@@ -91,14 +91,14 @@ onMount(() => {
 
 <div class="rc-wrap">
 	{#if loading}
-		<div class="rc-loading">{i18n(I18nKey.loading)}</div>
+		<div class="rc-loading">{i18n(I18nKey.pageViewsLoading)}</div>
 	{:else if error}
 		<div class="rc-error">
-			{i18n(I18nKey.loadFailed)}
-			<button class="rc-retry" onclick={load}>{i18n(I18nKey.retry)}</button>
+			加载失败
+			<button class="rc-retry" onclick={load}>重试</button>
 		</div>
 	{:else if comments.length === 0}
-		<div class="rc-empty">{i18n(I18nKey.noComments)}</div>
+		<div class="rc-empty">{i18n(I18nKey.recentCommentsEmpty)}</div>
 	{:else}
 		<ul class="rc-list">
 			{#each comments as c (c.objectId)}
