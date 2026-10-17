@@ -904,6 +904,9 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
 // 静态 JSON 优先尝试：VPS 定时任务每 5 分钟生成 /api/stats.json
 // 成功则渲染并设置标志，主 script 会直接返回；失败则静默，主 script 走原有 API 逻辑
 (function () {
+	// 重置跨页残留标志：Swup 导航时 window 对象复用，上次的 true 会导致主脚本误判跳过
+	window.__lanercStatsDone = false;
+	window.__lanercStatsData = null;
 	function fmt(n) { return Number(n || 0).toLocaleString(); }
 
 	// 数字从0快速递增动画（约800ms，easeOut）
@@ -944,25 +947,71 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
 		try {
 			localStorage.setItem("lanerc-umami-live", JSON.stringify({ ts: Date.now(), data: d }));
 		} catch (e) {}
+		// 静态数据渲染慢卡片：donut/脉冲/国家/热门页面（数据已在 stats.json，无需等 API）
+		try {
+			var arr = d.pageviews90 || [];
+			var el = document.getElementById("umami-daily-data");
+			if (el && arr.length) {
+				el.textContent = JSON.stringify(arr);
+				if (window.__renderPulse) window.__renderPulse();
+			}
+			var devC = ["#7eb8f0", "#8fd8b8", "#f0c878", "#b8a0f0", "#f0a0c0"];
+			var broC = ["#a080f0", "#f0c878", "#78d0d0", "#f0a080", "#f0a0c0", "#a0c8f0"];
+			var srcC = ["#7eb8f0", "#f0c878", "#8fd8b8", "#b8a0f0"];
+			if (d.device && d.device.length && window.updateDonut) {
+				var del = document.getElementById("device-donut");
+				if (del) window.updateDonut("device-donut", d.device, devC);
+			}
+			if (d.browser && d.browser.length && window.updateDonut) {
+				var bel = document.getElementById("browser-donut");
+				if (bel) window.updateDonut("browser-donut", d.browser, broC);
+			}
+			if (d.referrer && d.referrer.length && window.updateDonut) {
+				window.updateDonut("source-donut", d.referrer.map(function (x) { return { x: x.x || "直接访问", y: x.y }; }), srcC);
+			}
+			var countryNames = { CN: "中国", US: "美国", JP: "日本", HK: "香港", TW: "台湾", GB: "英国", DE: "德国", FR: "法国", KR: "韩国", SG: "新加坡" };
+			var ctyColors = ["#f06a6a", "#7eb8f0", "#f0c878", "#8fd8b8", "#b8a0f0"];
+			if (d.country && d.country.length) {
+				var cel = document.getElementById("region-map");
+				if (cel) {
+					var mapped = d.country.map(function (x) { return { x: countryNames[x.x] || x.x, y: x.y }; });
+					if (window.createDonutHTML && !cel.querySelector(".donut-row")) {
+						cel.innerHTML = window.createDonutHTML(mapped, ctyColors, "");
+					} else if (window.updateDonut) {
+						window.updateDonut("region-map", mapped, ctyColors);
+					}
+				}
+			}
+			if (d.url && d.url.length) {
+				var tel = document.getElementById("top-pages");
+				if (tel && window.__renderTopPages) window.__renderTopPages(d.url);
+			}
+		} catch (e) {}
 	}
-	fetch("/api/stats.json", { cache: "no-store" })
+	window.__lanercStatsPromise = fetch("/api/stats.json", { cache: "no-store" })
 		.then(function (r) { if (!r.ok) throw 0; return r.json(); })
 		.then(function (d) {
 			if (d && (d.totalVisitors != null || d.totalPageviews != null)) {
-				renderStatic(d);
-				window.__lanercStatsDone = true;
-				window.__lanercStatsData = d;  // 完整数据（含 device/browser/country 等），供其他卡片使用
+				// 新鲜度检查：generatedAt 超过 10 分钟视为过期，走实时 API
+				var genAt = d.generatedAt ? new Date(d.generatedAt).getTime() : 0;
+				if (genAt && (Date.now() - genAt) < 10 * 60 * 1000) {
+					renderStatic(d);
+					window.__lanercStatsDone = true;
+					window.__lanercStatsData = d;  // 完整数据（含 device/browser/country 等），供其他卡片使用
+					return true;
+				}
 			}
+			return false;
 		})
-		.catch(function () {});
+		.catch(function () { return false; });
 })();
 </script>
 
-<script>
+<script is:inline>
 // 静态 JSON 优先（独立 script 块已尝试）：若命中则直接返回
 // 逻辑：VPS 每 5 分钟生成 /api/stats.json，走 CDN 毫秒级；失败则走下方原有 Umami API
+// is:inline：配合 Swup 无刷新导航，每次进统计页都重新执行
 (function () {
-	if (window.__lanercStatsDone) return;
 	var SHARE_ID = "EG15WwHeRvz2lmd2";
 	var API_BASE = "https://umami.lanerc.me";
 	var TOKEN_KEY = "lanerc-umami-share-token";
@@ -1160,6 +1209,14 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
 	window.updateDonut = updateDonut;
 	window.createDonutHTML = createDonutHTML;
 
+	// 等待静态 JSON 尝试完成，若命中则直接返回，不调 API
+	var statsPromise = window.__lanercStatsPromise || Promise.resolve(false);
+	statsPromise.then(function (hit) {
+		if (hit || window.__lanercStatsDone) return;
+		startApiFetch();
+	});
+
+	function startApiFetch() {
 	getShare().then(function (info) {
 		var wid = info.websiteId, now = Date.now(), day = 86400000;
 		var q = function (s, e, u) { return "?startAt=" + s + "&endAt=" + e + "&unit=" + u + "&timezone=Asia/Shanghai"; };
@@ -1314,5 +1371,21 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
 			location.reload();
 		});
 	}
+	} // end startApiFetch
+})();
+</script>
+
+
+<script>
+// 独立补充：已在统计页时，点击导航栏"站点统计"滚动回顶部
+(function () {
+	document.addEventListener("click", function (e) {
+		var a = e.target.closest ? e.target.closest('a[href="/analytics/"], a[href="/analytics"]') : null;
+		if (!a) return;
+		if (location.pathname.replace(/\/$/, "") === "/analytics") {
+			e.preventDefault();
+			window.scrollTo({ top: 0, behavior: "smooth" });
+		}
+	});
 })();
 </script>
