@@ -24,11 +24,54 @@ const config = {
     const effectiveConfig = requestedPath
       ? { ...config, path: requestedPath }
       : config;
+    let walineInstance = null;
     try {
-      init(effectiveConfig);
+      walineInstance = init(effectiveConfig);
     } catch (error) {
       console.error("[Waline] Failed to initialize:", error);
     }
+
+    // 评论区智能自动刷新：每 30 秒查一次服务端评论数，有新增且用户没在输入时重建
+    (function() {
+      if (!effectiveConfig.serverURL) return;
+      const serverURL = String(effectiveConfig.serverURL).replace(/\/$/, '');
+      const walinePath = effectiveConfig.path;
+
+      function isUserComposing() {
+        const els = document.querySelectorAll('#waline .wl-editor');
+        for (const ed of els) {
+          if ((ed.value || '').trim()) return true;
+          if (ed.contains(document.activeElement)) return true;
+        }
+        return false;
+      }
+
+      async function checkNewComments() {
+        if (document.hidden || !walineInstance || isUserComposing()) return;
+        try {
+          const r = await fetch(
+            `${serverURL}/api/comment?path=${encodeURIComponent(walinePath)}&page=1&pageSize=1`
+          );
+          const data = await r.json();
+          const serverCount = Number(data.count) || 0;
+          const shownEl = document.querySelector('#waline .wl-num');
+          const shown = parseInt((shownEl && shownEl.textContent) || '0', 10) || 0;
+          if (serverCount > shown) {
+            try { walineInstance.destroy(); } catch (e) {}
+            try {
+              walineInstance = init(effectiveConfig);
+            } catch (e) {
+              console.error("[Waline] Re-init failed:", e);
+            }
+          }
+        } catch (e) { /* 静默失败，下轮再试 */ }
+      }
+
+      setInterval(checkNewComments, 30000);
+      document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) checkNewComments();
+      });
+    })();
   </script>
 </div>
 
@@ -57,3 +100,32 @@ const config = {
     color: #16a34a !important;
   }
 </style>
+
+<script is:inline>
+  // zhz-ai 勋章：给 AI 回复加上 🤖 徽章
+  (function() {
+    function addBadges() {
+      document.querySelectorAll('.wl-comment').forEach(function(el) {
+        if (el.dataset.butlerBadged) return;
+        var nick = el.querySelector('.wl-nick');
+        if (nick && nick.textContent.trim() === 'zhz-ai') {
+          el.dataset.butlerBadged = '1';
+          var badge = document.createElement('span');
+          badge.className = 'muse-butler-badge';
+          badge.textContent = '🤖 AI';
+          badge.style.cssText = 'display:inline-block;margin-left:6px;padding:1px 8px;font-size:11px;line-height:1.6;border-radius:10px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-weight:600;vertical-align:middle;';
+          nick.after(badge);
+        }
+      });
+    }
+    // Waline 是异步渲染的，用 MutationObserver 监听
+    var observer = new MutationObserver(addBadges);
+    observer.observe(document.body, { childList: true, subtree: true });
+    // 初始执行一次
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', addBadges);
+    } else {
+      addBadges();
+    }
+  })();
+</script>
