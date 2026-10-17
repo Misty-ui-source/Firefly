@@ -12,7 +12,7 @@ export const profileConfig: ProfileConfig = {
 	name: "zhz",
 
 	// 个人签名
-	bio: "Hello, I'm zhz. 折腾各种有趣的项目，写写博客记录生活。",
+	bio: "Hello, I'm zhz. 折腾各种有趣的项目，写写文章记录生活。",
 
 	// 链接配置
 	// 已经预装的图标集：fa7-brands，fa7-regular，fa7-solid，material-symbols，simple-icons
