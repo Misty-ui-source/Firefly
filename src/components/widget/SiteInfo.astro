@@ -54,32 +54,12 @@ if (pnpmMatch) {
 // 构建时间
 const buildTime = formatDateI18nWithTime(new Date());
 
-// 构建平台检测（使用 ci-info 自动识别 CI 环境）
-const unknownBuildPlatform =
-	widgetConfig?.specificConfig?.siteInfo?.unknownBuildPlatform || "Unknown CI";
-const buildPlatform = detectBuildPlatform({
-	env: process.env,
-	isCI: ci.isCI,
-	ciName: ci.name,
-	isDev: import.meta.env.DEV,
-	unknownBuildPlatform,
-});
+// 构建平台——显示为用户的 VPS
+const buildPlatform = "Hong Kong VPS";
 
-// 系统信息（平台 + 架构）
-const platformMap: Record<string, string> = {
-	win32: "Windows",
-	darwin: "macOS",
-	linux: "Linux",
-	freebsd: "FreeBSD",
-};
-const archMap: Record<string, string> = {
-	x64: "x86_64",
-	arm64: "ARM64",
-	arm: "ARM",
-	ia32: "x86",
-};
-const osName = platformMap[process.platform] || process.platform;
-const archName = archMap[process.arch] || process.arch;
+// 系统信息（平台 + 架构）——显示为用户的 VPS
+const osName = "Ubuntu 24.04";
+const archName = "x86_64";
 const systemInfo = `${osName} / ${archName}`;
 
 // 站点域名（去掉协议前缀）
