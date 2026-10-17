@@ -1,5 +1,5 @@
 ---
-title: 大学物理实验--霍尔效应实验报告
+title: 霍尔效应实验报告
 published: 2025-10-31
 updated: 2025-10-31
 tags:
