@@ -103,13 +103,15 @@ onMount(() => {
 		<ul class="rc-list">
 			{#each comments as c (c.objectId)}
 				<li class="rc-item">
-					{#if c.avatar}
-						<img class="rc-avatar" src={c.avatar} alt={c.nick} loading="lazy" />
-					{/if}
-					<div class="rc-body">
-						<div class="rc-nick">{c.nick}</div>
-						<div class="rc-text">{stripHtml(c.comment).slice(0, 80)}</div>
-					</div>
+					<a class="rc-link" href={url(c.url) + '#' + c.objectId} title="跳转到评论">
+						{#if c.avatar}
+							<img class="rc-avatar" src={c.avatar} alt={c.nick} loading="lazy" />
+						{/if}
+						<div class="rc-body">
+							<div class="rc-nick">{c.nick}</div>
+							<div class="rc-text">{stripHtml(c.comment).slice(0, 80)}</div>
+						</div>
+					</a>
 				</li>
 			{/each}
 		</ul>
@@ -129,9 +131,24 @@ onMount(() => {
 		gap: 0.75rem;
 	}
 	.rc-item {
+		min-width: 0;
+	}
+	.rc-link {
 		display: flex;
 		gap: 0.5rem;
 		min-width: 0;
+		color: inherit;
+		text-decoration: none;
+		border-radius: 0.5rem;
+		padding: 0.25rem;
+		margin: -0.25rem;
+		transition: background-color 0.15s;
+	}
+	.rc-link:hover {
+		background-color: rgba(0, 0, 0, 0.04);
+	}
+	:global(html.dark) .rc-link:hover {
+		background-color: rgba(255, 255, 255, 0.06);
 	}
 	.rc-avatar {
 		width: 2rem;
