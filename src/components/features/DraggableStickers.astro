@@ -1,0 +1,94 @@
+---
+import { getImage } from "astro:assets";
+import { stickerConfig } from "@/config/stickerConfig";
+
+// 首页可拖拽贴纸（HY 式玩法 + 主题内置看板娘融合）
+// 只在首页首屏横幅区显示，可拖拽、可一键隐藏
+if (!stickerConfig.enable) return;
+
+const stickers = await Promise.all(
+	stickerConfig.stickers.map(async (s) => {
+		const images = import.meta.glob(
+			"@/assets/images/stickers/*.{png,jpg,jpeg,webp,avif,gif}",
+			{ eager: true },
+		) as Record<string, { default: ImageMetadata }>;
+		const key = Object.keys(images).find((k) =>
+			k.endsWith("/" + s.src.split("/").pop()),
+		);
+		if (!key) return null;
+		const optimized = await getImage({ src: images[key].default, width: 192 });
+		return { ...s, url: optimized.src };
+	}),
+);
+const valid = stickers.filter(Boolean);
+---
+
+{
+	valid.length > 0 && (
+		<div
+			id="draggable-stickers"
+			class="pointer-events-none fixed inset-x-0 top-0 z-30 hidden md:block transition-opacity duration-300"
+			style="height: min(62vh, 560px);"
+			data-hide-on-mobile={stickerConfig.hideOnMobile}
+		>
+			{valid.map((s: any, i: number) => (
+				<img
+					src={s.url}
+					alt={`sticker-${i}`}
+					class="sticker pointer-events-auto absolute cursor-grab select-none active:cursor-grabbing"
+					style={`left: ${s.x}%; top: ${s.y}%; width: ${s.size}px; height: ${s.size}px; border-radius: 9999px; filter: drop-shadow(0 4px 10px rgba(0,0,0,.25)); touch-action: none;`}
+					draggable="false"
+					loading="lazy"
+				/>
+			))}
+			<button
+				id="sticker-toggle"
+				class="pointer-events-auto absolute right-4 top-4 rounded-full bg-black/30 px-3 py-1 text-xs text-white backdrop-blur transition hover:bg-black/50"
+			>
+				隐藏贴纸
+			</button>
+		</div>
+	)
+}
+
+<script>
+	const layer = document.getElementById("draggable-stickers");
+	if (layer) {
+		// 拖拽逻辑
+		let dragEl: HTMLElement | null = null;
+		let startX = 0, startY = 0, origLeft = 0, origTop = 0;
+		layer.querySelectorAll(".sticker").forEach((el) => {
+			const h = el as HTMLElement;
+			h.addEventListener("pointerdown", (e) => {
+				dragEl = h;
+				startX = e.clientX; startY = e.clientY;
+				origLeft = h.offsetLeft; origTop = h.offsetTop;
+				h.setPointerCapture(e.pointerId);
+			});
+		});
+		layer.addEventListener("pointermove", (e) => {
+			if (!dragEl) return;
+			dragEl.style.left = `${origLeft + e.clientX - startX}px`;
+			dragEl.style.top = `${origTop + e.clientY - startY}px`;
+		});
+		layer.addEventListener("pointerup", () => { dragEl = null; });
+		layer.addEventListener("pointercancel", () => { dragEl = null; });
+		// 隐藏/显示开关
+		const toggle = document.getElementById("sticker-toggle");
+		toggle?.addEventListener("click", () => {
+			const imgs = layer.querySelectorAll(".sticker");
+			const hidden = toggle.textContent?.includes("隐藏");
+			imgs.forEach((img) => ((img as HTMLElement).style.display = hidden ? "none" : ""));
+			if (toggle) toggle.textContent = hidden ? "显示贴纸" : "隐藏贴纸";
+		});
+		// 滚动超过横幅区时自动淡出
+		const bannerH = Math.min(window.innerHeight * 0.62, 560);
+		const onScroll = () => {
+			const past = window.scrollY > bannerH;
+			layer.style.opacity = past ? "0" : "1";
+			layer.style.visibility = past ? "hidden" : "visible";
+		};
+		window.addEventListener("scroll", onScroll, { passive: true });
+		onScroll();
+	}
+</script>
