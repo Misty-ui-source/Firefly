@@ -1,0 +1,86 @@
+---
+// 看板娘小伙伴：在主 Live2D 旁边再摆一排动态小人（参考 HY 站的多角色效果，模型另选）
+// 逐个创建、等待其根节点挂载后摆放到指定 left 偏移（widget 根为无 class 的 fixed div，用 canvas 识别）
+---
+
+<style>
+	/* 移动端隐藏小伙伴，避免拥挤（主角色保留） */
+	@media (max-width: 768px) {
+		.l2d-buddy {
+			display: none !important;
+		}
+	}
+</style>
+
+<script>
+	import { createWidget } from "l2d-widget";
+
+	interface Buddy {
+		path: string;
+		leftPct: number; // 距左边缘百分比（桌面端均匀分布）
+		size: number; // canvas 尺寸 px
+	}
+
+	const buddies: Buddy[] = [
+		{ path: "/pio/models/live2d/z16/z16.model.json", leftPct: 84, size: 135 },
+	];
+
+	// widget 根节点：fixed 定位且内含 canvas 的 div
+	function widgetRoots(): HTMLElement[] {
+		return Array.prototype.slice
+			.call(document.body.querySelectorAll('div[style*="fixed"]'))
+			.filter((el: Element) => el.querySelector("canvas")) as HTMLElement[];
+	}
+
+	function waitForNewRoot(known: Set<HTMLElement>): Promise<HTMLElement | null> {
+		return new Promise((resolve) => {
+			let tries = 0;
+			const timer = setInterval(() => {
+				tries++;
+				const fresh = widgetRoots().filter((el) => !known.has(el));
+				if (fresh.length > 0 || tries > 60) {
+					clearInterval(timer);
+					resolve(fresh[0] || null);
+				}
+			}, 200);
+		});
+	}
+
+	async function startBuddies() {
+		// 移动端直接不初始化
+		if (window.innerWidth <= 768) return;
+		try {
+			const known = new Set<HTMLElement>(widgetRoots());
+			for (const b of buddies) {
+				try {
+					createWidget({
+						model: { path: b.path, volume: 0, tips: false },
+						position: "bottom-left",
+						size: b.size,
+					});
+				} catch (e) {
+					console.warn("Buddy create failed:", b.path, e);
+					continue;
+				}
+				const root = await waitForNewRoot(known);
+				if (root) {
+					known.add(root);
+					root.classList.add("l2d-buddy");
+					root.style.left = `${b.leftPct}%`;
+					root.style.right = "auto";
+					root.style.bottom = "0px";
+					root.style.zIndex = "998";
+				}
+			}
+		} catch (e) {
+			console.warn("Live2D buddies init failed:", e);
+		}
+	}
+
+	// 等主 widget 先挂载完成再启动
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", () => setTimeout(startBuddies, 1500));
+	} else {
+		setTimeout(startBuddies, 1500);
+	}
+</script>
