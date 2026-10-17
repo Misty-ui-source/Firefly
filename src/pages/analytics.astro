@@ -900,11 +900,69 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
   }
 </style>
 
-<script>
-// 实时数据：直连 Umami 公开分享接口（学 HY 9ll.uk 方案，零后端）
-// 流程：GET /api/share/{shareId} 拿 websiteId + token → 带 x-umami-share-token 头调数据接口
-// 缓存：token 24h，数据 2min；失败静默保留构建时数据
+<script is:inline>
+// 静态 JSON 优先尝试：VPS 定时任务每 5 分钟生成 /api/stats.json
+// 成功则渲染并设置标志，主 script 会直接返回；失败则静默，主 script 走原有 API 逻辑
 (function () {
+	function fmt(n) { return Number(n || 0).toLocaleString(); }
+
+	// 数字从0快速递增动画（约800ms，easeOut）
+	function countUp(el, target) {
+		if (!el || target == null) return;
+		target = Number(target);
+		if (isNaN(target)) return;
+		var start = 0;
+		var duration = 800;
+		var startTime = null;
+		function step(ts) {
+			if (!startTime) startTime = ts;
+			var p = Math.min((ts - startTime) / duration, 1);
+			// easeOutCubic
+			var eased = 1 - Math.pow(1 - p, 3);
+			var cur = Math.round(start + (target - start) * eased);
+			el.textContent = cur.toLocaleString();
+			if (p < 1) requestAnimationFrame(step);
+		}
+		requestAnimationFrame(step);
+	}
+
+	function renderStatic(d) {
+		var map = { totalVisitors: d.totalVisitors, totalPageviews: d.totalPageviews, todayVisitors: d.todayVisitors, todayPageviews: d.todayPageviews };
+		Object.keys(map).forEach(function (k) {
+			var el = document.querySelector('[data-stat="' + k + '"]');
+			if (el && map[k] != null) countUp(el, map[k]);
+		});
+		var onlineEl = document.getElementById("live-online");
+		if (onlineEl && d.online != null) {
+			onlineEl.innerHTML = '<span class="online-dot"></span>' + (d.online > 0 ? d.online + " 人在线" : "在线");
+		}
+		var updatedEl = document.getElementById("live-updated");
+		if (updatedEl) {
+			var t = new Date().toLocaleString("zh-CN", { hour12: false }).slice(0, 16);
+			updatedEl.textContent = "实时更新于 " + t + " · 30天区间";
+		}
+		try {
+			localStorage.setItem("lanerc-umami-live", JSON.stringify({ ts: Date.now(), data: d }));
+		} catch (e) {}
+	}
+	fetch("/api/stats.json", { cache: "no-store" })
+		.then(function (r) { if (!r.ok) throw 0; return r.json(); })
+		.then(function (d) {
+			if (d && (d.totalVisitors != null || d.totalPageviews != null)) {
+				renderStatic(d);
+				window.__lanercStatsDone = true;
+				window.__lanercStatsData = d;  // 完整数据（含 device/browser/country 等），供其他卡片使用
+			}
+		})
+		.catch(function () {});
+})();
+</script>
+
+<script>
+// 静态 JSON 优先（独立 script 块已尝试）：若命中则直接返回
+// 逻辑：VPS 每 5 分钟生成 /api/stats.json，走 CDN 毫秒级；失败则走下方原有 Umami API
+(function () {
+	if (window.__lanercStatsDone) return;
 	var SHARE_ID = "EG15WwHeRvz2lmd2";
 	var API_BASE = "https://umami.lanerc.me";
 	var TOKEN_KEY = "lanerc-umami-share-token";
@@ -913,6 +971,26 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
 	var DATA_TTL = 0; // 用户要求：不缓存，每次进页面都重新拉
 
 	function fmt(n) { return Number(n || 0).toLocaleString(); }
+
+	// 数字从0快速递增动画（约800ms，easeOut）
+	function countUp(el, target) {
+		if (!el || target == null) return;
+		target = Number(target);
+		if (isNaN(target)) return;
+		var start = 0;
+		var duration = 800;
+		var startTime = null;
+		function step(ts) {
+			if (!startTime) startTime = ts;
+			var p = Math.min((ts - startTime) / duration, 1);
+			// easeOutCubic
+			var eased = 1 - Math.pow(1 - p, 3);
+			var cur = Math.round(start + (target - start) * eased);
+			el.textContent = cur.toLocaleString();
+			if (p < 1) requestAnimationFrame(step);
+		}
+		requestAnimationFrame(step);
+	}
 
 	function render(d) {
 		var map = {
@@ -923,7 +1001,7 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
 		};
 		Object.keys(map).forEach(function (k) {
 			var el = document.querySelector('[data-stat="' + k + '"]');
-			if (el && map[k] != null) el.textContent = fmt(map[k]);
+			if (el && map[k] != null) countUp(el, map[k]);
 		});
 		var onlineEl = document.getElementById("live-online");
 		if (onlineEl && d.online != null) {
@@ -1078,10 +1156,63 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
 		return '<div class="donut-row" data-astro-cid-bhxyrf2g><div class="donut-wrap" data-astro-cid-bhxyrf2g><svg viewBox="0 0 140 140" class="donut-svg" data-astro-cid-bhxyrf2g><circle cx="70" cy="70" r="54" fill="none" stroke="#f3f0ea" stroke-width="18" data-astro-cid-bhxyrf2g/>' + svg + "</svg>" + iconHtml + '</div><div class="donut-legend" data-astro-cid-bhxyrf2g>' + legend + "</div></div>";
 	}
 
+	// 暴露 donut 函数供静态数据渲染使用
+	window.updateDonut = updateDonut;
+	window.createDonutHTML = createDonutHTML;
+
 	getShare().then(function (info) {
 		var wid = info.websiteId, now = Date.now(), day = 86400000;
 		var q = function (s, e, u) { return "?startAt=" + s + "&endAt=" + e + "&unit=" + u + "&timezone=Asia/Shanghai"; };
 		var mq = q(now - 30 * day, now, "day");
+
+		// 静态 JSON 优先：如果已有完整数据，直接渲染各卡片，跳过 API
+		var sd = window.__lanercStatsData;
+		if (sd && sd.pageviews90 && sd.device) {
+			try {
+				// 访问脉冲图
+				var arr = sd.pageviews90 || [];
+				var el = document.getElementById("umami-daily-data");
+				if (el && arr.length) {
+					el.textContent = JSON.stringify(arr);
+					if (window.__renderPulse) window.__renderPulse();
+				}
+				// 设备/浏览器/来源 donut
+				var devC = ["#7eb8f0", "#8fd8b8", "#f0c878", "#b8a0f0", "#f0a0c0"];
+				var broC = ["#a080f0", "#f0c878", "#78d0d0", "#f0a080", "#f0a0c0", "#a0c8f0"];
+				var srcC = ["#7eb8f0", "#f0c878", "#8fd8b8", "#b8a0f0"];
+				if (sd.device && sd.device.length && window.updateDonut) {
+					var del = document.getElementById("device-donut");
+					if (del) window.updateDonut("device-donut", sd.device, devC);
+				}
+				if (sd.browser && sd.browser.length && window.updateDonut) {
+					var bel = document.getElementById("browser-donut");
+					if (bel) window.updateDonut("browser-donut", sd.browser, broC);
+				}
+				if (sd.referrer && sd.referrer.length && window.updateDonut) {
+					window.updateDonut("source-donut", sd.referrer.map(function (x) { return { x: x.x || "直接访问", y: x.y }; }), srcC);
+				}
+				// 国家分布
+				var countryNames = { CN: "中国", US: "美国", JP: "日本", HK: "香港", TW: "台湾", GB: "英国", DE: "德国", FR: "法国", KR: "韩国", SG: "新加坡" };
+				var ctyColors = ["#f06a6a", "#7eb8f0", "#f0c878", "#8fd8b8", "#b8a0f0"];
+				if (sd.country && sd.country.length) {
+					var cel = document.getElementById("region-map");
+					if (cel) {
+						var mapped = sd.country.map(function (x) { return { x: countryNames[x.x] || x.x, y: x.y }; });
+						if (window.createDonutHTML && !cel.querySelector(".donut-row")) {
+							cel.innerHTML = window.createDonutHTML(mapped, ctyColors, "");
+						} else if (window.updateDonut) {
+							window.updateDonut("region-map", mapped, ctyColors);
+						}
+					}
+				}
+				// 热门页面
+				if (sd.url && sd.url.length) {
+					var tel = document.getElementById("top-pages");
+				if (tel && window.__renderTopPages) window.__renderTopPages(sd.url);
+				}
+			} catch (e) {}
+			return; // 已用静态数据渲染，跳过 API 调用
+		}
 
 		function delay(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
 		// 访问脉冲（延迟启动，避免并发触发限流）
