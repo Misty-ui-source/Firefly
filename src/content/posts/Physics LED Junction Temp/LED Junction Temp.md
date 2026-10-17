@@ -14,37 +14,37 @@ category: 论文
 draft: false
 ---
 
-大功率LED结温测量方法的扩展
+# 大功率LED结温测量方法的扩展
 
-zhz
+**zhz**
 
-（东南大学电子科学与工程学院，南京  210096）
+*（东南大学电子科学与工程学院，南京 210096）*
 
-本文基于大学物理选修实验“大功率LED热学特性研究”，针对脉冲法测量结温中的参数优化、热阻模型构建以及实验数据处理流程进行了系统研究。针对实验相关内容进行课外研读，通过建立结温—照度—电压耦合模型，提出了一种更精确的LED的结温动态测量与热性能评估方法。本研究为LED热设计与寿命预测提供了实验支持，并在实验教学中提出了探索性环节。
+**摘要：**本文基于大学物理选修实验“大功率LED热学特性研究”，针对脉冲法测量结温中的参数优化、热阻模型构建以及实验数据处理流程进行了系统研究。针对实验相关内容进行课外研读，通过建立结温—照度—电压耦合模型，提出了一种更精确的LED的结温动态测量与热性能评估方法。本研究为LED热设计与寿命预测提供了实验支持，并在实验教学中提出了探索性环节。
 
-大功率LED；结温测量；脉冲法优化；热阻分析
+**关键词：**大功率LED；结温测量；脉冲法优化；热阻分析
 
-The Extension of Junction Temperature Measurement Method for High-Power LEDs
+## The Extension of Junction Temperature Measurement Method for High-Power LEDs
 
-zhz
+**zhz**
 
-(School of Electronic Science and Engineering , Southeast University, Nanjing  210096)
+*(School of Electronic Science and Engineering, Southeast University, Nanjing 210096)*
 
-This paper is based on the elective experiment of college physics, "Research on the Thermal Characteristics of High-Power LEDs", and conducts a systematic study on the optimization of key parameters in the pulse method for measuring junction temperature, the construction of thermal resistance models, and the data processing flow of experiments. By establishing a junction temperature-illuminance-voltage coupling model, a more accurate dynamic measurement method for junction temperature and thermal performance evaluation of LEDs is proposed. This research provides experimental support for the thermal design and life prediction of LEDs and proposes an exploratory link in experimental teaching.
+**Abstract:** This paper is based on the elective experiment of college physics, "Research on the Thermal Characteristics of High-Power LEDs", and conducts a systematic study on the optimization of key parameters in the pulse method for measuring junction temperature, the construction of thermal resistance models, and the data processing flow of experiments. By establishing a junction temperature-illuminance-voltage coupling model, a more accurate dynamic measurement method for junction temperature and thermal performance evaluation of LEDs is proposed. This research provides experimental support for the thermal design and life prediction of LEDs and proposes an exploratory link in experimental teaching.
 
-Key words:   High-power LED; Junction temperature measurement; Pulse method optimization; Thermal resistance analysis
+**Key words:** High-power LED; Junction temperature measurement; Pulse method optimization; Thermal resistance analysis
 
 大功率LED的发光效率、波长稳定性及使用寿命均严重依赖于其工作结温[1-2]。准确测量结温并评估散热性能，是LED器件设计与应用的核心环节。脉冲法虽能实现结温的间接测量，但在脉冲参数选择、动态热响应建模及多参数耦合分析方面仍有优化空间。并且现有实验流程中，数据记录、
 
-zhz，东南大学电子科学与工程学院。
+*作者简介：zhz，东南大学电子科学与工程学院。*
 
 处理与分析环节相对独立，不利于初学者系统理解LED的热学特性与光电特性之间的关联。
 
 本文基于脉冲法原理，结合温控系统，系统研究了大功率LED在不同工作模式下的结温变化规律，并分析了结温对其光电性能的影响。
 
-1 实验原理与现有方法分析
+## 1 实验原理与现有方法分析
 
-脉冲法测量结温的基本原理
+### 脉冲法测量结温的基本原理
 
 脉冲法的核心思想是通过施加低占空比的脉冲电流，使LED在脉冲间歇期内充分冷却，从而使结温（Tj）与表面温度（Ts）趋于一致。在此基础上，通过温控系统改变表面温度，可标定出特定电流下正向压降（U）与结温（Tj）的关系曲线：
 
@@ -59,9 +59,9 @@ Tj=f(U)           （1）
 
 其中，U 和 I 分别为 LED 两端的电压与流过 LED 的正向电流。
 
-实验数据分析
+### 实验数据分析
 
-表1 不同结温下LED的正向压降
+**表1** 不同结温下LED的正向压降
 
 
 ![图2](./images/img01.png)
@@ -75,9 +75,9 @@ Tj=−0.000014U3+0.130692U2−413.090271U+435748
 
 ![图3](./images/img02.png)
 
-图1 结温-压降曲线
+*图1 结温-压降曲线*
 
-现有实验方法的几个局限
+### 现有实验方法的局限
 
 脉冲参数少：实验仅使用1:50与1:1000两种占空比，未系统研究占空比、脉宽对测量稳定性的影响。
 
@@ -87,9 +87,9 @@ Tj=−0.000014U3+0.130692U2−413.090271U+435748
 
 实验验证性强，探索性弱：学生按固定步骤操作，缺乏对“最佳测量条件”的探究环节。
 
-2 实验方法改进与优化策略
+## 2 实验方法改进与优化策略
 
-脉冲参数的系统优化研究
+### 脉冲参数的系统优化研究
 
 提出“可变占空比脉冲”，在保持平均电流相同的条件下，改变占空比（如1:10、1:50、1:200、1:1000），研究：
 
@@ -102,11 +102,11 @@ Tj=−0.000014U3+0.130692U2−413.090271U+435748
 
 ![图4](./images/img03.png)
 
-图2 不同占空比下LED表面温度变化
+*图2 不同占空比下LED表面温度变化*
 
 可以看出，低占空比(1:1000)下温度基本不变，高占空比(1:50)下温度有小幅上升但变化很小。最小时间常数上，占空比(1:1000)的较小，温度较为稳定。但由于样本量少，且缺乏足够的数据支撑，实验结论不能得到足够的支撑。
 
-将热阻模型从稳态扩展到瞬态
+### 将热阻模型从稳态扩展到瞬态
 
 为深入揭示大功率LED的多层次热结构特性，本节在传统稳态热阻基础上，引入瞬态热阻分析。通过对LED开启后 Tj(t) 与 Ts(t)上升曲线进行双指数拟合：
 
@@ -118,7 +118,7 @@ T(t)=T0+A1(1−e−t/τ1)+A2(1−e−t/τ2)    （3）
 
 目标：将测量得到的稳态总热阻分解，揭示LED内部的热传递路径。
 
-结温—照度—电压耦合模型的建立
+### 结温—照度—电压耦合模型的建立
 
 基于实验数据，建立包含结温（Tj）、正向压降（U）与照度（E）的经验耦合模型：
 
@@ -126,13 +126,13 @@ E(Tj)=E0⋅e−k(Tj−T0)或E(U)=a⋅U2+b⋅U+c  （4）
 
 该模型可用于预测LED在不同散热条件下的光输出衰减。[4]
 
-两个模型的实验数据验证
+### 两个模型的实验数据验证
 
-数据如何用于瞬态热阻分析
+#### 数据如何用于瞬态热阻分析
 
 现有的数据构成了一个完美的阶跃响应实验：
 
-表2 不同时间的结温(室温：18.8°C)
+**表2** 不同时间的结温（室温：18.8°C）
 
 激励：在t=0时刻，对LED施加一个300mA的直流电流阶跃。
 
@@ -150,7 +150,7 @@ U(t)=U0+ΔU1(1−e−t/τ1)+ΔU2(1−e−t/τ2)（4）
 
 其中各段热阻：Rθi=ΔTi/Pd，Pd为热耗散功率（≈0.85UI）。
 
-图3 LED正向电压双指数拟合曲线
+*图3 LED正向电压双指数拟合曲线*
 
 
 ![图5](./images/img04.png)
@@ -169,11 +169,11 @@ U(t) = 3025.9 + 31.5·exp(-t/21.4) + 10.4·exp(-t/80.3) mV
 
 本工作在传统稳态热阻测量基础上，创新性地引入双指数模型分析LED的瞬态热响应。这不仅加深了我对LED热物理过程的理解，更将基础实验提升至研究性学习的高度，体现了“从实验中学习，在研究中创新”的格物致知理念。
 
-结温—照度—电压耦合模型的实验验证
+### 结温—照度—电压耦合模型的实验验证
 
 基于现有的实验数据设计一个基于该理论的实验验证方案：
 
-表3 结温对照度的影响实验（直流工作状态）
+**表3** 结温对照度的影响实验（直流工作状态）
 
 室温：18.8°C  电流幅值：300.1mA
 
@@ -181,7 +181,7 @@ U(t) = 3025.9 + 31.5·exp(-t/21.4) + 10.4·exp(-t/80.3) mV
 
 模型建立使用了两个关键数据集：1）表3的U-Tj标定数据；2）表2的直流工作瞬态数据。首先建立U-Tj转换关系，进而建立E-Tj关系，最终形成完整的U→Tj→E预测链。采用线性、指数和二次多项式等多种模型进行拟合。
 
-图4 结温—照度—电压耦合模型验证
+*图4 结温—照度—电压耦合模型验证*
 
 
 ![图6](./images/img05.png)
@@ -202,7 +202,7 @@ E-U二次模型：0.69%
 
 本实验基于部分数据和恒定电流条件的建立，且未考虑LED老化、波长漂移等因素[3-4],因而存在一定的局限性。
 
-总结与归纳
+## 3 总结与归纳
 
 LED不仅是一项基础的光电子技术，更是推动现代照明、通信以及能源变革的核心动力。它虽已无处不在，但其潜力远不如此。提升寿命、解决散热问题也尤为重要。
 
@@ -218,7 +218,7 @@ LED不仅是一项基础的光电子技术，更是推动现代照明、通信�
 
 通过本次研究，不仅深化了我对大功率LED热学特性的理解，更锻炼了综合运用物理原理、数学建模与数据处理解决实际工程问题的能力，为后续的专业学习与相关研究奠定了基础。
 
-参考文献：
+## 参考文献
 
 [1] 陈乾, 戴玉蓉, 孙贵宁, 等. LED热学特性研究及应用实
 
@@ -239,6 +239,7 @@ LED热阻测试与分析.” 光电子·激光,  2012, 23(6):
 
 
 | 时间 t(s) | 结温 Ti(°C) | 电压 U(mV) |
+|---|---|---|
 | 10 | 52.67 | 3055 |
 | 20 | 61.43 | 3046 |
 | 30 | 66.62 | 3041 |
@@ -253,6 +254,7 @@ LED热阻测试与分析.” 光电子·激光,  2012, 23(6):
 
 
 | 时间 <br>t(s) | 表面温度 Ts(°C) | 电压 U<br>(mV) | 结温 Ti<br>(°C) | 照度E(104Lx) |
+|---|---|---|---|---|
 | 10 | 33.4 | 3055 | 52.67 | 0.833 |
 | 20 | 42.3 | 3046 | 61.43 | 0.820 |
 | 30 | 48.9 | 3041 | 66.62 | 0.808 |
