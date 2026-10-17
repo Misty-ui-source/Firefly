@@ -20,6 +20,7 @@ This static blog is based on [Firefly](https://github.com/CuteLeaf/Firefly).
 
 - GitHub：https://github.com/Misty-ui-source
 - 邮箱：xz011@qq.com
+- Linux.do：https://linux.do/u/halo9
 
 ## 相关链接
 
@@ -89,4 +90,5 @@ This static blog is based on [Firefly](https://github.com/CuteLeaf/Firefly).
 建立本站的初衷是希望能与自己以及在看的你分享、记录一些实用的技术和日常生活中的趣闻轶事，如果有帮助到你，那我也会非常开心。
 也欢迎各位访客提出建议与批评。
 ## 我的项目
+::github{repo="Misty-ui-source/Firefly"}
 ::github{repo="Misty-ui-source/folia-major"}
