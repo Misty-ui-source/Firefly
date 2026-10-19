@@ -1,0 +1,47 @@
+name: 友链申请
+description: 申请将您的博客加入本站友链
+title: "[友链申请]: "
+labels: ["友链申请"]
+body:
+  - type: input
+    id: site-name
+    attributes:
+      label: 网站名称
+      placeholder: "例如：Alexander"
+    validations:
+      required: true
+  - type: input
+    id: site-url
+    attributes:
+      label: 网站链接
+      placeholder: "例如：https://lanerc.me"
+    validations:
+      required: true
+  - type: textarea
+    id: site-desc
+    attributes:
+      label: 网站描述
+      placeholder: "一句话介绍您的网站"
+    validations:
+      required: true
+  - type: input
+    id: site-avatar
+    attributes:
+      label: 网站头像 URL
+      placeholder: "例如：https://lanerc.me/avatar.png"
+    validations:
+      required: true
+  - type: input
+    id: site-rss
+    attributes:
+      label: RSS 订阅地址（可选）
+      placeholder: "例如：https://lanerc.me/rss.xml"
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 确认事项
+      options:
+        - label: 我已在本网站友链页面添加了本站（Alexander, https://lanerc.me）的友链
+          required: true
