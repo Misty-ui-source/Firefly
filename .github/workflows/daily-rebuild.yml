@@ -1,0 +1,26 @@
+name: 每日定时构建
+
+# 每天早上 7 点（北京时间）触发一次空提交，
+# Cloudflare Pages 的 Git 集成会自动构建，刷新站内数据
+# （Umami 统计、友链动态、GitHub 热力图、Steam 数据）
+on:
+  schedule:
+    - cron: '0 23 * * *' # 23:00 UTC = 07:00 CST
+  workflow_dispatch: # 允许在 Actions 页面手动触发
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 空提交触发构建
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # 当天已触发过就跳过，避免重复构建
+          if git log --since="24 hours ago" --pretty=format:"%s" | grep -q "每日定时构建触发"; then
+            echo "今日已触发过，跳过"
+            exit 0
+          fi
+          git commit --allow-empty -m "chore: 每日定时构建触发"
+          git push
