@@ -11,6 +11,9 @@ interface Props {
 }
 const { style } = Astro.props;
 const className = Astro.props.class;
+// 头像：动态/静态切换
+const avatarSrc = profileConfig.avatar || "";
+const useAnimated = !!profileConfig.avatarUseAnimated;
 ---
 
 <div class:list={["card-base", "p-3", className]} style={style}>
@@ -29,15 +32,25 @@ const className = Astro.props.class;
         class="transition opacity-0 scale-90 group-hover:scale-100 group-hover:opacity-100 text-white text-5xl"
       />
     </div>
-    <ImageWrapper
-      src={profileConfig.avatar || ""}
-      alt="Profile Image of the Author"
-      class="profile-avatar-image mx-auto lg:w-full h-full lg:mt-0"
-      loading="eager"
-      fetchpriority="high"
-      widths={[350]}
-      sizes="350px"
-    />
+    {useAnimated ? (
+      <img
+        src={avatarSrc}
+        alt="Profile Image of the Author"
+        class="profile-avatar-image mx-auto lg:w-full h-full lg:mt-0"
+        loading="eager"
+        fetchpriority="high"
+      />
+    ) : (
+      <ImageWrapper
+        src={avatarSrc}
+        alt="Profile Image of the Author"
+        class="profile-avatar-image mx-auto lg:w-full h-full lg:mt-0"
+        loading="eager"
+        fetchpriority="high"
+        widths={[350]}
+        sizes="350px"
+      />
+    )}
   </a>
   <div class="px-2">
     <div
