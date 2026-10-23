@@ -708,9 +708,9 @@ function heatmapSVG(byDay, label, palette) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const endSunday = new Date(today); endSunday.setDate(endSunday.getDate() - today.getDay());
   const start = new Date(endSunday); start.setDate(start.getDate() - (WEEKS - 1) * 7);
-  const W = WEEKS * (CS + GAP) + 8, H = 7 * (CS + GAP) + TOP + 6;
+  const W = WEEKS * (CS + GAP) + 8, H = 7 * (CS + GAP) + TOP + 26;
   let s = `<svg viewBox="0 0 ${W} ${H}" class="heat-svg" role="img">`;
-  let lastMonth = -1;
+  let lastMonth = -1, lastLabelX = -50;
   for (let w = 0; w < WEEKS; w++) {
     for (let r = 0; r < 7; r++) {
       const d = new Date(start); d.setDate(d.getDate() + w * 7 + r);
@@ -722,13 +722,15 @@ function heatmapSVG(byDay, label, palette) {
       s += `<rect x="${x}" y="${y}" width="${CS}" height="${CS}" rx="2.5" fill="${fill}" class="heat-cell"><title>${ds}：${c} ${label === '文章' ? '篇' : '条'}</title></rect>`;
     }
     const wd = new Date(start); wd.setDate(wd.getDate() + w * 7);
-    if (wd.getMonth() !== lastMonth) {
-      lastMonth = wd.getMonth();
-      s += `<text x="${4 + w * (CS + GAP)}" y="11" class="ch-lbl">${wd.getMonth() + 1}月</text>`;
+    const lx = 4 + w * (CS + GAP);
+    if (wd.getMonth() !== lastMonth && lx - lastLabelX > 34) {
+      lastMonth = wd.getMonth(); lastLabelX = lx;
+      s += `<text x="${lx}" y="11" class="ch-lbl">${wd.getMonth() + 1}月</text>`;
     }
   }
   const cells = palette.map((c, i) => `<rect x="${i * 13}" y="0" width="10" height="10" rx="2" fill="${c}"/>`).join('');
-  s += `<g transform="translate(${W - 120},${H - 2})"><text x="-32" y="9" class="ch-lbl">少</text>${cells}<text x="${palette.length * 13 + 6}" y="9" class="ch-lbl">多</text></g>`;
+  const ly = 7 * (CS + GAP) + TOP + 8;
+  s += `<g transform="translate(${W - 132},${ly})"><text x="-30" y="9" class="ch-lbl">少</text>${cells}<text x="${palette.length * 13 + 4}" y="9" class="ch-lbl">多</text></g>`;
   return s + '</svg>';
 }
 
