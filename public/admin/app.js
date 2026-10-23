@@ -165,19 +165,31 @@ function serializeFrontmatter(fm, body) {
   return lines.join('\n') + body;
 }
 
+/* YouTube / B站链接 → iframe 嵌入地址；识别不了返回 null */
+function parseVideoUrl(u) {
+  u = String(u || '').trim();
+  let m = u.match(/(?:youtube\.com\/watch\?[^#]*v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{6,})/);
+  if (m) return `https://www.youtube.com/embed/${m[1]}`;
+  m = u.match(/bilibili\.com\/video\/(BV[A-Za-z0-9]+)/);
+  if (m) return `https://player.bilibili.com/player.html?bvid=${m[1]}`;
+  return null;
+}
+
 /* ---------- 简易 Markdown 预览 ---------- */
 function mdPreview(src) {
   let html = esc(src);
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
   html = html.replace(/^###### (.*)$/gm, '<h6>$1</h6>').replace(/^##### (.*)$/gm, '<h5>$1</h5>')
     .replace(/^#### (.*)$/gm, '<h4>$1</h4>').replace(/^### (.*)$/gm, '<h3>$1</h3>')
     .replace(/^## (.*)$/gm, '<h2>$1</h2>').replace(/^# (.*)$/gm, '<h1>$1</h1>');
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2">');
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
   html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>');
+    .replace(/==([^=\n]+)==/g, '<mark>$1</mark>')
+    .replace(/`([^`\n]+)`/g, '<code>$1</code>');
   html = html.replace(/^- (.*)$/gm, '<li>$1</li>');
   html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
-  html = html.replace(/^(?!<[hu]|<li|<ul)(.+)$/gm, '<p>$1</p>').replace(/<p><\/p>/g, '');
+  html = html.replace(/^(?!<[hu]|<li|<ul|<pre|<\/pre)(.+)$/gm, '<p>$1</p>').replace(/<p><\/p>/g, '');
   return html;
 }
 
@@ -224,7 +236,7 @@ function nav() {
   const n = $('#nav');
   n.innerHTML = '';
   n.classList.remove('hidden');
-  const items = [['dashboard', '🏠 首页'], ...Object.entries(CFG.collections).map(([k, c]) => [k, c.label]), ['images', '🖼 图片'], ['music', '🎵 音乐'], ['gallery', '📷 相册']];
+  const items = [['dashboard', '🏠 首页'], ...Object.entries(CFG.collections).map(([k, c]) => [k, c.label]), ['images', '🖼 图片'], ['music', '🎵 音乐'], ['gallery', '📷 相册'], ['announce', '📢 公告']];
   const cur = location.hash.replace('#/', '');
   for (const [key, label] of items) {
     const b = document.createElement('button');
@@ -240,11 +252,98 @@ function router() {
   const h = location.hash.replace('#/', '') || 'dashboard';
   const [page, ...rest] = h.split('/');
   const arg = rest.join('/');
+  const wasLogin = document.body.classList.contains('is-login');
   if (page !== 'login' && window._loginTimer) { clearInterval(window._loginTimer); window._loginTimer = null; }
   document.body.classList.toggle('is-login', page === 'login');
   nav();
-  if (routes[page]) routes[page](decodeURIComponent(arg || ''));
-  else routes.dashboard();
+  applyInnerBg();
+  const render = () => {
+    if (routes[page]) routes[page](decodeURIComponent(arg || ''));
+    else routes.dashboard();
+  };
+  const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (page === 'login' || reduced) { render(); return; }
+  if (wasLogin) { playCRT(); render(); return; } // 从登录页进入：CRT 开机动画
+  /* 虫洞跳转：旧视图缩+模糊+淡出，新视图由大恢复 */
+  const seq = ++router._seq;
+  view.classList.add('view-out');
+  setTimeout(() => {
+    if (seq !== router._seq) return;
+    view.classList.remove('view-out');
+    render();
+    view.classList.add('view-in');
+    setTimeout(() => { if (seq === router._seq) view.classList.remove('view-in'); }, 240);
+  }, 180);
+}
+router._seq = 0;
+/* CRT 开机动画：白横线从中间展开 → 纵向闪光 → 内容淡入，约 700ms */
+function playCRT() {
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const o = document.createElement('div');
+  o.className = 'crt-overlay';
+  document.body.appendChild(o);
+  requestAnimationFrame(() => requestAnimationFrame(() => o.classList.add('go')));
+  setTimeout(() => o.remove(), 780);
+}
+/* ---------- 日间 / 夜间主题 ---------- */
+function syncThemeBtn() {
+  const b = $('#btn-theme');
+  if (b) b.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙';
+}
+function toggleTheme() {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('admin-theme', next); } catch (e) {}
+  syncThemeBtn();
+}
+/* ---------- 控制台内部背景：默认多张轮换（30s 淡入淡出） ---------- */
+const INNER_BG_POOL = ['login-art.jpg', 'login-art-alt.jpg', 'login-art-sketch.png'];
+const INNER_BG_CUSTOM = 'admin-inner-bg.jpg';
+const BG_ROTATE_KEY = 'admin-inner-bg-rotate';
+const BG_CUSTOM_KEY = 'admin-inner-bg-custom';
+function bgRotateOn() {
+  try { return localStorage.getItem(BG_ROTATE_KEY) !== '0'; } catch (e) { return true; }
+}
+function innerBgPool() {
+  const pool = INNER_BG_POOL.slice();
+  try { if (localStorage.getItem(BG_CUSTOM_KEY) === '1') pool.push(INNER_BG_CUSTOM); } catch (e) {}
+  return pool;
+}
+let _bgTimer = null, _bgKey = '';
+function stopInnerBg() { if (_bgTimer) { clearInterval(_bgTimer); _bgTimer = null; } }
+function applyInnerBg(force) {
+  const a = document.getElementById('bg-a'), b = document.getElementById('bg-b');
+  if (!a || !b) return;
+  const isLogin = document.body.classList.contains('is-login');
+  const on = bgRotateOn();
+  const pool = innerBgPool();
+  const key = (isLogin ? 'L' : 'C') + (on ? 'R' : 'D') + '|' + pool.join(',');
+  if (!force && key === _bgKey) return;
+  _bgKey = key;
+  stopInnerBg();
+  const layers = [a, b];
+  if (isLogin || !on) {
+    layers[0].style.opacity = '0'; layers[1].style.opacity = '0';
+    document.body.classList.remove('has-bg');
+    return;
+  }
+  document.body.classList.add('has-bg');
+  const url = (f) => `url("./${f}")`;
+  const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let idx = 0, front = 0;
+  layers[0].style.backgroundImage = url(pool[0]);
+  layers[0].style.opacity = '1'; layers[1].style.opacity = '0';
+  if (pool.length > 1) { const im = new Image(); im.src = './' + pool[1]; } // 预加载下一张
+  if (pool.length < 2 || reduced) return; // 单张或减弱动效：静止显示
+  _bgTimer = setInterval(() => {
+    idx = (idx + 1) % pool.length;
+    const back = 1 - front;
+    layers[back].style.backgroundImage = url(pool[idx]); // 已预加载，直接换不闪
+    layers[back].style.opacity = '1';
+    layers[front].style.opacity = '0';
+    front = back;
+    const nx = new Image(); nx.src = './' + pool[(idx + 1) % pool.length]; // 预加载再下一张
+  }, 30000);
 }
 
 /* 登录页：装饰图原图完整鲜明呈现（不做淡化/半透明处理），hue 174 青绿品牌风 */
@@ -423,16 +522,79 @@ routes.dashboard = async () => {
   view.innerHTML = '<div class="card"><h2>👋 欢迎回来，<span id="d-user"></span></h2><p class="hint">选个集合开始干活。保存后会自动 commit 到 GitHub，构建发版走 Pages。</p></div>';
   $('#d-user').textContent = localStorage.getItem(USER_KEY) || '';
   view.appendChild(grid);
-  for (const [key, col] of Object.entries(CFG.collections)) {
+  const monthPrefix = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const isDraft = (fm) => String(fm.draft).toLowerCase() === 'true';
+  const isPinned = (fm) => String(fm.pinned).toLowerCase() === 'true';
+  const inMonth = (d) => String(d || '').slice(0, 7) === monthPrefix;
+
+  // 文章：读每篇 frontmatter 算草稿/置顶/本月新增
+  const postStats = async (col) => {
+    const rows = [];
     try {
       const list = await ghGetFile(col.path);
-      const count = Array.isArray(list) ? list.filter((x) => x.name.endsWith('.md') || x.type === 'dir').length : 0;
-      const d = document.createElement('div');
-      d.className = 'stat';
-      d.innerHTML = `<div class="num">${count}</div><div class="lbl">${col.label}</div>`;
-      d.onclick = () => { location.hash = '#/' + key; };
-      grid.appendChild(d);
+      const dirs = (Array.isArray(list) ? list : []).filter((x) => x.type === 'dir');
+      const fill = async (e) => {
+        try {
+          const files = await ghGetFile(`${col.path}/${e.name}`);
+          const md = (Array.isArray(files) ? files : []).find((f) => f.name.endsWith('.md'));
+          if (!md) return;
+          const data = await ghGetFile(`${col.path}/${e.name}/${md.name}`);
+          const { fm } = parseFrontmatter(data.text);
+          rows.push(fm);
+        } catch (err) { /* 单篇失败跳过 */ }
+      };
+      for (let i = 0; i < dirs.length; i += 4) await Promise.all(dirs.slice(i, i + 4).map(fill));
     } catch (e) { /* 忽略 */ }
+    return {
+      total: rows.length,
+      details: [
+        ['📝', '草稿', rows.filter(isDraft).length],
+        ['📌', '置顶', rows.filter(isPinned).length],
+        ['🆕', '本月新增', rows.filter((fm) => inMonth(fm.published)).length],
+      ],
+    };
+  };
+  // 动态：文件名即日期 YYYY-MM-DD.md
+  const dynStats = async (col) => {
+    let files = [];
+    try {
+      const list = await ghGetFile(col.path);
+      files = (Array.isArray(list) ? list : []).filter((x) => x.name.endsWith('.md'));
+    } catch (e) { /* 忽略 */ }
+    const dates = files.map((f) => f.name.slice(0, 10)).sort().reverse();
+    return {
+      total: files.length,
+      details: [
+        ['🆕', '本月新增', dates.filter((d) => d.slice(0, 7) === monthPrefix).length],
+        ['🕘', '最新', dates[0] || '—'],
+      ],
+    };
+  };
+  const simpleStats = async (col) => {
+    let n = 0;
+    try {
+      const list = await ghGetFile(col.path);
+      n = (Array.isArray(list) ? list : []).filter((x) => x.name.endsWith('.md') || x.type === 'dir').length;
+    } catch (e) { /* 忽略 */ }
+    return { total: n, details: [] };
+  };
+
+  const jobs = { posts: postStats, dynamic: dynStats };
+  for (const [key, col] of Object.entries(CFG.collections)) {
+    const d = document.createElement('div');
+    d.className = 'stat';
+    d.innerHTML = `<div class="stat-head"><span class="lbl">${col.label}</span><span class="num">…</span></div><div class="stat-rows"></div>`;
+    d.onclick = () => { location.hash = '#/' + key; };
+    grid.appendChild(d);
+    (async () => {
+      const fn = jobs[key] || simpleStats;
+      const { total, details } = await fn(col);
+      const numEl = d.querySelector('.num');
+      if (numEl) numEl.textContent = total;
+      const rowsEl = d.querySelector('.stat-rows');
+      if (rowsEl) rowsEl.innerHTML = details.map(([icon, label, val]) =>
+        `<div class="stat-row"><span class="dot"></span>${icon} ${label} <b>${esc(String(val))}</b></div>`).join('');
+    })();
   }
 };
 
@@ -454,10 +616,18 @@ function listRoute(key) {
       listEl.innerHTML = '';
       // 动态按文件名倒序
       entries.sort((a, b) => b.name.localeCompare(a.name));
+      const rows = [];
       for (const e of entries) {
         const div = document.createElement('div');
         div.className = 'list-item';
-        div.innerHTML = `<span class="title">${esc(e.name)}</span><span class="meta">${e.type}</span>
+        let dateHtml = '';
+        if (key === 'dynamic') {
+          const m = e.name.match(/(\d{4}-\d{2}-\d{2})/);
+          dateHtml = `<span class="date">${m ? '📅 ' + m[1] : ''}</span>`;
+        } else if (key === 'posts') {
+          dateHtml = '<span class="date"></span>'; // 稍后异步回填 published
+        }
+        div.innerHTML = `<span class="title">${esc(e.name)}</span>${dateHtml}<span class="meta">${e.type}</span>
           <button class="btn btn-small">编辑</button>
           <button class="btn btn-small btn-danger">删除</button>`;
         const [btnEdit, btnDel] = div.querySelectorAll('button');
@@ -476,6 +646,26 @@ function listRoute(key) {
           } catch (err) { toast(err.message, true); }
         };
         listEl.appendChild(div);
+        rows.push({ e, div });
+      }
+      /* 文章列表：异步回填 published 写作时间 + 真实标题（每批 4 个并发） */
+      if (key === 'posts' && rows.length) {
+        const fill = async ({ e, div }) => {
+          try {
+            const files = await ghGetFile(`${col.path}/${e.name}`);
+            const md = (Array.isArray(files) ? files : []).find((f) => f.name.endsWith('.md'));
+            if (!md) return;
+            const data = await ghGetFile(`${col.path}/${e.name}/${md.name}`);
+            const { fm } = parseFrontmatter(data.text);
+            const dEl = div.querySelector('.date');
+            if (dEl && fm.published) dEl.textContent = '📅 ' + String(fm.published).slice(0, 10);
+            const tEl = div.querySelector('.title');
+            if (tEl && fm.title) tEl.textContent = fm.title;
+          } catch (err) { /* 单篇失败不影响其他 */ }
+        };
+        for (let i = 0; i < rows.length; i += 4) {
+          await Promise.all(rows.slice(i, i + 4).map(fill));
+        }
       }
     } catch (e) { listEl.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; }
   };
@@ -609,6 +799,12 @@ routes.edit = async (arg) => {
       <button class="btn btn-small" data-md="quote" type="button" title="引用">❝ 引用</button>
       <button class="btn btn-small" data-md="code" type="button" title="行内代码">‹› 代码</button>
       <button class="btn btn-small" data-md="link" type="button" title="链接">🔗 链接</button>
+      <button class="btn btn-small" id="btn-video" type="button" title="插入视频">🎬 视频</button>
+      <button class="btn btn-small" data-md="hl" type="button" title="高亮">✨ 高亮</button>
+      <button class="btn btn-small" data-md="codeblock" type="button" title="代码块">📦 代码块</button>
+      <button class="btn btn-small" data-md="task" type="button" title="任务列表">☑️ 任务</button>
+      <button class="btn btn-small" data-md="table" type="button" title="表格">🗒 表格</button>
+      <button class="btn btn-small" data-md="hr" type="button" title="分割线">➖ 分割线</button>
       <button class="btn btn-small" id="btn-img" type="button">🖼 插入图片</button>
       <input type="file" id="f-img" accept="image/*" multiple class="hidden">
       <input type="text" id="f-r2dir" value="${r2dirDefault}" placeholder="R2 目录，如 dynamic/2026-10-23">
@@ -644,8 +840,48 @@ routes.edit = async (arg) => {
       else if (k === 'quote') wrapSel('\n> ', '', '引用内容');
       else if (k === 'code') wrapSel('`', '`', '代码');
       else if (k === 'link') wrapSel('[', '](https://)', '链接文字');
+      else if (k === 'hl') wrapSel('==', '==', '高亮文字');
+      else if (k === 'codeblock') insertAtCursor('\n```js\n代码\n```\n');
+      else if (k === 'task') insertAtCursor('\n- [ ] 任务\n');
+      else if (k === 'table') insertAtCursor('\n| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n|  |  |  |\n');
+      else if (k === 'hr') insertAtCursor('\n---\n');
     };
   });
+  /* 在光标处插入文本（不包裹选区） */
+  function insertAtCursor(text) {
+    const s = ta.selectionStart, e = ta.selectionEnd;
+    ta.value = ta.value.slice(0, s) + text + ta.value.slice(e);
+    ta.focus();
+    ta.selectionStart = ta.selectionEnd = s + text.length;
+    updCount();
+  }
+  /* 🎬 视频：弹窗粘贴链接 → 转 iframe 嵌入 */
+  $('#btn-video').onclick = () => {
+    const m = document.createElement('div');
+    m.className = 'modal-mask';
+    m.innerHTML = `<div class="modal-card">
+      <h3>🎬 插入视频</h3>
+      <p class="hint">粘贴 YouTube / B站 视频链接，自动转为嵌入播放器（宽 100%、高 400）。</p>
+      <div class="field"><label>视频链接</label>
+        <input type="text" id="v-url" placeholder="https://www.youtube.com/watch?v=… 或 https://www.bilibili.com/video/BV…"></div>
+      <div class="modal-ops">
+        <button class="btn btn-ghost" id="v-cancel" type="button">取消</button>
+        <button class="btn" id="v-ok" type="button">插入</button>
+      </div></div>`;
+    view.appendChild(m);
+    const close = () => m.remove();
+    m.querySelector('#v-cancel').onclick = close;
+    m.addEventListener('mousedown', (ev) => { if (ev.target === m) close(); });
+    const input = m.querySelector('#v-url');
+    input.focus();
+    m.querySelector('#v-ok').onclick = () => {
+      const embed = parseVideoUrl(input.value);
+      if (!embed) { toast('识别不了这个链接，换个试试', true); return; }
+      insertAtCursor(`\n<iframe src="${embed}" width="100%" height="400" frameborder="0" allowfullscreen></iframe>\n`);
+      close();
+      toast('视频已插入');
+    };
+  };
   /* 封面上传 */
   if ($('#btn-cover')) {
     $('#btn-cover').onclick = () => $('#f-cover').click();
@@ -726,6 +962,113 @@ routes.edit = async (arg) => {
   };
 };
 
+/* ---------- 网站公告：src/config/announcementConfig.ts ---------- */
+const ANN_PATH = 'src/config/announcementConfig.ts';
+/* 从 TS 源码里提取 "key: \"...\"" 字符串（处理 \\ \" \n 转义） */
+function tsGetStr(src, key) {
+  const m = src.match(new RegExp(key + '\\s*:\\s*"((?:[^"\\\\\\n]|\\\\.)*)"'));
+  if (!m) return '';
+  return m[1].replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+}
+function tsGetBool(src, key, def) {
+  const m = src.match(new RegExp(key + '\\s*:\\s*(true|false)'));
+  return m ? m[1] === 'true' : def;
+}
+/* 写回 TS 双引号字符串时的转义 */
+function tsEsc(s) {
+  return String(s ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r?\n/g, '\\n');
+}
+function buildAnnouncementTs({ content, closable, linkEnable, linkText, linkUrl, external }) {
+  return `import type { AnnouncementConfig } from "../types/announcementConfig";
+
+export const announcementConfig: AnnouncementConfig = {
+\t// 公告标题，留空则走i18n默认标题
+\ttitle: "",
+
+\t// 公告内容
+\tcontent: "${tsEsc(content)}",
+
+\t// 是否允许用户关闭公告
+\tclosable: ${closable},
+
+\tlink: {
+\t\t// 启用链接
+\t\tenable: ${linkEnable},
+\t\t// 链接文本
+\t\ttext: "${tsEsc(linkText)}",
+\t\t// 链接 URL
+\t\turl: "${tsEsc(linkUrl)}",
+\t\t// 内部链接
+\t\texternal: ${external},
+\t},
+};
+`;
+}
+routes.announce = async () => {
+  view.innerHTML = '<div class="card"><h2>加载中…</h2></div>';
+  let sha = null, external = false;
+  let content = '', closable = true, linkEnable = true, linkText = '', linkUrl = '';
+  try {
+    const data = await ghGetFile(ANN_PATH);
+    sha = data.sha;
+    const src = data.text;
+    content = tsGetStr(src, 'content');
+    closable = tsGetBool(src, 'closable', true);
+    const linkBlock = (src.match(/link\s*:\s*\{([\s\S]*?)\}/) || [])[1] || '';
+    linkEnable = tsGetBool(linkBlock, 'enable', true);
+    linkText = tsGetStr(linkBlock, 'text');
+    linkUrl = tsGetStr(linkBlock, 'url');
+    external = tsGetBool(linkBlock, 'external', false);
+  } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+
+  view.innerHTML = `
+  <div class="toolbar">
+    <button class="btn btn-ghost" id="btn-back">← 返回</button>
+    <span class="spacer"></span>
+    <button class="btn" id="btn-save-ann">💾 保存公告</button>
+  </div>
+  <div class="card"><h2>📢 网站公告 <span class="sub">${ANN_PATH}</span></h2>
+    <p class="hint">网站顶部的公告栏，一句话即可。保存后重新构建网站生效。</p>
+    <div class="field"><label>公告内容</label>
+      <input type="text" id="ann-content" class="big" value="${esc(content)}" placeholder="一句话公告"></div>
+    <div class="field"><label>选项</label><div class="pills">
+      <label class="pill${closable ? ' on' : ''}"><input type="checkbox" id="ann-closable"${closable ? ' checked' : ''}>❌ 允许用户关闭</label>
+      <label class="pill${linkEnable ? ' on' : ''}"><input type="checkbox" id="ann-link-enable"${linkEnable ? ' checked' : ''}>🔗 显示链接</label>
+    </div></div>
+    <div id="ann-link-zone" class="${linkEnable ? '' : 'hidden'}">
+      <div class="grid2">
+        <div class="field"><label>链接文本</label><input type="text" id="ann-link-text" value="${esc(linkText)}" placeholder="了解更多"></div>
+        <div class="field"><label>链接 URL</label><input type="text" id="ann-link-url" value="${esc(linkUrl)}" placeholder="/about/"></div>
+      </div>
+    </div>
+  </div>`;
+
+  $('#btn-back').onclick = () => { location.hash = '#/dashboard'; };
+  view.querySelectorAll('.pill input[type=checkbox]').forEach((el) => {
+    el.onchange = () => {
+      el.closest('.pill').classList.toggle('on', el.checked);
+      if (el.id === 'ann-link-enable') $('#ann-link-zone').classList.toggle('hidden', !el.checked);
+    };
+  });
+  $('#btn-save-ann').onclick = async () => {
+    const text = buildAnnouncementTs({
+      content: $('#ann-content').value.trim(),
+      closable: $('#ann-closable').checked,
+      linkEnable: $('#ann-link-enable').checked,
+      linkText: $('#ann-link-text').value.trim(),
+      linkUrl: $('#ann-link-url').value.trim(),
+      external,
+    });
+    const btn = $('#btn-save-ann');
+    btn.disabled = true;
+    try {
+      await ghPutFile(ANN_PATH, text, sha, '更新网站公告 [管理台]');
+      toast('公告已保存，重新构建网站后生效');
+    } catch (e) { toast(e.message, true); }
+    btn.disabled = false;
+  };
+};
+
 /* ---------- 启动 ---------- */
 function hideLoader() {
   var w = document.getElementById('loader-wrapper');
@@ -735,6 +1078,9 @@ function hideLoader() {
 }
 async function init() {
   $('#btn-logout').onclick = logout;
+  const bt = $('#btn-theme');
+  if (bt) bt.onclick = toggleTheme;
+  syncThemeBtn();
   // OAuth 回调
   if (new URLSearchParams(location.search).has('code')) {
     view.innerHTML = '<div class="card"><h2>登录中…</h2></div>';

@@ -389,6 +389,20 @@ routes.images = async () => {
         <input type="file" id="adminbg-file" accept="image/*" class="hidden">
         <button class="btn btn-small" id="adminbg-btn">📤 上传替换当前背景</button>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>🖥 控制台内部背景 <span class="sub">登录后内页背景 · 默认多张轮换</span></h2>
+      <div class="switch-row">
+        <label class="switch"><input type="checkbox" id="innerbg-rotate" checked><span class="slider"></span></label>
+        <span>背景轮换 <span class="hint">多张背景每 30 秒淡入淡出切换；关闭则用纯色主题背景</span></span>
+      </div>
+      <p class="hint">轮换池：下面这些图会自动轮换播放。上传新图会加入轮换（自动转 JPEG 存为 admin-inner-bg.jpg）。</p>
+      <div class="img-grid" id="innerbg-grid"></div>
+      <div class="toolbar">
+        <input type="file" id="innerbg-file" accept="image/*" class="hidden">
+        <button class="btn btn-small" id="innerbg-btn">📤 上传图片加入轮换</button>
+      </div>
     </div>`;
 
   renderWallpapers();
@@ -436,6 +450,55 @@ routes.images = async () => {
       await replaceRepoImage('public/admin/login-art.jpg', f, { format: 'image/jpeg', quality: 0.85, label: '控制台背景' });
       toast('背景已替换（重新进登录页生效）');
       renderAdminBg();
+    } catch (err) { toast(err.message, true); }
+  };
+
+  // ---- 控制台内部背景：默认轮换 + 一个禁用开关 ----
+  const INNERBG_PRESETS = [
+    { file: 'login-art.jpg', name: '波奇酱' },
+    { file: 'login-art-alt.jpg', name: '星空海滨站' },
+    { file: 'login-art-sketch.png', name: '波奇草稿' },
+  ];
+  function renderInnerBg() {
+    const g = $('#innerbg-grid');
+    if (!g) return;
+    g.innerHTML = '';
+    let hasCustom = false;
+    try { hasCustom = localStorage.getItem('admin-inner-bg-custom') === '1'; } catch (e) {}
+    const list = INNERBG_PRESETS.concat(hasCustom ? [{ file: 'admin-inner-bg.jpg', name: '自定义上传' }] : []);
+    list.forEach((p) => {
+      const d = document.createElement('div');
+      d.className = 'img-cell';
+      d.innerHTML = `<img loading="lazy" src="${repoRawUrl('public/admin/' + p.file)}" alt="${esc(p.name)}">
+        <div class="url" title="${esc(p.name)}">${esc(p.name)}</div>`;
+      g.appendChild(d);
+    });
+    const sw = $('#innerbg-rotate');
+    if (sw && !sw._wired) {
+      sw._wired = true;
+      let on = true;
+      try { on = localStorage.getItem('admin-inner-bg-rotate') !== '0'; } catch (e) {}
+      sw.checked = on;
+      sw.onchange = () => {
+        try { localStorage.setItem('admin-inner-bg-rotate', sw.checked ? '1' : '0'); } catch (e) {}
+        applyInnerBg(true);
+        toast(sw.checked ? '背景轮换已开启' : '背景已关闭，改用纯色主题背景');
+      };
+    }
+  }
+  renderInnerBg();
+  $('#innerbg-btn').onclick = () => $('#innerbg-file').click();
+  $('#innerbg-file').onchange = async (e) => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    toast('上传中…');
+    try {
+      await replaceRepoImage('public/admin/admin-inner-bg.jpg', f, { format: 'image/jpeg', quality: 0.85, maxDim: 1920, label: '内部背景' });
+      try { localStorage.setItem('admin-inner-bg-custom', '1'); } catch (e2) {}
+      applyInnerBg(true);
+      renderInnerBg();
+      toast('已加入轮换');
     } catch (err) { toast(err.message, true); }
   };
 

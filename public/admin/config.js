@@ -15,6 +15,8 @@ window.ADMIN_CONFIG = {
 
   // 管理台登录页背景图（public/admin/ 下的文件名；在「图片管理 → 控制台背景」里切换）
   adminBg: 'login-art.jpg',
+  // 管理台内部（登录后）背景：默认多张轮换（login-art.jpg / login-art-alt.jpg / login-art-sketch.png
+  // + 用户上传的 admin-inner-bg.jpg）；在「图片管理 → 控制台内部背景」里用开关控制开/关
 
   // 内容集合
   collections: {
