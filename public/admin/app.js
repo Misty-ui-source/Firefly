@@ -111,7 +111,7 @@ async function finishLogin() {
   history.replaceState(null, '', location.pathname);
   const res = await fetch('/api/github-exchange', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, code_verifier: verifier }),
+    body: JSON.stringify({ code, code_verifier: verifier, client_id: window.ADMIN_CONFIG.githubClientId }),
   });
   if (!res.ok) { toast('换 token 失败: ' + res.status, true); return false; }
   const { access_token } = await res.json();
@@ -303,6 +303,9 @@ function router() {
   if (page !== 'login' && window._loginTimer) { clearInterval(window._loginTimer); window._loginTimer = null; }
   document.body.classList.toggle('is-login', page === 'login');
   nav();
+  /* 顶栏中间显示当前栏目名 */
+  const pt = $('#page-title');
+  if (pt) pt.textContent = page === 'login' ? '' : navLabel(page);
   applyInnerBg();
   const render = () => {
     if (routes[page]) routes[page](decodeURIComponent(arg || ''));
@@ -1342,18 +1345,20 @@ routes.friends = async () => {
   const tabs = view.querySelectorAll('[data-tab]');
   // 缓存友链列表供 RSS tab 用
   let cachedList = null;
-  const getList = async () => {
-    if (cachedList) return cachedList;
+  const getList = async (force) => {
+    if (cachedList && !force) return cachedList;
     const data = await ghGetFile(FRIENDS_PATH);
     cachedList = friendsParseBody(friendsExtract(data.text).body);
     return cachedList;
   };
+  // 友链管理里保存后，清掉缓存让 RSS 页读到最新的
+  const invalidateCache = () => { cachedList = null; };
   tabs.forEach((t) => { t.onclick = () => {
     tabs.forEach((x) => x.classList.add('btn-ghost'));
     t.classList.remove('btn-ghost');
-    if (t.dataset.tab === 'mgr') friendsMgr(body); else friendsRss(body, getList);
+    if (t.dataset.tab === 'mgr') friendsMgr(body, invalidateCache); else friendsRss(body, getList);
   }; });
-  friendsMgr(body);
+  friendsMgr(body, invalidateCache);
 };
 /* RSS 管理：列出所有订阅源，一键测试，坏源不影响构建 */
 async function friendsRss(body, getList) {
@@ -1405,7 +1410,7 @@ async function friendsRss(body, getList) {
     toast('全部测试完成');
   };
 }
-async function friendsMgr(body) {
+async function friendsMgr(body, invalidateCache) {
   body.innerHTML = '<div class="card"><p class="hint">正在读取仓库…</p></div>';
   let sha = null, head = '', tail = '', list = [];
   try {
@@ -1507,8 +1512,8 @@ async function friendsMgr(body) {
       <button class="btn" id="btn-fsave" disabled>💾 保存到仓库</button>
     </div>
     <p class="hint">↑↓ 调整顺序（保存后按此顺序展示）；停用=前台隐藏但保留。</p>
-    <div id="friend-list"></div>
-    <div id="friend-new"></div>`;
+    <div id="friend-new"></div>
+    <div id="friend-list"></div>`;
   render();
 
   $('#btn-fadd').onclick = () => {
@@ -1539,6 +1544,7 @@ async function friendsMgr(body) {
       const r = await ghPutFile(FRIENDS_PATH, text, sha, '更新友链 [管理台]');
       sha = r.content.sha;
       dirty.v = false;
+      if (invalidateCache) invalidateCache();
       toast('已保存，构建后生效');
     } catch (e) { toast(e.message, true); btn.disabled = false; }
   };
