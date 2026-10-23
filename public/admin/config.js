@@ -50,4 +50,13 @@ window.ADMIN_CONFIG = {
       fields: ['title', 'description'],
     },
   },
+
+  // 控制台导航栏布局：在「··· → 🧭 导航」里可视化调整（顺序/改名/主栏与···分组）
+  // key 说明：dashboard=首页 stats=写作 posts/dynamic/projects/spec=内容集合
+  //           images=图片 music=音乐 gallery=相册 announce=公告 friends=友链 booknav=书签
+  navLayout: {
+    primary: ['dashboard', 'stats', 'posts', 'dynamic', 'projects', 'spec'],
+    secondary: ['images', 'music', 'gallery', 'announce', 'friends', 'booknav'],
+    labels: {}, // 自定义名称，如 { dashboard: '🏠 主页' }；不填则用默认
+  },
 };
