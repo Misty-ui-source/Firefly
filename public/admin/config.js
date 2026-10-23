@@ -13,19 +13,22 @@ window.ADMIN_CONFIG = {
   // 例如绑定了自定义域名 img.lanerc.me，就填 https://img.lanerc.me
   r2PublicBase: 'https://PASTE_YOUR_R2_PUBLIC_DOMAIN',
 
+  // 管理台登录页背景图（public/admin/ 下的文件名；在「图片管理 → 控制台背景」里切换）
+  adminBg: 'login-art.png',
+
   // 内容集合
   collections: {
     posts: {
       label: '文章',
       path: 'src/content/posts',
       mode: 'dir', // 每篇文章一个目录
-      fields: ['title', 'published', 'updated', 'description', 'image', 'tags', 'category', 'draft'],
+      fields: ['title', 'published', 'updated', 'description', 'image', 'tags', 'category', 'draft', 'pinned', 'password', 'passwordHint'],
     },
     dynamic: {
       label: '动态',
       path: 'src/content/dynamic',
       mode: 'file', // 平铺 .md 文件
-      fields: ['published', 'pinned'],
+      fields: ['published', 'pinned', 'location'],
       newFileName: () => {
         const d = new Date();
         const p = (n) => String(n).padStart(2, '0');

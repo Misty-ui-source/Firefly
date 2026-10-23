@@ -223,33 +223,71 @@ function nav() {
   const n = $('#nav');
   n.innerHTML = '';
   n.classList.remove('hidden');
-  const items = [['dashboard', '🏠 首页'], ...Object.entries(CFG.collections).map(([k, c]) => [k, c.label])];
+  const items = [['dashboard', '🏠 首页'], ...Object.entries(CFG.collections).map(([k, c]) => [k, c.label]), ['images', '🖼 图片'], ['music', '🎵 音乐'], ['gallery', '📷 相册']];
+  const cur = location.hash.replace('#/', '');
   for (const [key, label] of items) {
     const b = document.createElement('button');
     b.textContent = label;
-    if (location.hash.replace('#/', '') === key || (location.hash === '' && key === 'dashboard')) b.classList.add('active');
-    b.onclick = () => { location.hash = '#/' + key; };
+    if (cur === key || (location.hash === '' && key === 'dashboard') || (key === 'gallery' && cur.startsWith('gallery-'))) b.classList.add('active');
+    b.onclick = () => { n.classList.remove('open'); location.hash = '#/' + key; };
     n.appendChild(b);
   }
+  const mb = $('#btn-menu');
+  if (mb && !mb._wired) { mb._wired = true; mb.onclick = () => n.classList.toggle('open'); }
 }
 function router() {
   const h = location.hash.replace('#/', '') || 'dashboard';
-  const [page, arg] = h.split('/');
+  const [page, ...rest] = h.split('/');
+  const arg = rest.join('/');
+  document.body.classList.toggle('is-login', page === 'login');
   nav();
   if (routes[page]) routes[page](decodeURIComponent(arg || ''));
   else routes.dashboard();
 }
 
-/* 登录页 */
+/* 登录页：装饰图原图完整鲜明呈现（不做淡化/半透明处理），hue 174 青绿品牌风 */
 routes.login = () => {
+  document.body.classList.add('is-login');
   $('#nav').classList.add('hidden');
-  view.innerHTML = `<div class="card login-wrap">
-    <div class="big">🛠</div>
-    <h2>Alexander 管理台</h2>
-    <p class="hint">用 GitHub 登录，浏览器直写仓库，图片存 R2</p>
-    <button class="btn" id="btn-login">用 GitHub 登录</button>
+  view.innerHTML = `<div class="login-stage">
+    <div class="login-card">
+      <div class="login-body">
+        <img class="login-avatar" src="/avatar.png" alt="zhz" onerror="this.style.display='none'">
+        <h1>Alexander <span class="brand">管理台</span></h1>
+        <p class="login-desc">博客的中控室 —— 内容、图片、音乐，一处打理。</p>
+        <ul class="login-feats">
+          <li><span>🖼</span>图片管理：背景 / 头像 / 贴纸一键换</li>
+          <li><span>🎵</span>音乐管理：歌单增删改、调顺序</li>
+          <li><span>📷</span>相册管理：新建相册、批量传图</li>
+          <li><span>📝</span>内容管理：文章 / 动态 / 项目 / 单页</li>
+          <li><span>☁️</span>R2 图床：上传自动转 WebP</li>
+        </ul>
+        <button class="btn btn-login" id="btn-login">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+          用 GitHub 登录
+        </button>
+        <p class="hint">登录即授权浏览器直写仓库 · 每次保存自动 commit</p>
+      </div>
+    </div>
+    <div class="login-foot">🛠 Alexander 自研管理台 · hue 174</div>
   </div>`;
   $('#btn-login').onclick = startLogin;
+  // 氛围感：漂浮的音符粒子（孤独摇滚主题）
+  const stage = view.querySelector('.login-stage');
+  const notes = ['♪', '♫', '♩', '♬'];
+  for (let i = 0; i < 16; i++) {
+    const s = document.createElement('span');
+    s.className = 'note-particle';
+    s.textContent = notes[i % notes.length];
+    s.style.left = (Math.random() * 100) + '%';
+    s.style.fontSize = (14 + Math.random() * 22) + 'px';
+    s.style.animationDuration = (7 + Math.random() * 8) + 's';
+    s.style.animationDelay = (-Math.random() * 12) + 's';
+    stage.appendChild(s);
+  }
+  /* 控制台背景图：config.js 的 adminBg 可切换（图片管理 → 控制台背景） */
+  const bgFile = (CFG.adminBg || 'login-art.png').replace(/^\/+/, '');
+  stage.style.backgroundImage = `url("./${bgFile}")`;
 };
 
 /* 首页 */
@@ -346,78 +384,204 @@ routes.edit = async (arg) => {
     }
   } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
 
-  const fieldDefs = {
-    title: ['标题 title', 'text'], published: ['发布时间 published', 'text'],
-    updated: ['更新时间 updated', 'text'], description: ['描述 description', 'text'],
-    image: ['封面 image', 'text'], tags: ['标签 tags（逗号分隔）', 'text'],
-    category: ['分类 category', 'text'], draft: ['草稿 draft', 'check'],
-    pinned: ['置顶 pinned', 'check'],
+  /* ============ 表单：doulor 式分区编辑器 ============ */
+  const isPost = key === 'posts';
+  const isDynamic = key === 'dynamic';
+  const isTrue = (v) => String(v).toLowerCase() === 'true';
+  const dtLocal = (v) => {
+    const m = String(v || '').match(/(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
+    return m ? `${m[1]}T${m[2]}` : '';
   };
-  const fields = col.fields || Object.keys(fieldDefs);
-  let formHtml = '';
-  for (const f of fields) {
-    const [label, type] = fieldDefs[f] || [f, 'text'];
-    let val = fm[f] ?? '';
-    if (Array.isArray(val)) val = val.join(', ');
-    if (type === 'check') {
-      const checked = String(val).toLowerCase() === 'true' ? 'checked' : '';
-      formHtml += `<div class="field"><label class="checkline"><input type="checkbox" data-f="${f}" ${checked}> ${esc(label)}</label></div>`;
-    } else {
-      formHtml += `<div class="field"><label>${esc(label)}</label><input type="text" data-f="${f}" value="${esc(val)}"></div>`;
+  const pill = (f, label, on) =>
+    `<label class="pill${on ? ' on' : ''}"><input type="checkbox" data-f="${f}"${on ? ' checked' : ''}>${label}</label>`;
+
+  let infoHtml = '';
+  if (isPost) {
+    const hasPw = !!(fm.password || fm.passwordHint);
+    infoHtml = `
+    <div class="field"><label>标题</label>
+      <input type="text" data-f="title" class="big" value="${esc(fm.title ?? '')}" placeholder="文章标题"></div>
+    <div class="grid2">
+      <div class="field"><label>发布时间</label><input type="datetime-local" id="f-published" value="${dtLocal(fm.published)}"></div>
+      <div class="field"><label>更新时间（可选）</label><input type="datetime-local" id="f-updated" value="${dtLocal(fm.updated)}"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>分类</label><input type="text" data-f="category" value="${esc(fm.category ?? '')}" placeholder="如：技术"></div>
+      <div class="field"><label>标签（逗号分隔）</label><input type="text" data-f="tags" value="${esc(Array.isArray(fm.tags) ? fm.tags.join(', ') : (fm.tags ?? ''))}" placeholder="如：AI, 折腾"></div>
+    </div>
+    <div class="field"><label>描述</label>
+      <textarea data-f="description" rows="2" placeholder="一句话简介，显示在文章列表页">${esc(fm.description ?? '')}</textarea></div>
+    <div class="field"><label>封面</label>
+      <div class="cover-row">
+        <input type="text" data-f="image" id="f-image" value="${esc(fm.image ?? '')}" placeholder=https://… 或 /assets/…">
+        <input type="file" id="f-cover" accept="image/*" class="hidden">
+        <button class="btn btn-small" id="btn-cover" type="button">🖼 上传</button>
+      </div>
+      <div class="cover-prev" id="cover-prev">${fm.image ? `<img src="${esc(fm.image)}" alt="封面预览">` : '<span class="hint">暂无封面（留空则不显示）</span>'}</div>
+    </div>
+    <div class="field"><label>选项</label><div class="pills">
+      ${pill('draft', '📝 草稿', isTrue(fm.draft))}
+      ${pill('pinned', '📌 置顶', isTrue(fm.pinned))}
+      ${pill('_pw', '🔒 密码保护', hasPw)}
+    </div></div>
+    <div id="pw-zone" class="${hasPw ? '' : 'hidden'}"><div class="grid2">
+      <div class="field"><label>访问密码</label><input type="text" data-f="password" value="${esc(fm.password ?? '')}" placeholder="留空则不设"></div>
+      <div class="field"><label>密码提示</label><input type="text" data-f="passwordHint" value="${esc(fm.passwordHint ?? '')}" placeholder="给读者的提示"></div>
+    </div></div>
+    ${isNew && col.mode === 'dir' ? `<div class="grid2">
+      <div class="field"><label>目录名（英文）</label><input type="text" id="f-dirname" placeholder="my-new-post"></div>
+      <div class="field"><label>文件名</label><input type="text" id="f-filename" value="index.md"></div>
+    </div>` : ''}`;
+  } else if (isDynamic) {
+    infoHtml = `
+    <div class="grid2">
+      <div class="field"><label>发布时间</label><input type="datetime-local" id="f-published" value="${dtLocal(fm.published)}"></div>
+      <div class="field"><label>地点（可选）</label><input type="text" data-f="location" value="${esc(fm.location ?? '')}" placeholder="如：上海"></div>
+    </div>
+    <div class="field"><label>选项</label><div class="pills">
+      ${pill('pinned', '📌 置顶', isTrue(fm.pinned))}
+      <button class="btn btn-small" id="btn-ai-tag" type="button">📰 插入【Muse AI 发布】</button>
+    </div></div>
+    <p class="hint">💡 动态支持 Markdown；配图点下方「🖼 插入图片」上传，R2 目录已自动填好今天的日期。</p>`;
+  } else {
+    /* 项目 / 单页：通用表单 */
+    const fieldDefs = {
+      title: '标题', published: '发布时间', description: '描述',
+      image: '封面', tags: '标签（逗号分隔）', draft: '草稿',
+    };
+    const fields = col.fields || Object.keys(fieldDefs);
+    for (const f of fields) {
+      const label = fieldDefs[f] || f;
+      let val = fm[f] ?? '';
+      if (Array.isArray(val)) val = val.join(', ');
+      if (f === 'draft') {
+        infoHtml += `<div class="field"><label>选项</label><div class="pills">${pill('draft', '📝 草稿', isTrue(val))}</div></div>`;
+      } else if (f === 'published') {
+        infoHtml += `<div class="field"><label>${esc(label)}</label><input type="datetime-local" id="f-published" value="${dtLocal(val)}"></div>`;
+      } else if (f === 'description') {
+        infoHtml += `<div class="field"><label>${esc(label)}</label><textarea data-f="${f}" rows="2">${esc(val)}</textarea></div>`;
+      } else {
+        infoHtml += `<div class="field"><label>${esc(label)}</label><input type="text" data-f="${f}" value="${esc(val)}"></div>`;
+      }
     }
   }
-  if (isNew && col.mode === 'dir') {
-    formHtml = `<div class="field"><label>目录名（英文）</label><input type="text" id="f-dirname" placeholder="my-new-post"></div>
-      <div class="field"><label>文件名</label><input type="text" id="f-filename" value="index.md"></div>` + formHtml;
-  }
 
-  view.innerHTML = `<div class="toolbar">
-      <button class="btn btn-ghost" id="btn-back">← 返回</button>
-      <span class="spacer"></span>
-      <button class="btn btn-ghost" id="btn-preview">预览</button>
-      <button class="btn" id="btn-save">💾 保存发布</button>
+  const r2dirDefault = isDynamic ? `dynamic/${new Date().toISOString().slice(0, 10)}` : '';
+  view.innerHTML = `
+  <div class="toolbar">
+    <button class="btn btn-ghost" id="btn-back">← 返回</button>
+    <span class="spacer"></span>
+    <button class="btn btn-ghost" id="btn-preview">👁 预览</button>
+    <button class="btn" id="btn-save">💾 保存发布</button>
+  </div>
+  <div class="card"><h2>${isNew ? '新建' : '编辑'}${col.label} <span class="sub">${esc(filePath || '')}</span></h2>
+    ${infoHtml}
+  </div>
+  <div class="card"><h2>正文 <span class="sub">Markdown · <span id="char-count">0</span> 字</span></h2>
+    <div class="mdbar">
+      <button class="btn btn-small" data-md="bold" type="button" title="加粗"><b>B</b></button>
+      <button class="btn btn-small" data-md="italic" type="button" title="斜体"><i>I</i></button>
+      <button class="btn btn-small" data-md="quote" type="button" title="引用">❝ 引用</button>
+      <button class="btn btn-small" data-md="code" type="button" title="行内代码">‹› 代码</button>
+      <button class="btn btn-small" data-md="link" type="button" title="链接">🔗 链接</button>
+      <button class="btn btn-small" id="btn-img" type="button">🖼 插入图片</button>
+      <input type="file" id="f-img" accept="image/*" multiple class="hidden">
+      <input type="text" id="f-r2dir" value="${r2dirDefault}" placeholder="R2 目录，如 dynamic/2026-10-23">
     </div>
-    <div class="card"><h2>${isNew ? '新建' : '编辑'}${col.label} <span class="sub">${esc(filePath || '')}</span></h2>${formHtml}</div>
-    <div class="card"><h2>正文 <span class="sub">Markdown</span></h2>
-      <div class="toolbar"><input type="file" id="f-img" accept="image/*" multiple class="hidden">
-        <button class="btn btn-small" id="btn-img">🖼 插入图片（R2）</button>
-        <input type="text" id="f-r2dir" placeholder="R2 目录名，如 dynamic/2026-10-23" style="flex:1;border:3px solid #000;border-radius:10px;padding:6px 10px">
-      </div>
-      <div class="field"><textarea id="md-body" class="code" rows="18">${esc(body)}</textarea></div>
-      <div id="preview" class="preview hidden"></div>
-    </div>`;
+    <div class="field"><textarea id="md-body" class="code" rows="20">${esc(body)}</textarea></div>
+    <div id="preview" class="preview hidden"></div>
+  </div>`;
+
+  /* pill 开关样式 + 密码区显隐 */
+  view.querySelectorAll('.pill input[type=checkbox]').forEach((el) => {
+    el.onchange = () => {
+      el.closest('.pill').classList.toggle('on', el.checked);
+      if (el.dataset.f === '_pw') $('#pw-zone').classList.toggle('hidden', !el.checked);
+    };
+  });
+  const ta = $('#md-body');
+  const updCount = () => { $('#char-count').textContent = ta.value.replace(/\s/g, '').length; };
+  ta.addEventListener('input', updCount); updCount();
+  /* markdown 快捷按钮：在光标处包裹/插入 */
+  const wrapSel = (before, after, placeholder) => {
+    const s = ta.selectionStart, e = ta.selectionEnd;
+    const sel = ta.value.slice(s, e) || placeholder;
+    ta.value = ta.value.slice(0, s) + before + sel + after + ta.value.slice(e);
+    ta.focus();
+    ta.selectionStart = s + before.length; ta.selectionEnd = s + before.length + sel.length;
+    updCount();
+  };
+  view.querySelectorAll('[data-md]').forEach((b) => {
+    b.onclick = () => {
+      const k = b.dataset.md;
+      if (k === 'bold') wrapSel('**', '**', '加粗文字');
+      else if (k === 'italic') wrapSel('*', '*', '斜体文字');
+      else if (k === 'quote') wrapSel('\n> ', '', '引用内容');
+      else if (k === 'code') wrapSel('`', '`', '代码');
+      else if (k === 'link') wrapSel('[', '](https://)', '链接文字');
+    };
+  });
+  /* 封面上传 */
+  if ($('#btn-cover')) {
+    $('#btn-cover').onclick = () => $('#f-cover').click();
+    $('#f-cover').onchange = async (e) => {
+      const f = e.target.files[0]; e.target.value = '';
+      if (!f) return;
+      toast('上传封面中…');
+      try {
+        const { urls } = await uploadImages([f], 'covers');
+        $('#f-image').value = urls[0];
+        $('#cover-prev').innerHTML = `<img src="${esc(urls[0])}" alt="封面预览">`;
+        toast('封面已上传');
+      } catch (err) { toast(err.message, true); }
+    };
+  }
+  /* 动态：一键插入 AI 发布标记 */
+  if ($('#btn-ai-tag')) $('#btn-ai-tag').onclick = () => {
+    ta.value = '【Muse AI 发布】' + ta.value; ta.focus(); updCount();
+  };
 
   $('#btn-back').onclick = () => { location.hash = '#/' + key; };
   $('#btn-preview').onclick = () => {
     const p = $('#preview');
     p.classList.toggle('hidden');
-    p.innerHTML = mdPreview($('#md-body').value);
+    if (!p.classList.contains('hidden')) p.innerHTML = mdPreview(ta.value);
   };
   $('#btn-img').onclick = () => $('#f-img').click();
   $('#f-img').onchange = async (e) => {
     const files = Array.from(e.target.files);
+    e.target.value = '';
     if (!files.length) return;
     const dir = $('#f-r2dir').value.trim();
     toast('上传中…');
     try {
       const { urls } = await uploadImages(files, dir);
-      const ta = $('#md-body');
       const ins = urls.map((u) => `![图片](${u})`).join('\n');
       const pos = ta.selectionStart;
       ta.value = ta.value.slice(0, pos) + '\n' + ins + '\n' + ta.value.slice(pos);
       toast(`上传成功 ${urls.length} 张`);
+      updCount();
     } catch (err) { toast(err.message, true); }
-    e.target.value = '';
   };
   $('#btn-save').onclick = async () => {
     const newFm = {};
     view.querySelectorAll('[data-f]').forEach((el) => {
       const f = el.dataset.f;
+      if (f === '_pw') return; // 仅作开关，不写入
       if (el.type === 'checkbox') newFm[f] = el.checked ? 'true' : 'false';
       else if (f === 'tags') newFm[f] = el.value.split(',').map((s) => s.trim()).filter(Boolean);
-      else newFm[f] = el.value.trim();
+      else if (el.value.trim() !== '') newFm[f] = el.value.trim();
     });
-    const newBody = $('#md-body').value;
+    /* 密码保护未勾选 → 不写 password 字段 */
+    const pwOn = view.querySelector('[data-f="_pw"]');
+    if (pwOn && !pwOn.checked) { delete newFm.password; delete newFm.passwordHint; }
+    /* 发布时间：datetime-local → ISO+08:00 */
+    const toISO = (v) => (v && v.length === 16 ? v + ':00+08:00' : v);
+    const pv = $('#f-published') ? $('#f-published').value : '';
+    newFm.published = pv ? toISO(pv) : (fm.published || nowISO());
+    const uv = $('#f-updated') ? $('#f-updated').value : '';
+    if (uv) newFm.updated = toISO(uv);
+    const newBody = ta.value;
     let path = filePath;
     if (isNew) {
       if (col.mode === 'dir') {
@@ -438,19 +602,26 @@ routes.edit = async (arg) => {
 };
 
 /* ---------- 启动 ---------- */
+function hideLoader() {
+  var w = document.getElementById('loader-wrapper');
+  if (!w) return;
+  w.classList.add('loaded');
+  setTimeout(function () { w.remove(); }, 2000);
+}
 async function init() {
   $('#btn-logout').onclick = logout;
   // OAuth 回调
   if (new URLSearchParams(location.search).has('code')) {
     view.innerHTML = '<div class="card"><h2>登录中…</h2></div>';
     const ok = await finishLogin().catch((e) => { toast(e.message, true); return false; });
-    if (!ok) { routes.login(); return; }
+    if (!ok) { routes.login(); hideLoader(); return; }
   }
-  if (!token()) { routes.login(); return; }
+  if (!token()) { routes.login(); hideLoader(); return; }
   $('#user-badge').textContent = '👤 ' + (localStorage.getItem(USER_KEY) || '');
   $('#user-badge').classList.remove('hidden');
   $('#btn-logout').classList.remove('hidden');
   window.addEventListener('hashchange', router);
   router();
+  hideLoader();
 }
 init();

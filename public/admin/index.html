@@ -5,12 +5,40 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>管理台 - Alexander</title>
 <link rel="stylesheet" href="./style.css">
+<style>
+/* 全屏加载页（仿 nekro.top）：三环 spinner + 站名，加载完左右面板滑开 */
+#loader-wrapper{position:fixed;top:0;left:0;width:100%;height:100%;z-index:999;overflow:hidden}
+#loader-wrapper .loader{width:100%;height:100%;position:absolute;top:0;left:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#loader-wrapper .loader-circle{position:relative;width:150px;height:150px;border-radius:50%;border:3px solid transparent;border-top-color:#2dd4bf;animation:spin 1.8s linear infinite;z-index:2}
+#loader-wrapper .loader-circle:before{content:"";position:absolute;top:5px;left:5px;right:5px;bottom:5px;border-radius:50%;border:3px solid transparent;border-top-color:#a4a4a4;animation:spin-reverse .6s linear infinite}
+#loader-wrapper .loader-circle:after{content:"";position:absolute;top:15px;left:15px;right:15px;bottom:15px;border-radius:50%;border:3px solid transparent;border-top-color:#d3d3d3;animation:spin 1s linear infinite}
+#loader-wrapper .loader-text{display:flex;flex-direction:column;align-items:center;color:#fff;z-index:2;margin-top:40px;font-size:24px;font-weight:800}
+#loader-wrapper .loader-text .tip{margin-top:6px;font-size:18px;opacity:.6}
+#loader-wrapper .loader-section{position:fixed;top:0;width:51%;height:100%;background:#1a1a1a;z-index:1}
+#loader-wrapper .loader-section.section-left{left:0}
+#loader-wrapper .loader-section.section-right{right:0}
+#loader-wrapper.loaded{visibility:hidden;transform:translateY(-100%);transition:transform .3s 1s ease-out,visibility .3s 1s ease-out}
+#loader-wrapper.loaded .loader-circle,#loader-wrapper.loaded .loader-text{opacity:0;transition:opacity .3s ease-out}
+#loader-wrapper.loaded .section-left{transform:translate(-100%);transition:transform .5s .3s cubic-bezier(.645,.045,.355,1)}
+#loader-wrapper.loaded .section-right{transform:translate(100%);transition:transform .5s .3s cubic-bezier(.645,.045,.355,1)}
+@keyframes spin{0%{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes spin-reverse{0%{transform:rotate(0)}to{transform:rotate(-360deg)}}
+</style>
 </head>
 <body>
+<div id="loader-wrapper">
+  <div class="loader">
+    <div class="loader-circle"></div>
+    <div class="loader-text"><span class="name">Alexander 管理台</span><span class="tip">加载中…</span></div>
+  </div>
+  <div class="loader-section section-left"></div>
+  <div class="loader-section section-right"></div>
+</div>
 <div id="app">
   <header class="topbar">
     <div class="topbar-inner">
       <span class="logo">🛠 Alexander 管理台</span>
+      <button id="btn-menu" class="menu-btn">☰ 菜单</button>
       <nav id="nav" class="nav hidden"></nav>
       <div class="topbar-right">
         <span id="user-badge" class="user-badge hidden"></span>
@@ -23,5 +51,7 @@
 </div>
 <script src="./config.js"></script>
 <script src="./app.js"></script>
+<script src="./media.js"></script>
+<script src="./gallery.js"></script>
 </body>
 </html>
