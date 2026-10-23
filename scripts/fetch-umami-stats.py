@@ -9,6 +9,7 @@ import json
 import os
 import sys
 import time
+import datetime
 import urllib.request
 import urllib.error
 import urllib.parse
@@ -78,7 +79,9 @@ def main():
     WEBSITE_ID = info["websiteId"]
 
     now = ms(0)
-    result = {"updatedAt": time.strftime("%Y-%m-%dT%H:%M:%S+08:00", time.localtime())}
+    # 用显式北京时间，不依赖构建机器的本地时区（Cloudflare 构建机是 UTC）
+    beijing_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))
+    result = {"updatedAt": beijing_now.strftime("%Y-%m-%dT%H:%M:%S+08:00")}
 
     def paced_get(path, params=None):
         """带间隔的请求，避免触发 Umami 限流"""
