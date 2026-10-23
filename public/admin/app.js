@@ -1,4 +1,4 @@
-/* Alexander 管理台：原生 JS 单页，无构建步骤
+/* Alexander Console：原生 JS 单页，无构建步骤
  * 登录 GitHub OAuth(PKCE) → 浏览器直调 GitHub API 读写仓库 → 图片走 R2
  */
 'use strict';
@@ -264,7 +264,7 @@ function router() {
   const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (page === 'login' || reduced) { render(); return; }
   if (wasLogin) { playCRT(); render(); return; } // 从登录页进入：CRT 开机动画
-  /* 虫洞跳转：旧视图缩+模糊+淡出，新视图由大恢复 */
+  /* 栏目切换：虫洞过渡（旧视图缩+模糊+淡出，新视图由大恢复） */
   const seq = ++router._seq;
   view.classList.add('view-out');
   setTimeout(() => {

@@ -252,6 +252,7 @@ body.has-bg:not(.is-login)::before {
 #view.view-in { animation: worm-in .22s ease-out; }
 @keyframes worm-out { to { transform: scale(.96); filter: blur(6px); opacity: 0; } }
 @keyframes worm-in { from { transform: scale(1.04); filter: blur(6px); opacity: 0; } to { transform: scale(1); filter: blur(0); opacity: 1; } }
+
 @media (prefers-reduced-motion: reduce) {
   #view.view-out, #view.view-in, .crt-overlay.go, .crt-overlay.go::after, .modal-card { animation: none !important; }
   .bg-layer { transition: none; }
@@ -373,8 +374,8 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
   .clock-time { font-size: 30px; }
   .login-top-row { flex-direction: column; }
 }
-/* 登录页移动端：分栏改上下堆叠 */
-@media (max-width: 900px) {
+/* 登录页移动端：分栏改上下堆叠（1100px 以下平板也堆叠，避免标题被右侧卡片压住） */
+@media (max-width: 1100px) {
   .login-layout { flex-direction: column; }
   .login-left { flex: none; width: 100%; align-items: center; text-align: center; }
   .login-id { flex-direction: column; gap: 10px; }
