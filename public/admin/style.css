@@ -93,6 +93,7 @@ body.has-bg:not(.is-login)::before {
 }
 .nav button.active, .nav button:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.page-title { flex: 0 1 auto; margin: 0 auto; text-align: center; font-weight: 700; font-size: 15px; color: var(--text); opacity: .55; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; max-width: 200px; }
 .user-badge {
   background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 999px;
   padding: 4px 12px; font-size: 13px; font-weight: 600; color: var(--text);
