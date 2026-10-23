@@ -14,7 +14,7 @@ window.ADMIN_CONFIG = {
   r2PublicBase: 'https://PASTE_YOUR_R2_PUBLIC_DOMAIN',
 
   // 管理台登录页背景图（public/admin/ 下的文件名；在「图片管理 → 控制台背景」里切换）
-  adminBg: 'login-art.png',
+  adminBg: 'login-art.jpg',
 
   // 内容集合
   collections: {

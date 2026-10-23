@@ -1,8 +1,8 @@
-/* Alexander 管理台：hue 174 青绿 + HY 式 3px 粗边卡片 */
+/* Alexander Console：暗红主题 + HY 式 3px 粗边卡片 */
 :root {
-  --teal: hsl(174, 65%, 42%);
-  --teal-dark: hsl(174, 65%, 32%);
-  --teal-light: hsl(174, 60%, 92%);
+  --teal: hsl(0, 62%, 38%);
+  --teal-dark: hsl(0, 62%, 28%);
+  --teal-light: hsl(0, 55%, 93%);
   --ink: #111;
   --paper: #fffdf7;
   --muted: #6b7280;
@@ -113,7 +113,7 @@ body {
 .stat .num { font-size: 30px; font-weight: 800; }
 .stat .lbl { font-size: 13px; color: var(--muted); font-weight: 700; }
 
-/* ---------- 登录页 ---------- */
+/* ---------- 登录页（nekro.top 式毛玻璃） ---------- */
 body.is-login { background: #0a1f1d; }
 body.is-login .topbar { display: none; }
 body.is-login .view { max-width: none; margin: 0; padding: 0; }
@@ -121,28 +121,98 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
   min-height: 100vh;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 20px; padding: 36px 20px;
-  /* 整个登录界面就是波奇图：全屏背景，原图不做任何淡化/遮罩处理 */
-  background: url("./login-art.png") center / cover no-repeat #0d2b28;
+  /* 波奇全屏背景，原图不做任何淡化/遮罩处理 */
+  background: url("./login-art.jpg") center / cover no-repeat #0d2b28;
+  position: relative; overflow: hidden;
 }
-.login-card {
-  width: min(480px, 92vw);
-  background: rgba(255, 253, 247, .97);
-  border: 3px solid #000; border-radius: 22px;
-  box-shadow: 10px 10px 0 rgba(0, 0, 0, .75), 0 0 90px rgba(45, 212, 191, .45);
-  animation: card-glow 4s ease-in-out infinite;
-  overflow: hidden;
-  position: relative; z-index: 2;
+/* 玻璃卡片通用 */
+.glass-card {
+  background: rgba(20, 30, 38, 0.10);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  padding: 20px 24px; color: #fff;
 }
-@keyframes card-glow {
-  0%, 100% { box-shadow: 10px 10px 0 rgba(0, 0, 0, .75), 0 0 60px rgba(45, 212, 191, .35); }
-  50% { box-shadow: 10px 10px 0 rgba(0, 0, 0, .75), 0 0 110px rgba(45, 212, 191, .6); }
+/* 电子表字体（DSEG 七段数码管） */
+@font-face {
+  font-family: 'DSEG7';
+  src: url('./fonts/DSEG7.woff2') format('woff2');
+  font-display: swap;
 }
-/* 氛围感：漂浮的音符粒子（纯装饰，不碰背景图本身） */
-.login-stage { position: relative; overflow: hidden; }
+/* 登录页左右分栏（学 nekro.top 首页排版：铺满全屏、左右贴边） */
+.login-layout {
+  display: flex; gap: 40px; align-items: stretch; justify-content: space-between;
+  width: min(1360px, 94vw); position: relative; z-index: 2;
+}
+.login-left { flex: 0 0 400px; display: flex; flex-direction: column; justify-content: space-between; gap: 22px; min-width: 0; padding: 36px 0; }
+.login-id { display: flex; align-items: center; gap: 18px; }
+.login-avatar {
+  width: 110px; height: 110px; border-radius: 50%; flex: 0 0 auto;
+  border: 3px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  object-fit: cover; background: #fff;
+}
+.login-left h1 { margin: 0; font-size: 38px; letter-spacing: 1px; color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,.45); white-space: nowrap; }
+.login-left h1 .brand { color: #fca5a5; }
+.login-desc-card { margin: 14px 0 0; padding: 18px 22px; position: relative; }
+.login-desc-card .hello-line { color: #fff; margin: 0; font-size: 17px; font-weight: 700; padding: 0 26px; }
+.login-desc-card .hello-sub { color: rgba(255, 255, 255, 0.92); margin: 8px 0 0; font-size: 15px; font-weight: 600; line-height: 1.7; padding: 0 26px; }
+.qmark { position: absolute; top: 2px; left: 12px; font-size: 26px; font-weight: 900; color: rgba(255,255,255,0.55); line-height: 1; }
+.qmark-r { top: auto; left: auto; bottom: 0; right: 12px; }
+.quote-card .quote-text { font-size: 15px; line-height: 1.7; }
+.quote-card .quote-from { margin-top: 8px; text-align: right; font-size: 13px; color: rgba(255,255,255,.65); }
+.clock-card { text-align: center; }
+.clock-date { font-size: 14px; color: rgba(255, 255, 255, .75); }
+.clock-time { font-family: 'DSEG7', 'Courier New', monospace; font-size: 36px; letter-spacing: 3px; margin-top: 6px; text-shadow: 0 0 18px rgba(255, 255, 255, .35); }
+.clock-lunar { font-size: 14px; color: rgba(255, 255, 255, .75); margin-top: 8px; }
+.login-right { flex: 0 1 660px; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+/* 右上：名言 + 时钟并排（学 nekro.top 右上音乐卡 + 时钟卡） */
+.login-top-row { display: flex; gap: 18px; }
+.login-top-row .quote-card { flex: 1.15; display: flex; flex-direction: column; justify-content: center; }
+.login-top-row .clock-card { flex: 1; }
+.login-label { color: #fff; font-weight: 700; font-size: 14px; text-shadow: 0 1px 8px rgba(0,0,0,.5); margin: 14px 0 10px; display: flex; align-items: center; gap: 8px; }
+.login-label svg { width: 17px; height: 17px; }
+.login-label svg .lb-bar { fill: #fff; }
+.login-label svg .lb-dot { fill: rgba(30,30,40,0.55); }
+/* 网站列表九宫格（学 nekro.top 首页：横卡片，图标左 + 文字右） */
+.site-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.site-card {
+  display: flex; flex-direction: row; align-items: center; justify-content: center;
+  gap: 12px; padding: 24px 18px;
+  font-size: 17px; font-weight: 700; color: #fff; text-decoration: none;
+  cursor: pointer; font-family: inherit;
+  transition: transform .15s ease;
+}
+.site-card:hover { transform: translateY(-3px); }
+.site-card svg { width: 30px; height: 30px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.site-card svg.fill-icon { fill: #fff; stroke: none; }
+.site-login { background: rgba(185, 28, 28, 0.18); border-color: rgba(248, 113, 113, 0.4); }
+/* 联系方式一排（学 nekro.top 首页左下角） */
+.contact-row { display: flex; gap: 12px; }
+.contact-row a {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  transition: transform .15s ease, background .15s ease;
+}
+.contact-row a:hover { transform: translateY(-2px); background: rgba(255, 255, 255, 0.2); }
+.contact-row svg { width: 20px; height: 20px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.contact-row svg.fill-icon { fill: #fff; stroke: none; }
+/* 时钟 + 名言卡片 */
+.clock-card { flex: 0 0 auto; min-width: 250px; text-align: center; }
+.clock-date { font-size: 14px; color: rgba(255, 255, 255, .75); }
+.clock-time { font-size: 38px; font-weight: 800; letter-spacing: 2px; font-variant-numeric: tabular-nums; margin-top: 4px; }
+.quote-card { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.quote-text { font-size: 16px; line-height: 1.7; }
+.quote-from { margin-top: 8px; text-align: right; font-size: 13px; color: rgba(255, 255, 255, .65); }
+/* 漂浮音符：咱们的标识，蔷薇红柔光（浅色壁纸上也看得见） */
 .note-particle {
   position: absolute; bottom: -40px; z-index: 1;
-  color: rgba(255, 255, 255, .85);
-  text-shadow: 0 0 12px rgba(45, 212, 191, .9), 2px 2px 0 rgba(0, 0, 0, .5);
+  color: rgba(219, 84, 105, .55);
+  text-shadow: 0 0 12px rgba(219, 84, 105, .45);
   pointer-events: none; user-select: none;
   animation: note-float linear infinite;
 }
@@ -154,34 +224,18 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .note-particle { display: none; }
-  .login-card { animation: none; }
 }
-}
-.login-body { padding: 36px 34px; display: flex; flex-direction: column; }
-.login-avatar {
-  width: 84px; height: 84px; border-radius: 50%;
-  border: 3px solid #000; box-shadow: 3px 3px 0 #000;
-  object-fit: cover; background: #fff;
-}
-.login-body h1 { margin: 16px 0 6px; font-size: 32px; letter-spacing: .5px; }
-.login-body h1 .brand { color: var(--teal-dark); }
-.login-desc { color: var(--muted); margin: 0 0 18px; font-size: 14px; }
-.login-feats { list-style: none; margin: 0 0 24px; padding: 0; display: grid; gap: 10px; }
-.login-feats li {
-  background: #fff; border: 3px solid #000; border-radius: 12px;
-  padding: 9px 14px; font-size: 14px; font-weight: 700;
-  box-shadow: 3px 3px 0 #000; display: flex; gap: 10px; align-items: center;
-}
-.btn-login {
-  font-size: 17px; padding: 13px 18px;
-  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-}
-.btn-login svg { width: 22px; height: 22px; fill: #fff; }
-.login-body .hint { margin-top: 14px; text-align: center; }
-.login-foot { color: rgba(255, 255, 255, .8); font-size: 13px; font-weight: 700; text-shadow: 1px 1px 0 #000; }
 @media (max-width: 760px) {
-  .login-body { padding: 28px 24px; }
-  .login-body h1 { font-size: 26px; }
+  .clock-card { min-width: 0; }
+  .clock-time { font-size: 30px; }
+  .login-top-row { flex-direction: column; }
+}
+/* 登录页移动端：分栏改上下堆叠 */
+@media (max-width: 900px) {
+  .login-layout { flex-direction: column; }
+  .login-left { flex: none; width: 100%; align-items: center; text-align: center; }
+  .login-id { flex-direction: column; gap: 10px; }
+  .site-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* ---------- 图片 / 音乐管理 ---------- */

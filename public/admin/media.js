@@ -382,8 +382,8 @@ routes.images = async () => {
     </div>
 
     <div class="card">
-      <h2>🖥 控制台背景 <span class="sub">public/admin/login-art.png（登录页全屏背景）</span></h2>
-      <p class="hint">登录页的背景图。预设一键切换，或自己上传一张（自动转 PNG 覆盖 login-art.png）。config.js 的 adminBg 决定当前用哪张。</p>
+      <h2>🖥 控制台背景 <span class="sub">public/admin/login-art.jpg（登录页全屏背景）</span></h2>
+      <p class="hint">登录页的背景图。预设一键切换，或自己上传一张（自动转 JPEG 覆盖 login-art.jpg）。config.js 的 adminBg 决定当前用哪张。</p>
       <div class="img-grid" id="adminbg-grid"></div>
       <div class="toolbar">
         <input type="file" id="adminbg-file" accept="image/*" class="hidden">
@@ -396,8 +396,9 @@ routes.images = async () => {
 
   // ---- 控制台背景 ----
   const ADMINBG_PRESETS = [
-    { file: 'login-art.png', name: '波奇酱（默认）' },
+    { file: 'login-art.jpg', name: '波奇酱（默认）' },
     { file: 'login-art-alt.jpg', name: '星空海滨站（备选）' },
+    { file: 'login-art-sketch.png', name: '波奇草稿（旧版）' },
   ];
   async function setAdminBg(file) {
     const data = await ghGetFile('public/admin/config.js');
@@ -411,7 +412,7 @@ routes.images = async () => {
   function renderAdminBg() {
     const g = $('#adminbg-grid');
     g.innerHTML = '';
-    const cur = CFG.adminBg || 'login-art.png';
+    const cur = CFG.adminBg || 'login-art.jpg';
     ADMINBG_PRESETS.forEach((p) => {
       const d = document.createElement('div');
       d.className = 'img-cell';
@@ -432,7 +433,7 @@ routes.images = async () => {
     if (!f) return;
     toast('背景替换中…');
     try {
-      await replaceRepoImage('public/admin/login-art.png', f, { format: 'image/png', quality: 0.9, label: '控制台背景' });
+      await replaceRepoImage('public/admin/login-art.jpg', f, { format: 'image/jpeg', quality: 0.85, label: '控制台背景' });
       toast('背景已替换（重新进登录页生效）');
       renderAdminBg();
     } catch (err) { toast(err.message, true); }

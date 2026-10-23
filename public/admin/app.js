@@ -239,6 +239,7 @@ function router() {
   const h = location.hash.replace('#/', '') || 'dashboard';
   const [page, ...rest] = h.split('/');
   const arg = rest.join('/');
+  if (page !== 'login' && window._loginTimer) { clearInterval(window._loginTimer); window._loginTimer = null; }
   document.body.classList.toggle('is-login', page === 'login');
   nav();
   if (routes[page]) routes[page](decodeURIComponent(arg || ''));
@@ -246,30 +247,124 @@ function router() {
 }
 
 /* 登录页：装饰图原图完整鲜明呈现（不做淡化/半透明处理），hue 174 青绿品牌风 */
+/* ---------- 农历 / 节气 / 节日（登录页时钟用） ---------- */
+const LUNAR_INFO=[0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
+0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
+0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,
+0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,
+0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,
+0x06ca0,0x0b550,0x15355,0x04da0,0x0a5d0,0x14573,0x052d0,0x0a9a8,0x0e950,0x06aa0,
+0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,
+0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b5a0,0x195a6,
+0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,
+0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x055c0,0x0ab60,0x096d5,0x092e0,
+0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0abb7,0x025d0,0x092d0,0x0cab5,
+0x0a950,0x0b4a0,0x0baa4,0x0ad50,0x055d9,0x04ba0,0x0a5b0,0x15176,0x052b0,0x0a930,
+0x07954,0x06aa0,0x0ad50,0x05b52,0x04b60,0x0a6e6,0x0a4e0,0x0d260,0x0ea65,0x0d530,
+0x05aa0,0x076a3,0x096d0,0x04bd7,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,0x0dd45,
+0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,0x1b255,0x06d20,0x0ada0,
+0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x168a6,0x0ea50,0x06b20,0x1a6c4,0x0aae0,
+0x0a2e0,0x0d2e3,0x0c960,0x0d557,0x0d4a0,0x0da50,0x05d55,0x056a0,0x0a6d0,0x055d4,
+0x052d0,0x0a9b8,0x0a950,0x0b4a0,0x0b6a6,0x0ad50,0x055a0,0x0aba4,0x0a5b0,0x052b0,
+0x0b273,0x06930,0x07337,0x06aa0,0x0ad50,0x14b55,0x04b60,0x0a570,0x054e4,0x0d160,
+0x0e968,0x0d520,0x0daa0,0x16aa6,0x056d0,0x04ae0,0x0a9d4,0x0a2d0,0x0d150,0x0f252,0x0d520];
+const M_CH=['正','二','三','四','五','六','七','八','九','十','冬','腊'];
+const D_CH=['初一','初二','初三','初四','初五','初六','初七','初八','初九','初十','十一','十二','十三','十四','十五','十六','十七','十八','十九','二十','廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十'];
+function leapMonth(y){return LUNAR_INFO[y-1900]&0xf;}
+function leapDays(y){return leapMonth(y)?((LUNAR_INFO[y-1900]&0x10000)?30:29):0;}
+function lunarYearDays(y){let s=348;for(let i=0x8000;i>0x8;i>>=1)s+=(LUNAR_INFO[y-1900]&i)?1:0;return s+leapDays(y);}
+function monthDays(y,m){return (LUNAR_INFO[y-1900]&(0x10000>>m))?30:29;}
+function solarToLunar(y,m,d){
+  let off=Math.floor((Date.UTC(y,m-1,d)-Date.UTC(1900,0,31))/86400000);
+  let year=1900,days=0;
+  for(year=1900;year<2101&&off>0;year++){days=lunarYearDays(year);off-=days;}
+  if(off<0){off+=days;year--;}
+  const lp=leapMonth(year);let mon=1,isLeap=false;
+  for(mon=1;mon<13&&off>0;mon++){
+    if(lp>0&&mon===lp+1&&!isLeap){mon--;isLeap=true;days=leapDays(year);}
+    else days=monthDays(year,mon);
+    off-=days;
+    if(isLeap&&mon===lp+1)isLeap=false;
+  }
+  if(off===0&&lp>0&&mon===lp+1){if(isLeap)isLeap=false;else{isLeap=true;mon--;}}
+  if(off<0){off+=days;mon--;}
+  return {month:mon,day:off+1,isLeap};
+}
+const TERM_INFO=[0,21208,42467,63836,85337,107014,128867,150921,173149,195551,218072,240693,263343,285989,308563,331033,353350,375494,397447,419210,440795,462224,483532,504758];
+const TERM_NAMES=['小寒','大寒','立春','雨水','惊蛰','春分','清明','谷雨','立夏','小满','芒种','夏至','小暑','大暑','立秋','处暑','白露','秋分','寒露','霜降','立冬','小雪','大雪','冬至'];
+function solarTerm(y,m,d){
+  for(let k=0;k<2;k++){
+    const n=(m-1)*2+k;
+    const t=new Date(Date.UTC(1900,0,6,2,5)+(31556925974.7*(y-1900)+TERM_INFO[n]*60000));
+    if(t.getUTCMonth()+1===m&&t.getUTCDate()===d)return TERM_NAMES[n];
+  }
+  return '';
+}
+const SOLAR_FEST={'1-1':'元旦','2-14':'情人节','3-8':'妇女节','5-1':'劳动节','6-1':'儿童节','9-10':'教师节','10-1':'国庆节','12-25':'圣诞节'};
+const LUNAR_FEST={'1-1':'春节','1-15':'元宵节','5-5':'端午节','7-7':'七夕节','8-15':'中秋节','9-9':'重阳节','12-8':'腊八节'};
+function lunarLine(y,mon,d){
+  const l=solarToLunar(y,mon,d);
+  const term=solarTerm(y,mon,d);
+  const sf=SOLAR_FEST[mon+'-'+d]||'';
+  let lf=(!l.isLeap)?(LUNAR_FEST[l.month+'-'+l.day]||''):'';
+  if(!lf&&l.month===12&&!l.isLeap){
+    const t=new Date(y,mon-1,d+1);
+    const lt=solarToLunar(t.getFullYear(),t.getMonth()+1,t.getDate());
+    if(lt.month===1&&lt.day===1)lf='除夕';
+  }
+  const fest=[sf,lf].filter(Boolean).join(' ');
+  const parts=[];
+  if(term)parts.push(term);
+  parts.push('农历'+(l.isLeap?'闰':'')+M_CH[l.month-1]+'月'+D_CH[l.day-1]);
+  if(fest)parts.push(fest);
+  return parts.join(' · ');
+}
+
 routes.login = () => {
   document.body.classList.add('is-login');
   $('#nav').classList.add('hidden');
   view.innerHTML = `<div class="login-stage">
-    <div class="login-card">
-      <div class="login-body">
-        <img class="login-avatar" src="/avatar.png" alt="zhz" onerror="this.style.display='none'">
-        <h1>Alexander <span class="brand">管理台</span></h1>
-        <p class="login-desc">博客的中控室 —— 内容、图片、音乐，一处打理。</p>
-        <ul class="login-feats">
-          <li><span>🖼</span>图片管理：背景 / 头像 / 贴纸一键换</li>
-          <li><span>🎵</span>音乐管理：歌单增删改、调顺序</li>
-          <li><span>📷</span>相册管理：新建相册、批量传图</li>
-          <li><span>📝</span>内容管理：文章 / 动态 / 项目 / 单页</li>
-          <li><span>☁️</span>R2 图床：上传自动转 WebP</li>
-        </ul>
-        <button class="btn btn-login" id="btn-login">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
-          用 GitHub 登录
-        </button>
-        <p class="hint">登录即授权浏览器直写仓库 · 每次保存自动 commit</p>
+    <div class="login-layout">
+      <div class="login-left">
+        <div class="login-id">
+          <img class="login-avatar" src="/avatar.png" alt="zhz" onerror="this.style.display='none'">
+          <h1>Alexander <span class="brand">Console</span></h1>
+        </div>
+        <div class="glass-card login-desc-card"><span class="qmark">“</span><p class="hello-line">Hello!</p><p class="hello-sub">保持热爱，折腾不止。</p><span class="qmark qmark-r">”</span></div>
+        <div class="contact-row">
+          <a href="https://github.com/Misty-ui-source" target="_blank" rel="noopener" title="GitHub"><svg class="fill-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></a>
+          <a href="mailto:xz011@qq.com" title="Email"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></a>
+          <a href="https://lanerc.me/rss/" target="_blank" rel="noopener" title="RSS"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1" fill="#fff" stroke="none"/></svg></a>
+          <a href="https://t.me/zhzhk27" target="_blank" rel="noopener" title="Telegram"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg></a>
+          <a href="https://discord.com/users/1550493367920627732" target="_blank" rel="noopener" title="Discord"><svg class="fill-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></a>
+        </div>
+      </div>
+      <div class="login-right">
+        <div class="login-top-row">
+          <div class="glass-card quote-card">
+            <div class="quote-text" id="quote-text"></div>
+            <div class="quote-from" id="quote-from"></div>
+          </div>
+          <div class="glass-card clock-card">
+            <div class="clock-date" id="clock-date">--</div>
+            <div class="clock-time" id="clock-time">--:--:--</div>
+            <div class="clock-lunar" id="clock-lunar"></div>
+          </div>
+        </div>
+        <div class="login-label"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="6" rx="2.5" class="lb-bar"/><rect x="3" y="14" width="18" height="6" rx="2.5" class="lb-bar"/><circle cx="7.5" cy="7" r="1.3" class="lb-dot"/><circle cx="7.5" cy="17" r="1.3" class="lb-dot"/></svg><span>网站列表</span></div>
+        <div class="site-grid">
+          <button class="glass-card site-card site-login" id="btn-login">
+            <svg class="fill-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+            <span>登录</span>
+          </button>
+          <a class="glass-card site-card" href="https://lanerc.me/friends/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>友链</span></a>
+          <a class="glass-card site-card" href="https://lanerc.me/about/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>关于</span></a>
+          <a class="glass-card site-card" href="https://lanerc.me/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span>博客</span></a>
+          <a class="glass-card site-card" href="https://lanerc.me/dynamic/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg><span>动态</span></a>
+          <a class="glass-card site-card" href="https://www.lanerc.me/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="16" rx="3"/><path d="M4 10h16"/><path d="M9 14h.01M15 14h.01"/><path d="M8 18l-2 3M16 18l2 3"/></svg><span>开往</span></a>
+        </div>
       </div>
     </div>
-    <div class="login-foot">🛠 Alexander 自研管理台 · hue 174</div>
   </div>`;
   $('#btn-login').onclick = startLogin;
   // 氛围感：漂浮的音符粒子（孤独摇滚主题）
@@ -286,8 +381,37 @@ routes.login = () => {
     stage.appendChild(s);
   }
   /* 控制台背景图：config.js 的 adminBg 可切换（图片管理 → 控制台背景） */
-  const bgFile = (CFG.adminBg || 'login-art.png').replace(/^\/+/, '');
+  const bgFile = (CFG.adminBg || 'login-art.jpg').replace(/^\/+/, '');
   stage.style.backgroundImage = `url("./${bgFile}")`;
+  /* 时钟 + 每日名言（nekro.top 式） */
+  if (window._loginTimer) { clearInterval(window._loginTimer); window._loginTimer = null; }
+  const week = ['日', '一', '二', '三', '四', '五', '六'];
+  const tick = () => {
+    const d = new Date(), p = (n) => String(n).padStart(2, '0');
+    const cd = $('#clock-date'), ct = $('#clock-time');
+    if (!cd || !ct) return;
+    cd.textContent = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 星期${week[d.getDay()]}`;
+    ct.textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    const cl = $('#clock-lunar');
+    if (cl) cl.textContent = lunarLine(d.getFullYear(), d.getMonth() + 1, d.getDate());
+  };
+  tick();
+  window._loginTimer = setInterval(tick, 1000);
+  const quotes = [
+    { text: 'Talk is cheap. Show me the code.', from: 'Linus Torvalds' },
+    { text: '种一棵树最好的时间是十年前，其次是现在。', from: '谚语' },
+    { text: '路漫漫其修远兮，吾将上下而求索。', from: '屈原《离骚》' },
+    { text: 'Stay hungry, stay foolish.', from: 'Steve Jobs' },
+    { text: '先让它跑起来，再让它跑得快。', from: '工程师信条' },
+    { text: '简单是可靠的灵魂。', from: 'UNIX 哲学' },
+    { text: '不要重复自己。', from: 'DRY 原则' },
+    { text: '代码写出来是给人看的，顺便让机器执行。', from: '佚名' },
+    { text: '山重水复疑无路，柳暗花明又一村。', from: '陆游' },
+    { text: '纸上得来终觉浅，绝知此事要躬行。', from: '陆游' },
+  ];
+  const q = quotes[Math.floor(Math.random() * quotes.length)];
+  $('#quote-text').textContent = '\u201C' + q.text + '\u201D';
+  $('#quote-from').textContent = '— ' + q.from;
 };
 
 /* 首页 */
