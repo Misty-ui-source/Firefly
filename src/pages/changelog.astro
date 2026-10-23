@@ -5,21 +5,6 @@ import { siteConfig } from "@/config";
 const title = "博客日志";
 const description = "记录本站的实质性更新";
 
-// 头部统计卡：从 logs 自动算，加新版本时数字自己跟上，不用手改
-const parseLogDate = (s) => {
-  const m = String(s).match(/(\d+)\s*年\s*(\d+)\s*月\s*(\d+)\s*日/);
-  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
-};
-const statVersion = logs[0]?.version ?? "—";
-const statDays = new Set(logs.map((l) => l.date)).size;
-const statRecords = logs.reduce((n, l) => n + (l.changes?.length ?? 0), 0);
-const statDates = logs.map((l) => parseLogDate(l.date)).filter(Boolean).sort((a, b) => a - b);
-const fmtMD = (d) => `${d.getMonth() + 1}.${d.getDate()}`;
-const statSpan = statDates.length
-  ? (statDates[0].getTime() === statDates[statDates.length - 1].getTime()
-      ? fmtMD(statDates[0])
-      : `${fmtMD(statDates[0])}–${fmtMD(statDates[statDates.length - 1])}`)
-  : "—";
 
 // 版本记录（倒序，最新在前）
 const logs = [
@@ -148,6 +133,22 @@ const logs = [
     updateTags: ["Firefly", "Waline", "Umami"],
   },
 ];
+
+// 头部统计卡：从 logs 自动算，加新版本时数字自己跟上，不用手改
+const parseLogDate = (s) => {
+  const m = String(s).match(/(\d+)\s*年\s*(\d+)\s*月\s*(\d+)\s*日/);
+  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+};
+const statVersion = logs[0]?.version ?? "—";
+const statDays = new Set(logs.map((l) => l.date)).size;
+const statRecords = logs.reduce((n, l) => n + (l.changes?.length ?? 0), 0);
+const statDates = logs.map((l) => parseLogDate(l.date)).filter(Boolean).sort((a, b) => a - b);
+const fmtMD = (d) => `${d.getMonth() + 1}.${d.getDate()}`;
+const statSpan = statDates.length
+  ? (statDates[0].getTime() === statDates[statDates.length - 1].getTime()
+      ? fmtMD(statDates[0])
+      : `${fmtMD(statDates[0])}–${fmtMD(statDates[statDates.length - 1])}`)
+  : "—";
 ---
 
 <MainGridLayout title={title} description={description}>
