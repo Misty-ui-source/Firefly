@@ -236,7 +236,7 @@ function nav() {
   const n = $('#nav');
   n.innerHTML = '';
   n.classList.remove('hidden');
-  const items = [['dashboard', '🏠 首页'], ...Object.entries(CFG.collections).map(([k, c]) => [k, c.label]), ['images', '🖼 图片'], ['music', '🎵 音乐'], ['gallery', '📷 相册'], ['announce', '📢 公告']];
+  const items = [['dashboard', '🏠 首页'], ['stats', '📊 写作'], ...Object.entries(CFG.collections).map(([k, c]) => [k, c.label]), ['images', '🖼 图片'], ['music', '🎵 音乐'], ['gallery', '📷 相册'], ['announce', '📢 公告']];
   const cur = location.hash.replace('#/', '');
   for (const [key, label] of items) {
     const b = document.createElement('button');
@@ -515,6 +515,47 @@ routes.login = () => {
 };
 
 /* 首页 */
+/* 写作日期抓取（供 dashboard 统计卡与 stats 栏目复用） */
+async function fetchPostDates() {
+  const dates = [];
+  try {
+    const col = CFG.collections.posts;
+    const list = await ghGetFile(col.path);
+    const dirs = (Array.isArray(list) ? list : []).filter((x) => x.type === 'dir');
+    const fill = async (e) => {
+      try {
+        const files = await ghGetFile(`${col.path}/${e.name}`);
+        const md = (Array.isArray(files) ? files : []).find((f) => f.name.endsWith('.md'));
+        if (!md) return;
+        const data = await ghGetFile(`${col.path}/${e.name}/${md.name}`);
+        const { fm } = parseFrontmatter(data.text);
+        const d = String(fm.published || '').slice(0, 10);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.push(d);
+      } catch (err) { /* 单篇失败跳过 */ }
+    };
+    for (let i = 0; i < dirs.length; i += 4) await Promise.all(dirs.slice(i, i + 4).map(fill));
+  } catch (e) { /* 忽略 */ }
+  return dates;
+}
+async function fetchDynDates() {
+  try {
+    const list = await ghGetFile(CFG.collections.dynamic.path);
+    return (Array.isArray(list) ? list : [])
+      .map((x) => x.name.slice(0, 10))
+      .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d));
+  } catch (e) { return []; }
+}
+/* 写作数据栏目：折线图 + 热力图 */
+routes.stats = async () => {
+  view.innerHTML = '<div class="card"><h2>📊 写作数据</h2><p class="hint">正在读取仓库数据…</p></div>';
+  const [postDates, dynDates] = await Promise.all([fetchPostDates(), fetchDynDates()]);
+  if (!postDates.length && !dynDates.length) {
+    view.innerHTML = '<div class="card"><h2>📊 写作数据</h2><p class="hint">没有读到写作数据。</p></div>';
+    return;
+  }
+  view.innerHTML = '<div class="card"><h2>📊 写作数据</h2><p class="hint">文章与动态的发布统计，数据来自仓库实时读取。</p></div>';
+  renderWriteCharts(postDates, dynDates);
+};
 routes.dashboard = async () => {
   view.innerHTML = '<div class="card"><h2>加载中…</h2></div>';
   const grid = document.createElement('div');
@@ -547,7 +588,6 @@ routes.dashboard = async () => {
     } catch (e) { /* 忽略 */ }
     return {
       total: rows.length,
-      dates: rows.map((fm) => String(fm.published || '').slice(0, 10)).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)),
       details: [
         ['📝', '草稿', rows.filter(isDraft).length],
         ['📌', '置顶', rows.filter(isPinned).length],
@@ -562,10 +602,9 @@ routes.dashboard = async () => {
       const list = await ghGetFile(col.path);
       files = (Array.isArray(list) ? list : []).filter((x) => x.name.endsWith('.md'));
     } catch (e) { /* 忽略 */ }
-    const dates = files.map((f) => f.name.slice(0, 10)).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().reverse();
+    const dates = files.map((f) => f.name.slice(0, 10)).sort().reverse();
     return {
       total: files.length,
-      dates,
       details: [
         ['🆕', '本月新增', dates.filter((d) => d.slice(0, 7) === monthPrefix).length],
         ['🕘', '最新', dates[0] || '—'],
@@ -582,30 +621,22 @@ routes.dashboard = async () => {
   };
 
   const jobs = { posts: postStats, dynamic: dynStats };
-  const chartJobs = {};
   for (const [key, col] of Object.entries(CFG.collections)) {
     const d = document.createElement('div');
     d.className = 'stat';
     d.innerHTML = `<div class="stat-head"><span class="lbl">${col.label}</span><span class="num">…</span></div><div class="stat-rows"></div>`;
     d.onclick = () => { location.hash = '#/' + key; };
     grid.appendChild(d);
-    const p = (async () => {
+    (async () => {
       const fn = jobs[key] || simpleStats;
-      const { total, details, dates } = await fn(col);
+      const { total, details } = await fn(col);
       const numEl = d.querySelector('.num');
       if (numEl) numEl.textContent = total;
       const rowsEl = d.querySelector('.stat-rows');
       if (rowsEl) rowsEl.innerHTML = details.map(([icon, label, val]) =>
         `<div class="stat-row"><span class="dot"></span>${icon} ${label} <b>${esc(String(val))}</b></div>`).join('');
-      return dates || [];
     })();
-    if (key === 'posts' || key === 'dynamic') chartJobs[key] = p;
   }
-  // 写作折线图 + 热力图（等文章/动态日期到齐）
-  try {
-    const [postDates, dynDates] = await Promise.all([chartJobs.posts || [], chartJobs.dynamic || []]);
-    renderWriteCharts(postDates, dynDates);
-  } catch (e) { /* 图表失败不影响卡片 */ }
 };
 
 /* ---------- 写作统计图：折线图 + 热力图 ---------- */
