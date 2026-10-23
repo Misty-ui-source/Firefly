@@ -61,12 +61,12 @@ async function ghGetFile(path) {
   if (Array.isArray(data)) return data; // 目录
   return { ...data, text: b64decodeUnicode(data.content.replace(/\n/g, '')) };
 }
-async function ghPutFile(path, text, sha, message) {
+async function ghPutFile(path, text, sha, message, isBase64) {
   return gh(`/repos/${CFG.owner}/${CFG.repo}/contents/${path}`, {
     method: 'PUT',
     body: JSON.stringify({
       message: message || `更新 ${path} [管理台]`,
-      content: b64encodeUnicode(text),
+      content: isBase64 ? text : b64encodeUnicode(text),
       branch: CFG.branch,
       ...(sha ? { sha } : {}),
     }),
@@ -232,19 +232,66 @@ async function uploadImages(files, dir) {
 
 /* ---------- 路由与视图 ---------- */
 const routes = {};
+/* 控制台导航定义：key → 默认名称 */
+function navDefs() {
+  const defs = {
+    dashboard: '🏠 首页', stats: '📊 写作',
+    images: '🖼 图片', music: '🎵 音乐', gallery: '📷 相册',
+    announce: '📢 公告', friends: '🔗 友链', booknav: '🔖 书签', navmgr: '🧭 导航', videos: '🎬 视频', profile: '👤 简介', banner: '🖼️ 横幅',
+  };
+  for (const [k, c] of Object.entries(CFG.collections)) defs[k] = c.label;
+  return defs;
+}
+function navLabel(key) {
+  const custom = (CFG.navLayout && CFG.navLayout.labels) || {};
+  return custom[key] || navDefs()[key] || key;
+}
+function navLayout() {
+  const d = { primary: ['dashboard', 'stats', 'posts', 'dynamic', 'projects', 'spec'], secondary: ['images', 'music', 'gallery', 'announce', 'friends', 'booknav', 'navmgr', 'videos', 'profile', 'banner'] };
+  const cfg = CFG.navLayout || {};
+  const all = Object.keys(navDefs());
+  const p = (cfg.primary || d.primary).filter((k) => all.includes(k));
+  const s = (cfg.secondary || d.secondary).filter((k) => all.includes(k));
+  // 漏掉的新增项自动补进次栏
+  all.forEach((k) => { if (!p.includes(k) && !s.includes(k)) s.push(k); });
+  return { primary: p, secondary: s };
+}
 function nav() {
   const n = $('#nav');
   n.innerHTML = '';
   n.classList.remove('hidden');
-  const items = [['dashboard', '🏠 首页'], ['stats', '📊 写作'], ...Object.entries(CFG.collections).map(([k, c]) => [k, c.label]), ['images', '🖼 图片'], ['music', '🎵 音乐'], ['gallery', '📷 相册'], ['announce', '📢 公告']];
+  const { primary, secondary } = navLayout();
   const cur = location.hash.replace('#/', '');
-  for (const [key, label] of items) {
+  const isActive = (key) => cur === key || (location.hash === '' && key === 'dashboard') || (key === 'gallery' && cur.startsWith('gallery-'));
+  const mkBtn = (key) => {
     const b = document.createElement('button');
-    b.textContent = label;
-    if (cur === key || (location.hash === '' && key === 'dashboard') || (key === 'gallery' && cur.startsWith('gallery-'))) b.classList.add('active');
-    b.onclick = () => { n.classList.remove('open'); location.hash = '#/' + key; };
-    n.appendChild(b);
-  }
+    b.textContent = navLabel(key);
+    if (isActive(key)) b.classList.add('active');
+    b.onclick = () => { n.classList.remove('open'); const dd = $('#nav-more'); if (dd) dd.classList.add('hidden'); location.hash = '#/' + key; };
+    return b;
+  };
+  primary.forEach((k) => n.appendChild(mkBtn(k)));
+  /* 次要入口收进 ··· 菜单（桌面端下拉，移动端换行全显） */
+  const moreWrap = document.createElement('span');
+  moreWrap.className = 'nav-more-wrap';
+  const moreBtn = document.createElement('button');
+  moreBtn.textContent = '···';
+  moreBtn.title = '更多';
+  if (secondary.some((k) => isActive(k))) moreBtn.classList.add('active');
+  const dd = document.createElement('div');
+  dd.id = 'nav-more';
+  dd.className = 'nav-more hidden';
+  secondary.forEach((k) => dd.appendChild(mkBtn(k)));
+  moreBtn.onclick = (e) => { e.stopPropagation(); dd.classList.toggle('hidden'); };
+  document.addEventListener('click', () => dd.classList.add('hidden'), { once: false });
+  moreWrap.appendChild(moreBtn);
+  moreWrap.appendChild(dd);
+  n.appendChild(moreWrap);
+  /* 移动端：次要按钮直接换行展示 */
+  const mNav = document.createElement('span');
+  mNav.className = 'nav-more-inline';
+  secondary.forEach((k) => mNav.appendChild(mkBtn(k)));
+  n.appendChild(mNav);
   const mb = $('#btn-menu');
   if (mb && !mb._wired) { mb._wired = true; mb.onclick = () => n.classList.toggle('open'); }
 }
@@ -576,7 +623,6 @@ routes.dashboard = async () => {
   const monthPrefix = new Date().toISOString().slice(0, 7); // YYYY-MM
   const isDraft = (fm) => String(fm.draft).toLowerCase() === 'true';
   const isPinned = (fm) => String(fm.pinned).toLowerCase() === 'true';
-  const isArchived = (fm) => String(fm.archived).toLowerCase() === 'true';
   const inMonth = (d) => String(d || '').slice(0, 7) === monthPrefix;
 
   // 文章：读每篇 frontmatter 算草稿/置顶/本月新增
@@ -602,7 +648,6 @@ routes.dashboard = async () => {
       details: [
         ['📝', '草稿', rows.filter(isDraft).length],
         ['📌', '置顶', rows.filter(isPinned).length],
-        ['📦', '已存档', rows.filter(isArchived).length],
         ['🆕', '本月新增', rows.filter((fm) => inMonth(fm.published)).length],
       ],
     };
@@ -777,27 +822,9 @@ function listRoute(key) {
         }
         div.innerHTML = `<span class="title">${esc(e.name)}</span>${dateHtml}<span class="meta">${e.type}</span>
           <button class="btn btn-small">编辑</button>
-          ${key === 'posts' ? '<button class="btn btn-small btn-archive">📦 存档</button>' : ''}
           <button class="btn btn-small btn-danger">删除</button>`;
-        const btns = div.querySelectorAll('button');
-        const btnEdit = btns[0], btnDel = btns[btns.length - 1];
-        const btnArch = key === 'posts' ? div.querySelector('.btn-archive') : null;
+        const [btnEdit, btnDel] = div.querySelectorAll('button');
         btnEdit.onclick = () => { location.hash = `#/edit/${key}/${encodeURIComponent(e.name)}`; };
-        if (btnArch) btnArch.onclick = async () => {
-          try {
-            const files = await ghGetFile(`${col.path}/${e.name}`);
-            const md = (Array.isArray(files) ? files : []).find((f) => f.name.endsWith('.md'));
-            if (!md) { toast('找不到文章文件', true); return; }
-            const data = await ghGetFile(`${col.path}/${e.name}/${md.name}`);
-            const { fm, body } = parseFrontmatter(data.text);
-            const nowArchived = String(fm.archived).toLowerCase() === 'true';
-            if (nowArchived) delete fm.archived; else fm.archived = true;
-            await ghPutFile(`${col.path}/${e.name}/${md.name}`, serializeFrontmatter(fm, body), data.sha,
-              `${nowArchived ? '取消存档' : '存档'} ${e.name} [管理台]`);
-            toast(nowArchived ? '已取消存档，前台恢复显示' : '已存档，前台不再显示（构建后生效）');
-            router();
-          } catch (err) { toast(err.message, true); }
-        };
         btnDel.onclick = async () => {
           if (!confirm(`确定删除 ${e.name}？`)) return;
           try {
@@ -827,12 +854,6 @@ function listRoute(key) {
             if (dEl && fm.published) dEl.textContent = '📅 ' + String(fm.published).slice(0, 10);
             const tEl = div.querySelector('.title');
             if (tEl && fm.title) tEl.textContent = fm.title;
-            if (String(fm.archived).toLowerCase() === 'true') {
-              if (tEl) tEl.innerHTML = '📦 ' + esc(tEl.textContent);
-              const bA = div.querySelector('.btn-archive');
-              if (bA) bA.textContent = '📤 取消存档';
-              div.classList.add('is-archived');
-            }
           } catch (err) { /* 单篇失败不影响其他 */ }
         };
         for (let i = 0; i < rows.length; i += 4) {
@@ -896,6 +917,10 @@ routes.edit = async (arg) => {
       <div class="field"><label>分类</label><input type="text" data-f="category" value="${esc(fm.category ?? '')}" placeholder="如：技术"></div>
       <div class="field"><label>标签（逗号分隔）</label><input type="text" data-f="tags" value="${esc(Array.isArray(fm.tags) ? fm.tags.join(', ') : (fm.tags ?? ''))}" placeholder="如：AI, 折腾"></div>
     </div>
+    <div class="grid2">
+      <div class="field"><label>系列</label><input type="text" data-f="series" id="f-series" list="series-list" value="${esc(fm.series ?? '')}" placeholder="如：博客搭建系列（留空=不归属）"><datalist id="series-list"></datalist></div>
+      <div class="field"><label>系列内排序（数字越小越靠前）</label><input type="number" data-f="seriesOrder" value="${esc(fm.seriesOrder ?? '')}" placeholder="留空按发布时间排"></div>
+    </div>
     <div class="field"><label>描述</label>
       <textarea data-f="description" rows="2" placeholder="一句话简介，显示在文章列表页">${esc(fm.description ?? '')}</textarea></div>
     <div class="field"><label>封面</label>
@@ -909,7 +934,6 @@ routes.edit = async (arg) => {
     <div class="field"><label>选项</label><div class="pills">
       ${pill('draft', '📝 草稿', isTrue(fm.draft))}
       ${pill('pinned', '📌 置顶', isTrue(fm.pinned))}
-      ${pill('archived', '📦 存档', isTrue(fm.archived))}
       ${pill('_pw', '🔒 密码保护', hasPw)}
     </div></div>
     <div id="pw-zone" class="${hasPw ? '' : 'hidden'}"><div class="grid2">
@@ -1076,6 +1100,30 @@ routes.edit = async (arg) => {
   };
 
   $('#btn-back').onclick = () => { location.hash = '#/' + key; };
+  /* 系列输入框：异步加载已有系列名做候选（防拼写不一致） */
+  if ($('#series-list')) {
+    (async () => {
+      try {
+        const items = await ghGetFile(CFG.collections.posts.path);
+        const names = new Set();
+        const dirs = (Array.isArray(items) ? items : []).filter((x) => x.type === 'dir');
+        for (let i = 0; i < dirs.length; i += 6) {
+          await Promise.all(dirs.slice(i, i + 6).map(async (d) => {
+            try {
+              const files = await ghGetFile(`${CFG.collections.posts.path}/${d.name}`);
+              const md = (Array.isArray(files) ? files : []).find((f) => f.name.endsWith('.md'));
+              if (!md) return;
+              const data = await ghGetFile(`${CFG.collections.posts.path}/${d.name}/${md.name}`);
+              const m = data.text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+              const sm = m && m[1].match(/^series:\s*(.+)$/m);
+              if (sm) { const v = sm[1].trim().replace(/^["']|["']$/g, ''); if (v) names.add(v); }
+            } catch (e) {}
+          }));
+        }
+        $('#series-list').innerHTML = [...names].sort().map((n) => `<option value="${esc(n)}">`).join('');
+      } catch (e) {}
+    })();
+  }
   $('#btn-preview').onclick = () => {
     const p = $('#preview');
     p.classList.toggle('hidden');
@@ -1239,6 +1287,904 @@ routes.announce = async () => {
       toast('公告已保存，重新构建网站后生效');
     } catch (e) { toast(e.message, true); }
     btn.disabled = false;
+  };
+};
+
+/* ---------- 友链管理 ---------- */
+const FRIENDS_PATH = 'src/config/friendsConfig.ts';
+function friendsExtract(src) {
+  const kw = 'export const friendsConfig';
+  const ks = src.indexOf(kw);
+  if (ks < 0) throw new Error('找不到 friendsConfig');
+  const eq = src.indexOf('=', ks);
+  const as = src.indexOf('[', eq); /* 跳过类型注解 FriendLink[] 里的 [] */
+  let depth = 0, i = as;
+  for (; i < src.length; i++) {
+    if (src[i] === '[') depth++;
+    else if (src[i] === ']') { depth--; if (!depth) break; }
+  }
+  return { head: src.slice(0, as + 1), body: src.slice(as + 1, i), tail: src.slice(i) };
+}
+function friendsParseBody(body) {
+  const list = [];
+  let i = 0;
+  while (i < body.length) {
+    const s = body.indexOf('{', i);
+    if (s < 0) break;
+    let depth = 0, j = s;
+    for (; j < body.length; j++) {
+      if (body[j] === '{') depth++;
+      else if (body[j] === '}') { depth--; if (!depth) break; }
+    }
+    const block = body.slice(s, j + 1);
+    const get = (k) => { const mm = block.match(new RegExp(k + '\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"')); return mm ? mm[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\') : ''; };
+    const tagsM = block.match(/tags\s*:\s*\[([^\]]*)\]/);
+    const tags = tagsM ? tagsM[1].split(',').map((x) => x.trim().replace(/^["']|["']$/g, '')).filter(Boolean) : [];
+    list.push({
+      title: get('title'), imgurl: get('imgurl'), desc: get('desc'), siteurl: get('siteurl'),
+      tags, weight: parseInt((block.match(/weight\s*:\s*(\d+)/) || [])[1] || '0', 10),
+      enabled: /enabled\s*:\s*true/.test(block), rss: get('rss'),
+    });
+    i = j + 1;
+  }
+  return list;
+}
+function friendToTs(f, weight) {
+  const q = (s) => `"${String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  return `\t{\n\t\ttitle: ${q(f.title)},\n\t\timgurl: ${q(f.imgurl)},\n\t\tdesc: ${q(f.desc)},\n\t\tsiteurl: ${q(f.siteurl)},\n\t\ttags: [${(f.tags || []).map(q).join(', ')}],\n\t\tweight: ${weight},\n\t\tenabled: ${f.enabled ? 'true' : 'false'},\n\t\trss: ${q(f.rss)},\n\t},`;
+}
+routes.friends = async () => {
+  view.innerHTML = `<div class="toolbar">
+      <button class="btn" data-tab="mgr">🔗 友链管理</button>
+      <button class="btn btn-ghost" data-tab="rss">📡 RSS 管理</button>
+    </div><div id="friends-body"><div class="card"><p class="hint">正在读取仓库…</p></div></div>`;
+  const body = $('#friends-body');
+  const tabs = view.querySelectorAll('[data-tab]');
+  // 缓存友链列表供 RSS tab 用
+  let cachedList = null;
+  const getList = async () => {
+    if (cachedList) return cachedList;
+    const data = await ghGetFile(FRIENDS_PATH);
+    cachedList = friendsParseBody(friendsExtract(data.text).body);
+    return cachedList;
+  };
+  tabs.forEach((t) => { t.onclick = () => {
+    tabs.forEach((x) => x.classList.add('btn-ghost'));
+    t.classList.remove('btn-ghost');
+    if (t.dataset.tab === 'mgr') friendsMgr(body); else friendsRss(body, getList);
+  }; });
+  friendsMgr(body);
+};
+/* RSS 管理：列出所有订阅源，一键测试，坏源不影响构建 */
+async function friendsRss(body, getList) {
+  body.innerHTML = '<div class="card"><p class="hint">正在读取友链 RSS 配置…</p></div>';
+  let list;
+  try { list = await getList(); }
+  catch (e) { body.innerHTML = `<div class="card">读取失败：${esc(e.message)}</div>`; return; }
+  const withRss = list.filter((f) => f.rss);
+  const noRss = list.filter((f) => !f.rss);
+  body.innerHTML = `<p class="hint">共 ${list.length} 个友链，${withRss.length} 个配了 RSS，${noRss.length} 个没配。构建时只拉取有效的源，坏源自动跳过、不影响构建。</p>
+    <div id="rss-list"></div>
+    ${noRss.length ? `<div class="card"><b>没配 RSS 的友链</b><p class="hint">${noRss.map((f) => esc(f.title)).join('、')}</p><p class="hint">去「友链管理」里编辑，给它们加上 RSS 地址。</p></div>` : ''}`;
+  const box = body.querySelector('#rss-list');
+  const testOne = async (f, btn, stEl) => {
+    btn.disabled = true; stEl.innerHTML = '<span class="hint">测试中…</span>';
+    try {
+      const r = await fetch('/api/rss-test?url=' + encodeURIComponent(f.rss), {
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+      const j = await r.json();
+      if (j.ok) stEl.innerHTML = `<span style="color:#16a34a">✓ 有效（约 ${j.count} 篇）</span><span class="hint">${esc((j.titles || []).join(' / ').slice(0, 80))}</span>`;
+      else stEl.innerHTML = `<span style="color:#dc2626">✗ ${esc(j.error || '无效')}</span><span class="hint">构建时会自动跳过，不影响其他源。</span>`;
+    } catch (e) { stEl.innerHTML = `<span style="color:#dc2626">✗ 测试失败：${esc(e.message)}</span>`; }
+    btn.disabled = false;
+  };
+  box.innerHTML = withRss.map((f, i) => `
+    <div class="list-item" data-i="${i}">
+      <span class="title">${esc(f.title)}</span><span class="meta">${esc(f.rss)}</span>
+      <span class="rss-st hint"></span>
+      <button class="btn btn-small" data-a="test">🔍 测试</button>
+    </div>`).join('') || '<div class="card">还没有配 RSS 的友链</div>';
+  box.querySelectorAll('.list-item').forEach((row) => {
+    const f = withRss[+row.dataset.i];
+    row.querySelector('[data-a=test]').onclick = (e) => testOne(f, e.target, row.querySelector('.rss-st'));
+  });
+  /* 一键全测 */
+  const bar = document.createElement('div');
+  bar.className = 'toolbar';
+  bar.innerHTML = `<span class="spacer"></span><button class="btn btn-small" id="btn-rss-all">🔍 全部测试</button>`;
+  box.before(bar);
+  bar.querySelector('#btn-rss-all').onclick = async (e) => {
+    const btn = e.target; btn.disabled = true; btn.textContent = '测试中…';
+    const rows = box.querySelectorAll('.list-item');
+    for (const row of rows) {
+      const f = withRss[+row.dataset.i];
+      await testOne(f, row.querySelector('[data-a=test]'), row.querySelector('.rss-st'));
+    }
+    btn.disabled = false; btn.textContent = '🔍 全部测试';
+    toast('全部测试完成');
+  };
+}
+async function friendsMgr(body) {
+  body.innerHTML = '<div class="card"><p class="hint">正在读取仓库…</p></div>';
+  let sha = null, head = '', tail = '', list = [];
+  try {
+    const data = await ghGetFile(FRIENDS_PATH);
+    sha = data.sha;
+    const parts = friendsExtract(data.text);
+    head = parts.head; tail = parts.tail;
+    list = friendsParseBody(parts.body);
+    list.sort((a, b) => b.weight - a.weight);
+  } catch (e) { body.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+
+  const dirty = { v: false };
+  const markDirty = () => { dirty.v = true; $('#btn-fsave').disabled = false; };
+
+  function rowHtml(f, i) {
+    return `<div class="list-item friend-row" data-i="${i}">
+      <img class="friend-avatar" src="${esc(f.imgurl)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+      <span class="title">${esc(f.title || '(无标题)')}${f.enabled ? '' : ' <span class="hint">(已停用)</span>'}</span>
+      <span class="meta">${esc(f.siteurl)}</span>
+      <button class="btn btn-small" data-a="up" title="上移">↑</button>
+      <button class="btn btn-small" data-a="down" title="下移">↓</button>
+      <button class="btn btn-small" data-a="toggle">${f.enabled ? '停用' : '启用'}</button>
+      <button class="btn btn-small" data-a="edit">编辑</button>
+      <button class="btn btn-small btn-danger" data-a="del">删除</button>
+    </div>
+    <div class="friend-form hidden" data-form="${i}"></div>`;
+  }
+  function formHtml(f) {
+    const inp = (k, label, v, ph) => `<div class="field"><label>${label}</label><input type="text" data-k="${k}" value="${esc(v || '')}" placeholder="${ph || ''}"></div>`;
+    return `<div class="card"><div class="grid2">
+      ${inp('title', '站名 *', f.title)}
+      ${inp('siteurl', '网址 *', f.siteurl, 'https://')}
+      ${inp('imgurl', '头像 URL', f.imgurl)}
+      <div class="field"><label>RSS（用于 moments 聚合）</label>
+        <div class="cover-row"><input type="text" data-k="rss" value="${esc(f.rss || '')}" placeholder="https://…/rss.xml" style="flex:1">
+        <button class="btn btn-small" data-a="rsstest" type="button">🔍 测试</button></div>
+        <div class="hint rss-test-tip"></div></div>
+      ${inp('desc', '描述', f.desc)}
+      ${inp('tags', '标签（逗号分隔）', (f.tags || []).join(', '))}
+    </div>
+    <label class="pill${f.enabled ? ' on' : ''}"><input type="checkbox" data-k="enabled"${f.enabled ? ' checked' : ''}>启用</label>
+    <div class="toolbar"><span class="spacer"></span>
+      <button class="btn btn-small btn-ghost" data-a="cancel">取消</button>
+      <button class="btn btn-small" data-a="oksave">确定</button>
+    </div></div>`;
+  }
+  function wireRssTest(formEl) {
+    const btn = formEl.querySelector('[data-a=rsstest]');
+    if (!btn) return;
+    btn.onclick = async () => {
+      const url = formEl.querySelector('[data-k=rss]').value.trim();
+      const tip = formEl.querySelector('.rss-test-tip');
+      if (!url) { tip.textContent = '先填 RSS 地址'; return; }
+      btn.disabled = true; tip.textContent = '测试中…';
+      try {
+        const r = await fetch('/api/rss-test?url=' + encodeURIComponent(url), { headers: { Authorization: `Bearer ${token()}` } });
+        const j = await r.json();
+        tip.innerHTML = j.ok
+          ? `<span style="color:#16a34a">✓ 有效，约 ${j.count} 篇</span>`
+          : `<span style="color:#dc2626">✗ ${esc(j.error || '无效')}（构建时会自动跳过）</span>`;
+      } catch (e) { tip.textContent = '测试失败：' + e.message; }
+      btn.disabled = false;
+    };
+  }
+  function render() {
+    const box = $('#friend-list');
+    box.innerHTML = list.map(rowHtml).join('');
+    box.querySelectorAll('.friend-row').forEach((row) => {
+      const i = +row.dataset.i;
+      row.querySelector('[data-a=up]').onclick = () => { if (i > 0) { [list[i - 1], list[i]] = [list[i], list[i - 1]]; markDirty(); render(); } };
+      row.querySelector('[data-a=down]').onclick = () => { if (i < list.length - 1) { [list[i + 1], list[i]] = [list[i], list[i + 1]]; markDirty(); render(); } };
+      row.querySelector('[data-a=toggle]').onclick = () => { list[i].enabled = !list[i].enabled; markDirty(); render(); };
+      row.querySelector('[data-a=del]').onclick = () => { if (confirm(`删除友链「${list[i].title}」？`)) { list.splice(i, 1); markDirty(); render(); } };
+      row.querySelector('[data-a=edit]').onclick = () => {
+        const fe = box.querySelector(`[data-form="${i}"]`);
+        fe.innerHTML = formHtml(list[i]);
+        fe.classList.remove('hidden');
+        wireRssTest(fe);
+        fe.querySelector('[data-a=cancel]').onclick = () => { fe.classList.add('hidden'); fe.innerHTML = ''; };
+        fe.querySelector('[data-a=oksave]').onclick = () => {
+          const f = list[i];
+          fe.querySelectorAll('[data-k]').forEach((el) => {
+            const k = el.dataset.k;
+            if (k === 'enabled') f.enabled = el.checked;
+            else if (k === 'tags') f.tags = el.value.split(',').map((s) => s.trim()).filter(Boolean);
+            else f[k] = el.value.trim();
+          });
+          if (!f.title || !f.siteurl) { toast('站名和网址必填', true); return; }
+          markDirty(); render(); toast('已更新（记得点保存）');
+        };
+      };
+    });
+    $('#friend-count').textContent = `共 ${list.length} 个`;
+  }
+
+  body.innerHTML = `<div class="toolbar">
+      <button class="btn" id="btn-fadd">＋ 添加友链</button>
+      <span class="spacer"></span><span class="hint" id="friend-count"></span>
+      <button class="btn" id="btn-fsave" disabled>💾 保存到仓库</button>
+    </div>
+    <p class="hint">↑↓ 调整顺序（保存后按此顺序展示）；停用=前台隐藏但保留。</p>
+    <div id="friend-list"></div>
+    <div id="friend-new"></div>`;
+  render();
+
+  $('#btn-fadd').onclick = () => {
+    const box = $('#friend-new');
+    if (box.innerHTML) { box.innerHTML = ''; return; }
+    box.innerHTML = formHtml({ title: '', siteurl: '', imgurl: '', desc: '', tags: ['Blog'], rss: '', enabled: true });
+    wireRssTest(box);
+    box.querySelector('[data-a=cancel]').onclick = () => { box.innerHTML = ''; };
+    box.querySelector('[data-a=oksave]').onclick = () => {
+      const f = { tags: [] };
+      box.querySelectorAll('[data-k]').forEach((el) => {
+        const k = el.dataset.k;
+        if (k === 'enabled') f.enabled = el.checked;
+        else if (k === 'tags') f.tags = el.value.split(',').map((s) => s.trim()).filter(Boolean);
+        else f[k] = el.value.trim();
+      });
+      if (!f.title || !f.siteurl) { toast('站名和网址必填', true); return; }
+      list.push(f); box.innerHTML = ''; markDirty(); render(); toast('已添加（记得点保存）');
+    };
+  };
+  $('#btn-fsave').onclick = async () => {
+    const btn = $('#btn-fsave');
+    btn.disabled = true;
+    try {
+      const n = list.length;
+      const body = list.map((f, i) => friendToTs(f, n - i)).join('\n');
+      const text = head + '\n' + body + '\n' + tail;
+      const r = await ghPutFile(FRIENDS_PATH, text, sha, '更新友链 [管理台]');
+      sha = r.content.sha;
+      dirty.v = false;
+      toast('已保存，构建后生效');
+    } catch (e) { toast(e.message, true); btn.disabled = false; }
+  };
+};
+
+/* ---------- 书签导航管理 ---------- */
+const BOOKNAV_PATH = 'src/config/booknavConfig.ts';
+function booknavExtract(src) {
+  const ks = src.indexOf('export const booknavConfig');
+  if (ks < 0) throw new Error('找不到 booknavConfig');
+  const eq = src.indexOf('=', ks);
+  const as = src.indexOf('[', eq);
+  let depth = 0, i = as;
+  for (; i < src.length; i++) {
+    if (src[i] === '[') depth++;
+    else if (src[i] === ']') { depth--; if (!depth) break; }
+  }
+  return { head: src.slice(0, as + 1), body: src.slice(as + 1, i), tail: src.slice(i) };
+}
+function topBlocks(body) {
+  const blocks = [];
+  let i = 0;
+  while (i < body.length) {
+    const s = body.indexOf('{', i);
+    if (s < 0) break;
+    let depth = 0, j = s, inStr = null;
+    for (; j < body.length; j++) {
+      const c = body[j];
+      if (inStr) { if (c === inStr && body[j - 1] !== '\\') inStr = null; }
+      else if (c === '"' || c === "'") inStr = c;
+      else if (c === '{') depth++;
+      else if (c === '}') { depth--; if (!depth) break; }
+    }
+    blocks.push(body.slice(s, j + 1));
+    i = j + 1;
+  }
+  return blocks;
+}
+function booknavParse(src) {
+  const { head, body, tail } = booknavExtract(src);
+  const get = (block, k) => {
+    const mm = block.match(new RegExp(k + '\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"'));
+    return mm ? mm[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\') : '';
+  };
+  const groups = topBlocks(body).map((gb) => {
+    const itemsM = gb.match(/items\s*:\s*\[/);
+    let items = [];
+    if (itemsM) {
+      const as = gb.indexOf('[', itemsM.index);
+      let depth = 0, i = as, inStr = null;
+      for (; i < gb.length; i++) {
+        const c = gb[i];
+        if (inStr) { if (c === inStr && gb[i - 1] !== '\\') inStr = null; }
+        else if (c === '"' || c === "'") inStr = c;
+        else if (c === '[') depth++;
+        else if (c === ']') { depth--; if (!depth) break; }
+      }
+      const itemsBody = gb.slice(as + 1, i);
+      items = topBlocks(itemsBody).map((ib) => ({
+        title: get(ib, 'title'), url: get(ib, 'url'), desc: get(ib, 'desc'),
+        icon: get(ib, 'icon'),
+        weight: parseInt((ib.match(/weight\s*:\s*(\d+)/) || [])[1] || '0', 10),
+      }));
+    }
+    return {
+      id: get(gb, 'id'), name: get(gb, 'name'), icon: get(gb, 'icon'), desc: get(gb, 'desc'),
+      weight: parseInt((gb.match(/weight\s*:\s*(\d+)/) || [])[1] || '0', 10),
+      items,
+    };
+  });
+  return { head, tail, groups };
+}
+function booknavToTs(groups) {
+  const q = (s) => `"${String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  const lines = [];
+  groups.forEach((g, gi) => {
+    lines.push(`\t{`);
+    lines.push(`\t\tid: ${q(g.id || 'g' + Date.now())},`);
+    lines.push(`\t\tname: ${q(g.name)},`);
+    if (g.icon) lines.push(`\t\ticon: ${q(g.icon)},`);
+    if (g.desc) lines.push(`\t\tdesc: ${q(g.desc)},`);
+    lines.push(`\t\tweight: ${groups.length - gi},`);
+    lines.push(`\t\titems: [`);
+    g.items.forEach((it, ii) => {
+      lines.push(`\t\t\t{`);
+      lines.push(`\t\t\t\ttitle: ${q(it.title)},`);
+      lines.push(`\t\t\t\turl: ${q(it.url)},`);
+      if (it.desc) lines.push(`\t\t\t\tdesc: ${q(it.desc)},`);
+      if (it.icon) lines.push(`\t\t\t\ticon: ${q(it.icon)},`);
+      lines.push(`\t\t\t\tweight: ${g.items.length - ii},`);
+      lines.push(`\t\t\t},`);
+    });
+    lines.push(`\t\t],`);
+    lines.push(`\t},`);
+  });
+  return lines.join('\n');
+}
+routes.booknav = async () => {
+  view.innerHTML = '<div class="card"><h2>🔖 书签导航</h2><p class="hint">正在读取仓库…</p></div>';
+  let sha = null, head = '', tail = '', groups = [];
+  try {
+    const data = await ghGetFile(BOOKNAV_PATH);
+    sha = data.sha;
+    const p = booknavParse(data.text);
+    head = p.head; tail = p.tail; groups = p.groups;
+    groups.sort((a, b) => b.weight - a.weight);
+    groups.forEach((g) => g.items.sort((a, b) => b.weight - a.weight));
+  } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+  const markDirty = () => { $('#btn-bsave').disabled = false; };
+  const itemForm = (it) => {
+    const inp = (k, label, v, ph) => `<div class="field"><label>${label}</label><input type="text" data-k="${k}" value="${esc(v || '')}" placeholder="${ph || ''}"></div>`;
+    return `<div class="card">${inp('title', '标题 *', it.title)}${inp('url', '网址 *', it.url, 'https://')}${inp('desc', '描述', it.desc)}${inp('icon', '图标（留空自动获取 favicon）', it.icon, 'material-symbols:…')}
+    <div class="toolbar"><span class="spacer"></span><button class="btn btn-small btn-ghost" data-a="cancel">取消</button><button class="btn btn-small" data-a="ok">确定</button></div></div>`;
+  };
+  const groupForm = (g) => {
+    const inp = (k, label, v, ph) => `<div class="field"><label>${label}</label><input type="text" data-k="${k}" value="${esc(v || '')}" placeholder="${ph || ''}"></div>`;
+    return `<div class="card"><div class="grid2">${inp('name', '分组名 *', g.name)}${inp('id', 'ID（英文唯一）', g.id)}</div><div class="grid2">${inp('icon', '图标', g.icon, 'material-symbols:…')}${inp('desc', '描述', g.desc)}</div>
+    <div class="toolbar"><span class="spacer"></span><button class="btn btn-small btn-ghost" data-a="cancel">取消</button><button class="btn btn-small" data-a="ok">确定</button></div></div>`;
+  };
+  function readForm(box) {
+    const o = {};
+    box.querySelectorAll('[data-k]').forEach((el) => { o[el.dataset.k] = el.value.trim(); });
+    return o;
+  }
+  function render() {
+    const box = $('#booknav-list');
+    box.innerHTML = groups.map((g, gi) => `
+      <div class="card" data-g="${gi}">
+        <div class="toolbar"><b>📁 ${esc(g.name || '(未命名)')} <span class="hint">${g.items.length} 个书签</span></b><span class="spacer"></span>
+          <button class="btn btn-small" data-a="gup">↑</button><button class="btn btn-small" data-a="gdown">↓</button>
+          <button class="btn btn-small" data-a="gedit">编辑分组</button><button class="btn btn-small" data-a="iadd">＋书签</button>
+          <button class="btn btn-small btn-danger" data-a="gdel">删分组</button></div>
+        <div class="gform hidden"></div>
+        ${g.items.map((it, ii) => `
+          <div class="list-item" data-ii="${ii}">
+            <span class="title">${esc(it.title || '(无标题)')}</span><span class="meta">${esc(it.url)}</span>
+            <button class="btn btn-small" data-a="iup">↑</button><button class="btn btn-small" data-a="idown">↓</button>
+            <button class="btn btn-small" data-a="iedit">编辑</button><button class="btn btn-small btn-danger" data-a="idel">删除</button>
+          </div><div class="iform hidden"></div>`).join('')}
+        <div class="inew"></div>
+      </div>`).join('');
+    box.querySelectorAll('[data-g]').forEach((card) => {
+      const gi = +card.dataset.g, g = groups[gi];
+      const qsa = (s) => card.querySelector(s);
+      qsa('[data-a=gup]').onclick = () => { if (gi > 0) { [groups[gi - 1], groups[gi]] = [groups[gi], groups[gi - 1]]; markDirty(); render(); } };
+      qsa('[data-a=gdown]').onclick = () => { if (gi < groups.length - 1) { [groups[gi + 1], groups[gi]] = [groups[gi], groups[gi + 1]]; markDirty(); render(); } };
+      qsa('[data-a=gdel]').onclick = () => { if (confirm(`删除分组「${g.name}」（含 ${g.items.length} 个书签）？`)) { groups.splice(gi, 1); markDirty(); render(); } };
+      qsa('[data-a=gedit]').onclick = () => {
+        const f = qsa('.gform'); f.innerHTML = groupForm(g); f.classList.remove('hidden');
+        f.querySelector('[data-a=cancel]').onclick = () => { f.classList.add('hidden'); f.innerHTML = ''; };
+        f.querySelector('[data-a=ok]').onclick = () => {
+          const o = readForm(f);
+          if (!o.name) { toast('分组名必填', true); return; }
+          Object.assign(g, o); if (!g.id) g.id = 'g' + Date.now();
+          markDirty(); render(); toast('已更新（记得点保存）');
+        };
+      };
+      qsa('[data-a=iadd]').onclick = () => {
+        const nw = card.querySelector('.inew');
+        if (nw.innerHTML) { nw.innerHTML = ''; return; }
+        nw.innerHTML = itemForm({ title: '', url: '', desc: '', icon: '' });
+        nw.querySelector('[data-a=cancel]').onclick = () => { nw.innerHTML = ''; };
+        nw.querySelector('[data-a=ok]').onclick = () => {
+          const o = readForm(nw);
+          if (!o.title || !o.url) { toast('标题和网址必填', true); return; }
+          g.items.push(o); nw.innerHTML = ''; markDirty(); render(); toast('已添加（记得点保存）');
+        };
+      };
+      card.querySelectorAll('.list-item').forEach((row) => {
+        const ii = +row.dataset.ii, it = g.items[ii];
+        const iform = row.nextElementSibling;
+        row.querySelector('[data-a=iup]').onclick = () => { if (ii > 0) { [g.items[ii - 1], g.items[ii]] = [g.items[ii], g.items[ii - 1]]; markDirty(); render(); } };
+        row.querySelector('[data-a=idown]').onclick = () => { if (ii < g.items.length - 1) { [g.items[ii + 1], g.items[ii]] = [g.items[ii], g.items[ii + 1]]; markDirty(); render(); } };
+        row.querySelector('[data-a=idel]').onclick = () => { if (confirm(`删除书签「${it.title}」？`)) { g.items.splice(ii, 1); markDirty(); render(); } };
+        row.querySelector('[data-a=iedit]').onclick = () => {
+          iform.innerHTML = itemForm(it); iform.classList.remove('hidden');
+          iform.querySelector('[data-a=cancel]').onclick = () => { iform.classList.add('hidden'); iform.innerHTML = ''; };
+          iform.querySelector('[data-a=ok]').onclick = () => {
+            const o = readForm(iform);
+            if (!o.title || !o.url) { toast('标题和网址必填', true); return; }
+            Object.assign(it, o); markDirty(); render(); toast('已更新（记得点保存）');
+          };
+        };
+      });
+    });
+    $('#booknav-count').textContent = `共 ${groups.length} 个分组 / ${groups.reduce((s, g) => s + g.items.length, 0)} 个书签`;
+  }
+  view.innerHTML = `<div class="toolbar">
+      <button class="btn" id="btn-gadd">＋ 添加分组</button><span class="spacer"></span>
+      <span class="hint" id="booknav-count"></span><button class="btn" id="btn-bsave" disabled>💾 保存到仓库</button>
+    </div><p class="hint">↑↓ 调整顺序（保存后按此顺序展示）。图标留空则自动获取目标站 favicon。</p>
+    <div id="booknav-new"></div><div id="booknav-list"></div>`;
+  render();
+  $('#btn-gadd').onclick = () => {
+    const nw = $('#booknav-new');
+    if (nw.innerHTML) { nw.innerHTML = ''; return; }
+    nw.innerHTML = groupForm({ name: '', id: '', icon: '', desc: '' });
+    nw.querySelector('[data-a=cancel]').onclick = () => { nw.innerHTML = ''; };
+    nw.querySelector('[data-a=ok]').onclick = () => {
+      const o = readForm(nw);
+      if (!o.name) { toast('分组名必填', true); return; }
+      o.id = o.id || 'g' + Date.now(); o.items = [];
+      groups.push(o); nw.innerHTML = ''; markDirty(); render(); toast('已添加（记得点保存）');
+    };
+  };
+  $('#btn-bsave').onclick = async () => {
+    const btn = $('#btn-bsave'); btn.disabled = true;
+    try {
+      const text = head + '\n' + booknavToTs(groups) + '\n' + tail;
+      const r = await ghPutFile(BOOKNAV_PATH, text, sha, '更新书签导航 [管理台]');
+      sha = r.content.sha; toast('已保存，构建后生效');
+    } catch (e) { toast(e.message, true); btn.disabled = false; }
+  };
+};
+
+/* ---------- 控制台导航栏管理 ---------- */
+const NAVMGR_PATH = 'public/admin/config.js';
+routes.navmgr = async () => {
+  view.innerHTML = '<div class="card"><h2>🧭 导航</h2><p class="hint">正在读取配置…</p></div>';
+  let sha = null, cfgText = '';
+  try {
+    const data = await ghGetFile(NAVMGR_PATH);
+    sha = data.sha; cfgText = data.text;
+  } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+  // 解析当前 navLayout
+  const parseLayout = (t) => {
+    const m = t.match(/navLayout\s*:\s*\{([\s\S]*?)\n\s*\},/);
+    if (!m) return null;
+    const blk = m[1];
+    const arr = (k) => { const mm = blk.match(new RegExp(k + '\\s*:\\s*\\[([^\\]]*)\\]')); return mm ? mm[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean) : []; };
+    const labels = {};
+    const lm = blk.match(/labels\s*:\s*\{([^}]*)\}/);
+    if (lm) lm[1].split(',').forEach((p) => { const mm = p.match(/(\w+)\s*:\s*['"]([^'"]*)['"]/); if (mm) labels[mm[1]] = mm[2]; });
+    return { primary: arr('primary'), secondary: arr('secondary'), labels };
+  };
+  let layout = parseLayout(cfgText) || { primary: [], secondary: [], labels: {} };
+  const defs = navDefs();
+  const allKeys = Object.keys(defs);
+  // 补齐漏掉的 key
+  allKeys.forEach((k) => { if (!layout.primary.includes(k) && !layout.secondary.includes(k)) layout.secondary.push(k); });
+  layout.primary = layout.primary.filter((k) => allKeys.includes(k));
+  layout.secondary = layout.secondary.filter((k) => allKeys.includes(k));
+  const markDirty = () => { $('#btn-navmsave').disabled = false; };
+  const labelOf = (k) => layout.labels[k] || defs[k] || k;
+  function render() {
+    const box = $('#navm-list');
+    const row = (k, listName, i, list) => `
+      <div class="list-item" data-k="${k}">
+        <span class="title">${esc(labelOf(k))}</span><span class="meta">${esc(k)}${layout.labels[k] ? ' · 已改名' : ''}</span>
+        <button class="btn btn-small" data-a="up">↑</button><button class="btn btn-small" data-a="down">↓</button>
+        <button class="btn btn-small" data-a="move">${listName === 'primary' ? '→ ···' : '← 主栏'}</button>
+        <button class="btn btn-small" data-a="rename">改名</button>
+      </div>`;
+    box.innerHTML = `
+      <div class="card"><b>主栏</b><p class="hint">直接显示在导航栏</p>
+        ${layout.primary.map((k, i) => row(k, 'primary', i, layout.primary)).join('') || '<p class="hint">空</p>'}</div>
+      <div class="card"><b>··· 更多</b><p class="hint">收进 ··· 下拉菜单（移动端换行全显）</p>
+        ${layout.secondary.map((k, i) => row(k, 'secondary', i, layout.secondary)).join('') || '<p class="hint">空</p>'}</div>`;
+    box.querySelectorAll('.list-item').forEach((el) => {
+      const k = el.dataset.k;
+      const inPrimary = layout.primary.includes(k);
+      const list = inPrimary ? layout.primary : layout.secondary;
+      const i = list.indexOf(k);
+      el.querySelector('[data-a=up]').onclick = () => { if (i > 0) { [list[i-1], list[i]] = [list[i], list[i-1]]; markDirty(); render(); } };
+      el.querySelector('[data-a=down]').onclick = () => { if (i < list.length - 1) { [list[i+1], list[i]] = [list[i], list[i+1]]; markDirty(); render(); } };
+      el.querySelector('[data-a=move]').onclick = () => {
+        list.splice(i, 1);
+        (inPrimary ? layout.secondary : layout.primary).push(k);
+        markDirty(); render();
+      };
+      el.querySelector('[data-a=rename]').onclick = () => {
+        const v = prompt(`「${defs[k]}」显示名称：`, labelOf(k));
+        if (v === null) return;
+        const name = v.trim();
+        if (!name) delete layout.labels[k];
+        else if (name !== defs[k]) layout.labels[k] = name;
+        else delete layout.labels[k];
+        markDirty(); render();
+      };
+    });
+  }
+  view.innerHTML = `<div class="toolbar"><span class="spacer"></span>
+      <button class="btn" id="btn-navmsave" disabled>💾 保存到仓库</button></div>
+    <p class="hint">调整控制台导航栏：↑↓ 排序，→··· / ←主栏 切换分组，改名自定义显示名称。保存后所有设备生效。</p>
+    <div id="navm-list"></div>`;
+  render();
+  $('#btn-navmsave').onclick = async () => {
+    const btn = $('#btn-navmsave'); btn.disabled = true;
+    try {
+      const q = (s) => `'${s}'`;
+      const labelsStr = Object.entries(layout.labels).map(([k, v]) => `${k}: '${v.replace(/'/g, "\\'")}'`).join(', ');
+      const newLayout = `navLayout: {\n    primary: [${layout.primary.map(q).join(', ')}],\n    secondary: [${layout.secondary.map(q).join(', ')}],\n    labels: { ${labelsStr} },\n  },`;
+      const text = cfgText.replace(/navLayout\s*:\s*\{[\s\S]*?\n\s*\},/, newLayout);
+      if (text === cfgText) throw new Error('配置未变化或格式不匹配');
+      const r = await ghPutFile(NAVMGR_PATH, text, sha, '更新控制台导航栏 [管理台]');
+      sha = r.content.sha; cfgText = text;
+      // 同步到当前页
+      CFG.navLayout = { primary: layout.primary.slice(), secondary: layout.secondary.slice(), labels: { ...layout.labels } };
+      toast('已保存，刷新页面生效');
+    } catch (e) { toast(e.message, true); btn.disabled = false; }
+  };
+};
+
+/* ---------- 视频管理（R2 原画质直传，不转码不压缩） ---------- */
+routes.videos = async () => {
+  view.innerHTML = `<div class="toolbar">
+      <button class="btn" id="btn-vupload">＋ 上传视频</button>
+      <input type="file" id="f-vupload" accept="video/*" multiple class="hidden">
+      <span class="spacer"></span><span class="hint" id="video-count"></span>
+    </div>
+    <p class="hint">原画质直传 R2，不转码、不压缩。建议 mp4（H.264）兼容性最好。单个文件建议 &lt; 100MB。</p>
+    <div id="video-list"><div class="card"><p class="hint">正在读取…</p></div></div>`;
+  const listEl = $('#video-list');
+  async function load() {
+    try {
+      const r = await fetch('/api/r2-list?prefix=videos/&limit=100', { headers: { Authorization: `Bearer ${token()}` } });
+      const j = await r.json();
+      if (j.error) throw new Error(j.error);
+      const objs = (j.objects || []).sort((a, b) => new Date(b.uploaded) - new Date(a.uploaded));
+      $('#video-count').textContent = `共 ${objs.length} 个`;
+      listEl.innerHTML = objs.map((o, i) => {
+        const name = o.key.split('/').pop();
+        const mb = (o.size / 1048576).toFixed(1);
+        const dt = o.uploaded ? new Date(o.uploaded).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) : '';
+        return `<div class="list-item" data-i="${i}">
+          <video class="video-thumb" src="${esc(o.url)}" preload="metadata" muted></video>
+          <span class="feed-main"><span class="feed-title">${esc(name)}</span>
+          <span class="feed-ex">${mb} MB · ${esc(dt)}</span></span>
+          <button class="btn btn-small" data-a="play">▶ 预览</button>
+          <button class="btn btn-small" data-a="copy">复制链接</button>
+          <button class="btn btn-small btn-danger" data-a="del">删除</button>
+        </div><div class="vpreview hidden"></div>`;
+      }).join('') || '<div class="card">还没有视频，传一个吧 👆</div>';
+      listEl.querySelectorAll('.list-item').forEach((row) => {
+        const o = objs[+row.dataset.i];
+        const pv = row.nextElementSibling;
+        row.querySelector('[data-a=play]').onclick = () => {
+          if (pv.innerHTML) { pv.classList.add('hidden'); pv.innerHTML = ''; return; }
+          pv.innerHTML = `<div class="card"><video src="${esc(o.url)}" controls style="max-width:100%;max-height:400px"></video></div>`;
+          pv.classList.remove('hidden');
+        };
+        row.querySelector('[data-a=copy]').onclick = async () => {
+          try { await navigator.clipboard.writeText(o.url); toast('链接已复制'); }
+          catch (e) { prompt('复制链接：', o.url); }
+        };
+        row.querySelector('[data-a=del]').onclick = async () => {
+          if (!confirm(`删除视频 ${o.key.split('/').pop()}？R2 上的文件会真正删除。`)) return;
+          try {
+            const r = await fetch('/api/r2-delete', { method: 'POST',
+              headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ keys: [o.key] }) });
+            const j = await r.json();
+            if (j.error) throw new Error(j.error);
+            toast('已删除'); load();
+          } catch (e) { toast(e.message, true); }
+        };
+      });
+    } catch (e) { listEl.innerHTML = `<div class="card">读取失败：${esc(e.message)}</div>`; }
+  }
+  await load();
+  $('#btn-vupload').onclick = () => $('#f-vupload').click();
+  $('#f-vupload').onchange = async (e) => {
+    const files = Array.from(e.target.files);
+    e.target.value = '';
+    if (!files.length) return;
+    const d = new Date(), p = (n) => String(n).padStart(2, '0');
+    const dir = `videos/${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    toast(`上传中（${files.length} 个，原画质）…`);
+    try {
+      const fd = new FormData();
+      fd.append('dir', dir);
+      for (const f of files) fd.append('files', f, f.name); // 不做任何转码，原样上传
+      const r = await fetch('/api/r2-upload', { method: 'POST', headers: { Authorization: `Bearer ${token()}` }, body: fd });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || `上传失败: ${r.status}`);
+      toast(`上传成功 ${j.urls.length} 个`);
+      load();
+    } catch (err) { toast(err.message, true); }
+  };
+};
+
+/* ---------- 简介卡片管理 ---------- */
+const PROFILE_PATH = 'src/config/profileConfig.ts';
+routes.profile = async () => {
+  view.innerHTML = '<div class="card"><h2>👤 简介</h2><p class="hint">正在读取仓库…</p></div>';
+  let sha = null, src = '';
+  try {
+    const data = await ghGetFile(PROFILE_PATH);
+    sha = data.sha; src = data.text;
+  } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+  const getStr = (k) => { const m = src.match(new RegExp(k + '\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"')); return m ? m[1].replace(/\\"/g, '"') : ''; };
+  // 解析 links 数组
+  const links = [];
+  const lm = src.match(/links\s*:\s*\[/);
+  if (lm) {
+    const as = src.indexOf('[', lm.index);
+    let depth = 0, i = as, inStr = null;
+    for (; i < src.length; i++) {
+      const c = src[i];
+      if (inStr) { if (c === inStr && src[i - 1] !== '\\') inStr = null; }
+      else if (c === '"' || c === "'") inStr = c;
+      else if (c === '[') depth++;
+      else if (c === ']') { depth--; if (!depth) break; }
+    }
+    for (const b of topBlocks(src.slice(as + 1, i))) {
+      const g = (k) => { const mm = b.match(new RegExp(k + '\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"')); return mm ? mm[1] : ''; };
+      links.push({ name: g('name'), icon: g('icon'), url: g('url'), showName: /showName\s*:\s*true/.test(b) });
+    }
+  }
+  const info = { avatar: getStr('avatar'), name: getStr('name'), bio: getStr('bio'),
+    avatarUseAnimated: /avatarUseAnimated\s*:\s*true/.test(src) };
+  const markDirty = () => { $('#btn-pfsave').disabled = false; };
+  const linkForm = (l) => {
+    const inp = (k, label, v, ph) => `<div class="field"><label>${label}</label><input type="text" data-k="${k}" value="${esc(v || '')}" placeholder="${ph || ''}"></div>`;
+    return `<div class="card"><div class="grid2">${inp('name', '名称 *', l.name)}${inp('url', '链接 *', l.url, 'https:// 或 mailto:')}</div>
+    <div class="grid2">${inp('icon', '图标', l.icon, 'fa7-brands:github')} 
+    <div class="field"><label>显示名称</label><label class="pill${l.showName ? ' on' : ''}"><input type="checkbox" data-k="showName"${l.showName ? ' checked' : ''}>图标旁显示文字</label></div></div>
+    <p class="hint">图标去 <a href="https://icones.js.org/" target="_blank">icones.js.org</a> 找代码，如 fa7-brands:github</p>
+    <div class="toolbar"><span class="spacer"></span><button class="btn btn-small btn-ghost" data-a="cancel">取消</button><button class="btn btn-small" data-a="ok">确定</button></div></div>`;
+  };
+  function renderLinks() {
+    const box = $('#pf-links');
+    box.innerHTML = links.map((l, i) => `
+      <div class="list-item" data-i="${i}">
+        <span class="title">${esc(l.name || '(未命名)')}</span><span class="meta">${esc(l.url || '')}</span>
+        <button class="btn btn-small" data-a="up">↑</button><button class="btn btn-small" data-a="down">↓</button>
+        <button class="btn btn-small" data-a="edit">编辑</button><button class="btn btn-small btn-danger" data-a="del">删除</button>
+      </div><div class="lform hidden"></div>`).join('');
+    box.querySelectorAll('.list-item').forEach((row) => {
+      const i = +row.dataset.i, l = links[i], f = row.nextElementSibling;
+      row.querySelector('[data-a=up]').onclick = () => { if (i > 0) { [links[i-1], links[i]] = [links[i], links[i-1]]; markDirty(); renderLinks(); } };
+      row.querySelector('[data-a=down]').onclick = () => { if (i < links.length - 1) { [links[i+1], links[i]] = [links[i], links[i+1]]; markDirty(); renderLinks(); } };
+      row.querySelector('[data-a=del]').onclick = () => { if (confirm(`删除链接「${l.name}」？`)) { links.splice(i, 1); markDirty(); renderLinks(); } };
+      row.querySelector('[data-a=edit]').onclick = () => {
+        f.innerHTML = linkForm(l); f.classList.remove('hidden');
+        f.querySelector('[data-a=cancel]').onclick = () => { f.classList.add('hidden'); f.innerHTML = ''; };
+        f.querySelector('[data-a=ok]').onclick = () => {
+          const o = {};
+          f.querySelectorAll('[data-k]').forEach((el) => { o[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value.trim(); });
+          if (!o.name || !o.url) { toast('名称和链接必填', true); return; }
+          Object.assign(l, o); markDirty(); renderLinks();
+        };
+      };
+    });
+  }
+  view.innerHTML = `
+    <div class="card"><h3>基本信息</h3>
+      <div class="field"><label>名字</label><input type="text" id="pf-name" value="${esc(info.name)}"></div>
+      <div class="field"><label>头像 <span class="hint">（对外固定地址，不可改）</span></label>
+        <div class="avatar-row">
+          <img src="/avatar.png" class="avatar-preview" onerror="this.style.display='none'">
+          <div style="flex:1">
+            <div class="mono">https://lanerc.me/avatar.png</div>
+            <div class="mono">https://lanerc.me/avatar.avif</div>
+          </div>
+          <button class="btn btn-small" id="btn-avupload">替换文件</button>
+          <input type="file" id="f-avupload" accept="image/*" class="hidden">
+        </div>
+        <p class="hint">传一次，两个地址同时换成新头像，只换 public/ 下文件内容，地址永不变，友链那边不会挂。</p>
+        <label class="pill${info.avatarUseAnimated ? ' on' : ''}" style="margin-top:8px"><input type="checkbox" id="pf-use-animated"${info.avatarUseAnimated ? ' checked' : ''}>动图模式</label>
+        <p class="hint">传 GIF 动图时打开：前台跳过图片优化器直接渲染，保证动起来。</p></div>
+      <div class="field"><label>个人签名</label><textarea id="pf-bio" rows="2">${esc(info.bio)}</textarea></div>
+    </div>
+    <div class="toolbar"><button class="btn btn-small" id="btn-pfadd">＋ 添加链接</button><span class="spacer"></span>
+      <button class="btn" id="btn-pfsave" disabled>💾 保存到仓库</button></div>
+    <div id="pf-new"></div><div id="pf-links"></div>`;
+  renderLinks();
+  ['pf-name', 'pf-bio'].forEach((id) => { $('#' + id).oninput = markDirty; });
+  $('#pf-use-animated').onchange = (e) => {
+    e.target.closest('.pill').classList.toggle('on', e.target.checked);
+    markDirty();
+  };
+  // 头像：一次上传，同时替换 public/avatar.png 和 public/avatar.avif（地址不变）
+  $('#btn-avupload').onclick = () => $('#f-avupload').click();
+  $('#f-avupload').onchange = async (e) => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    if (!confirm(`用「${f.name}」替换头像？\npublic/avatar.png 和 public/avatar.avif 都会换成这张，\n对外地址 https://lanerc.me/avatar.png / .avif 不变。`)) return;
+    toast('替换中…');
+    try {
+      const buf = await f.arrayBuffer();
+      let bin = '';
+      const bytes = new Uint8Array(buf);
+      for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+      const b64 = btoa(bin);
+      for (const repoPath of ['public/avatar.png', 'public/avatar.avif']) {
+        let sha = null;
+        try { sha = (await ghGetFile(repoPath)).sha; } catch (_) {}
+        await ghPutFile(repoPath, b64, sha, `替换头像 ${repoPath} [管理台]`, true);
+      }
+      toast('两个地址都已更新，构建后全网生效');
+    } catch (err) { toast(err.message, true); }
+  };
+  $('#btn-pfadd').onclick = () => {
+    const nw = $('#pf-new');
+    if (nw.innerHTML) { nw.innerHTML = ''; return; }
+    nw.innerHTML = linkForm({ name: '', url: '', icon: '', showName: false });
+    nw.querySelector('[data-a=cancel]').onclick = () => { nw.innerHTML = ''; };
+    nw.querySelector('[data-a=ok]').onclick = () => {
+      const o = {};
+      nw.querySelectorAll('[data-k]').forEach((el) => { o[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value.trim(); });
+      if (!o.name || !o.url) { toast('名称和链接必填', true); return; }
+      links.push(o); nw.innerHTML = ''; markDirty(); renderLinks();
+    };
+  };
+  $('#btn-pfsave').onclick = async () => {
+    const btn = $('#btn-pfsave'); btn.disabled = true;
+    try {
+      const q = (s) => `"${String(s || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+      let text = src;
+      // avatar 地址固定，不可改，只保存动图开关
+      text = text.replace(/avatarUseAnimated\s*:\s*(true|false)/, `avatarUseAnimated: ${$('#pf-use-animated').checked ? 'true' : 'false'}`);
+      text = text.replace(/name\s*:\s*"[^"]*"/, `name: ${q($('#pf-name').value.trim())}`);
+      text = text.replace(/bio\s*:\s*"[^"]*"/, `bio: ${q($('#pf-bio').value.trim())}`);
+      const linksTs = links.map((l) => `\t\t{\n\t\t\tname: ${q(l.name)},\n\t\t\ticon: ${q(l.icon)},\n\t\t\turl: ${q(l.url)},\n\t\t\tshowName: ${l.showName ? 'true' : 'false'},\n\t\t},`).join('\n');
+      const lm2 = text.match(/links\s*:\s*\[/);
+      const as = text.indexOf('[', lm2.index);
+      let depth = 0, i = as, inStr = null;
+      for (; i < text.length; i++) {
+        const c = text[i];
+        if (inStr) { if (c === inStr && text[i - 1] !== '\\') inStr = null; }
+        else if (c === '"' || c === "'") inStr = c;
+        else if (c === '[') depth++;
+        else if (c === ']') { depth--; if (!depth) break; }
+      }
+      text = text.slice(0, as + 1) + '\n' + linksTs + '\n\t' + text.slice(i);
+      const r = await ghPutFile(PROFILE_PATH, text, sha, '更新简介卡片 [管理台]');
+      sha = r.content.sha; src = text; toast('已保存，构建后生效');
+    } catch (e) { toast(e.message, true); btn.disabled = false; }
+  };
+};
+
+/* ---------- 横幅文字管理 ---------- */
+const BANNER_PATH = 'src/config/backgroundWallpaper.ts';
+routes.banner = async () => {
+  view.innerHTML = '<div class="card"><h2>🖼️ 横幅</h2><p class="hint">正在读取仓库…</p></div>';
+  let sha = null, src = '';
+  try {
+    const data = await ghGetFile(BANNER_PATH);
+    sha = data.sha; src = data.text;
+  } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+  const getStr = (k) => { const m = src.match(new RegExp(k + '\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"')); return m ? m[1].replace(/\\"/g, '"') : ''; };
+  const getBool = (k) => new RegExp(k + '\\s*:\\s*true').test(src);
+  // 解析 subtitle 数组
+  const subtitles = [];
+  const sm = src.match(/subtitle\s*:\s*\[/);
+  if (sm) {
+    const as = src.indexOf('[', sm.index);
+    let depth = 0, i = as, inStr = null;
+    for (; i < src.length; i++) {
+      const c = src[i];
+      if (inStr) { if (c === inStr && src[i - 1] !== '\\') inStr = null; }
+      else if (c === '"' || c === "'") inStr = c;
+      else if (c === '[') depth++;
+      else if (c === ']') { depth--; if (!depth) break; }
+    }
+    const inner = src.slice(as + 1, i);
+    const re = /"((?:[^"\\]|\\.)*)"/g;
+    let m;
+    while ((m = re.exec(inner))) subtitles.push(m[1].replace(/\\"/g, '"'));
+  }
+  const info = { title: getStr('title'), enable: getBool('enable') };
+  const markDirty = () => { $('#btn-bnsave').disabled = false; };
+  function renderSubs() {
+    const box = $('#bn-subs');
+    box.innerHTML = subtitles.map((s, i) => `
+      <div class="list-item" data-i="${i}">
+        <span class="title" style="flex:1">${esc(s)}</span>
+        <button class="btn btn-small" data-a="up">↑</button><button class="btn btn-small" data-a="down">↓</button>
+        <button class="btn btn-small" data-a="edit">编辑</button><button class="btn btn-small btn-danger" data-a="del">删除</button>
+      </div><div class="sform hidden"></div>`).join('') || '<p class="hint">还没有轮换语句，加一条吧 👇</p>';
+    box.querySelectorAll('.list-item').forEach((row) => {
+      const i = +row.dataset.i, f = row.nextElementSibling;
+      row.querySelector('[data-a=up]').onclick = () => { if (i > 0) { [subtitles[i-1], subtitles[i]] = [subtitles[i], subtitles[i-1]]; markDirty(); renderSubs(); } };
+      row.querySelector('[data-a=down]').onclick = () => { if (i < subtitles.length - 1) { [subtitles[i+1], subtitles[i]] = [subtitles[i], subtitles[i+1]]; markDirty(); renderSubs(); } };
+      row.querySelector('[data-a=del]').onclick = () => { if (confirm('删除这条？')) { subtitles.splice(i, 1); markDirty(); renderSubs(); } };
+      row.querySelector('[data-a=edit]').onclick = () => {
+        f.innerHTML = `<div class="card"><div class="field"><input type="text" id="bn-edit" value="${esc(subtitles[i])}"></div>
+          <div class="toolbar"><span class="spacer"></span><button class="btn btn-small btn-ghost" data-a="cancel">取消</button><button class="btn btn-small" data-a="ok">确定</button></div></div>`;
+        f.classList.remove('hidden');
+        f.querySelector('[data-a=cancel]').onclick = () => { f.classList.add('hidden'); f.innerHTML = ''; };
+        f.querySelector('[data-a=ok]').onclick = () => {
+          const v = f.querySelector('#bn-edit').value.trim();
+          if (!v) { toast('内容不能为空', true); return; }
+          subtitles[i] = v; markDirty(); renderSubs();
+        };
+      };
+    });
+  }
+  view.innerHTML = `
+    <div class="card"><h3>主标题</h3>
+      <div class="field"><input type="text" id="bn-title" value="${esc(info.title)}" placeholder="Lovely Life"></div>
+      <p class="hint">支持中文、日文、emoji 等各种语言，直接写就行。</p>
+    </div>
+    <div class="toolbar"><button class="btn btn-small" id="btn-bnadd">＋ 添加轮换语句</button><span class="spacer"></span>
+      <button class="btn" id="btn-bnsave" disabled>💾 保存到仓库</button></div>
+    <div id="bn-new"></div>
+    <div class="card"><h3>轮换语句（按顺序播放）</h3><div id="bn-subs"></div></div>`;
+  renderSubs();
+  $('#bn-title').oninput = markDirty;
+  $('#btn-bnadd').onclick = () => {
+    const nw = $('#bn-new');
+    if (nw.innerHTML) { nw.innerHTML = ''; return; }
+    nw.innerHTML = `<div class="card"><div class="field"><input type="text" id="bn-newtext" placeholder="写一句新的轮换语句…"></div>
+      <div class="toolbar"><span class="spacer"></span><button class="btn btn-small btn-ghost" id="bn-cancel">取消</button><button class="btn btn-small" id="bn-ok">确定</button></div></div>`;
+    $('#bn-cancel').onclick = () => { nw.innerHTML = ''; };
+    $('#bn-ok').onclick = () => {
+      const v = $('#bn-newtext').value.trim();
+      if (!v) { toast('内容不能为空', true); return; }
+      subtitles.push(v); nw.innerHTML = ''; markDirty(); renderSubs();
+    };
+  };
+  $('#btn-bnsave').onclick = async () => {
+    const btn = $('#btn-bnsave'); btn.disabled = true;
+    try {
+      const q = (s) => `"${String(s || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+      let text = src;
+      // 只替换 homeText 块内的 title（避免误伤别处的 title）
+      const ht = text.match(/homeText\s*:\s*\{/);
+      if (!ht) throw new Error('找不到 homeText 配置');
+      const hs = ht.index;
+      // title
+      const tm = text.slice(hs).match(/title\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      if (tm) {
+        const abs = hs + tm.index;
+        text = text.slice(0, abs) + `title: ${q($('#bn-title').value.trim())}` + text.slice(abs + tm[0].length);
+      }
+      // subtitle 数组
+      const sm2 = text.slice(hs).match(/subtitle\s*:\s*\[/);
+      if (sm2) {
+        const as = hs + sm2.index + sm2[0].length - 1;
+        let depth = 0, i = as, inStr = null;
+        for (; i < text.length; i++) {
+          const c = text[i];
+          if (inStr) { if (c === inStr && text[i - 1] !== '\\') inStr = null; }
+          else if (c === '"' || c === "'") inStr = c;
+          else if (c === '[') depth++;
+          else if (c === ']') { depth--; if (!depth) break; }
+        }
+        const arrTs = subtitles.map((s) => `\t\t\t\t${q(s)},`).join('\n');
+        text = text.slice(0, as + 1) + '\n' + arrTs + '\n\t\t\t' + text.slice(i);
+      }
+      const r = await ghPutFile(BANNER_PATH, text, sha, '更新横幅文字 [管理台]');
+      sha = r.content.sha; src = text; toast('已保存，构建后生效');
+    } catch (e) { toast(e.message, true); btn.disabled = false; }
   };
 };
 
