@@ -475,14 +475,28 @@ routes.images = async () => {
     const g = $('#innerbg-grid');
     if (!g) return;
     g.innerHTML = '';
-    let hasCustom = false;
-    try { hasCustom = localStorage.getItem('admin-inner-bg-custom') === '1'; } catch (e) {}
-    const list = INNERBG_PRESETS.concat(hasCustom ? [{ file: 'admin-inner-bg.jpg', name: '自定义上传' }] : []);
+    let hasCustom = false, customName = '自定义上传';
+    try {
+      hasCustom = localStorage.getItem('admin-inner-bg-custom') === '1';
+      customName = localStorage.getItem('admin-inner-bg-custom-name') || '自定义上传';
+    } catch (e) {}
+    const list = INNERBG_PRESETS.concat(hasCustom ? [{ file: 'admin-inner-bg.jpg', name: customName, custom: true }] : []);
     list.forEach((p) => {
       const d = document.createElement('div');
       d.className = 'img-cell';
       d.innerHTML = `<img loading="lazy" src="${repoRawUrl('public/admin/' + p.file)}" alt="${esc(p.name)}">
-        <div class="url" title="${esc(p.name)}">${esc(p.name)}</div>`;
+        <div class="url" title="${esc(p.name)}">${esc(p.name)}</div>
+        ${p.custom ? '<div class="ops"><button class="mini-btn" data-a="rename">✏️ 改名</button></div>' : ''}`;
+      if (p.custom) {
+        d.querySelector('[data-a=rename]').onclick = () => {
+          const v = prompt('给这张自定义背景起个名字：', customName);
+          if (v === null) return;
+          const name = v.trim() || '自定义上传';
+          try { localStorage.setItem('admin-inner-bg-custom-name', name); } catch (e) {}
+          renderInnerBg();
+          toast('已改名为「' + name + '」');
+        };
+      }
       g.appendChild(d);
     });
     const sw = $('#innerbg-rotate');
