@@ -11,7 +11,7 @@ window.ADMIN_CONFIG = {
 
   // R2 图床公开访问前缀（Function 返回的 URL 会拼成 公开前缀 + 路径）
   // 例如绑定了自定义域名 img.lanerc.me，就填 https://img.lanerc.me
-  r2PublicBase: 'https://PASTE_YOUR_R2_PUBLIC_DOMAIN',
+  r2PublicBase: 'https://img.lanerc.me',
 
   // 管理台登录页背景图（public/admin/ 下的文件名；在「图片管理 → 控制台背景」里切换）
   adminBg: 'login-art.jpg',
