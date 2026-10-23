@@ -20,6 +20,8 @@ export async function onRequestPost({ request, env }) {
     const form = await request.formData();
     const dir = String(form.get('dir') || '').replace(/^\/+|\/+$/g, '').replace(/\.\./g, '');
     if (!dir) return Response.json({ error: '缺少 R2 目录名' }, { status: 400 });
+    // fixedName：固定文件名（不含目录），传了则覆盖同名文件，用于头像这类固定路径场景
+    const fixedName = String(form.get('fixedName') || '').replace(/^\/+|\/+$/g, '').replace(/\.\./g, '').replace(/\//g, '');
     const files = form.getAll('files');
     if (!files.length) return Response.json({ error: '没有文件' }, { status: 400 });
 
@@ -28,7 +30,7 @@ export async function onRequestPost({ request, env }) {
     for (const f of files) {
       if (typeof f === 'string') continue;
       const safeName = f.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const key = `${dir}/${stamp}-${safeName}`;
+      const key = fixedName ? `${dir}/${fixedName}` : `${dir}/${stamp}-${safeName}`;
       await env.R2_BUCKET.put(key, f.stream(), {
         httpMetadata: { contentType: f.type || 'application/octet-stream' },
       });
