@@ -97,6 +97,7 @@ async function startLogin() {
   const challenge = await sha256base64url(verifier);
   const url = 'https://github.com/login/oauth/authorize?' + new URLSearchParams({
     client_id: CFG.githubClientId, scope: 'public_repo',
+    redirect_uri: new URL('./', location.href).href,
     state, code_challenge: challenge, code_challenge_method: 'S256',
   });
   location.href = url;
