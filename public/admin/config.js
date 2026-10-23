@@ -7,7 +7,7 @@ window.ADMIN_CONFIG = {
 
   // GitHub OAuth App 的 Client ID（在 github.com/settings/developers 新建 OAuth App 后填入）
   // 回调地址填：https://你的域名/admin/
-  githubClientId: 'PASTE_YOUR_GITHUB_OAUTH_CLIENT_ID',
+  githubClientId: 'Ov23lizGLBB3dIulw6ss',
 
   // R2 图床公开访问前缀（Function 返回的 URL 会拼成 公开前缀 + 路径）
   // 例如绑定了自定义域名 img.lanerc.me，就填 https://img.lanerc.me
