@@ -424,6 +424,9 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
 .mini-btn:disabled { opacity: .45; cursor: default; }
 .mini-btn.danger { background: var(--accent); border-color: var(--accent-dark); color: #fff; }
 .mini-btn.warn { background: #b45309; border-color: #92400e; color: #fff; }
+/* 已存档文章：标题置灰 */
+.list-item.is-archived .title { color: var(--text-dim); }
+.list-item.is-archived { opacity: .75; }
 .slot-row { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; margin: 12px 0; }
 .slot-preview {
   width: 120px; height: 120px; object-fit: cover;

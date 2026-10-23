@@ -566,6 +566,7 @@ routes.dashboard = async () => {
   const monthPrefix = new Date().toISOString().slice(0, 7); // YYYY-MM
   const isDraft = (fm) => String(fm.draft).toLowerCase() === 'true';
   const isPinned = (fm) => String(fm.pinned).toLowerCase() === 'true';
+  const isArchived = (fm) => String(fm.archived).toLowerCase() === 'true';
   const inMonth = (d) => String(d || '').slice(0, 7) === monthPrefix;
 
   // 文章：读每篇 frontmatter 算草稿/置顶/本月新增
@@ -591,6 +592,7 @@ routes.dashboard = async () => {
       details: [
         ['📝', '草稿', rows.filter(isDraft).length],
         ['📌', '置顶', rows.filter(isPinned).length],
+        ['📦', '已存档', rows.filter(isArchived).length],
         ['🆕', '本月新增', rows.filter((fm) => inMonth(fm.published)).length],
       ],
     };
@@ -765,9 +767,27 @@ function listRoute(key) {
         }
         div.innerHTML = `<span class="title">${esc(e.name)}</span>${dateHtml}<span class="meta">${e.type}</span>
           <button class="btn btn-small">编辑</button>
+          ${key === 'posts' ? '<button class="btn btn-small btn-archive">📦 存档</button>' : ''}
           <button class="btn btn-small btn-danger">删除</button>`;
-        const [btnEdit, btnDel] = div.querySelectorAll('button');
+        const btns = div.querySelectorAll('button');
+        const btnEdit = btns[0], btnDel = btns[btns.length - 1];
+        const btnArch = key === 'posts' ? div.querySelector('.btn-archive') : null;
         btnEdit.onclick = () => { location.hash = `#/edit/${key}/${encodeURIComponent(e.name)}`; };
+        if (btnArch) btnArch.onclick = async () => {
+          try {
+            const files = await ghGetFile(`${col.path}/${e.name}`);
+            const md = (Array.isArray(files) ? files : []).find((f) => f.name.endsWith('.md'));
+            if (!md) { toast('找不到文章文件', true); return; }
+            const data = await ghGetFile(`${col.path}/${e.name}/${md.name}`);
+            const { fm, body } = parseFrontmatter(data.text);
+            const nowArchived = String(fm.archived).toLowerCase() === 'true';
+            if (nowArchived) delete fm.archived; else fm.archived = true;
+            await ghPutFile(`${col.path}/${e.name}/${md.name}`, serializeFrontmatter(fm, body), data.sha,
+              `${nowArchived ? '取消存档' : '存档'} ${e.name} [管理台]`);
+            toast(nowArchived ? '已取消存档，前台恢复显示' : '已存档，前台不再显示（构建后生效）');
+            router();
+          } catch (err) { toast(err.message, true); }
+        };
         btnDel.onclick = async () => {
           if (!confirm(`确定删除 ${e.name}？`)) return;
           try {
@@ -797,6 +817,12 @@ function listRoute(key) {
             if (dEl && fm.published) dEl.textContent = '📅 ' + String(fm.published).slice(0, 10);
             const tEl = div.querySelector('.title');
             if (tEl && fm.title) tEl.textContent = fm.title;
+            if (String(fm.archived).toLowerCase() === 'true') {
+              if (tEl) tEl.innerHTML = '📦 ' + esc(tEl.textContent);
+              const bA = div.querySelector('.btn-archive');
+              if (bA) bA.textContent = '📤 取消存档';
+              div.classList.add('is-archived');
+            }
           } catch (err) { /* 单篇失败不影响其他 */ }
         };
         for (let i = 0; i < rows.length; i += 4) {
@@ -873,6 +899,7 @@ routes.edit = async (arg) => {
     <div class="field"><label>选项</label><div class="pills">
       ${pill('draft', '📝 草稿', isTrue(fm.draft))}
       ${pill('pinned', '📌 置顶', isTrue(fm.pinned))}
+      ${pill('archived', '📦 存档', isTrue(fm.archived))}
       ${pill('_pw', '🔒 密码保护', hasPw)}
     </div></div>
     <div id="pw-zone" class="${hasPw ? '' : 'hidden'}"><div class="grid2">
