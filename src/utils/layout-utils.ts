@@ -28,8 +28,12 @@ export const getBackgroundImages = (): BackgroundImages => {
 			desktop?: string | string[];
 			mobile?: string | string[];
 		};
-		const desktopImages = toArray(srcObj.desktop);
-		const mobileImages = toArray(srcObj.mobile);
+		// 已禁用的壁纸不参与轮换（管理台维护的 disabled 列表）
+		const disabledSet = new Set(
+			toArray((backgroundWallpaper as { disabled?: string | string[] }).disabled),
+		);
+		const desktopImages = toArray(srcObj.desktop).filter((u) => !disabledSet.has(u));
+		const mobileImages = toArray(srcObj.mobile).filter((u) => !disabledSet.has(u));
 		return {
 			desktop: desktopImages.length > 0 ? desktopImages : mobileImages,
 			mobile: mobileImages.length > 0 ? mobileImages : desktopImages,

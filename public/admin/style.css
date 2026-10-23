@@ -404,6 +404,14 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .img-cell .ops { display: flex; gap: 6px; padding: 8px; flex-wrap: wrap; align-items: center; }
+/* 已禁用的壁纸：图片置灰 + 斜线角标 */
+.img-cell.is-disabled > img { filter: grayscale(.9) brightness(.55); }
+.img-cell.is-disabled { position: relative; }
+.img-cell.is-disabled::after {
+  content: "已禁用"; position: absolute; top: 8px; right: 8px;
+  background: rgba(0,0,0,.65); color: #fff; font-size: 11px; font-weight: 700;
+  padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,.25);
+}
 .mini-btn {
   background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 6px;
   padding: 4px 10px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text);
@@ -413,6 +421,7 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
 .mini-btn:active { transform: scale(.96); }
 .mini-btn:disabled { opacity: .45; cursor: default; }
 .mini-btn.danger { background: var(--accent); border-color: var(--accent-dark); color: #fff; }
+.mini-btn.warn { background: #b45309; border-color: #92400e; color: #fff; }
 .slot-row { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; margin: 12px 0; }
 .slot-preview {
   width: 120px; height: 120px; object-fit: cover;

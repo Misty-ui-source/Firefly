@@ -1,4 +1,4 @@
-/* Alexander 管理台：图片管理 + 音乐管理（media.js，在 app.js 之后加载）
+/* Alexander Console：图片管理 + 音乐管理（media.js，在 app.js 之后加载）
  * 图片槽位：背景壁纸 / 头像 / Favicon / 首页贴纸 / 导航 Logo / Devices 配图 / 相册封面
  * 音乐：src/config/musicConfig.ts 的 local.playlist 增删改排序
  * 约定：R2 适合远程 URL 的槽位（壁纸/音乐/封面）；固定路径文件走 GitHub Contents API base64 覆盖
@@ -168,6 +168,7 @@ routes.images = async () => {
 
   let wpDesktop = parseConfigStrings(extractConfigValue(bg.text, 'desktop'));
   let wpMobile = parseConfigStrings(extractConfigValue(bg.text, 'mobile'));
+  let wpDisabled = parseConfigStrings(extractConfigValue(bg.text, 'disabled'));
   let stickers = splitBraceObjects((extractConfigValue(sticker.text, 'stickers') || { raw: '[]' }).raw)
     .map((o) => ({ src: getStrField(o, 'src'), x: getNumField(o, 'x'), y: getNumField(o, 'y'), size: getNumField(o, 'size') }));
   const albums = [];
@@ -180,6 +181,7 @@ routes.images = async () => {
   async function saveWallpapers() {
     await updateStringListConfig(BG_CONFIG, 'desktop', wpDesktop, '桌面壁纸');
     await updateStringListConfig(BG_CONFIG, 'mobile', wpMobile, '手机壁纸');
+    await updateStringListConfig(BG_CONFIG, 'disabled', wpDisabled, '禁用壁纸');
     toast('壁纸配置已保存（构建后生效）');
   }
   async function saveStickers(msg) {
@@ -196,12 +198,14 @@ routes.images = async () => {
 
   function wallpaperCell(url, list, idx, rerender) {
     const d = document.createElement('div');
-    d.className = 'img-cell';
+    const isDisabled = wpDisabled.includes(url);
+    d.className = 'img-cell' + (isDisabled ? ' is-disabled' : '');
     d.innerHTML = `<img loading="lazy" src="${esc(cfgImgPreview(url))}" alt="">
-      <div class="url" title="${esc(url)}">${esc(url)}</div>
+      <div class="url" title="${esc(url)}">${esc(url)}${isDisabled ? '（已禁用）' : ''}</div>
       <div class="ops">
         <button class="mini-btn" data-a="up">↑</button>
         <button class="mini-btn" data-a="down">↓</button>
+        <button class="mini-btn${isDisabled ? '' : ' warn'}" data-a="toggle">${isDisabled ? '启用' : '禁用'}</button>
         <button class="mini-btn danger" data-a="del">删除</button>
       </div>`;
     d.querySelector('[data-a=up]').onclick = async () => {
@@ -214,9 +218,17 @@ routes.images = async () => {
       [list[idx + 1], list[idx]] = [list[idx], list[idx + 1]];
       try { await saveWallpapers(); rerender(); } catch (e) { toast(e.message, true); }
     };
+    d.querySelector('[data-a=toggle]').onclick = async () => {
+      const i = wpDisabled.indexOf(url);
+      if (i >= 0) wpDisabled.splice(i, 1);
+      else wpDisabled.push(url);
+      try { await saveWallpapers(); rerender(); } catch (e) { toast(e.message, true); }
+    };
     d.querySelector('[data-a=del]').onclick = async () => {
       if (!confirm('确定移除这张壁纸？')) return;
       list.splice(idx, 1);
+      const di = wpDisabled.indexOf(url);
+      if (di >= 0) wpDisabled.splice(di, 1);
       try { await saveWallpapers(); rerender(); } catch (e) { toast(e.message, true); }
     };
     return d;
