@@ -5,9 +5,16 @@ window.ADMIN_CONFIG = {
   repo: 'Firefly',
   branch: 'main',
 
-  // GitHub OAuth App 的 Client ID（在 github.com/settings/developers 新建 OAuth App 后填入）
+  // GitHub OAuth App 的 Client ID（按域名自动切换）
+  // firefly-6sp.pages.dev 用旧 App，lanerc.me 用新 App
   // 回调地址填：https://你的域名/admin/
-  githubClientId: 'Ov23lizGLBB3dIulw6ss',
+  githubClientId: (() => {
+    const ids = {
+      'firefly-6sp.pages.dev': 'Ov23lizGLBB3dIulw6ss',
+      'lanerc.me': 'Ov23liLl7QdL6nfcgOLR'
+    };
+    return ids[location.hostname] || ids['lanerc.me'];
+  })(),
 
   // R2 图床公开访问前缀（Function 返回的 URL 会拼成 公开前缀 + 路径）
   // 例如绑定了自定义域名 img.lanerc.me，就填 https://img.lanerc.me
@@ -55,8 +62,8 @@ window.ADMIN_CONFIG = {
   // key 说明：dashboard=首页 stats=写作 posts/dynamic/projects/spec=内容集合
   //           images=图片 music=音乐 gallery=相册 announce=公告 friends=友链 booknav=书签
   navLayout: {
-    primary: ['dashboard', 'stats', 'posts', 'dynamic', 'projects', 'spec', 'friends'],
-    secondary: ['images', 'music', 'gallery', 'announce', 'booknav', 'navmgr', 'videos', 'profile', 'banner'],
-    labels: {  },
+    primary: ['dashboard', 'stats', 'posts', 'dynamic', 'projects', 'spec'],
+    secondary: ['images', 'music', 'gallery', 'announce', 'friends', 'booknav'],
+    labels: {}, // 自定义名称，如 { dashboard: '🏠 主页' }；不填则用默认
   },
 };
