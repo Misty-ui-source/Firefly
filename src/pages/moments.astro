@@ -1,0 +1,283 @@
+---
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import friendPosts from "@/data/friend-posts.json";
+
+const title = "朋友圈";
+const description = "友链朋友们的最新文章聚合";
+
+const posts = friendPosts.posts ?? [];
+const total = friendPosts.total ?? posts.length;
+const sources = friendPosts.sources ?? 0;
+
+// 按日期分组
+function dateKey(iso: string | null): string {
+  if (!iso) return "unknown";
+  try {
+    const d = new Date(iso);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  } catch {
+    return "unknown";
+  }
+}
+
+function dateLabel(key: string): { main: string; sub: string } {
+  if (key === "unknown") return { main: "未知日期", sub: "" };
+  const [y, m, d] = key.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(y, m - 1, d);
+  const diffDays = Math.round((today.getTime() - target.getTime()) / 86400000);
+  const weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+  const wd = weekdays[date.getDay()];
+  if (diffDays === 0) return { main: "今天", sub: `${m}月${d}日·${wd}` };
+  if (diffDays === 1) return { main: "昨天", sub: `${m}月${d}日·${wd}` };
+  if (diffDays === 2) return { main: "前天", sub: `${m}月${d}日·${wd}` };
+  return { main: `${m}月${d}日`, sub: wd };
+}
+
+function fmtTime(iso: string | null): string {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    const h = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    return `${h}:${min}`;
+  } catch {
+    return "";
+  }
+}
+
+// 统计：今日更新 / 近7天
+const now = new Date();
+now.setHours(0, 0, 0, 0);
+const weekAgo = new Date(now.getTime() - 6 * 86400000);
+let todayCount = 0;
+let weekCount = 0;
+for (const p of posts) {
+  if (!p.date) continue;
+  const d = new Date(p.date);
+  d.setHours(0, 0, 0, 0);
+  if (d.getTime() === now.getTime()) todayCount++;
+  if (d.getTime() >= weekAgo.getTime()) weekCount++;
+}
+
+// 分组并排序（日期倒序）
+const groups = new Map<string, typeof posts>();
+for (const p of posts) {
+  const k = dateKey(p.date);
+  if (!groups.has(k)) groups.set(k, []);
+  groups.get(k)!.push(p);
+}
+const sortedKeys = [...groups.keys()].sort((a, b) => b.localeCompare(a));
+
+// 平铺视图：按时间倒序
+const sortedPosts = [...posts].sort((a, b) =>
+  (b.date ?? "").localeCompare(a.date ?? "")
+);
+---
+
+<MainGridLayout title={title} description={description}>
+  <div class="border-2 border-black dark:border-white rounded-2xl p-6 md:p-8 bg-white dark:bg-black">
+      {/* 头部：标题 + 视图切换 */}
+      <div class="flex items-start justify-between gap-4 mb-6">
+        <div class="flex items-center gap-4">
+          <div class="w-14 h-14 rounded-2xl bg-[var(--primary)] flex items-center justify-center shrink-0">
+            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9" stroke-width="2"/>
+              <path stroke-linecap="round" stroke-width="2" d="M12 3a15 15 0 010 18M12 3a15 15 0 000 18M3 12h18"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-3xl font-bold">朋友圈</h1>
+            <p class="text-sm opacity-60 mt-1">友链博主们的最新文章更新</p>
+          </div>
+        </div>
+        <div class="flex gap-1 p-1 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 shrink-0">
+          <button
+            id="view-timeline"
+            class="px-4 py-1.5 text-sm rounded-full bg-[var(--primary)] text-white font-medium transition-colors"
+          >
+            时间线
+          </button>
+          <button
+            id="view-grid"
+            class="px-4 py-1.5 text-sm rounded-full opacity-60 hover:opacity-100 transition-colors"
+          >
+            平铺
+          </button>
+        </div>
+      </div>
+
+      {/* 统计卡 */}
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        <div class="border border-black/10 dark:border-white/10 rounded-2xl p-4 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="text-xs opacity-60">今日更新</div>
+            <div class="text-xl font-bold">{todayCount} <span class="text-xs font-normal opacity-60">篇</span></div>
+          </div>
+        </div>
+        <div class="border border-black/10 dark:border-white/10 rounded-2xl p-4 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="text-xs opacity-60">近 7 天</div>
+            <div class="text-xl font-bold">{weekCount} <span class="text-xs font-normal opacity-60">篇</span></div>
+          </div>
+        </div>
+        <div class="border border-black/10 dark:border-white/10 rounded-2xl p-4 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="text-xs opacity-60">收录动态</div>
+            <div class="text-xl font-bold">{total} <span class="text-xs font-normal opacity-60">篇</span></div>
+          </div>
+        </div>
+        <div class="border border-black/10 dark:border-white/10 rounded-2xl p-4 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9" stroke-width="2"/>
+              <path stroke-linecap="round" stroke-width="2" d="M12 3a15 15 0 010 18M12 3a15 15 0 000 18M3 12h18"/>
+            </svg>
+          </div>
+          <div>
+            <div class="text-xs opacity-60">聚合站点</div>
+            <div class="text-xl font-bold">{sources} <span class="text-xs font-normal opacity-60">个</span></div>
+          </div>
+        </div>
+      </div>
+
+      {/* 时间线视图 */}
+      <div id="timeline-view">
+        {sortedKeys.map((key) => {
+          const label = dateLabel(key);
+          const items = groups.get(key)!;
+          return (
+            <div class="relative pl-12 pb-8 last:pb-0">
+              <div class="absolute left-5 top-10 bottom-0 w-px bg-black/10 dark:bg-white/10"></div>
+              <div class="absolute left-0 top-0 w-10 h-10 rounded-full border-2 border-[var(--primary)] bg-white dark:bg-black flex items-center justify-center">
+                <svg class="w-4 h-4 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div class="flex items-center gap-3 mb-4 pt-1">
+                <span class="text-xl font-bold">{label.main}</span>
+                {label.sub && <span class="text-sm opacity-60">{label.sub}</span>}
+                <span class="text-xs px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)]">
+                  {items.length} 篇更新
+                </span>
+              </div>
+              <div class="space-y-4">
+                {items.map((post) => (
+                  <a
+                    href={post.link}
+                    target="_blank"
+                    rel="noopener"
+                    class="flex gap-4 border border-black/10 dark:border-white/10 rounded-2xl p-4 hover:border-[var(--primary)] transition-colors"
+                  >
+                    {post.avatar && (
+                      <img
+                        src={post.avatar}
+                        alt={post.source}
+                        class="w-12 h-12 rounded-full object-cover shrink-0"
+                        loading="lazy"
+                      />
+                    )}
+                    <div class="min-w-0 flex-1">
+                      <div class="text-xs opacity-60 mb-1">
+                        {post.source} · {fmtTime(post.date)}
+                      </div>
+                      <h2 class="font-bold mb-1 leading-snug">{post.title || "(无标题)"}</h2>
+                      {post.excerpt && (
+                        <p class="text-sm opacity-70 line-clamp-2">{post.excerpt}</p>
+                      )}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 平铺视图 */}
+      <div id="grid-view" class="hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {sortedPosts.map((post) => (
+            <a
+              href={post.link}
+              target="_blank"
+              rel="noopener"
+              class="border border-black/10 dark:border-white/10 rounded-2xl p-4 hover:border-[var(--primary)] transition-colors"
+            >
+              <div class="flex items-center gap-3 mb-2">
+                {post.avatar && (
+                  <img
+                    src={post.avatar}
+                    alt={post.source}
+                    class="w-8 h-8 rounded-full object-cover shrink-0"
+                    loading="lazy"
+                  />
+                )}
+                <div class="text-xs opacity-60 truncate">
+                  {post.source} · {post.date ? new Date(post.date).toLocaleDateString("zh-CN") : ""}
+                </div>
+              </div>
+              <h2 class="font-bold mb-1 leading-snug line-clamp-2">{post.title || "(无标题)"}</h2>
+              {post.excerpt && (
+                <p class="text-sm opacity-70 line-clamp-2">{post.excerpt}</p>
+              )}
+            </a>
+          ))}
+        </div>
+      </div>
+
+      {posts.length === 0 && (
+        <p class="text-center opacity-60 py-12">暂无文章，构建时会自动抓取。</p>
+      )}
+    </div>
+
+  <script>
+    const timelineBtn = document.getElementById("view-timeline");
+    const gridBtn = document.getElementById("view-grid");
+    const timelineView = document.getElementById("timeline-view");
+    const gridView = document.getElementById("grid-view");
+
+    function setView(view: string) {
+      const isTimeline = view === "timeline";
+      timelineView?.classList.toggle("hidden", !isTimeline);
+      gridView?.classList.toggle("hidden", isTimeline);
+      // 按钮样式
+      timelineBtn?.classList.toggle("bg-[var(--primary)]", isTimeline);
+      timelineBtn?.classList.toggle("text-white", isTimeline);
+      timelineBtn?.classList.toggle("opacity-60", !isTimeline);
+      gridBtn?.classList.toggle("bg-[var(--primary)]", !isTimeline);
+      gridBtn?.classList.toggle("text-white", !isTimeline);
+      gridBtn?.classList.toggle("opacity-60", isTimeline);
+      try { localStorage.setItem("moments-view", view); } catch {}
+    }
+
+    timelineBtn?.addEventListener("click", () => setView("timeline"));
+    gridBtn?.addEventListener("click", () => setView("grid"));
+
+    // 恢复上次选择的视图
+    try {
+      const saved = localStorage.getItem("moments-view");
+      if (saved === "grid") setView("grid");
+    } catch {}
+  </script>
+</MainGridLayout>

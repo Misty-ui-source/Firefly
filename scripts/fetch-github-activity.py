@@ -49,14 +49,38 @@ def api_get(url, retries=3):
     return None
 
 def main():
-    # 1. 取公开仓库列表
-    repos = api_get(f"https://api.github.com/users/{USERNAME}/repos?per_page=100&type=public")
+    # 1. 取全部仓库列表（有 token 时含私有仓库）
+    if TOKEN:
+        # 认证请求：/user/repos 返回 public+private
+        repos = []
+        page = 1
+        while True:
+            batch = api_get(f"https://api.github.com/user/repos?per_page=100&page={page}&type=all")
+            if not batch:
+                break
+            repos.extend(batch)
+            if len(batch) < 100:
+                break
+            page += 1
+            time.sleep(1)
+    else:
+        repos = api_get(f"https://api.github.com/users/{USERNAME}/repos?per_page=100&type=public")
     if not repos:
         print("无法获取仓库列表", file=sys.stderr)
         sys.exit(1)
 
-    repo_names = [r["name"] for r in repos if not r.get("fork", False)]
-    print(f"仓库: {repo_names}")
+    # 只算自己的仓库（排除 fork，上游历史会虚增提交数），但 folia-major 例外保留；
+    # folia-major 和 Firefly 置顶
+    repos = [r for r in repos if not r.get("fork") or r["name"] == "folia-major"]
+    PRIORITY = ["folia-major", "Firefly"]
+    def sort_key(r):
+        name = r["name"]
+        if name in PRIORITY:
+            return (0, PRIORITY.index(name))
+        return (1, name.lower())
+    repos_sorted = sorted(repos, key=sort_key)
+    repo_names = [r["name"] for r in repos_sorted]
+    print(f"仓库({len(repo_names)}): {repo_names}")
 
     # 2. 每个仓库取 52 周 commit_activity
     # commit_activity 返回 52 周 x 7 天的每天提交数
@@ -99,6 +123,11 @@ def main():
         "heatmap": heatmap,  # 52周 x 7天
         "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%S+08:00", time.localtime()),
     }
+
+    # 兜底：如果拉取失败（0 commits），不覆盖旧的好数据
+    if total_commits == 0 or not repo_names:
+        print("拉取失败（0 commits），保留旧数据不覆盖", file=sys.stderr)
+        sys.exit(1)
 
     os.makedirs(os.path.dirname(OUTPUT), exist_ok=True)
     with open(OUTPUT, "w", encoding="utf-8") as f:

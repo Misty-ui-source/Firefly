@@ -1,0 +1,173 @@
+---
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import { siteConfig } from "@/config";
+
+const title = "博客日志";
+const description = "记录本站的实质性更新";
+
+// 版本记录（倒序，最新在前）
+const logs = [
+  {
+    version: "V1.4",
+    date: "2026 年 10 月 19 日",
+    no: "第 5 次记录",
+    tags: ["书签", "朋友圈", "设备页"],
+    summary: "书签导航大扩展到 96 条，我的设备页上线，朋友圈和日志改版",
+    count: "4 条记录",
+    background: "书签导航整理了一遍，从 18 条干到 96 条。顺手做了个'我的设备'页，把手头的设备都摆出来。朋友圈和博客日志也改了一版。",
+    changes: [
+      { no: "01", cat: "功能", text: "书签导航从 18 条扩展到 96 条：新增邮箱、AI、影视等分类",
+        detail: "把浏览器书签里公开能用的都整理进来了，分类压到 7 个：开发、项目、设计、工具（含 14 个邮箱）、论坛、资源、AI。多的分类默认折叠，点'展开全部'看全。" },
+      { no: "02", cat: "功能", text: "新增'我的设备'页（/devices/）：6 台设备，每台配淡化女孩背景",
+        detail: "导航栏'我的'下拉里加了入口。OPPO Reno12、MECHREVO、iPad 11、Watch GT 2、AirPods 3、OPPO Enco Air 4，每台卡片配了张 10% 淡化的女孩图做背景。页面风格照着站点统计那张卡做的，有 DEVICES / MY GEAR 标识。" },
+      { no: "03", cat: "改版", text: "朋友圈改版：单大卡 + 时间线/平铺切换，宽度跟主页对齐",
+        detail: "照着冷汐的站改的，青绿点缀。头部有统计卡（今日更新/近7天/收录动态/聚合站点），右上可切时间线和平铺两种视图。页面宽度从 max-w-4xl 放到全宽，跟主页一样。" },
+      { no: "04", cat: "改版", text: "博客日志改版：标题卡和时间线合并进一个大白框",
+        detail: "之前是每条记录单独套卡，改成整个页面一个大白框，时间线在里面。跟朋友圈统一风格。" },
+    ],
+    updateTags: ["书签", "设备", "朋友圈"],
+  },
+  {
+    version: "V1.3",
+    date: "2026 年 10 月 19 日",
+    no: "第 4 次记录",
+    tags: ["友链", "番组页"],
+    summary: "友链新增三位朋友，番组页加上国内访问说明",
+    count: "5 条记录",
+    background: "Pinktu 的友链申请通过后，顺手把 mccsjs 和冷汐的杂货铺也加上了。番组页之前因为国内访问不了 api.bgm.tv 被吐槽，加个注说明情况。",
+    changes: [
+      { no: "01", cat: "功能", text: "新增友链：Pinktu（tutu.pink）、mccsjs（mccsjs.cn）、冷汐的杂货铺（lengxiqwq.com）",
+        detail: "Pinktu 的友链申请通过后（之前被拒一次说是地址填错了），把 mccsjs 和冷汐也一起加上。" },
+      { no: "02", cat: "功能", text: "番组页标题下加注：本站番组数据来自 Bangumi API（api.bgm.tv），国内网络访问可能较慢或失败",
+        detail: "之前番组页显示'数据拉取失败'，查下来是 api.bgm.tv 国内直连不稳（开代理就能加载）。试过 HK 机自建反代，也试过公开反代，最后决定不折腾，直接加一行注说明情况。" },
+      { no: "03", cat: "功能", text: "新增博客日志页（/changelog/）：只记录有实质性进展的版本",
+        detail: "参考 HY 站长的博客日志格式做的，版本号从 V1.0 开始，只收录有实质性进展的版本，不记 v120 那种折腾。每个版本有背景说明和分类变更条目，导航栏'链接'下拉里有入口。" },
+      { no: "04", cat: "功能", text: "友链配置新增 RSS 订阅地址（番茄主理人、Pasule、夏夜流萤、mccsjs、阿叶、冷汐），为朋友圈文章聚合做准备",
+        detail: "6 家友链的 RSS 都测通了（Pinktu 没找到公开 RSS，跳过）。friendsConfig.ts 里加了 rss 字段，以后加新友链时配上 RSS 地址，朋友圈构建时自动抓取，不用改代码。" },
+      { no: "05", cat: "维护", text: "public/screenshot.png：博客首页截图，供友链申请时使用（https://lanerc.me/screenshot.png）",
+        detail: "申请友链时对方要站点截图，存一份在博客里，地址固定 https://lanerc.me/screenshot.png。只直链访问，界面上没有入口。" },
+    ],
+    updateTags: ["友链", "番组页"],
+  },
+  {
+    version: "V1.2",
+    date: "2026 年 10 月 18 日",
+    no: "第 3 次记录",
+    tags: ["随笔"],
+    summary: "发布随笔《和AI\"谈了\"三天\"恋爱\"》，聊聊三天重建网站的感受",
+    count: "2 条记录",
+    background: "从 10-15 到 10-18，三天时间和 AI 一起把博客从 Fuwari 迁到 Firefly，中间翻车无数。写篇随笔记录一下，结论是：能，但是真的很累。",
+    changes: [
+      { no: "01", cat: "内容", text: "新增随笔《和AI\"谈了\"三天\"恋爱\"：来说说这三天重建个人网站的感受》，含 5 张配图",
+        detail: "10-15 到 10-18，三天时间和 AI 一起把博客从 Fuwari 迁到 Firefly。文章分两部分：前半段是我的心路历程，后半是实战复盘。结论：能，但是真的很累。中间生气不下 16 次，包体干到 117 版，站点搞崩 3 次。" },
+      { no: "02", cat: "数据", text: "在线人数 token 缓存修复、GitHub 动态数据修复（构建时 0 数据自动中止防覆盖）",
+        detail: "在线人数 badge 不显示数字，是前端 token 缓存的 key 没隔离，加 -v2 后缀解决。GitHub 动态构建时如果 API 返回 0 条，直接 exit(1) 中止，防止空数据覆盖掉之前的好数据。" },
+    ],
+    updateTags: ["文章", "统计"],
+  },
+  {
+    version: "V1.1",
+    date: "2026 年 10 月 18 日",
+    no: "第 2 次记录",
+    tags: ["Steam", "新功能"],
+    summary: "Steam 游戏展示页上线，构建时自动抓取游戏数据",
+    count: "1 条记录",
+    background: "想把 Steam 游戏库展示出来，做了个 /steam/ 页面。构建时调 Steam API 抓数据，纯静态，不用后端。",
+    changes: [
+      { no: "01", cat: "功能", text: "新增 /steam/ 页面：展示游戏列表、游玩时长，Hollow Knight 游玩最长（439 分钟）",
+        detail: "构建时调 Steam API 抓数据（scripts/fetch-steam-stats.py），生成 steam-stats.json，纯静态展示。SteamID 76561199810487907，API Key 放 .env.local 不进仓库。导航栏在番组计划下面。" },
+    ],
+    updateTags: ["Steam"],
+  },
+  {
+    version: "V1.0",
+    date: "2026 年 10 月 15 日",
+    no: "第 1 次记录",
+    tags: ["新站上线", "结构"],
+    summary: "博客从 Fuwari 迁移到 Firefly，lanerc.me 全新亮相",
+    count: "4 条记录",
+    background: "旧站（Fuwari + Cloudflare Pages）有四个忍不了的缺点：构建慢、魔改难、评论统计都靠第三方。决定搬到 VPS，用 Firefly 主题，三天时间和 AI 一起重建。",
+    changes: [
+      { no: "01", cat: "结构", text: "全站迁移到 Firefly 主题，部署到香港 VPS（nginx + 静态文件），Cloudflare 做 CDN",
+        detail: "旧站是 Fuwari + Cloudflare Pages，构建慢、魔改难。新站用 Firefly 主题，本地构建（VPS 内存不够，构建会 OOM），打包传 HK 机 /var/www/lanerc，nginx 托管，CF 做 CDN 和缓存。" },
+      { no: "02", cat: "功能", text: "评论系统：Waline（waline.lanerc.me），AI 自动回复 zhz-ai",
+        detail: "从 Artalk 切回 Waline（Artalk 2.10.0 宣布停服）。Waline 跑在 Docker 里，SQLite 存储。AI 回复 zhz-ai 跑在 ID 机，用智谱 glm-4-flash，60 秒轮询一次。" },
+      { no: "03", cat: "功能", text: "统计系统：Umami 自建，直连公开分享接口，实时在线人数、访问脉冲、热力图",
+        detail: "Umami 跑在 Docker 里（Postgres 存数据）。前端直连 Umami 的公开分享 API，不走后端。统计页有实时在线人数、访问脉冲点图、访客活跃热力图，都是构建时 + 运行时混合方案。" },
+      { no: "04", cat: "结构", text: "Live2D 雪初音 + 金发 z16、首页可拖拽贴纸、打赏关闭、页脚萌ICP备",
+        detail: "Live2D 两个模型：雪初音（主角，左侧）+ 金发 z16（右侧，桌面端）。首页 4 张 AI 原创贴纸可拖拽。打赏彻底关闭（/sponsor/ 404）。页脚萌ICP备 20260282 号 + 运行时间计数器。" },
+    ],
+    updateTags: ["Firefly", "Waline", "Umami"],
+  },
+];
+---
+
+<MainGridLayout title={title} description={description}>
+  <div class="border-2 border-black dark:border-white rounded-2xl p-6 md:p-8 bg-white dark:bg-black">
+      <div class="flex flex-col md:flex-row gap-6 mb-8">
+        <div class="flex-1">
+          <div class="text-xs tracking-widest opacity-60 mb-3">● BLOG CHANGELOG / PUBLIC RECORD</div>
+          <h1 class="text-4xl font-bold mb-3">博客日志</h1>
+          <p class="text-sm opacity-70 mb-3">这里记录这个博客从上线到页面迭代的每一个重要节点，每一次都按真实改动整理，展开即可查看完整变更说明。</p>
+          <p class="text-xs text-[var(--primary)]">版本规则：Major 代表结构升级 · Minor 代表新功能 · Patch 代表修复、内容与维护</p>
+        </div>
+        <div class="grid grid-cols-2 gap-3 md:w-64 shrink-0">
+          <div class="border border-black/10 dark:border-white/10 rounded-xl p-3 text-center">
+            <div class="text-xl font-bold text-[var(--primary)]">V1.4</div>
+            <div class="text-xs opacity-60">当前版本</div>
+          </div>
+          <div class="border border-black/10 dark:border-white/10 rounded-xl p-3 text-center">
+            <div class="text-xl font-bold text-[var(--primary)]">4</div>
+            <div class="text-xs opacity-60">个更新日</div>
+          </div>
+          <div class="border border-black/10 dark:border-white/10 rounded-xl p-3 text-center">
+            <div class="text-xl font-bold text-[var(--primary)]">16</div>
+            <div class="text-xs opacity-60">条详细记录</div>
+          </div>
+          <div class="border border-black/10 dark:border-white/10 rounded-xl p-3 text-center">
+            <div class="text-xl font-bold text-[var(--primary)]">26.10</div>
+            <div class="text-xs opacity-60">时间跨度</div>
+          </div>
+        </div>
+      </div>
+
+    <div class="space-y-8">
+      {logs.map((log) => (
+        <article class="relative pl-8">
+          <div class="absolute left-0 top-8 bottom-0 w-px bg-black/10 dark:bg-white/10"></div>
+          <div class="absolute -left-1.5 top-2 w-3 h-3 rounded-full bg-[var(--primary)]"></div>
+          <div class="text-sm opacity-60 mb-1">{log.date} · {log.no}</div>
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="text-xl font-bold text-[var(--primary)]">{log.version}</span>
+            {log.tags.map((t) => (
+              <span class="text-xs px-2 py-0.5 rounded-full bg-black/5 dark:bg-white/10">{t}</span>
+            ))}
+          </div>
+          <h2 class="text-lg font-semibold mb-2">{log.summary}</h2>
+          <details class="mt-3">
+            <summary class="cursor-pointer text-sm opacity-70 hover:opacity-100">展开这条记录（{log.count}）</summary>
+            <div class="mt-3 pl-4 border-l border-black/10 dark:border-white/10">
+              <h3 class="text-sm font-semibold mb-2">背景</h3>
+              <p class="text-sm opacity-80 mb-4">{log.background}</p>
+              {log.changes.map((c) => (
+                <details class="mb-2 border border-black/10 dark:border-white/10 rounded-lg">
+                  <summary class="cursor-pointer text-sm p-3">
+                    <span class="font-mono opacity-60">{c.no}</span>
+                    <span class="ml-2 px-1.5 py-0.5 text-xs rounded bg-black/5 dark:bg-white/10">{c.cat}</span>
+                    <span class="ml-2">{c.text}</span>
+                  </summary>
+                  <div class="px-3 pb-3 text-sm opacity-80 border-t border-black/10 dark:border-white/10 pt-2">
+                    {c.detail || c.text}
+                  </div>
+                </details>
+              ))}
+              <div class="mt-3 text-xs opacity-50">
+                更新标签：{log.updateTags.join(" · ")}
+              </div>
+            </div>
+          </details>
+        </article>
+      ))}
+    </div>
+  </div>
+</MainGridLayout>

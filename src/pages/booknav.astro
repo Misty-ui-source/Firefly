@@ -93,7 +93,12 @@ const description =
 
             {/* 分组区块 */}
             <div class="booknav-groups">
-              {resolvedGroups.map((group) => (
+              {resolvedGroups.map((group) => {
+                const SHOW_LIMIT = 6;
+                const hasMore = group.items.length > SHOW_LIMIT;
+                const visibleItems = hasMore ? group.items.slice(0, SHOW_LIMIT) : group.items;
+                const hiddenItems = hasMore ? group.items.slice(SHOW_LIMIT) : [];
+                return (
                 <section
                   id={group.id}
                   class="booknav-group mb-8 last:mb-2"
@@ -121,7 +126,7 @@ const description =
 
                   {/* 书签卡片网格 */}
                   <div class="booknav-grid">
-                    {group.items.map((item) => (
+                    {visibleItems.map((item) => (
                       <a
                         href={item.url}
                         target="_blank"
@@ -178,9 +183,79 @@ const description =
                         </div>
                       </a>
                     ))}
+                    {hiddenItems.map((item) => (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={item.desc || item.title}
+                        data-title={item.title.toLowerCase()}
+                        data-desc={(item.desc || "").toLowerCase()}
+                        data-domain={item.domain.toLowerCase()}
+                        data-extra="true"
+                        style="display: none;"
+                        class="booknav-card group flex items-center gap-3 p-3 rounded-xl border border-(--line-divider) hover:border-(--primary) hover:bg-(--card-bg) transition-all duration-300 hover:shadow-lg relative overflow-hidden"
+                      >
+                        {/* 背景装饰 - 仅悬停显示 */}
+                        <div class="absolute inset-0 bg-(--primary) opacity-0 group-hover:opacity-5 transition-opacity duration-300 pointer-events-none" />
+
+                        {/* 图标 */}
+                        <div
+                          class="booknav-icon relative w-14 h-14 shrink-0 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-black/5 dark:border-white/5 flex items-center justify-center group-hover:scale-105 transition-transform duration-300"
+                          data-letter={item.letter}
+                        >
+                          {item.resolvedIcon.kind === "icon" && (
+                            <Icon
+                              name={item.resolvedIcon.value}
+                              class="text-6xl text-neutral-700 dark:text-neutral-200"
+                            />
+                          )}
+                          {item.resolvedIcon.kind === "image" && (
+                            <img
+                              src={item.resolvedIcon.value}
+                              alt={item.title}
+                              loading="lazy"
+                              decoding="async"
+                              referrerpolicy="no-referrer"
+                              class="w-full h-full object-contain"
+                            />
+                          )}
+                          {item.resolvedIcon.kind === "letter" && (
+                            <span class="booknav-letter">{item.letter}</span>
+                          )}
+                        </div>
+
+                        {/* 外部链接图标 - 固定在卡片右上角 */}
+                        <Icon
+                          name="material-symbols:arrow-outward-rounded"
+                          class="absolute top-3 right-3 text-(--primary) text-lg opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300"
+                        />
+
+                        {/* 内容 */}
+                        <div class="grow min-w-0 flex flex-col justify-center">
+                          <div class="font-bold text-base text-neutral-900 dark:text-neutral-100 group-hover:text-(--primary) transition-colors truncate pr-4">
+                            {item.title}
+                          </div>
+                          <div class="text-sm text-neutral-500 dark:text-neutral-400 truncate">
+                            {item.desc || item.domain}
+                          </div>
+                        </div>
+                      </a>
+                    ))}
                   </div>
+
+                  {hasMore && (
+                    <button
+                      data-expand={group.id}
+                      class="mt-3 mx-auto flex items-center gap-1 px-4 py-1.5 text-sm rounded-full border border-(--line-divider) text-neutral-500 dark:text-neutral-400 hover:border-(--primary) hover:text-(--primary) transition-colors"
+                    >
+                      <span data-expand-text>展开全部 {group.items.length} 个</span>
+                      <Icon name="material-symbols:keyboard-arrow-down-rounded" class="text-lg transition-transform" data-expand-icon />
+                    </button>
+                  )}
                 </section>
-              ))}
+                );
+              })}
             </div>
 
             {/* 搜索无结果提示 */}
@@ -246,13 +321,36 @@ const description =
         // 点击分类胶囊平滑滚动到对应分组
         handleClick(e) {
           const button = e.target.closest("button[data-target]");
-          if (!button) return;
+          if (button) {
+            const section = this.querySelector(
+              `[data-group-id="${button.dataset.target}"]`,
+            );
+            if (section) {
+              section.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+            return;
+          }
 
-          const section = this.querySelector(
-            `[data-group-id="${button.dataset.target}"]`,
-          );
-          if (section) {
-            section.scrollIntoView({ behavior: "smooth", block: "start" });
+          // 展开/收起分组的多余书签
+          const expandBtn = e.target.closest("button[data-expand]");
+          if (expandBtn) {
+            const section = expandBtn.closest("section[data-group-id]");
+            if (!section) return;
+            const extras = section.querySelectorAll('[data-extra="true"]');
+            const isExpanded = expandBtn.dataset.expanded === "true";
+            extras.forEach((card) => {
+              card.style.display = isExpanded ? "none" : "";
+            });
+            expandBtn.dataset.expanded = isExpanded ? "false" : "true";
+            const textEl = expandBtn.querySelector("[data-expand-text]");
+            const iconEl = expandBtn.querySelector("[data-expand-icon]");
+            if (textEl) {
+              const total = section.querySelectorAll(".booknav-card").length;
+              textEl.textContent = isExpanded ? `展开全部 ${total} 个` : "收起";
+            }
+            if (iconEl) {
+              iconEl.style.transform = isExpanded ? "" : "rotate(180deg)";
+            }
           }
         }
 
@@ -287,6 +385,23 @@ const description =
 
             section.style.display = groupVisible > 0 ? "" : "none";
             if (groupVisible > 0) hasVisible = true;
+
+            // 搜索时隐藏展开按钮，非搜索时恢复折叠状态
+            const expandBtn = section.querySelector("button[data-expand]");
+            if (expandBtn) {
+              if (query) {
+                expandBtn.style.display = "none";
+              } else {
+                expandBtn.style.display = "";
+                // 恢复折叠状态
+                const isExpanded = expandBtn.dataset.expanded === "true";
+                if (!isExpanded) {
+                  section.querySelectorAll('[data-extra="true"]').forEach((card) => {
+                    card.style.display = "none";
+                  });
+                }
+              }
+            }
           });
 
           const emptyEl = this.querySelector(".booknav-empty");

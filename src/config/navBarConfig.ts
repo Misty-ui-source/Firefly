@@ -45,6 +45,9 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 			// 友链
 			LinkPresets.Friends,
 
+			// 朋友圈
+			LinkPresets.Moments,
+
 			// 留言
 			LinkPresets.Guestbook,
 		],
@@ -68,11 +71,17 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 			// 书签导航
 			LinkPresets.Booknav,
 
+			// 我的设备
+			LinkPresets.Devices,
+
 			// 哔哩哔哩追番
 			LinkPresets.Bilibili,
 
 			// 番组计划
 			LinkPresets.Bangumi,
+
+			// Steam 游戏
+			LinkPresets.Steam,
 
 			// VNDB
 			LinkPresets.VNDB,
@@ -157,6 +166,11 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 				external: true,
 				icon: "material-symbols:analytics",
 			},
+			{
+				name: "博客日志",
+				url: "/changelog/",
+				icon: "material-symbols:history",
+			},
 		],
 	});
 
@@ -222,7 +236,7 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		icon: "material-symbols:layers",
 	},
 	Friends: {
-		name: "友链",
+		name: "友人帐",
 		url: "/friends/",
 		icon: "material-symbols:link-2-rounded",
 		pageKey: "friends",
@@ -232,6 +246,12 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		url: "/guestbook/",
 		icon: "material-symbols:chat",
 		pageKey: "guestbook",
+	},
+	Moments: {
+		name: "朋友圈",
+		url: "/moments/",
+		icon: "material-symbols:diversity-2",
+		pageKey: "moments",
 	},
 	Dynamic: {
 		name: "动态",
@@ -257,6 +277,12 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		icon: "material-symbols:bookmarks",
 		pageKey: "booknav",
 	},
+	Devices: {
+		name: "我的设备",
+		url: "/devices/",
+		icon: "material-symbols:devices",
+		pageKey: "devices",
+	},
 	Bilibili: {
 		name: "哔哩哔哩",
 		url: "/bilibili/",
@@ -268,6 +294,12 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		url: "/bangumi/",
 		icon: "material-symbols:movie",
 		pageKey: "bangumi",
+	},
+	Steam: {
+		name: "Steam 游戏",
+		url: "/steam/",
+		icon: "fa7-brands:steam",
+		pageKey: "steam",
 	},
 	VNDB: {
 		name: "VNDB",

@@ -1,0 +1,188 @@
+---
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import steamStats from "@/data/steam-stats.json";
+
+const title = "Steam 游戏库";
+const description = "我的 Steam 游戏库，构建时定时抓取";
+
+const s = steamStats as any;
+const player = s.player ?? {};
+const allGames: any[] = s.allGames ?? s.topGames ?? [];
+const recentGames: any[] = s.recentGames ?? [];
+const gameCount = s.gameCount ?? 0;
+const totalPlaytime = s.totalPlaytime ?? 0;
+const playtime2weeks = s.playtime2weeks ?? 0;
+const playerLevel = s.playerLevel ?? null;
+const badgeCount = s.badgeCount ?? null;
+const updatedAt = s.updatedAt ?? "";
+
+const STATUS_MAP: Record<number, string> = {
+  0: "离线", 1: "在线", 2: "忙碌", 3: "离开", 4: "睡眠", 5: "想交易", 6: "想玩",
+};
+
+function fmtHM(mins: number) {
+  mins = Math.round(mins || 0);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h < 1) return `${m}m`;
+  return `${h}h ${m}m`;
+}
+---
+
+<MainGridLayout title={title} description={description}>
+  <div class="steam-page">
+    <!-- 玩家信息卡 -->
+    <div class="card player-card">
+      <div class="card-label"><span class="dot"></span>STEAM / PLAYER</div>
+      <div class="player-info">
+        {player.avatar && <img src={player.avatar} alt={player.name} class="player-avatar" loading="lazy" />}
+        <div class="player-meta">
+          <h1 class="player-name">{player.name || "Steam 玩家"}</h1>
+          <div class="player-badges">
+            <span class="badge status">{STATUS_MAP[player.status] ?? "离线"}</span>
+            {playerLevel != null && <span class="badge level">{playerLevel} 等级</span>}
+          </div>
+          {player.profileUrl && (
+            <a href={player.profileUrl} target="_blank" rel="noopener" class="profile-link">
+              Steam 主页 ↗
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+
+    <!-- 四项统计卡 -->
+    <div class="stat-cards">
+      <div class="card stat-card">
+        <div class="stat-num">{gameCount}</div>
+        <div class="stat-label2">拥有游戏</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-num">{fmtHM(totalPlaytime)}</div>
+        <div class="stat-label2">总游玩时长</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-num">{fmtHM(playtime2weeks)}</div>
+        <div class="stat-label2">近两周</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-num">{badgeCount != null ? badgeCount : "—"}</div>
+        <div class="stat-label2">徽章</div>
+      </div>
+    </div>
+
+    <!-- 最近游玩 -->
+    {recentGames.length > 0 && (
+      <div class="card">
+        <div class="card-label"><span class="dot"></span>最近游玩</div>
+        <div class="recent-pills">
+          {recentGames.map((g: any) => (
+            <a
+              class="pill"
+              href={`https://store.steampowered.com/app/${g.appid}/`}
+              target="_blank"
+              rel="noopener"
+            >
+              <span class="pill-name">{g.name}</span>
+              <span class="pill-time">{fmtHM(g.playtime2weeks)}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    )}
+
+    <!-- 全部游戏 -->
+    <div class="card">
+      <div class="card-label"><span class="dot"></span>全部游戏（{allGames.length}）</div>
+      <div class="game-grid">
+        {allGames.map((g: any) => (
+          <a
+            class="game-card"
+            href={g.storeUrl || `https://store.steampowered.com/app/${g.appid}/`}
+            target="_blank"
+            rel="noopener"
+          >
+            {g.banner && <img src={g.banner} alt={g.name} loading="lazy" class="game-banner" />}
+            <div class="game-row">
+              <div class="game-name" title={g.name}>{g.name}</div>
+              <div class="game-playtime">{fmtHM(g.playtime)}</div>
+            </div>
+            {g.lastPlayed && <div class="game-last muted small">最后游玩 {g.lastPlayed}</div>}
+          </a>
+        ))}
+      </div>
+      {allGames.length === 0 && <p class="muted">暂无数据，等待构建时拉取。</p>}
+    </div>
+
+    {updatedAt && <p class="muted small center">Steam 数据由构建时定时抓取，数据更新于 {updatedAt.slice(0, 16).replace("T", " ")}</p>}
+  </div>
+</MainGridLayout>
+
+<style>
+  .steam-page { display: flex; flex-direction: column; gap: 1.25rem; }
+  .card {
+    background: var(--card-bg, #fff);
+    border: 3px solid #1a1a1a;
+    border-radius: 16px;
+    padding: 1.5rem;
+  }
+  .card-label {
+    font-size: 0.72rem; letter-spacing: 0.12em; font-weight: 700;
+    color: oklch(0.65 0.15 174); margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .card-label .dot { width: 8px; height: 8px; border-radius: 50%; background: oklch(0.65 0.15 174); display: inline-block; }
+  .muted { color: #999; } .small { font-size: 0.8rem; } .center { text-align: center; }
+
+  .player-info { display: flex; gap: 1.25rem; align-items: center; }
+  .player-avatar { width: 80px; height: 80px; border-radius: 12px; border: 3px solid #1a1a1a; }
+  .player-name { font-size: 1.5rem; font-weight: 800; margin: 0 0 0.5rem; }
+  .player-badges { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .badge {
+    font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 999px;
+    border: 2px solid #1a1a1a;
+  }
+  .badge.status { background: #eee; color: #666; }
+  .badge.level { background: #1a1a1a; color: #fff; }
+  .profile-link { font-size: 0.85rem; font-weight: 600; }
+
+  .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+  .stat-card { text-align: center; padding: 1.1rem 0.5rem; }
+  .stat-num { font-size: 1.35rem; font-weight: 800; color: oklch(0.65 0.15 174); }
+  .stat-label2 { font-size: 0.78rem; color: #999; margin-top: 0.25rem; }
+  @media (max-width: 640px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } }
+
+  .recent-pills { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    border: 2px solid #1a1a1a; border-radius: 999px;
+    padding: 0.35rem 0.9rem; text-decoration: none; color: inherit;
+    font-size: 0.85rem; transition: background 0.15s;
+  }
+  .pill:hover { background: #f5f5f5; }
+  .pill-name { font-weight: 700; }
+  .pill-time { color: oklch(0.65 0.15 174); font-weight: 700; }
+
+  .game-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+  @media (max-width: 1024px) { .game-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 640px) { .game-grid { grid-template-columns: repeat(2, 1fr); } }
+  .game-card {
+    display: flex; flex-direction: column;
+    border: 2px solid #e5e5e5; border-radius: 12px; overflow: hidden;
+    text-decoration: none; color: inherit;
+    transition: border-color 0.15s;
+  }
+  .game-card:hover { border-color: #1a1a1a; }
+  .game-banner { width: 100%; aspect-ratio: 460 / 215; object-fit: cover; display: block; }
+  .game-row {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem;
+    padding: 0.55rem 0.7rem 0;
+  }
+  .game-name { font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .game-playtime { color: oklch(0.65 0.15 174); font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+  .game-last { padding: 0.15rem 0.7rem 0.6rem; }
+</style>

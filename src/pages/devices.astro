@@ -1,0 +1,149 @@
+---
+import { Icon } from "astro-icon/components";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import phoneBg from "@/assets/images/devices/phone.jpg";
+import laptopBg from "@/assets/images/devices/laptop.jpg";
+import tabletBg from "@/assets/images/devices/tablet.jpg";
+import watchBg from "@/assets/images/devices/watch.jpg";
+import earbuds1Bg from "@/assets/images/devices/earbuds1.jpg";
+import earbuds2Bg from "@/assets/images/devices/earbuds2.jpg";
+
+const title = "我的设备";
+const description = "日常在用的设备";
+
+interface Device {
+	name: string;
+	brand: string;
+	specs: string;
+	desc: string;
+	icon: string;
+	status: "active" | "retiring";
+	statusText: string;
+	bg: ImageMetadata;
+}
+
+const devices: Device[] = [
+	{
+		name: "OPPO Reno12",
+		brand: "OPPO",
+		specs: "国行",
+		desc: "主力手机，日常使用。",
+		icon: "material-symbols:smartphone",
+		status: "active",
+		statusText: "主力在服役",
+		bg: phoneBg,
+	},
+	{
+		name: "MECHREVO",
+		brand: "机械革命",
+		specs: "i7-12800HX / 16GB RAM",
+		desc: "主力电脑，写代码、折腾的主力机。",
+		icon: "material-symbols:laptop-mac",
+		status: "active",
+		statusText: "主力在服役",
+		bg: laptopBg,
+	},
+	{
+		name: "iPad 11",
+		brand: "Apple",
+		specs: "A16 / WLAN 版",
+		desc: "主力平板，看文档、记笔记。",
+		icon: "material-symbols:tablet-mac",
+		status: "active",
+		statusText: "主力在服役",
+		bg: tabletBg,
+	},
+	{
+		name: "Watch GT 2",
+		brand: "HUAWEI",
+		specs: "",
+		desc: "戴了很久的手表。",
+		icon: "material-symbols:watch",
+		status: "retiring",
+		statusText: "快退役了",
+		bg: watchBg,
+	},
+	{
+		name: "AirPods 3",
+		brand: "Apple",
+		specs: "",
+		desc: "主力耳机。",
+		icon: "material-symbols:headphones",
+		status: "active",
+		statusText: "主力在服役",
+		bg: earbuds1Bg,
+	},
+	{
+		name: "Enco Air 4",
+		brand: "OPPO",
+		specs: "",
+		desc: "备用耳机。",
+		icon: "material-symbols:headphones",
+		status: "active",
+		statusText: "主力在服役",
+		bg: earbuds2Bg,
+	},
+];
+
+const activeCount = devices.filter((d) => d.status === "active").length;
+---
+
+<MainGridLayout title={title} description={description}>
+  <div class="border-2 border-black dark:border-white rounded-2xl p-6 md:p-10 bg-white dark:bg-black">
+      <div class="text-xs tracking-widest text-[var(--primary)] font-semibold mb-4">● DEVICES / MY GEAR</div>
+
+      <h1 class="text-4xl md:text-5xl font-bold mb-3">我的设备</h1>
+      <p class="opacity-60 mb-6 max-w-xl">这里陈列的是我日常在用的设备，每一台都在为折腾和创作发光发热。</p>
+
+      <div class="flex flex-wrap gap-2 mb-8">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-black/10 dark:border-white/10 text-sm">
+          <Icon name="material-symbols:devices" class="text-base text-[var(--primary)]" />
+          共 {devices.length} 台设备
+        </span>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-black/10 dark:border-white/10 text-sm">
+          <span class="w-2 h-2 rounded-full bg-[var(--primary)]"></span>
+          {activeCount} 台在服役
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {devices.map((d) => (
+          <div class="group border border-black/10 dark:border-white/10 rounded-2xl p-5 hover:border-[var(--primary)] hover:shadow-lg transition-all duration-300 relative overflow-hidden">
+            <div
+              class="absolute inset-0 opacity-10 dark:opacity-[0.08] pointer-events-none"
+              style={`background-image: url(${d.bg.src}); background-size: cover; background-position: center;`}
+            ></div>
+            <div class="absolute inset-0 bg-[var(--primary)] opacity-0 group-hover:opacity-5 transition-opacity duration-300 pointer-events-none"></div>
+            <div class="relative">
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-12 h-12 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-300">
+                <Icon name={d.icon} class="w-6 h-6 text-[var(--primary)]" />
+              </div>
+              <span
+                class:list={[
+                  "text-xs px-2.5 py-1 rounded-full font-medium shrink-0",
+                  d.status === "active"
+                    ? "bg-[var(--primary)]/10 text-[var(--primary)]"
+                    : "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
+                ]}
+              >
+                {d.statusText}
+              </span>
+            </div>
+            <div class="text-xs tracking-wider opacity-50 mb-1 uppercase">{d.brand}</div>
+            <h2 class="text-xl font-bold mb-1">{d.name}</h2>
+            {d.specs && (
+              <div class="text-sm font-mono opacity-70 mb-2">{d.specs}</div>
+            )}
+            <p class="text-sm opacity-60">{d.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div class="flex items-center justify-between mt-10 pt-6 border-t border-black/10 dark:border-white/10 text-xs tracking-widest opacity-40">
+        <span>LANERC / 2026</span>
+        <span>GEAR THAT GETS THINGS DONE</span>
+      </div>
+  </div>
+</MainGridLayout>

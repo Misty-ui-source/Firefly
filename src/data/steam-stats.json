@@ -1,0 +1,177 @@
+{
+  "updatedAt": "2026-10-22T23:26:27+08:00",
+  "player": {
+    "name": "zhz",
+    "avatar": "https://avatars.steamstatic.com/2f7dab730f427a8dd1f086bc4e6df399cbd4d085_full.jpg",
+    "profileUrl": "https://steamcommunity.com/profiles/76561199810487907/",
+    "status": 0
+  },
+  "gameCount": 10,
+  "totalPlaytime": 1013,
+  "allGames": [
+    {
+      "appid": 367520,
+      "name": "Hollow Knight",
+      "playtime": 439,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/367520/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/367520/",
+      "lastPlayed": "2025-09-09"
+    },
+    {
+      "appid": 304430,
+      "name": "INSIDE",
+      "playtime": 327,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/304430/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/304430/",
+      "lastPlayed": "2025-09-09"
+    },
+    {
+      "appid": 383870,
+      "name": "Firewatch",
+      "playtime": 97,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/383870/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/383870/",
+      "lastPlayed": "2025-01-01"
+    },
+    {
+      "appid": 1243960,
+      "name": "Unspottable",
+      "playtime": 79,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/1243960/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/1243960/",
+      "lastPlayed": "2025-07-26"
+    },
+    {
+      "appid": 48000,
+      "name": "LIMBO",
+      "playtime": 55,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/48000/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/48000/",
+      "lastPlayed": "2025-01-04"
+    },
+    {
+      "appid": 1030300,
+      "name": "Hollow Knight: Silksong",
+      "playtime": 9,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/1030300/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/1030300/",
+      "lastPlayed": "2026-05-12"
+    },
+    {
+      "appid": 1703140,
+      "name": "Isle of Jura",
+      "playtime": 7,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/1703140/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/1703140/",
+      "lastPlayed": "2025-03-11"
+    },
+    {
+      "appid": 312520,
+      "name": "Rain World",
+      "playtime": 0,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/312520/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/312520/",
+      "lastPlayed": ""
+    },
+    {
+      "appid": 860510,
+      "name": "Little Nightmares II",
+      "playtime": 0,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/860510/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/860510/",
+      "lastPlayed": ""
+    },
+    {
+      "appid": 1245430,
+      "name": "Golden Light",
+      "playtime": 0,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/1245430/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/1245430/",
+      "lastPlayed": ""
+    }
+  ],
+  "topGames": [
+    {
+      "appid": 367520,
+      "name": "Hollow Knight",
+      "playtime": 439,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/367520/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/367520/",
+      "lastPlayed": "2025-09-09"
+    },
+    {
+      "appid": 304430,
+      "name": "INSIDE",
+      "playtime": 327,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/304430/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/304430/",
+      "lastPlayed": "2025-09-09"
+    },
+    {
+      "appid": 383870,
+      "name": "Firewatch",
+      "playtime": 97,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/383870/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/383870/",
+      "lastPlayed": "2025-01-01"
+    },
+    {
+      "appid": 1243960,
+      "name": "Unspottable",
+      "playtime": 79,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/1243960/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/1243960/",
+      "lastPlayed": "2025-07-26"
+    },
+    {
+      "appid": 48000,
+      "name": "LIMBO",
+      "playtime": 55,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/48000/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/48000/",
+      "lastPlayed": "2025-01-04"
+    },
+    {
+      "appid": 1030300,
+      "name": "Hollow Knight: Silksong",
+      "playtime": 9,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/1030300/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/1030300/",
+      "lastPlayed": "2026-05-12"
+    },
+    {
+      "appid": 1703140,
+      "name": "Isle of Jura",
+      "playtime": 7,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/1703140/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/1703140/",
+      "lastPlayed": "2025-03-11"
+    },
+    {
+      "appid": 312520,
+      "name": "Rain World",
+      "playtime": 0,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/312520/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/312520/",
+      "lastPlayed": ""
+    },
+    {
+      "appid": 860510,
+      "name": "Little Nightmares II",
+      "playtime": 0,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/860510/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/860510/",
+      "lastPlayed": ""
+    },
+    {
+      "appid": 1245430,
+      "name": "Golden Light",
+      "playtime": 0,
+      "banner": "https://cdn.akamai.steamstatic.com/steam/apps/1245430/header.jpg",
+      "storeUrl": "https://store.steampowered.com/app/1245430/",
+      "lastPlayed": ""
+    }
+  ],
+  "recentGames": [],
+  "playtime2weeks": 0
+}

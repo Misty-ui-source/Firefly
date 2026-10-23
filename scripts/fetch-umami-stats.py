@@ -2,7 +2,8 @@
 """
 构建时拉取 Umami 统计数据
 输出: src/data/umami-stats.json
-用法: UMAMI_API_KEY=xxx python3 scripts/fetch-umami-stats.py
+用法: python3 scripts/fetch-umami-stats.py
+认证: 使用公开分享链接 token（无需 API Key）
 """
 import json
 import os
@@ -12,17 +13,35 @@ import urllib.request
 import urllib.error
 import urllib.parse
 
-API_KEY = os.environ.get("UMAMI_API_KEY", "")
-WEBSITE_ID = "fd50ff34-e2c4-4110-888e-a40093cbe582"
+SHARE_ID = "EG15WwHeRvz2lmd2"
 BASE = "https://umami.lanerc.me"
 OUTPUT = os.path.join(os.path.dirname(__file__), "..", "src", "data", "umami-stats.json")
 
+# 分享 token（启动时获取一次）
+_SHARE_INFO = None
+
+def get_share_info():
+    global _SHARE_INFO
+    if _SHARE_INFO:
+        return _SHARE_INFO
+    url = f"{BASE}/api/share/{SHARE_ID}"
+    req = urllib.request.Request(url, headers={
+        "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0 (compatible; lanerc-blog-build)",
+    })
+    with urllib.request.urlopen(req, timeout=20) as r:
+        d = json.load(r)
+    _SHARE_INFO = {"websiteId": d["websiteId"], "token": d["token"]}
+    return _SHARE_INFO
+
 def api_get(path, params=None):
+    info = get_share_info()
     url = f"{BASE}{path}"
     if params:
         url += "?" + urllib.parse.urlencode(params)
     headers = {
-        "Authorization": f"Bearer {API_KEY}",
+        "x-umami-share-token": info["token"],
+        "x-umami-share-context": "1",
         "Accept": "application/json",
         "User-Agent": "Mozilla/5.0 (compatible; lanerc-blog-build)",
     }
@@ -55,9 +74,8 @@ def ms(days_ago=0):
     return int(t * 1000)
 
 def main():
-    if not API_KEY:
-        print("需要 UMAMI_API_KEY 环境变量", file=sys.stderr)
-        sys.exit(1)
+    info = get_share_info()
+    WEBSITE_ID = info["websiteId"]
 
     now = ms(0)
     result = {"updatedAt": time.strftime("%Y-%m-%dT%H:%M:%S+08:00", time.localtime())}

@@ -58,6 +58,7 @@ export const notes = [
             { label: "站点描述", value: site.desc },
             { label: "站点链接", value: site.url },
             { label: "头像链接", value: site.avatar },
+            { label: "站点图片", value: "https://lanerc.me/screenshot.png" },
           ].map((item) => (
             <div class="flex items-center justify-between gap-2 rounded-lg bg-black/5 dark:bg-white/5 px-3 py-2">
               <div class="min-w-0">
@@ -114,6 +115,7 @@ export const notes = [
                 </button>
                 {`站点名称：您的站点名称\n站点描述：您的站点描述\n站点链接：您的站点链接\n头像链接：您的站点头像`}
               </div>
+              <p class="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed mt-3">或者通过 GitHub Issue 申请（自动处理）：<a href="https://github.com/Misty-ui-source/Firefly/issues/new?template=04-friend-link.yml" target="_blank" class="text-(--primary) hover:underline font-medium">点击提交友链申请 →</a></p>
             </div>
           </div>
 

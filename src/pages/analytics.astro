@@ -234,7 +234,7 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
         </div>
         <div class="push-stat bg-cream">
           <span class="push-icon">📊</span>
-          <div><div class="ps-label">追踪仓库</div><div class="ps-value repo-names">folia-major / {gh.repos.slice(0, 2).join(" / ")}</div><div class="ps-sub">基于全部推送</div></div>
+          <div><div class="ps-label">追踪仓库</div><div class="ps-value repo-names">{gh.repos.slice(0, 3).join(" / ")}</div><div class="ps-sub">基于全部推送</div></div>
         </div>
         <div class="push-stat bg-lavender">
           <span class="push-icon">🔥</span>
@@ -328,7 +328,7 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
               <>
                 <div class="heatmap-grid">
                   <div class="hm-corner"></div>
-                  {hourLabels.map((h) => (
+                  {Array.from({ length: 24 }, (_, h) => (
                     <div class="hm-hlabel">{String(h).padStart(2, "0")}时</div>
                   ))}
                   {grid.map((row, wd) => (
@@ -601,15 +601,23 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
       if (activeEl) activeEl.textContent = active;
       if (peakEl) peakEl.textContent = peak;
       // 拉取该周期的访客数（Umami stats API）
+      // 大陆网络下 umami.lanerc.me 可能连接缓慢，加 8 秒超时避免无限挂起
       try {
-        var cached = JSON.parse(localStorage.getItem("lanerc-umami-share-token") || "null");
+        var cached = JSON.parse(localStorage.getItem("lanerc-umami-share-token-v2") || "null");
         var tk = cached && cached.data ? cached.data : null;
+        var fetchWithTimeout = function (url, opts) {
+          var ctrl = new AbortController();
+          var timer = setTimeout(function () { ctrl.abort(); }, 8000);
+          var o = opts || {};
+          o.signal = ctrl.signal;
+          return fetch(url, o).then(function (r) { clearTimeout(timer); return r; }, function (e) { clearTimeout(timer); throw e; });
+        };
         var doFetch = function (info) {
           var end = Date.now(), start = end - range * 86400000;
-          var url = "https://umami.lanerc.me/api/websites/" + info.websiteId + "/stats?startAt=" + start + "&endAt=" + end;
-          return fetch(url, { headers: { "x-umami-share-token": info.token, "x-umami-share-context": "1" } }).then(function (r) { return r.json(); });
+          var url = "/api/umami/api/websites/" + info.websiteId + "/stats?startAt=" + start + "&endAt=" + end;
+          return fetchWithTimeout(url, { headers: { "x-umami-share-token": info.token, "x-umami-share-context": "1" } }).then(function (r) { return r.json(); });
         };
-        var p = tk ? Promise.resolve(tk) : fetch("https://umami.lanerc.me/api/share/EG15WwHeRvz2lmd2").then(function (r) { return r.json(); }).then(function (d) { return { websiteId: d.websiteId, token: d.token }; });
+        var p = tk ? Promise.resolve(tk) : fetchWithTimeout("/api/umami/api/share/EG15WwHeRvz2lmd2").then(function (r) { return r.json(); }).then(function (d) { return { websiteId: d.websiteId, token: d.token }; });
         p.then(doFetch).then(function (s) {
           var vEl = document.querySelector('[data-period-visitors]');
           if (vEl && s && s.visitors != null) vEl.textContent = s.visitors;
@@ -988,7 +996,12 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
 			}
 		} catch (e) {}
 	}
-	window.__lanercStatsPromise = fetch("/api/stats.json", { cache: "no-store" })
+	window.__lanercStatsPromise = (function () {
+		var ctrl = new AbortController();
+		var timer = setTimeout(function () { ctrl.abort(); }, 8000);
+		return fetch("/api/stats.json", { cache: "no-store", signal: ctrl.signal })
+			.then(function (r) { clearTimeout(timer); return r; }, function (e) { clearTimeout(timer); throw e; });
+	})()
 		.then(function (r) { if (!r.ok) throw 0; return r.json(); })
 		.then(function (d) {
 			if (d && (d.totalVisitors != null || d.totalPageviews != null)) {
@@ -1013,8 +1026,8 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
 // is:inline：配合 Swup 无刷新导航，每次进统计页都重新执行
 (function () {
 	var SHARE_ID = "EG15WwHeRvz2lmd2";
-	var API_BASE = "https://umami.lanerc.me";
-	var TOKEN_KEY = "lanerc-umami-share-token";
+	var API_BASE = "/api/umami";
+	var TOKEN_KEY = "lanerc-umami-share-token-v2";
 	var DATA_KEY = "lanerc-umami-live";
 	var TOKEN_TTL = 24 * 60 * 60 * 1000;
 	var DATA_TTL = 0; // 用户要求：不缓存，每次进页面都重新拉
@@ -1078,10 +1091,18 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
 	var cachedData = getCached(DATA_KEY, DATA_TTL);
 	if (cachedData) { render(cachedData); return; }
 
+	function fetchWithTimeout(url, opts) {
+		var ctrl = new AbortController();
+		var timer = setTimeout(function () { ctrl.abort(); }, 8000);
+		var o = opts || {};
+		o.signal = ctrl.signal;
+		return fetch(url, o).then(function (r) { clearTimeout(timer); return r; }, function (e) { clearTimeout(timer); throw e; });
+	}
+
 	function fetchShare() {
 		var cached = getCached(TOKEN_KEY, TOKEN_TTL);
 		if (cached) return Promise.resolve(cached);
-		return fetch(API_BASE + "/api/share/" + SHARE_ID)
+		return fetchWithTimeout(API_BASE + "/api/share/" + SHARE_ID)
 			.then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
 			.then(function (d) {
 				var info = { websiteId: d.websiteId, token: d.token };
@@ -1091,7 +1112,7 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
 	}
 
 	function umamiGet(info, path) {
-		return fetch(API_BASE + path, {
+		return fetchWithTimeout(API_BASE + path, {
 			headers: {
 				"x-umami-share-token": info.token,
 				"x-umami-share-context": "1",
@@ -1146,19 +1167,19 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
 (function () {
 	function getShare() {
 		try {
-			var c = JSON.parse(localStorage.getItem("lanerc-umami-share-token") || "null");
+			var c = JSON.parse(localStorage.getItem("lanerc-umami-share-token-v2") || "null");
 			if (c && Date.now() - c.ts < 86400000) return Promise.resolve(c.data);
 		} catch (e) {}
-		return fetch("https://umami.lanerc.me/api/share/EG15WwHeRvz2lmd2")
+		return fetch("/api/umami/api/share/EG15WwHeRvz2lmd2")
 			.then(function (r) { return r.json(); })
 			.then(function (d) {
 				var info = { websiteId: d.websiteId, token: d.token };
-				try { localStorage.setItem("lanerc-umami-share-token", JSON.stringify({ ts: Date.now(), data: info })); } catch (e) {}
+				try { localStorage.setItem("lanerc-umami-share-token-v2", JSON.stringify({ ts: Date.now(), data: info })); } catch (e) {}
 				return info;
 			});
 	}
 	function uget(info, path) {
-		return fetch("https://umami.lanerc.me" + path, {
+		return fetch("/api/umami" + path, {
 			headers: { "x-umami-share-token": info.token, "x-umami-share-context": "1" }
 		}).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
 	}
@@ -1361,7 +1382,7 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
 	if (refreshBtn) {
 		refreshBtn.addEventListener("click", function () {
 			try {
-				localStorage.removeItem("lanerc-umami-share-token");
+				localStorage.removeItem("lanerc-umami-share-token-v2");
 			Object.keys(localStorage).forEach(function (k) {
 				if (k.indexOf("lanerc-umami-") === 0) localStorage.removeItem(k);
 			});
