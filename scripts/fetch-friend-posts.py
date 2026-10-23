@@ -162,4 +162,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        # 任何未预期异常都不中断构建：保留旧数据，退出码 0
+        print(f"fetch-friend-posts 异常（已忽略，不影响构建）: {e}", flush=True)
+    sys.exit(0)
