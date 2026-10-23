@@ -1,3 +1,6 @@
+---
+published: 2026-10-23T18:31:00+08:00
+---
 # About
 This static blog is based on [Firefly](https://github.com/CuteLeaf/Firefly).
 
@@ -97,7 +100,7 @@ This static blog is based on [Firefly](https://github.com/CuteLeaf/Firefly).
 **所有文章均为原创**，采用以下共享规则：
 
 - **允许**: 转载/修改
--  **禁止**: 商业用途
+- **禁止**: 商业用途
 ## 技术支持
 
 本站由 [Cloudflare](https://www.cloudflare.com/) 提供 CDN 与 HTTPS 支持，部署在自建 VPS 上
