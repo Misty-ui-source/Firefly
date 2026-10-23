@@ -28,6 +28,7 @@
   --shadow-sm: 0 2px 8px rgba(15, 23, 42, .06);
   --code-bg: rgba(15, 23, 42, .05);
   --mark-bg: rgba(185, 28, 28, .14);
+  --heat-empty: #e5e7eb;
 }
 /* ---------- 夜间主题 ---------- */
 [data-theme="dark"] {
@@ -44,6 +45,7 @@
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, .25);
   --code-bg: rgba(255, 255, 255, .07);
   --mark-bg: rgba(248, 113, 113, .22);
+  --heat-empty: rgba(255, 255, 255, .08);
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -475,6 +477,20 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
 .preview mark { background: #fef08a; color: inherit; border-radius: 3px; padding: 0 2px; }
 [data-theme="dark"] .preview mark { background: #a16207; color: #fefce8; }
 
+/* ---------- 写作统计图 ---------- */
+.chart-card h2 .sub { font-size: 12px; color: var(--text-dim); font-weight: 500; }
+.lg-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 4px 0 10px; vertical-align: baseline; }
+.chart-scroll { overflow-x: auto; }
+.ch-svg { width: 100%; min-width: 560px; height: auto; display: block; }
+.ch-grid { stroke: var(--card-border); stroke-dasharray: 4 4; stroke-width: 1; }
+.ch-lbl { font-size: 11px; fill: var(--text-dim); }
+.heat-block { margin-bottom: 14px; }
+.heat-block:last-child { margin-bottom: 0; }
+.heat-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+.heat-title .lg-dot { margin-left: 0; }
+.heat-svg { max-width: 100%; height: auto; display: block; }
+.heat-cell { transition: transform .1s ease; }
+.heat-cell:hover { transform: scale(1.25); }
 /* ---------- 手机 / 平板适配 ---------- */
 .menu-btn { display: none; }
 @media (max-width: 900px) {

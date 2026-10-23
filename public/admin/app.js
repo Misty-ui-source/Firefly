@@ -547,6 +547,7 @@ routes.dashboard = async () => {
     } catch (e) { /* 忽略 */ }
     return {
       total: rows.length,
+      dates: rows.map((fm) => String(fm.published || '').slice(0, 10)).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)),
       details: [
         ['📝', '草稿', rows.filter(isDraft).length],
         ['📌', '置顶', rows.filter(isPinned).length],
@@ -561,9 +562,10 @@ routes.dashboard = async () => {
       const list = await ghGetFile(col.path);
       files = (Array.isArray(list) ? list : []).filter((x) => x.name.endsWith('.md'));
     } catch (e) { /* 忽略 */ }
-    const dates = files.map((f) => f.name.slice(0, 10)).sort().reverse();
+    const dates = files.map((f) => f.name.slice(0, 10)).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().reverse();
     return {
       total: files.length,
+      dates,
       details: [
         ['🆕', '本月新增', dates.filter((d) => d.slice(0, 7) === monthPrefix).length],
         ['🕘', '最新', dates[0] || '—'],
@@ -580,23 +582,124 @@ routes.dashboard = async () => {
   };
 
   const jobs = { posts: postStats, dynamic: dynStats };
+  const chartJobs = {};
   for (const [key, col] of Object.entries(CFG.collections)) {
     const d = document.createElement('div');
     d.className = 'stat';
     d.innerHTML = `<div class="stat-head"><span class="lbl">${col.label}</span><span class="num">…</span></div><div class="stat-rows"></div>`;
     d.onclick = () => { location.hash = '#/' + key; };
     grid.appendChild(d);
-    (async () => {
+    const p = (async () => {
       const fn = jobs[key] || simpleStats;
-      const { total, details } = await fn(col);
+      const { total, details, dates } = await fn(col);
       const numEl = d.querySelector('.num');
       if (numEl) numEl.textContent = total;
       const rowsEl = d.querySelector('.stat-rows');
       if (rowsEl) rowsEl.innerHTML = details.map(([icon, label, val]) =>
         `<div class="stat-row"><span class="dot"></span>${icon} ${label} <b>${esc(String(val))}</b></div>`).join('');
+      return dates || [];
     })();
+    if (key === 'posts' || key === 'dynamic') chartJobs[key] = p;
   }
+  // 写作折线图 + 热力图（等文章/动态日期到齐）
+  try {
+    const [postDates, dynDates] = await Promise.all([chartJobs.posts || [], chartJobs.dynamic || []]);
+    renderWriteCharts(postDates, dynDates);
+  } catch (e) { /* 图表失败不影响卡片 */ }
 };
+
+/* ---------- 写作统计图：折线图 + 热力图 ---------- */
+const WRITE_COLORS = { posts: '#dc2626', dynamics: '#0d9488' };
+function countByDay(dates) {
+  const m = {};
+  (dates || []).forEach((d) => { m[d] = (m[d] || 0) + 1; });
+  return m;
+}
+function dayStr(d) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function renderWriteCharts(postDates, dynDates) {
+  const postByDay = countByDay(postDates), dynByDay = countByDay(dynDates);
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div class="card chart-card">
+      <h2>📈 写作趋势 <span class="sub">近 30 天 · <i class="lg-dot" style="background:${WRITE_COLORS.posts}"></i>文章 <i class="lg-dot" style="background:${WRITE_COLORS.dynamics}"></i>动态</span></h2>
+      <div class="chart-scroll"><div id="write-line"></div></div>
+    </div>
+    <div class="card chart-card">
+      <h2>🗓 写作热力图 <span class="sub">近 26 周</span></h2>
+      <div class="chart-scroll">
+        <div class="heat-block"><div class="heat-title"><i class="lg-dot" style="background:${WRITE_COLORS.posts}"></i>文章</div><div id="heat-posts"></div></div>
+        <div class="heat-block"><div class="heat-title"><i class="lg-dot" style="background:${WRITE_COLORS.dynamics}"></i>动态</div><div id="heat-dyns"></div></div>
+      </div>
+    </div>`;
+  view.appendChild(wrap);
+  $('#write-line').innerHTML = lineChartSVG(postByDay, dynByDay);
+  $('#heat-posts').innerHTML = heatmapSVG(postByDay, '文章', ['#fecaca', '#fca5a5', '#f87171', '#dc2626']);
+  $('#heat-dyns').innerHTML = heatmapSVG(dynByDay, '动态', ['#99f6e4', '#5eead4', '#2dd4bf', '#0d9488']);
+}
+/* 30 天双折线 SVG */
+function lineChartSVG(postByDay, dynByDay) {
+  const N = 30, W = 720, H = 230, P = { l: 34, r: 14, t: 14, b: 30 };
+  const days = [];
+  const today = new Date();
+  for (let i = N - 1; i >= 0; i--) { const d = new Date(today); d.setDate(d.getDate() - i); days.push(dayStr(d)); }
+  const pc = days.map((d) => postByDay[d] || 0), dc = days.map((d) => dynByDay[d] || 0);
+  const maxV = Math.max(2, ...pc, ...dc);
+  const X = (i) => P.l + (i / (N - 1)) * (W - P.l - P.r);
+  const Y = (v) => P.t + (1 - v / maxV) * (H - P.t - P.b);
+  const line = (arr) => arr.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  const area = (arr, c) => `${line(arr)} L${X(N - 1).toFixed(1)},${Y(0).toFixed(1)} L${X(0).toFixed(1)},${Y(0).toFixed(1)} Z`;
+  let g = '';
+  const step = maxV <= 4 ? 1 : Math.ceil(maxV / 4);
+  for (let v = 0; v <= maxV; v += step) {
+    g += `<line x1="${P.l}" y1="${Y(v)}" x2="${W - P.r}" y2="${Y(v)}" class="ch-grid"/>`
+      + `<text x="${P.l - 6}" y="${Y(v) + 4}" class="ch-lbl" text-anchor="end">${v}</text>`;
+  }
+  let xl = '';
+  days.forEach((d, i) => {
+    if (i % 5 === 0 || i === N - 1) xl += `<text x="${X(i)}" y="${H - 8}" class="ch-lbl" text-anchor="middle">${d.slice(5)}</text>`;
+  });
+  const dot = (arr, c) => arr.map((v, i) => v > 0 ? `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3.2" fill="${c}"><title>${days[i]}：${v}</title></circle>` : '').join('');
+  return `<svg viewBox="0 0 ${W} ${H}" class="ch-svg" role="img">
+    ${g}
+    <path d="${area(dc, 1)}" fill="${WRITE_COLORS.dynamics}" opacity="0.12"/>
+    <path d="${area(pc, 1)}" fill="${WRITE_COLORS.posts}" opacity="0.10"/>
+    <path d="${line(dc)}" fill="none" stroke="${WRITE_COLORS.dynamics}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="${line(pc)}" fill="none" stroke="${WRITE_COLORS.posts}" stroke-width="2.4" stroke-linejoin="round"/>
+    ${dot(dc, WRITE_COLORS.dynamics)}${dot(pc, WRITE_COLORS.posts)}
+    ${xl}</svg>`;
+}
+/* 26 周热力图 SVG（周日起） */
+function heatmapSVG(byDay, label, palette) {
+  const WEEKS = 26, CS = 11, GAP = 3, TOP = 18;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const endSunday = new Date(today); endSunday.setDate(endSunday.getDate() - today.getDay());
+  const start = new Date(endSunday); start.setDate(start.getDate() - (WEEKS - 1) * 7);
+  const W = WEEKS * (CS + GAP) + 8, H = 7 * (CS + GAP) + TOP + 6;
+  let s = `<svg viewBox="0 0 ${W} ${H}" class="heat-svg" role="img">`;
+  let lastMonth = -1;
+  for (let w = 0; w < WEEKS; w++) {
+    for (let r = 0; r < 7; r++) {
+      const d = new Date(start); d.setDate(d.getDate() + w * 7 + r);
+      if (d > today) continue;
+      const ds = dayStr(d), c = byDay[ds] || 0;
+      const lv = c === 0 ? 0 : c === 1 ? 1 : c === 2 ? 2 : c === 3 ? 3 : 4;
+      const fill = lv === 0 ? 'var(--heat-empty)' : palette[lv - 1];
+      const x = 4 + w * (CS + GAP), y = TOP + r * (CS + GAP);
+      s += `<rect x="${x}" y="${y}" width="${CS}" height="${CS}" rx="2.5" fill="${fill}" class="heat-cell"><title>${ds}：${c} ${label === '文章' ? '篇' : '条'}</title></rect>`;
+    }
+    const wd = new Date(start); wd.setDate(wd.getDate() + w * 7);
+    if (wd.getMonth() !== lastMonth) {
+      lastMonth = wd.getMonth();
+      s += `<text x="${4 + w * (CS + GAP)}" y="11" class="ch-lbl">${wd.getMonth() + 1}月</text>`;
+    }
+  }
+  const cells = palette.map((c, i) => `<rect x="${i * 13}" y="0" width="10" height="10" rx="2" fill="${c}"/>`).join('');
+  s += `<g transform="translate(${W - 120},${H - 2})"><text x="-32" y="9" class="ch-lbl">少</text>${cells}<text x="${palette.length * 13 + 6}" y="9" class="ch-lbl">多</text></g>`;
+  return s + '</svg>';
+}
 
 /* 列表页 */
 function listRoute(key) {
