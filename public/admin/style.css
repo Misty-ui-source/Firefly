@@ -78,17 +78,17 @@ body.has-bg:not(.is-login)::before {
   position: sticky; top: 0; z-index: 50;
 }
 .topbar-inner {
-  max-width: 1080px; margin: 0 auto; padding: 10px 16px;
-  display: flex; align-items: center; gap: 16px;
+  max-width: 1320px; margin: 0 auto; padding: 10px 16px;
+  display: flex; align-items: center; gap: 12px;
 }
 .logo { font-weight: 800; font-size: 18px; color: var(--text); white-space: nowrap; letter-spacing: .5px; }
 .logo b { color: var(--accent); font-weight: 800; }
-.nav { display: flex; gap: 8px; flex-wrap: nowrap; align-items: center; overflow-x: auto; scrollbar-width: none; }
+.nav { display: flex; gap: 6px; flex-wrap: nowrap; align-items: center; overflow-x: auto; scrollbar-width: none; }
 .nav::-webkit-scrollbar { display: none; }
 .nav button { flex: 0 0 auto; min-height: 34px; }
 .nav button {
   background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius);
-  padding: 6px 14px; font-weight: 600; font-size: 14px; cursor: pointer; color: var(--text);
+  padding: 6px 11px; font-weight: 600; font-size: 14px; cursor: pointer; color: var(--text);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
   transition: background .15s ease, color .15s ease, border-color .15s ease;
 }
@@ -496,7 +496,7 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
 .heat-cell:hover { transform: scale(1.25); }
 /* ---------- 手机 / 平板适配 ---------- */
 .menu-btn { display: none; }
-@media (max-width: 900px) {
+@media (max-width: 1200px) {
   .topbar-inner { flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
   .menu-btn { display: none; } /* 小屏导航直接换行展示，不用汉堡菜单 */
   .nav { display: flex; width: 100%; flex-direction: row; flex-wrap: wrap; overflow-x: visible; order: 3; }
