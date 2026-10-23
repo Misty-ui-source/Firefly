@@ -1,5 +1,6 @@
 export type ProfileConfig = {
 	avatar?: string;
+	avatarUseAnimated?: boolean;
 	name: string;
 	bio?: string;
 	links: {
