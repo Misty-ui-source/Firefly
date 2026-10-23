@@ -477,7 +477,8 @@ routes.images = async () => {
     g.innerHTML = '';
     let hasCustom = false, customName = '自定义上传';
     try {
-      hasCustom = localStorage.getItem('admin-inner-bg-custom') === '1';
+      /* 以仓库文件实际存在为准（跨设备）；本机改名只影响显示名 */
+      hasCustom = (typeof BG_CUSTOM_EXISTS !== 'undefined') && BG_CUSTOM_EXISTS;
       customName = localStorage.getItem('admin-inner-bg-custom-name') || '自定义上传';
     } catch (e) {}
     const list = INNERBG_PRESETS.concat(hasCustom ? [{ file: 'admin-inner-bg.jpg', name: customName, custom: true }] : []);
@@ -521,7 +522,7 @@ routes.images = async () => {
     toast('上传中…');
     try {
       await replaceRepoImage('public/admin/admin-inner-bg.jpg', f, { format: 'image/jpeg', quality: 0.85, maxDim: 1920, label: '内部背景' });
-      try { localStorage.setItem('admin-inner-bg-custom', '1'); } catch (e2) {}
+      try { if (typeof BG_CUSTOM_EXISTS !== 'undefined') BG_CUSTOM_EXISTS = true; } catch (e2) {}
       applyInnerBg(true);
       renderInnerBg();
       toast('已加入轮换');

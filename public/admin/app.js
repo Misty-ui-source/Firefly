@@ -300,14 +300,24 @@ function toggleTheme() {
 const INNER_BG_POOL = ['login-art.jpg', 'login-art-alt.jpg', 'login-art-sketch.png'];
 const INNER_BG_CUSTOM = 'admin-inner-bg.jpg';
 const BG_ROTATE_KEY = 'admin-inner-bg-rotate';
-const BG_CUSTOM_KEY = 'admin-inner-bg-custom';
 function bgRotateOn() {
   try { return localStorage.getItem(BG_ROTATE_KEY) !== '0'; } catch (e) { return true; }
 }
 function innerBgPool() {
   const pool = INNER_BG_POOL.slice();
-  try { if (localStorage.getItem(BG_CUSTOM_KEY) === '1') pool.push(INNER_BG_CUSTOM); } catch (e) {}
+  if (BG_CUSTOM_EXISTS) pool.push(INNER_BG_CUSTOM);
   return pool;
+}
+/* 自定义背景是否存在：以后端仓库文件为准（跨设备有效，不依赖 localStorage） */
+let BG_CUSTOM_EXISTS = false;
+function checkCustomBgExists() {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => { BG_CUSTOM_EXISTS = true; applyInnerBg(true); resolve(true); };
+    img.onerror = () => { BG_CUSTOM_EXISTS = false; resolve(false); };
+    /* 直接拼 raw URL（repoRawUrl 在 media.js，init 时还未加载） */
+    img.src = `https://raw.githubusercontent.com/${CFG.owner}/${CFG.repo}/${CFG.branch}/public/admin/` + INNER_BG_CUSTOM;
+  });
 }
 let _bgTimer = null, _bgKey = '';
 function stopInnerBg() { if (_bgTimer) { clearInterval(_bgTimer); _bgTimer = null; } }
@@ -1257,5 +1267,6 @@ async function init() {
   window.addEventListener('hashchange', router);
   router();
   hideLoader();
+  checkCustomBgExists(); /* 异步确认自定义背景是否存在，跨设备有效 */
 }
 init();
