@@ -273,6 +273,7 @@ routes.images = async () => {
     fileInput.onchange = async (e) => {
       const f = e.target.files[0];
       if (!f) return;
+      if (!confirm('用这张替换贴纸的图片？原图会被覆盖。')) return;
       toast('替换中…');
       try {
         await replaceRepoImage(s.src.startsWith('/') ? 'public' + s.src : 'src/' + s.src, f,
@@ -485,6 +486,7 @@ routes.images = async () => {
     </div>`).join('') || '<p class="hint">空的，传一张吧 👇</p>';
     g.querySelectorAll('[data-del]').forEach((b) => {
       b.onclick = () => {
+        if (!confirm('把这张移出报告图库？（R2 上的文件保留，之后重新上传可以再加回）')) return;
         const list = reportGallery();
         list.splice(+b.dataset.del, 1);
         try { localStorage.setItem(REPORT_GALLERY_KEY, JSON.stringify(list)); } catch (e) {}
@@ -549,6 +551,7 @@ routes.images = async () => {
     const f = e.target.files[0];
     e.target.value = '';
     if (!f) return;
+    if (!confirm('用这张替换当前登录页背景图（login-art.jpg）？原图会被覆盖。')) return;
     toast('背景替换中…');
     try {
       await replaceRepoImage('public/admin/login-art.jpg', f, { format: 'image/jpeg', quality: 0.85, label: '控制台背景' });
@@ -611,6 +614,7 @@ routes.images = async () => {
     const f = e.target.files[0];
     e.target.value = '';
     if (!f) return;
+    if (typeof BG_CUSTOM_EXISTS !== 'undefined' && BG_CUSTOM_EXISTS && !confirm('已经有一张自定义内部背景了，上传这张会替换掉它，继续？')) return;
     toast('上传中…');
     try {
       await replaceRepoImage('public/admin/admin-inner-bg.jpg', f, { format: 'image/jpeg', quality: 0.85, maxDim: 1920, label: '内部背景' });
@@ -698,6 +702,7 @@ routes.images = async () => {
       } catch (err) { toast(err.message, true); }
     };
     if (clr) clr.onclick = () => {
+      if (!confirm(`清除手机版${scope.noun}背景？清除后手机端回退用桌面背景，自定义上传的图将不再被使用。`)) return;
       mbgSet(scope.fixed, 'none');
       scope.apply();
       render();
@@ -719,6 +724,7 @@ routes.images = async () => {
     const f = e.target.files[0];
     e.target.value = '';
     if (!f) return;
+    if (!confirm(`用「${f.name}」替换头像？public/avatar.png 和 .avif 都会换成这张，对外地址不变。`)) return;
     toast('头像生成中…');
     try {
       await replaceRepoImage('public/avatar.png', f, { format: 'image/png', quality: 0.92, maxDim: 1024, label: '头像 PNG' });
@@ -745,6 +751,7 @@ routes.images = async () => {
     const f = e.target.files[0];
     e.target.value = '';
     if (!f) return;
+    if (!confirm(`用「${f.name}」替换站点 Favicon？两个尺寸的图标文件都会被覆盖。`)) return;
     toast('Favicon 生成中…');
     try {
       await replaceRepoImage('public/favicon/favicon-cat-180.png', f, { format: 'image/png', maxDim: 180, label: 'Favicon 180px' });
@@ -780,6 +787,7 @@ routes.images = async () => {
       const f = ev.target.files[0];
       ev.target.value = '';
       if (!f) return;
+      if (!confirm(`用「${f.name}」替换${label}？原文件会被覆盖。`)) return;
       toast('替换中…');
       try {
         await replaceRepoImage(repoPath, f, { format: 'image/png', quality: 0.92, label });
