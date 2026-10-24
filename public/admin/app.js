@@ -238,6 +238,7 @@ function navDefs() {
     dashboard: '🏠 首页', stats: '📊 写作',
     images: '🖼 图片', music: '🎵 音乐', gallery: '📷 相册',
     announce: '📢 公告', friends: '🔗 友链', booknav: '🔖 书签', navmgr: '🧭 导航', videos: '🎬 视频', profile: '👤 简介', banner: '🖼️ 横幅',
+    timeline: '🕘 时间线',
   };
   for (const [k, c] of Object.entries(CFG.collections)) defs[k] = c.label;
   return defs;
@@ -1844,6 +1845,137 @@ routes.navmgr = async () => {
       // 同步到当前页
       CFG.navLayout = { primary: layout.primary.slice(), secondary: layout.secondary.slice(), labels: { ...layout.labels } };
       toast('已保存，刷新页面生效');
+    } catch (e) { toast(e.message, true); btn.disabled = false; }
+  };
+};
+
+/* ---------- 时间线管理 ---------- */
+const TIMELINE_PATH = 'src/config/timelineConfig.ts';
+routes.timeline = async () => {
+  view.innerHTML = '<div class="card"><h2>🕘 时间线</h2><p class="hint">正在读取配置…</p></div>';
+  let sha = null, cfgText = '';
+  try {
+    const data = await ghGetFile(TIMELINE_PATH);
+    sha = data.sha; cfgText = data.text;
+  } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+  // 解析 items 数组
+  const parseItems = (t) => {
+    const m = t.match(/items\s*:\s*\[([\s\S]*?)\n\t\],\n\};/);
+    if (!m) { const m2 = t.match(/items:\s*\[([\s\S]*?)\],\s*\n\};/); if (!m2) return null; }
+    const arrText = (m || m2)[1];
+    try {
+      // 用 Function 求值（配置是合法 JS 对象字面量）
+      const fn = new Function(`return [${arrText}];`);
+      return fn();
+    } catch (e) { return null; }
+  };
+  let items = parseItems(cfgText);
+  if (!items) { view.innerHTML = '<div class="card">解析时间线配置失败，格式不匹配。</div>'; return; }
+  const markDirty = () => { $('#btn-tlsave').disabled = false; };
+  const genTS = (list) => {
+    const escS = (s) => (s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+    const itemStr = (it) => {
+      const parts = [];
+      parts.push(`\t\t\tdate: '${escS(it.date)}'`);
+      parts.push(`\t\t\ttype: '${escS(it.type)}'`);
+      if (it.featured) parts.push(`\t\t\tfeatured: true`);
+      parts.push(`\t\t\ttitle: '${escS(it.title)}'`);
+      if (it.subtitle) parts.push(`\t\t\tsubtitle: '${escS(it.subtitle)}'`);
+      parts.push(`\t\t\tdescription: '${escS(it.description)}'`);
+      if (it.details && it.details.length) parts.push(`\t\t\tdetails: [${it.details.map((d) => `'${escS(d)}'`).join(', ')}]`);
+      if (it.tags && it.tags.length) parts.push(`\t\t\ttags: [${it.tags.map((t) => `'${escS(t)}'`).join(', ')}]`);
+      if (it.link) parts.push(`\t\t\tlink: '${escS(it.link)}'`);
+      if (it.image) parts.push(`\t\t\timage: '${escS(it.image)}'`);
+      if (it.enabled === false) parts.push(`\t\t\tenabled: false`);
+      return `\t\t{\n${parts.join(',\n')}\n\t\t}`;
+    };
+    const itemsBlock = list.map(itemStr).join(',\n');
+    return cfgText.replace(/items:\s*\[[\s\S]*?\],\s*\n\};/, `items: [\n${itemsBlock},\n\t],\n};`);
+  };
+  function render() {
+    const box = $('#tl-list');
+    box.innerHTML = items.map((it, i) => `
+      <div class="list-item" data-i="${i}">
+        <span class="title">${esc(it.title)}</span>
+        <span class="meta">${esc(it.date)} · ${esc(it.type)}${it.featured ? ' · 精选' : ''}${it.enabled === false ? ' · 已隐藏' : ''}</span>
+        <button class="btn btn-small" data-a="up">↑</button>
+        <button class="btn btn-small" data-a="down">↓</button>
+        <button class="btn btn-small" data-a="edit">编辑</button>
+        <button class="btn btn-small" data-a="toggle">${it.enabled === false ? '显示' : '隐藏'}</button>
+        <button class="btn btn-small" data-a="del">删除</button>
+      </div>`).join('') || '<div class="card"><p class="hint">还没有时间线节点，点「＋ 新增」添加。</p></div>';
+    box.querySelectorAll('.list-item').forEach((el) => {
+      const i = +el.dataset.i;
+      el.querySelector('[data-a=up]').onclick = () => { if (i > 0) { [items[i-1], items[i]] = [items[i], items[i-1]]; markDirty(); render(); } };
+      el.querySelector('[data-a=down]').onclick = () => { if (i < items.length - 1) { [items[i+1], items[i]] = [items[i], items[i+1]]; markDirty(); render(); } };
+      el.querySelector('[data-a=toggle]').onclick = () => { items[i].enabled = items[i].enabled === false ? true : false; markDirty(); render(); };
+      el.querySelector('[data-a=del]').onclick = () => { if (confirm(`删除「${items[i].title}」？`)) { items.splice(i, 1); markDirty(); render(); } };
+      el.querySelector('[data-a=edit]').onclick = () => openEditor(i);
+    });
+  }
+  function openEditor(idx) {
+    const it = idx >= 0 ? items[idx] : { date: '', type: '项目', title: '', description: '' };
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal card">
+        <h3>${idx >= 0 ? '编辑' : '新增'}时间线节点</h3>
+        <div class="field"><label>日期 *</label><input id="tl-date" value="${esc(it.date || '')}" placeholder="2026.10"></div>
+        <div class="field"><label>分类 *</label><input id="tl-type" value="${esc(it.type || '项目')}" placeholder="项目 / 里程碑"></div>
+        <div class="field"><label><input type="checkbox" id="tl-featured" ${it.featured ? 'checked' : ''}> 精选</label></div>
+        <div class="field"><label>标题 *</label><input id="tl-title" value="${esc(it.title || '')}"></div>
+        <div class="field"><label>副标题</label><input id="tl-subtitle" value="${esc(it.subtitle || '')}"></div>
+        <div class="field"><label>描述 *</label><textarea id="tl-desc" rows="3">${esc(it.description || '')}</textarea></div>
+        <div class="field"><label>详情列表（一行一条）</label><textarea id="tl-details" rows="4">${esc((it.details || []).join('\n'))}</textarea></div>
+        <div class="field"><label>标签（逗号分隔）</label><input id="tl-tags" value="${esc((it.tags || []).join(', '))}"></div>
+        <div class="field"><label>链接</label><input id="tl-link" value="${esc(it.link || '')}" placeholder="https://…"></div>
+        <div class="field"><label>配图</label><input id="tl-image" value="${esc(it.image || '')}" placeholder="/assets/images/…"></div>
+        <div class="toolbar"><span class="spacer"></span>
+          <button class="btn btn-ghost" id="tl-cancel">取消</button>
+          <button class="btn" id="tl-ok">确定</button></div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#tl-cancel').onclick = () => overlay.remove();
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    overlay.querySelector('#tl-ok').onclick = () => {
+      const v = (id) => overlay.querySelector(id).value.trim();
+      const date = v('#tl-date'), type = v('#tl-type'), title = v('#tl-title'), desc = v('#tl-desc');
+      if (!date || !type || !title || !desc) { toast('日期、分类、标题、描述必填', true); return; }
+      const obj = {
+        date, type,
+        title,
+        description: desc,
+      };
+      if (overlay.querySelector('#tl-featured').checked) obj.featured = true;
+      const sub = v('#tl-subtitle'); if (sub) obj.subtitle = sub;
+      const det = v('#tl-details').split('\n').map((s) => s.trim()).filter(Boolean);
+      if (det.length) obj.details = det;
+      const tags = v('#tl-tags').split(/[,，]/).map((s) => s.trim()).filter(Boolean);
+      if (tags.length) obj.tags = tags;
+      const link = v('#tl-link'); if (link) obj.link = link;
+      const img = v('#tl-image'); if (img) obj.image = img;
+      if (idx >= 0) items[idx] = { ...items[idx], ...obj };
+      else items.unshift(obj);
+      overlay.remove();
+      markDirty(); render();
+    };
+  }
+  view.innerHTML = `<div class="toolbar">
+      <button class="btn" id="btn-tladd">＋ 新增节点</button>
+      <span class="spacer"></span>
+      <button class="btn" id="btn-tlsave" disabled>💾 保存到仓库</button></div>
+    <p class="hint">时间线显示在博客首页。↑↓ 排序，新增的节点默认排最前面。保存后重新构建生效。</p>
+    <div id="tl-list"></div>`;
+  render();
+  $('#btn-tladd').onclick = () => openEditor(-1);
+  $('#btn-tlsave').onclick = async () => {
+    const btn = $('#btn-tlsave'); btn.disabled = true;
+    try {
+      const text = genTS(items);
+      if (text === cfgText) throw new Error('配置未变化');
+      const r = await ghPutFile(TIMELINE_PATH, text, sha, '更新时间线 [管理台]');
+      sha = r.content.sha; cfgText = text;
+      toast('已保存，重新构建后生效');
     } catch (e) { toast(e.message, true); btn.disabled = false; }
   };
 };
