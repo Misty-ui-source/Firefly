@@ -98,6 +98,7 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 				"Upon Lighted Fyrefly, I Soon Gaze",
 				"From Undreamt Night, I Thence Shine",
 				"In Finalized Morrow, I Full Bloom",
+				"君踏光至，茶已温妥",
 			],
 			// 主页横幅副标题字体大小
 			subtitleSize: "1.5rem",
