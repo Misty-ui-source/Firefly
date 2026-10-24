@@ -432,6 +432,7 @@ function navDefs() {
     images: '🖼 图片', music: '🎵 音乐', gallery: '📷 相册',
     announce: '📢 公告', friends: '🔗 友链', booknav: '🔖 书签', navmgr: '🧭 导航', videos: '🎬 视频', profile: '👤 简介', banner: '🖼️ 横幅',
     timeline: '🕘 时间线', thoughts: '💭 碎碎念',
+    blog: '🌐 博客', waline: '💬 评论', umami: '📈 数据统计',
   };
   for (const [k, c] of Object.entries(CFG.collections)) defs[k] = c.label;
   return defs;
@@ -460,6 +461,13 @@ function nav() {
   const mkBtn = (key) => {
     const b = document.createElement('button');
     b.textContent = navLabel(key);
+    /* 外部入口（博客/评论后台/数据统计）：新标签页打开，不切控制台路由 */
+    const ext = CFG.navExternal && CFG.navExternal[key];
+    if (ext) {
+      b.title = '在新标签页打开';
+      b.onclick = () => { n.classList.remove('open'); const dd = $('#nav-more'); if (dd) dd.classList.add('hidden'); window.open(ext, '_blank', 'noopener'); };
+      return b;
+    }
     if (isActive(key)) b.classList.add('active');
     b.onclick = () => { n.classList.remove('open'); const dd = $('#nav-more'); if (dd) dd.classList.add('hidden'); location.hash = '#/' + key; };
     return b;
