@@ -1243,12 +1243,8 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
 	window.updateDonut = updateDonut;
 	window.createDonutHTML = createDonutHTML;
 
-	// 等待静态 JSON 尝试完成，若命中则直接返回，不调 API
-	var statsPromise = window.__lanercStatsPromise || Promise.resolve(false);
-	statsPromise.then(function (hit) {
-		if (hit || window.__lanercStatsDone) return;
-		startApiFetch();
-	});
+	// 每次进页面都真去 Umami 拉实时数据，不用构建时的静态数据充数
+	startApiFetch();
 
 	function startApiFetch() {
 	getShare().then(function (info) {
