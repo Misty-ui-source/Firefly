@@ -64,7 +64,7 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
         <div class="data-source">
           <div class="ds-label">DATA SOURCE</div>
           <a href="https://umami.lanerc.me/share/EG15WwHeRvz2lmd2" target="_blank" rel="noopener" class="ds-link">Umami ↗</a>
-          <div class="ds-updated" id="live-updated">更新于 {umami.updatedAt.slice(0, 16).replace("T", " ")} · 30天区间</div>
+          <div class="ds-updated" id="live-updated">正在拉取数据…</div>
           <button id="refresh-stats" class="refresh-btn" title="清除缓存并重新拉取实时数据">🔄 刷新数据</button>
         </div>
         <div class="hero-footer">
@@ -1158,7 +1158,10 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
 				setCached(DATA_KEY, d);
 			}
 		});
-	}).catch(function () { /* 保留构建时数据 */ });
+	}).catch(function () {
+		var updatedEl = document.getElementById("live-updated");
+		if (updatedEl) updatedEl.textContent = "目前暂时拉取不到";
+	});
 })();
 </script>
 
