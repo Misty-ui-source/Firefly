@@ -38,6 +38,6 @@ export async function onRequestPost({ request, env }) {
     }
     return Response.json({ urls });
   } catch (e) {
-    return Response.json({ error: '上传异常' }, { status: 500 });
+    return Response.json({ error: `上传异常：${e.message}` }, { status: 500 });
   }
 }
