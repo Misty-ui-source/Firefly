@@ -34,6 +34,14 @@ export const galleryConfig: GalleryConfig = {
 			password: "123456",
 			passwordHint: "示例密码123456",
 		},
+		{
+			id: "life-school",
+			name: "校园",
+			description: "随手记一下校园",
+			location: "南京市",
+			date: "2026-10-24",
+			tags: ["日常"],
+		},
 	],
 
 	// 瀑布流最小列宽(px)，浏览器根据容器宽度自动计算列数，默认 240
