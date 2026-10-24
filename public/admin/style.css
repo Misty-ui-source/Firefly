@@ -523,9 +523,10 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
 .menu-btn { display: none; }
 @media (max-width: 1200px) {
   .topbar-inner { flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
-  .menu-btn { display: none; } /* 小屏导航直接换行展示，不用汉堡菜单 */
-  .nav { display: flex; width: 100%; flex-direction: row; flex-wrap: wrap; overflow-x: visible; order: 3; }
-  .nav button { flex: 1 1 auto; text-align: center; min-height: 40px; font-size: 14px; justify-content: center; padding: 6px 10px; }
+  .menu-btn { display: none; } /* 小屏导航直接展示，不用汉堡菜单 */
+  .nav { display: flex; width: 100%; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; order: 3; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav button { flex: 0 0 auto; text-align: center; min-height: 40px; font-size: 14px; justify-content: center; padding: 6px 10px; }
 }
 @media (max-width: 640px) {
   .grid2 { grid-template-columns: 1fr; }
