@@ -2368,6 +2368,7 @@ routes.booknav = async () => {
     groups.forEach((g) => g.items.sort((a, b) => b.weight - a.weight));
   } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
   const markDirty = () => { $('#btn-bsave').disabled = false; };
+  const openGroups = new Set(); // 书签分组默认全折叠，这里存已展开的分组 id
   const itemForm = (it) => {
     const inp = (k, label, v, ph) => `<div class="field"><label>${label}</label><input type="text" data-k="${k}" value="${esc(v || '')}" placeholder="${ph || ''}"></div>`;
     return `<div class="card">${inp('title', '标题 *', it.title)}${inp('url', '网址 *', it.url, 'https://')}${inp('desc', '描述', it.desc)}${inp('icon', '图标（留空自动获取 favicon）', it.icon, 'material-symbols:…')}
@@ -2388,10 +2389,12 @@ routes.booknav = async () => {
     box.innerHTML = groups.map((g, gi) => `
       <div class="card" data-g="${gi}">
         <div class="toolbar"><b>📁 ${esc(g.name || '(未命名)')} <span class="hint">${g.items.length} 个书签</span></b><span class="spacer"></span>
+          <button class="btn btn-small" data-a="gtoggle">${openGroups.has(g.id) ? '收起 ▴' : '展开 ▾'}</button>
           <button class="btn btn-small" data-a="gup">↑</button><button class="btn btn-small" data-a="gdown">↓</button>
           <button class="btn btn-small" data-a="gedit">编辑分组</button><button class="btn btn-small" data-a="iadd">＋书签</button>
           <button class="btn btn-small btn-danger" data-a="gdel">删分组</button></div>
         <div class="gform hidden"></div>
+        <div class="gitems${openGroups.has(g.id) ? '' : ' hidden'}">
         ${g.items.map((it, ii) => `
           <div class="list-item" data-ii="${ii}">
             <span class="title">${esc(it.title || '(无标题)')}</span><span class="meta">${esc(it.url)}</span>
@@ -2399,12 +2402,14 @@ routes.booknav = async () => {
             <button class="btn btn-small" data-a="iedit">编辑</button><button class="btn btn-small btn-danger" data-a="idel">删除</button>
           </div><div class="iform hidden"></div>`).join('')}
         <div class="inew"></div>
+        </div>
       </div>`).join('');
     box.querySelectorAll('[data-g]').forEach((card) => {
       const gi = +card.dataset.g, g = groups[gi];
       const qsa = (s) => card.querySelector(s);
       qsa('[data-a=gup]').onclick = () => { if (gi > 0) { [groups[gi - 1], groups[gi]] = [groups[gi], groups[gi - 1]]; markDirty(); render(); } };
       qsa('[data-a=gdown]').onclick = () => { if (gi < groups.length - 1) { [groups[gi + 1], groups[gi]] = [groups[gi], groups[gi + 1]]; markDirty(); render(); } };
+      qsa('[data-a=gtoggle]').onclick = () => { openGroups.has(g.id) ? openGroups.delete(g.id) : openGroups.add(g.id); render(); };
       qsa('[data-a=gdel]').onclick = () => { if (confirm(`删除分组「${g.name}」（含 ${g.items.length} 个书签）？`)) { groups.splice(gi, 1); markDirty(); render(); } };
       qsa('[data-a=gedit]').onclick = () => {
         const f = qsa('.gform'); f.innerHTML = groupForm(g); f.classList.remove('hidden');
@@ -2417,7 +2422,9 @@ routes.booknav = async () => {
         };
       };
       qsa('[data-a=iadd]').onclick = () => {
-        const nw = card.querySelector('.inew');
+        if (!openGroups.has(g.id)) { openGroups.add(g.id); render(); } // 折叠时先展开再出表单
+        const nw = box.querySelector(`[data-g="${gi}"] .inew`);
+        if (!nw) return;
         if (nw.innerHTML) { nw.innerHTML = ''; return; }
         nw.innerHTML = itemForm({ title: '', url: '', desc: '', icon: '' });
         nw.querySelector('[data-a=cancel]').onclick = () => { nw.innerHTML = ''; };
@@ -2447,11 +2454,18 @@ routes.booknav = async () => {
     $('#booknav-count').textContent = `共 ${groups.length} 个分组 / ${groups.reduce((s, g) => s + g.items.length, 0)} 个书签`;
   }
   view.innerHTML = `<div class="toolbar">
-      <button class="btn" id="btn-gadd">＋ 添加分组</button><span class="spacer"></span>
+      <button class="btn" id="btn-gadd">＋ 添加分组</button><button class="btn btn-ghost" id="btn-ball">全部展开</button><span class="spacer"></span>
       <span class="hint" id="booknav-count"></span><button class="btn" id="btn-bsave" disabled>💾 保存到仓库</button>
     </div><p class="hint">↑↓ 调整顺序（保存后按此顺序展示）。图标留空则自动获取目标站 favicon。</p>
     <div id="booknav-new"></div><div id="booknav-list"></div>`;
   render();
+  $('#btn-ball').onclick = () => {
+    const allOpen = groups.length > 0 && groups.every((g) => openGroups.has(g.id));
+    openGroups.clear();
+    if (!allOpen) groups.forEach((g) => openGroups.add(g.id));
+    $('#btn-ball').textContent = allOpen ? '全部展开' : '全部收起';
+    render();
+  };
   $('#btn-gadd').onclick = () => {
     const nw = $('#booknav-new');
     if (nw.innerHTML) { nw.innerHTML = ''; return; }

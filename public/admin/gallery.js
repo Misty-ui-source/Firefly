@@ -216,7 +216,7 @@ routes.gallery = async () => {
     const count = ph.localImgs.length + ph.remoteUrls.length;
     const cover = albumCoverPreview(a, ph);
     const row = document.createElement('div');
-    row.className = 'list-item song';
+    row.className = 'list-item song gal-row';
     row.innerHTML = `
       ${cover ? `<img class="song-cover" loading="lazy" src="${esc(cover)}" alt="" onerror="this.style.visibility='hidden'">` : '<span class="song-cover"></span>'}
       <div class="song-info">
@@ -224,11 +224,13 @@ routes.gallery = async () => {
         <div class="meta">${esc(a.id)} · ${count} 张照片${a.date ? ' · ' + esc(a.date) : ''}</div>
         ${a.description ? `<div class="meta">${esc(a.description)}</div>` : ''}
       </div>
-      <button class="btn btn-small btn-ghost" data-a="up" ${i === 0 ? 'disabled' : ''}>↑</button>
-      <button class="btn btn-small btn-ghost" data-a="down" ${i === albums.length - 1 ? 'disabled' : ''}>↓</button>
-      <button class="btn btn-small" data-a="open">管理照片</button>
-      <button class="btn btn-small btn-ghost" data-a="edit">编辑信息</button>
-      <button class="btn btn-small btn-danger" data-a="del">删除</button>`;
+      <div class="gal-actions">
+        <button class="btn btn-small btn-ghost" data-a="up" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button class="btn btn-small btn-ghost" data-a="down" ${i === albums.length - 1 ? 'disabled' : ''}>↓</button>
+        <button class="btn btn-small" data-a="open">管理照片</button>
+        <button class="btn btn-small btn-ghost" data-a="edit">编辑信息</button>
+        <button class="btn btn-small btn-danger" data-a="del">删除</button>
+      </div>`;
     const swap = async (j) => {
       const ids = albums.map((x) => x.id);
       [ids[i], ids[j]] = [ids[j], ids[i]];
