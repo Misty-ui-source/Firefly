@@ -1178,10 +1178,20 @@ const description = "本站的整体访问趋势，不记录任何可识别个�
 				return info;
 			});
 	}
-	function uget(info, path) {
+	function uget(info, path, retried) {
 		return fetch("/api/umami" + path, {
 			headers: { "x-umami-share-token": info.token, "x-umami-share-context": "1" }
-		}).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+		}).then(function (r) {
+			if (r.status === 401 && !retried) {
+				// token 失效：清缓存，重新获取 token 后重试一次
+				try { localStorage.removeItem("lanerc-umami-share-token-v2"); } catch (e) {}
+				return getShare().then(function (newInfo) {
+					return uget(newInfo, path, true);
+				});
+			}
+			if (!r.ok) throw new Error(r.status);
+			return r.json();
+		});
 	}
 	var iconMap = { "laptop": "💻", "mobile": "📱", "tablet": "📱", "desktop": "🖥️", "中国": "🇨🇳", "美国": "🇺🇸", "日本": "🇯🇵", "香港": "🇭🇰", "台湾": "🇹🇼", "英国": "🇬🇧", "德国": "🇩🇪", "法国": "🇫🇷", "韩国": "🇰🇷", "新加坡": "🇸🇬", "chrome": "🌐", "edge-chromium": "🌐", "chromium-webview": "📱", "safari": "🧭", "firefox": "🦊" };
 	function updateDonut(containerId, items, colors) {
