@@ -908,6 +908,72 @@ routes.dashboard = async () => {
         `<div class="stat-row"><span class="dot"></span>${icon} ${label} <b>${esc(String(val))}</b></div>`).join('');
     })();
   }
+
+  // 快捷入口卡：友链 / 相册 / 时间线 / 碎碎念（与上面同款 .stat 卡，点卡跳对应管理页；读不到数据就停在「…」，不挡首页其他内容）
+  const parseCfgItems = (text) => {
+    const m = text.match(/items\s*:\s*\[([\s\S]*?)\n\t\],\n\};/) || text.match(/items\s*:\s*\[([\s\S]*?)\],\s*\n\};/);
+    if (!m) return null;
+    try {
+      const arr = new Function(`return [${m[1]}];`)();
+      return Array.isArray(arr) ? arr : null;
+    } catch (e) { return null; }
+  };
+  // 日期归一：时间线的 "2026.10" 与碎碎念的 ISO 时间统一成 YYYY-MM / YYYY-MM-DD 再比较
+  const normDate = (v) => {
+    const n = String(v || '').trim().replace(/\./g, '-').slice(0, 10);
+    return /^\d{4}-\d{2}(-\d{2})?$/.test(n) ? n : '';
+  };
+  const friendsCardStats = async () => {
+    const data = await ghGetFile(FRIENDS_PATH);
+    const list = friendsParseBody(friendsExtract(data.text).body);
+    return {
+      total: list.length,
+      details: [['✅', '启用', list.filter((f) => f.enabled).length]],
+    };
+  };
+  const galleryCardStats = async () => {
+    if (typeof readAlbums !== 'function' || typeof loadAlbumPhotos !== 'function') return null;
+    const { albums } = await readAlbums();
+    const photosArr = await Promise.all(albums.map((a) => loadAlbumPhotos(a.id).catch(() => null)));
+    const photos = photosArr.reduce((s, ph) => s + (ph ? ph.localImgs.length + ph.remoteUrls.length : 0), 0);
+    return { total: photos, details: [['🖼', '相册', albums.length]] };
+  };
+  const cfgCardStats = async (path, dateOf) => {
+    const data = await ghGetFile(path);
+    const items = parseCfgItems(data.text);
+    if (!items) return null;
+    const dates = items.map((it) => normDate(dateOf(it))).filter(Boolean).sort().reverse();
+    return {
+      total: items.length,
+      details: [
+        ['🆕', '本月新增', dates.filter((d) => d.slice(0, 7) === monthPrefix).length],
+        ['🕘', '最新', dates[0] || '—'],
+      ],
+    };
+  };
+  const extraCards = [
+    { key: 'friends', label: '友链', fn: friendsCardStats },
+    { key: 'gallery', label: '相册', fn: galleryCardStats },
+    { key: 'timeline', label: '时间线', fn: () => cfgCardStats(TIMELINE_PATH, (it) => it.date) },
+    { key: 'thoughts', label: '碎碎念', fn: () => cfgCardStats(THOUGHTS_PATH, (it) => it.createdAt) },
+  ];
+  for (const { key, label, fn } of extraCards) {
+    const d = document.createElement('div');
+    d.className = 'stat';
+    d.innerHTML = `<div class="stat-head"><span class="lbl">${label}</span><span class="num">…</span></div><div class="stat-rows"></div>`;
+    d.onclick = () => { location.hash = '#/' + key; };
+    grid.appendChild(d);
+    (async () => {
+      let r = null;
+      try { r = await fn(); } catch (e) { /* 单卡失败留「…」占位 */ }
+      if (!r) return;
+      const numEl = d.querySelector('.num');
+      if (numEl) numEl.textContent = r.total;
+      const rowsEl = d.querySelector('.stat-rows');
+      if (rowsEl) rowsEl.innerHTML = r.details.map(([icon, sub, val]) =>
+        `<div class="stat-row"><span class="dot"></span>${icon} ${sub} <b>${esc(String(val))}</b></div>`).join('');
+    })();
+  }
 };
 
 /* ---------- 写作统计图：折线图 + 热力图 ---------- */
@@ -1220,6 +1286,8 @@ routes.edit = async (arg) => {
       <button class="btn btn-small" data-md="hr" type="button" title="分割线">➖ 分割线</button>
       <button class="btn btn-small" id="btn-img" type="button">🖼 插入图片</button>
       <input type="file" id="f-img" accept="image/*" multiple class="hidden">
+      <button class="btn btn-small" id="btn-import" type="button" title="也可以直接把文件拖到页面上">📥 导入文件</button>
+      <input type="file" id="f-import" accept=".md,.markdown,.txt,.png,.jpg,.jpeg,.gif,.webp,.avif" multiple class="hidden">
       <input type="text" id="f-r2dir" value="${r2dirDefault}" placeholder="R2 目录，如 dynamic/2026-10-23">
     </div>
     <div class="field"><textarea id="md-body" class="code" rows="20">${esc(body)}</textarea></div>
@@ -1496,19 +1564,32 @@ routes.edit = async (arg) => {
     dragDepth = Math.max(0, dragDepth - 1);
     if (dragDepth === 0) dropOverlay.classList.add('hidden');
   }
-  async function onDropDrop(e) {
-    if (!hasFiles(e)) return;
-    e.preventDefault();
-    dragDepth = 0;
-    dropOverlay.classList.add('hidden');
-    if (!dropAlive()) { cleanupDropImport(); return; }
-    const files = Array.from(e.dataTransfer.files || []);
+  /* 拖放与「导入文件」按钮共用同一条导入管线：分类 → 超限/不支持提示 → 文本填字段、图片上传插入 */
+  async function importFiles(files) {
     if (!files.length) return;
     const cls = classifyDropFiles(files);
     if (cls.oversized.length) toast(`文件超过 2MB，已忽略：${cls.oversized.map((f) => f.name).join('、')}`, true);
     if (cls.ignored.length) toast(`不支持的文件，已忽略：${cls.ignored.map((f) => f.name).join('、')}`, true);
     if (cls.text) await importDroppedText(cls.text);
     if (cls.images.length) await importDroppedImages(cls.images);
+  }
+  async function onDropDrop(e) {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth = 0;
+    dropOverlay.classList.add('hidden');
+    if (!dropAlive()) { cleanupDropImport(); return; }
+    await importFiles(Array.from(e.dataTransfer.files || []));
+  }
+  /* 「📥 导入文件」按钮（工具栏，routes.edit 共用）：点开选文件，与拖放走同一条管线 */
+  const fImport = $('#f-import');
+  if ($('#btn-import') && fImport) {
+    $('#btn-import').onclick = () => fImport.click();
+    fImport.onchange = async () => {
+      const files = Array.from(fImport.files || []);
+      fImport.value = '';
+      await importFiles(files);
+    };
   }
   if (view._dropImportCleanup) view._dropImportCleanup();
   view._dropImportCleanup = cleanupDropImport;
