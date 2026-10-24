@@ -1,0 +1,145 @@
+---
+import { timelineConfig } from "@/config/timelineConfig";
+import type { TimelineItem } from "@/types/timelineConfig";
+
+const { items, title, enabled } = timelineConfig;
+const activeItems = items.filter((item) => item.enabled !== false);
+---
+
+{enabled && activeItems.length > 0 && (
+	<section class="timeline-section">
+		<h2 class="timeline-title">{title || "时间线"}</h2>
+		<div class="timeline">
+			{activeItems.map((item: TimelineItem) => (
+				<div class={`timeline-item ${item.featured ? "featured" : ""}`}>
+					<div class="timeline-date">
+						<span class="date">{item.date}</span>
+						<span class="type">{item.type}</span>
+						{item.featured && <span class="featured-badge">精选</span>}
+					</div>
+					<div class="timeline-content">
+						<h3>{item.title}</h3>
+						{item.subtitle && <p class="subtitle">{item.subtitle}</p>}
+						<p class="description">{item.description}</p>
+						{item.details && item.details.length > 0 && (
+							<ul class="details">
+								{item.details.map((d) => (
+									<li>{d}</li>
+								))}
+							</ul>
+						)}
+						{item.tags && item.tags.length > 0 && (
+							<div class="tags">
+								{item.tags.map((t) => (
+									<span class="tag">{t}</span>
+								))}
+							</div>
+						)}
+						{item.link && (
+							<a href={item.link} target="_blank" rel="noopener" class="timeline-link">
+								查看详情 →
+							</a>
+						)}
+					</div>
+				</div>
+			))}
+		</div>
+	</section>
+)}
+
+<style>
+	.timeline-section {
+		margin: 2rem 0;
+	}
+	.timeline-title {
+		font-size: 1.5rem;
+		font-weight: 700;
+		margin-bottom: 1.5rem;
+	}
+	.timeline {
+		position: relative;
+		padding-left: 1.5rem;
+		border-left: 2px solid var(--card-border);
+	}
+	.timeline-item {
+		position: relative;
+		margin-bottom: 2rem;
+		padding-left: 1rem;
+	}
+	.timeline-item::before {
+		content: "";
+		position: absolute;
+		left: -1.5rem;
+		top: 0.3rem;
+		width: 0.7rem;
+		height: 0.7rem;
+		border-radius: 50%;
+		background: var(--accent);
+		transform: translateX(-50%);
+	}
+	.timeline-item.featured::before {
+		width: 1rem;
+		height: 1rem;
+		background: #dc2626;
+	}
+	.timeline-date {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		margin-bottom: 0.5rem;
+		font-size: 0.85rem;
+		color: var(--text-muted);
+	}
+	.timeline-date .date {
+		font-weight: 700;
+		color: var(--text);
+	}
+	.timeline-date .type {
+		background: var(--card-bg);
+		border: 1px solid var(--card-border);
+		border-radius: 4px;
+		padding: 0.1rem 0.4rem;
+	}
+	.featured-badge {
+		background: #dc2626;
+		color: #fff;
+		border-radius: 4px;
+		padding: 0.1rem 0.4rem;
+		font-size: 0.75rem;
+	}
+	.timeline-content h3 {
+		font-size: 1.2rem;
+		margin-bottom: 0.3rem;
+	}
+	.timeline-content .subtitle {
+		color: var(--text-muted);
+		margin-bottom: 0.5rem;
+	}
+	.timeline-content .description {
+		margin-bottom: 0.5rem;
+	}
+	.timeline-content .details {
+		margin: 0.5rem 0;
+		padding-left: 1.2rem;
+	}
+	.timeline-content .details li {
+		margin-bottom: 0.3rem;
+	}
+	.timeline-content .tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		margin-top: 0.5rem;
+	}
+	.timeline-content .tag {
+		background: var(--teal-light);
+		border-radius: 4px;
+		padding: 0.15rem 0.5rem;
+		font-size: 0.8rem;
+	}
+	.timeline-link {
+		display: inline-block;
+		margin-top: 0.5rem;
+		color: var(--accent);
+	}
+</style>
