@@ -551,7 +551,7 @@ function innerBgPool() {
   if (BG_CUSTOM_EXISTS) pool.push(INNER_BG_CUSTOM);
   return pool;
 }
-/* ---------- 手机端背景：登录页（外部）与内页（内部）共用同一套设置 ----------
+/* ---------- 手机端背景：登录页（外部）与内页（内部）各一套独立设置（键名前缀 login / inner） ----------
  * 仅 ≤743px 宽度生效（手机横竖屏）；平板/桌面完全不受影响，仍走上面的桌面图池。
  * 轮换开（默认）：三张内置竖图按桌面图池的方式 30s 淡入淡出轮换；关：固定选中的一张（默认粉红款）。
  * 选图存 localStorage：admin-inner-bg-mobile = 内置文件名 / 自定义图 R2 直链 / 'none'（清除→桌面图兜底）；
@@ -583,6 +583,23 @@ function mobileBgSources() {
   if (fixed === 'none') return null;
   if (mobileBgRotateOn()) return MOBILE_BG_BUILTINS.map((f) => './' + f);
   return [/^https?:\/\//.test(fixed) ? fixed : './' + fixed];
+}
+/* 登录页手机图：独立的一套设置（admin-login-bg-mobile*），与内页互不影响；
+ * 2026-10-24 起拆开，两边分别在图片页的「控制台背景」「控制台内部背景」卡里设置 */
+const LOGIN_BG_KEY = 'admin-login-bg-mobile';
+const LOGIN_BG_ROTATE_KEY = 'admin-login-bg-mobile-rotate';
+const LOGIN_BG_FIT_KEY = 'admin-login-bg-mobile-fit';
+function loginBgFixed() {
+  try {
+    const v = localStorage.getItem(LOGIN_BG_KEY);
+    return v === null ? 'bg-m-pink.webp' : v;
+  } catch (e) { return 'bg-m-pink.webp'; }
+}
+function loginBgRotateOn() {
+  try { return localStorage.getItem(LOGIN_BG_ROTATE_KEY) !== '0'; } catch (e) { return true; }
+}
+function loginBgFit() {
+  try { return localStorage.getItem(LOGIN_BG_FIT_KEY) === 'contain' ? 'contain' : 'cover'; } catch (e) { return 'cover'; }
 }
 /* 自定义背景是否存在：以后端仓库文件为准（跨设备有效，不依赖 localStorage） */
 let BG_CUSTOM_EXISTS = false;
@@ -644,17 +661,17 @@ function applyInnerBg(force) {
     const nx = new Image(); nx.src = refOf(effPool[(idx + 1) % effPool.length]); // 预加载再下一张
   }, 30000);
 }
-/* 登录页背景：桌面/平板用 config.js 的 adminBg；手机宽度跟随同一套手机背景设置
+/* 登录页背景：桌面/平板用 config.js 的 adminBg；手机宽度用登录页自己的手机背景设置（admin-login-bg-mobile*）
  * （轮换开 → 从三张内置竖图随机抽一张；关 → 固定选图；已清除或总开关关 → 桌面图 + CSS 竖屏位置兜底） */
 function paintLoginStage() {
   const stage = document.querySelector('.login-stage');
   if (!stage) return;
   const bgFile = (CFG.adminBg || 'login-art.jpg').replace(/^\/+/, '');
   let src = './' + bgFile, size = '', pos = '';
-  if (isPhoneWidth() && bgRotateOn() && mobileBgFixed() !== 'none') {
-    if (mobileBgRotateOn()) src = './' + MOBILE_BG_BUILTINS[Math.floor(Math.random() * MOBILE_BG_BUILTINS.length)];
-    else { const f = mobileBgFixed(); src = /^https?:\/\//.test(f) ? f : './' + f; }
-    size = mobileBgFit(); pos = 'center';
+  if (isPhoneWidth() && bgRotateOn() && loginBgFixed() !== 'none') {
+    if (loginBgRotateOn()) src = './' + MOBILE_BG_BUILTINS[Math.floor(Math.random() * MOBILE_BG_BUILTINS.length)];
+    else { const f = loginBgFixed(); src = /^https?:\/\//.test(f) ? f : './' + f; }
+    size = loginBgFit(); pos = 'center';
   }
   stage.style.backgroundImage = `url("${src}")`;
   stage.style.backgroundSize = size;

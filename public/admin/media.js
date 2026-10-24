@@ -401,6 +401,24 @@ routes.images = async () => {
         <input type="file" id="adminbg-file" accept="image/*" class="hidden">
         <button class="btn btn-small" id="adminbg-btn">📤 上传替换当前背景</button>
       </div>
+      <h3 class="sub-h">📱 手机版登录背景 <span class="sub">仅手机宽度（≤743px）· 桌面/平板仍用上面的图</span></h3>
+      <div class="switch-row">
+        <label class="switch"><input type="checkbox" id="lmbg-rotate" checked><span class="slider"></span></label>
+        <span>三图轮换 <span class="hint">每次打开登录页随机抽一张竖版波奇图；关闭则固定用下面选中的图</span></span>
+      </div>
+      <p class="hint">点任意一张即固定为该图（自动关轮换）。自定义上传走 R2 并固定使用。清除后手机登录页回退用上面的桌面背景。</p>
+      <div class="img-grid" id="lmbg-grid"></div>
+      <div class="switch-row">
+        <span>显示方式</span>
+        <button class="mini-btn" id="lmbg-fit-cover">铺满裁剪</button>
+        <button class="mini-btn" id="lmbg-fit-contain">完整显示</button>
+        <span class="hint">仅作用于手机专用图</span>
+      </div>
+      <div class="toolbar">
+        <input type="file" id="lmbg-file" accept="image/*" class="hidden">
+        <button class="btn btn-small" id="lmbg-btn">📤 自定义上传</button>
+        <button class="btn btn-small" id="lmbg-clear">🧹 清除（用桌面图兜底）</button>
+      </div>
     </div>
 
     <div class="card">
@@ -415,15 +433,12 @@ routes.images = async () => {
         <input type="file" id="innerbg-file" accept="image/*" class="hidden">
         <button class="btn btn-small" id="innerbg-btn">📤 上传图片加入轮换</button>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>📱 手机端背景 <span class="sub">仅手机宽度（≤743px）生效 · 登录页与内页共用一套</span></h2>
+      <h3 class="sub-h">📱 手机版内页背景 <span class="sub">仅手机宽度（≤743px）· 桌面/平板仍用上面的轮换池</span></h3>
       <div class="switch-row">
         <label class="switch"><input type="checkbox" id="mbg-rotate" checked><span class="slider"></span></label>
-        <span>三图轮换 <span class="hint">3 张内置竖版波奇图在内页每 30 秒轮换（登录页每次随机抽一张）；关闭则固定用下面选中的图</span></span>
+        <span>三图轮换 <span class="hint">3 张内置竖版波奇图在内页每 30 秒轮换；关闭则固定用下面选中的图</span></span>
       </div>
-      <p class="hint">点任意一张即固定为该图（自动关轮换）。自定义上传走 R2 并固定使用。清除后手机端回退用桌面背景（位置做竖屏适配）。桌面与平板不受这里影响。</p>
+      <p class="hint">点任意一张即固定为该图（自动关轮换）。自定义上传走 R2 并固定使用。清除后手机端内页回退用桌面背景（位置做竖屏适配）。</p>
       <div class="img-grid" id="mbg-grid"></div>
       <div class="switch-row">
         <span>显示方式</span>
@@ -437,6 +452,7 @@ routes.images = async () => {
         <button class="btn btn-small" id="mbg-clear">🧹 清除（用桌面图兜底）</button>
       </div>
     </div>
+
 
     <div class="card">
       <h2>📊 报告图库（波奇酱） <span class="sub">总结报告的背景轮换池</span></h2>
@@ -605,7 +621,7 @@ routes.images = async () => {
     } catch (err) { toast(err.message, true); }
   };
 
-  // ---- 手机端背景：与内页/登录页共用 app.js 的同一套 localStorage 设置 ----
+  // ---- 手机版背景：登录页与内页两套独立设置，分别并入「控制台背景」「控制台内部背景」卡 ----
   const MBG_BUILTINS = [
     { file: 'bg-m-pink.webp', name: '粉红款（默认）' },
     { file: 'bg-m-2.webp', name: '竖版波奇 2' },
@@ -613,77 +629,83 @@ routes.images = async () => {
   ];
   function mbgGet(key, dft) { try { const v = localStorage.getItem(key); return v === null ? dft : v; } catch (e) { return dft; } }
   function mbgSet(key, v) { try { localStorage.setItem(key, v); } catch (e) {} }
-  function renderMobileBg() {
-    const g = $('#mbg-grid');
-    if (!g) return;
-    const fixed = mbgGet('admin-inner-bg-mobile', 'bg-m-pink.webp');
-    const rotate = mbgGet('admin-inner-bg-mobile-rotate', '1') !== '0';
-    const fit = mbgGet('admin-inner-bg-mobile-fit', 'cover');
-    const cleared = fixed === 'none';
-    const cells = MBG_BUILTINS.slice();
-    if (/^https?:\/\//.test(fixed)) cells.push({ file: fixed, name: '自定义上传', custom: true });
-    g.innerHTML = cleared ? '<p class="hint">当前已清除：手机端回退使用桌面背景（位置做竖屏适配）。点任意一张图可重新启用手机背景。</p>' : '';
-    cells.forEach((p) => {
-      const active = !cleared && !rotate && fixed === p.file;
-      const d = document.createElement('div');
-      d.className = 'img-cell';
-      d.innerHTML = `<img loading="lazy" src="${p.custom ? esc(p.file) : repoRawUrl('public/admin/' + p.file)}" alt="${esc(p.name)}">
-        <div class="url" title="${esc(p.name)}">${esc(p.name)}${active ? ' ✅ 固定使用中' : (!cleared && rotate && !p.custom ? ' · 轮换中' : '')}</div>
-        <div class="ops"><button class="mini-btn" data-a="fix"${active ? ' disabled' : ''}>固定这张</button></div>`;
-      d.querySelector('[data-a=fix]').onclick = () => {
-        mbgSet('admin-inner-bg-mobile', p.file);
-        mbgSet('admin-inner-bg-mobile-rotate', '0');
-        const sw = $('#mbg-rotate'); if (sw) sw.checked = false;
-        applyInnerBg(true);
-        renderMobileBg();
-        toast('手机背景已固定为「' + p.name + '」（登录页与内页同步）');
-      };
-      g.appendChild(d);
-    });
-    const sw = $('#mbg-rotate');
-    if (sw && !sw._wired) {
-      sw._wired = true;
-      sw.checked = rotate;
-      sw.onchange = () => {
-        mbgSet('admin-inner-bg-mobile-rotate', sw.checked ? '1' : '0');
-        if (sw.checked && mbgGet('admin-inner-bg-mobile', '') === 'none') mbgSet('admin-inner-bg-mobile', 'bg-m-pink.webp');
-        applyInnerBg(true);
-        renderMobileBg();
-        toast(sw.checked ? '手机背景轮换已开启（三张竖图轮换）' : '手机背景轮换已关闭，固定当前选图');
-      };
+  /* scope: { p 元素 id 前缀, fixed/rotate/fit 三个 localStorage 键, dir R2 上传目录, noun 名称, apply 改完立即生效的刷新函数 } */
+  function setupPhoneBg(scope) {
+    function render() {
+      const g = $('#' + scope.p + '-grid');
+      if (!g) return;
+      const fixed = mbgGet(scope.fixed, 'bg-m-pink.webp');
+      const rotate = mbgGet(scope.rotate, '1') !== '0';
+      const fit = mbgGet(scope.fit, 'cover');
+      const cleared = fixed === 'none';
+      const cells = MBG_BUILTINS.slice();
+      if (/^https?:\/\//.test(fixed)) cells.push({ file: fixed, name: '自定义上传', custom: true });
+      g.innerHTML = cleared ? '<p class="hint">当前已清除：手机端回退使用桌面背景。点任意一张图可重新启用手机背景。</p>' : '';
+      cells.forEach((p) => {
+        const active = !cleared && !rotate && fixed === p.file;
+        const d = document.createElement('div');
+        d.className = 'img-cell';
+        d.innerHTML = `<img loading="lazy" src="${p.custom ? esc(p.file) : repoRawUrl('public/admin/' + p.file)}" alt="${esc(p.name)}">
+          <div class="url" title="${esc(p.name)}">${esc(p.name)}${active ? ' ✅ 固定使用中' : (!cleared && rotate && !p.custom ? ' · 轮换中' : '')}</div>
+          <div class="ops"><button class="mini-btn" data-a="fix"${active ? ' disabled' : ''}>固定这张</button></div>`;
+        d.querySelector('[data-a=fix]').onclick = () => {
+          mbgSet(scope.fixed, p.file);
+          mbgSet(scope.rotate, '0');
+          const sw = $('#' + scope.p + '-rotate'); if (sw) sw.checked = false;
+          scope.apply();
+          render();
+          toast(`手机版${scope.noun}背景已固定为「${p.name}」`);
+        };
+        g.appendChild(d);
+      });
+      const sw = $('#' + scope.p + '-rotate');
+      if (sw && !sw._wired) {
+        sw._wired = true;
+        sw.checked = rotate;
+        sw.onchange = () => {
+          mbgSet(scope.rotate, sw.checked ? '1' : '0');
+          if (sw.checked && mbgGet(scope.fixed, '') === 'none') mbgSet(scope.fixed, 'bg-m-pink.webp');
+          scope.apply();
+          render();
+          toast(sw.checked ? `手机版${scope.noun}背景轮换已开启（三张竖图轮换）` : `手机版${scope.noun}背景轮换已关闭，固定当前选图`);
+        };
+      } else if (sw) { sw.checked = rotate; }
+      const fc = $('#' + scope.p + '-fit-cover'), ft = $('#' + scope.p + '-fit-contain');
+      if (fc && ft) {
+        fc.disabled = fit === 'cover';
+        ft.disabled = fit === 'contain';
+        fc.onclick = () => { mbgSet(scope.fit, 'cover'); scope.apply(); render(); };
+        ft.onclick = () => { mbgSet(scope.fit, 'contain'); scope.apply(); render(); };
+      }
     }
-    const fc = $('#mbg-fit-cover'), ft = $('#mbg-fit-contain');
-    if (fc && ft) {
-      fc.disabled = fit === 'cover';
-      ft.disabled = fit === 'contain';
-      fc.onclick = () => { mbgSet('admin-inner-bg-mobile-fit', 'cover'); applyInnerBg(true); renderMobileBg(); };
-      ft.onclick = () => { mbgSet('admin-inner-bg-mobile-fit', 'contain'); applyInnerBg(true); renderMobileBg(); };
-    }
+    render();
+    const btn = $('#' + scope.p + '-btn'), file = $('#' + scope.p + '-file'), clr = $('#' + scope.p + '-clear');
+    if (btn && file) btn.onclick = () => file.click();
+    if (file) file.onchange = async (e) => {
+      const f = e.target.files[0];
+      e.target.value = '';
+      if (!f) return;
+      toast('上传中…');
+      try {
+        const { urls } = await uploadImages([f], scope.dir);
+        mbgSet(scope.fixed, urls[0]);
+        mbgSet(scope.rotate, '0');
+        const sw = $('#' + scope.p + '-rotate'); if (sw) sw.checked = false;
+        oplogRecord('图片', '上传', `手机版${scope.noun}背景`, f.name);
+        scope.apply();
+        render();
+        toast(`手机版${scope.noun}背景已换成自定义图（固定显示）`);
+      } catch (err) { toast(err.message, true); }
+    };
+    if (clr) clr.onclick = () => {
+      mbgSet(scope.fixed, 'none');
+      scope.apply();
+      render();
+      toast(`已清除手机版${scope.noun}背景，手机端回退用桌面图`);
+    };
   }
-  renderMobileBg();
-  $('#mbg-btn').onclick = () => $('#mbg-file').click();
-  $('#mbg-file').onchange = async (e) => {
-    const f = e.target.files[0];
-    e.target.value = '';
-    if (!f) return;
-    toast('上传中…');
-    try {
-      const { urls } = await uploadImages([f], 'admin/mobile-bg');
-      mbgSet('admin-inner-bg-mobile', urls[0]);
-      mbgSet('admin-inner-bg-mobile-rotate', '0');
-      const sw = $('#mbg-rotate'); if (sw) sw.checked = false;
-      oplogRecord('图片', '上传', '手机端背景', f.name);
-      applyInnerBg(true);
-      renderMobileBg();
-      toast('手机背景已换成自定义图（固定显示）');
-    } catch (err) { toast(err.message, true); }
-  };
-  $('#mbg-clear').onclick = () => {
-    mbgSet('admin-inner-bg-mobile', 'none');
-    applyInnerBg(true);
-    renderMobileBg();
-    toast('已清除手机背景，手机端回退用桌面图');
-  };
+  setupPhoneBg({ p: 'lmbg', fixed: 'admin-login-bg-mobile', rotate: 'admin-login-bg-mobile-rotate', fit: 'admin-login-bg-mobile-fit', dir: 'admin/login-mobile-bg', noun: '登录页', apply: () => { if (typeof paintLoginStage === 'function') paintLoginStage(); } });
+  setupPhoneBg({ p: 'mbg', fixed: 'admin-inner-bg-mobile', rotate: 'admin-inner-bg-mobile-rotate', fit: 'admin-inner-bg-mobile-fit', dir: 'admin/mobile-bg', noun: '内页', apply: () => applyInnerBg(true) });
 
   // ---- 背景图：添加 ----
   $('#wp-d-add').onclick = () => $('#wp-d-file').click();
