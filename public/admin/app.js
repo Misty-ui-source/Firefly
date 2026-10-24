@@ -113,7 +113,11 @@ async function finishLogin() {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code, code_verifier: verifier, client_id: window.ADMIN_CONFIG.githubClientId }),
   });
-  if (!res.ok) { toast('换 token 失败: ' + res.status, true); return false; }
+  if (!res.ok) {
+    let detail = '';
+    try { const j = await res.json(); detail = j.error ? ': ' + j.error : ''; } catch (e) {}
+    toast('换 token 失败: ' + res.status + detail, true); return false;
+  }
   const { access_token } = await res.json();
   localStorage.setItem(TOKEN_KEY, access_token);
   const me = await gh('/user');
@@ -238,7 +242,7 @@ function navDefs() {
     dashboard: '🏠 首页', stats: '📊 写作',
     images: '🖼 图片', music: '🎵 音乐', gallery: '📷 相册',
     announce: '📢 公告', friends: '🔗 友链', booknav: '🔖 书签', navmgr: '🧭 导航', videos: '🎬 视频', profile: '👤 简介', banner: '🖼️ 横幅',
-    timeline: '🕘 时间线',
+    timeline: '🕘 时间线', thoughts: '💭 碎碎念',
   };
   for (const [k, c] of Object.entries(CFG.collections)) defs[k] = c.label;
   return defs;
@@ -1974,6 +1978,117 @@ routes.timeline = async () => {
       const text = genTS(items);
       if (text === cfgText) throw new Error('配置未变化');
       const r = await ghPutFile(TIMELINE_PATH, text, sha, '更新时间线 [管理台]');
+      sha = r.content.sha; cfgText = text;
+      toast('已保存，重新构建后生效');
+    } catch (e) { toast(e.message, true); btn.disabled = false; }
+  };
+};
+
+/* ---------- 碎碎念管理 ---------- */
+const THOUGHTS_PATH = 'src/config/thoughtsConfig.ts';
+routes.thoughts = async () => {
+  view.innerHTML = '<div class="card"><h2>💭 碎碎念</h2><p class="hint">正在读取配置…</p></div>';
+  let sha = null, cfgText = '';
+  try {
+    const data = await ghGetFile(THOUGHTS_PATH);
+    sha = data.sha; cfgText = data.text;
+  } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+  const parseItems = (t) => {
+    const m = t.match(/items\s*:\s*\[([\s\S]*?)\n\t\],\n\};/);
+    if (!m) return null;
+    try {
+      const fn = new Function(`return [${m[1]}];`);
+      return fn();
+    } catch (e) { return null; }
+  };
+  let items = parseItems(cfgText);
+  if (!items) { view.innerHTML = '<div class="card">解析碎碎念配置失败。</div>'; return; }
+  const markDirty = () => { $('#btn-thsave').disabled = false; };
+  const fmtDT = (iso) => {
+    try {
+      const d = new Date(iso);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    } catch { return iso; }
+  };
+  const genTS = (list) => {
+    const escS = (s) => (s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+    const itemStr = (it) => {
+      const parts = [];
+      parts.push(`\t\t\ttitle: '${escS(it.title)}'`);
+      parts.push(`\t\t\tcontent: '${escS(it.content)}'`);
+      parts.push(`\t\t\tcreatedAt: '${escS(it.createdAt)}'`);
+      if (it.updatedAt) parts.push(`\t\t\tupdatedAt: '${escS(it.updatedAt)}'`);
+      if (it.enabled === false) parts.push(`\t\t\tenabled: false`);
+      return `\t\t{\n${parts.join(',\n')}\n\t\t}`;
+    };
+    return cfgText.replace(/items:\s*\[[\s\S]*?\],\s*\n\};/, `items: [\n${list.map(itemStr).join(',\n')},\n\t],\n};`);
+  };
+  function render() {
+    const box = $('#th-list');
+    box.innerHTML = items.map((it, i) => `
+      <div class="list-item" data-i="${i}">
+        <span class="title">${esc(it.title)}</span>
+        <span class="meta">发布 ${esc(fmtDT(it.createdAt))}${it.updatedAt && it.updatedAt !== it.createdAt ? ' · 更新 ' + esc(fmtDT(it.updatedAt)) : ''}${it.enabled === false ? ' · 已隐藏' : ''}</span>
+        <button class="btn btn-small" data-a="up">↑</button>
+        <button class="btn btn-small" data-a="down">↓</button>
+        <button class="btn btn-small" data-a="edit">编辑</button>
+        <button class="btn btn-small" data-a="toggle">${it.enabled === false ? '显示' : '隐藏'}</button>
+        <button class="btn btn-small" data-a="del">删除</button>
+      </div>`).join('') || '<div class="card"><p class="hint">还没有碎碎念，点「＋ 新增」添加。</p></div>';
+    box.querySelectorAll('.list-item').forEach((el) => {
+      const i = +el.dataset.i;
+      el.querySelector('[data-a=up]').onclick = () => { if (i > 0) { [items[i-1], items[i]] = [items[i], items[i-1]]; markDirty(); render(); } };
+      el.querySelector('[data-a=down]').onclick = () => { if (i < items.length - 1) { [items[i+1], items[i]] = [items[i], items[i+1]]; markDirty(); render(); } };
+      el.querySelector('[data-a=toggle]').onclick = () => { items[i].enabled = items[i].enabled === false ? true : false; markDirty(); render(); };
+      el.querySelector('[data-a=del]').onclick = () => { if (confirm(`删除「${items[i].title}」？`)) { items.splice(i, 1); markDirty(); render(); } };
+      el.querySelector('[data-a=edit]').onclick = () => openEditor(i);
+    });
+  }
+  function openEditor(idx) {
+    const it = idx >= 0 ? items[idx] : { title: '', content: '' };
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal card">
+        <h3>${idx >= 0 ? '编辑' : '新增'}碎碎念</h3>
+        <div class="field"><label>标题 *</label><input id="th-title" value="${esc(it.title || '')}"></div>
+        <div class="field"><label>内容 *</label><textarea id="th-content" rows="5">${esc(it.content || '')}</textarea></div>
+        ${idx >= 0 ? `<p class="hint">发布时间：${esc(fmtDT(it.createdAt))}${it.updatedAt && it.updatedAt !== it.createdAt ? '<br>上次更新：' + esc(fmtDT(it.updatedAt)) : ''}<br>保存时会自动记录更新时间。</p>` : '<p class="hint">保存时会自动记录发布时间。</p>'}
+        <div class="toolbar"><span class="spacer"></span>
+          <button class="btn btn-ghost" id="th-cancel">取消</button>
+          <button class="btn" id="th-ok">确定</button></div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#th-cancel').onclick = () => overlay.remove();
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    overlay.querySelector('#th-ok').onclick = () => {
+      const title = overlay.querySelector('#th-title').value.trim();
+      const content = overlay.querySelector('#th-content').value.trim();
+      if (!title || !content) { toast('标题和内容必填', true); return; }
+      const now = new Date().toISOString();
+      if (idx >= 0) {
+        items[idx] = { ...items[idx], title, content, updatedAt: now };
+      } else {
+        items.unshift({ title, content, createdAt: now });
+      }
+      overlay.remove();
+      markDirty(); render();
+    };
+  }
+  view.innerHTML = `<div class="toolbar">
+      <button class="btn" id="btn-thadd">＋ 新增碎碎念</button>
+      <span class="spacer"></span>
+      <button class="btn" id="btn-thsave" disabled>💾 保存到仓库</button></div>
+    <p class="hint">碎碎念显示在 /gallery/thoughts/ 星空页面。新增自动记录发布时间，编辑自动记录更新时间。保存后重新构建生效。</p>
+    <div id="th-list"></div>`;
+  render();
+  $('#btn-thadd').onclick = () => openEditor(-1);
+  $('#btn-thsave').onclick = async () => {
+    const btn = $('#btn-thsave'); btn.disabled = true;
+    try {
+      const text = genTS(items);
+      if (text === cfgText) throw new Error('配置未变化');
+      const r = await ghPutFile(THOUGHTS_PATH, text, sha, '更新碎碎念 [管理台]');
       sha = r.content.sha; cfgText = text;
       toast('已保存，重新构建后生效');
     } catch (e) { toast(e.message, true); btn.disabled = false; }
