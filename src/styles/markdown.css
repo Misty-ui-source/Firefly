@@ -96,6 +96,13 @@
     }
   }
 
+  mark {
+    background: rgba(253, 224, 71, 0.45);
+    color: inherit;
+    padding: 0 0.25em;
+    border-radius: 0.3em;
+  }
+
   .expressive-code {
     @apply my-4;
   }
