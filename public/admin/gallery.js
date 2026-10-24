@@ -126,7 +126,13 @@ async function replaceAlbum(id, album) {
   if (idx < 0) throw new Error('找不到相册 ' + id);
   const pos = albums[idx]._pos;
   const newObj = serializeAlbum(album, blk.indent + '\t');
-  const next = data.text.slice(0, blk.openIdx + pos.start) + newObj + data.text.slice(blk.openIdx + pos.end);
+  const absStart = blk.openIdx + pos.start;
+  let absEnd = blk.openIdx + pos.end;
+  /* serializeAlbum 的文本自带尾逗号，原对象后面的旧逗号必须一并吞掉，
+   * 否则拼出 },, —— 数组里多一个空位，构建时 getStaticPaths 读到 undefined 直接挂（2026-10-24 事故） */
+  const cm = data.text.slice(absEnd).match(/^[ \t]*,/);
+  if (cm) absEnd += cm[0].length;
+  const next = data.text.slice(0, absStart) + newObj + data.text.slice(absEnd);
   await ghPutFile(GALLERY_CONFIG, next, data.sha, `更新相册「${album.name}」 [管理台]`);
 }
 async function removeAlbum(id) {

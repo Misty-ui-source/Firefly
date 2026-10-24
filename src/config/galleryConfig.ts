@@ -32,7 +32,7 @@ export const galleryConfig: GalleryConfig = {
 			tags: ["加密相册", "示例"],
 			password: "2829",
 			passwordHint: "示例密码123456",
-		},,
+		},
 		{
 			id: "life-school",
 			name: "校园",

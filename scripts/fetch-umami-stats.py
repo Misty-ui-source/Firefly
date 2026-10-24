@@ -103,8 +103,8 @@ def main():
         }
 
     # 2. 今日数据（北京时间 00:00 到现在）
-    # 取今天 00:00（UTC+8）的毫秒
-    import datetime
+    # 取今天 00:00（UTC+8）的毫秒（datetime 用文件顶部 import 的模块，别在函数里重复 import，
+    # 否则它会变成 main 的局部变量，前面第 83 行用它时报 UnboundLocalError）
     beijing = datetime.timezone(datetime.timedelta(hours=8))
     today_start = datetime.datetime.now(beijing).replace(hour=0, minute=0, second=0, microsecond=0)
     today_ms = int(today_start.timestamp() * 1000)
