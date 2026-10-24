@@ -519,8 +519,8 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
 .cover-row input { flex: 1; }
 .cover-prev { margin-top: 8px; }
 .cover-prev img { max-height: 130px; border: 1px solid var(--card-border); border-radius: 6px; box-shadow: var(--shadow); }
-.preview mark { background: #fef08a; color: inherit; border-radius: 3px; padding: 0 2px; }
-[data-theme="dark"] .preview mark { background: #a16207; color: #fefce8; }
+.preview mark { background: rgba(45, 212, 191, .32); color: inherit; border-radius: 3px; padding: 0 2px; }
+[data-theme="dark"] .preview mark { background: rgba(45, 212, 191, .32); color: inherit; }
 
 /* ---------- 写作统计图 ---------- */
 .chart-card h2 .sub { font-size: 12px; color: var(--text-dim); font-weight: 500; }
