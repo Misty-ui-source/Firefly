@@ -236,7 +236,7 @@ async function startLogin() {
   sessionStorage.setItem('oauth_state', state);
   const challenge = await sha256base64url(verifier);
   const url = 'https://github.com/login/oauth/authorize?' + new URLSearchParams({
-    client_id: CFG.githubClientId, scope: 'public_repo',
+    client_id: CFG.githubClientId, scope: 'repo',
     redirect_uri: new URL('./', location.href).href,
     state, code_challenge: challenge, code_challenge_method: 'S256',
   });
