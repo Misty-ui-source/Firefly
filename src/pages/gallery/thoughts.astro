@@ -1,0 +1,25 @@
+---
+import ThoughtsCanvas from "@/components/widget/ThoughtsCanvas.astro";
+import { thoughtsConfig } from "@/config/thoughtsConfig";
+import { siteConfig } from "@/config";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+
+if (!siteConfig.pages.gallery) {
+	return Astro.redirect("/404/");
+}
+
+const { items, title, enabled } = thoughtsConfig;
+const activeItems = items.filter((item) => item.enabled !== false);
+---
+
+<MainGridLayout title={title || "碎碎念"} description="我的碎碎念">
+	<div class="page-shell">
+		{enabled && activeItems.length > 0 ? (
+			<ThoughtsCanvas items={activeItems} />
+		) : (
+			<div class="border-2 border-black dark:border-white rounded-2xl p-12 bg-white dark:bg-black">
+				<p class="text-center opacity-60">还没有碎碎念，去控制台添加吧。</p>
+			</div>
+		)}
+	</div>
+</MainGridLayout>
