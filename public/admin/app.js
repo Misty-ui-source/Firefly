@@ -544,6 +544,39 @@ function innerBgPool() {
   if (BG_CUSTOM_EXISTS) pool.push(INNER_BG_CUSTOM);
   return pool;
 }
+/* ---------- 手机端背景：登录页（外部）与内页（内部）共用同一套设置 ----------
+ * 仅 ≤743px 宽度生效（手机横竖屏）；平板/桌面完全不受影响，仍走上面的桌面图池。
+ * 轮换开（默认）：三张内置竖图按桌面图池的方式 30s 淡入淡出轮换；关：固定选中的一张（默认粉红款）。
+ * 选图存 localStorage：admin-inner-bg-mobile = 内置文件名 / 自定义图 R2 直链 / 'none'（清除→桌面图兜底）；
+ * admin-inner-bg-mobile-rotate = 轮换开关；admin-inner-bg-mobile-fit = cover（铺满）/ contain（完整）。 */
+const PHONE_BG_MQ = '(max-width: 743px)';
+const MOBILE_BG_BUILTINS = ['bg-m-pink.webp', 'bg-m-2.webp', 'bg-m-3.webp'];
+const MOBILE_BG_KEY = 'admin-inner-bg-mobile';
+const MOBILE_BG_ROTATE_KEY = 'admin-inner-bg-mobile-rotate';
+const MOBILE_BG_FIT_KEY = 'admin-inner-bg-mobile-fit';
+function isPhoneWidth() {
+  return !!(window.matchMedia && matchMedia(PHONE_BG_MQ).matches);
+}
+function mobileBgRotateOn() {
+  try { return localStorage.getItem(MOBILE_BG_ROTATE_KEY) !== '0'; } catch (e) { return true; }
+}
+function mobileBgFixed() {
+  try {
+    const v = localStorage.getItem(MOBILE_BG_KEY);
+    return v === null ? 'bg-m-pink.webp' : v;
+  } catch (e) { return 'bg-m-pink.webp'; }
+}
+function mobileBgFit() {
+  try { return localStorage.getItem(MOBILE_BG_FIT_KEY) === 'contain' ? 'contain' : 'cover'; } catch (e) { return 'cover'; }
+}
+/* 手机端当前生效的背景源：null = 已清除，用桌面图池兜底；
+ * 轮换开 → 三张内置竖图；关 → 固定一张（内置文件名或自定义 R2 直链）。返回的是可直接用的引用（./文件 或完整 URL） */
+function mobileBgSources() {
+  const fixed = mobileBgFixed();
+  if (fixed === 'none') return null;
+  if (mobileBgRotateOn()) return MOBILE_BG_BUILTINS.map((f) => './' + f);
+  return [/^https?:\/\//.test(fixed) ? fixed : './' + fixed];
+}
 /* 自定义背景是否存在：以后端仓库文件为准（跨设备有效，不依赖 localStorage） */
 let BG_CUSTOM_EXISTS = false;
 function checkCustomBgExists() {
@@ -563,33 +596,70 @@ function applyInnerBg(force) {
   const isLogin = document.body.classList.contains('is-login');
   const on = bgRotateOn();
   const pool = innerBgPool();
-  const key = (isLogin ? 'L' : 'C') + (on ? 'R' : 'D') + '|' + pool.join(',');
+  /* 手机宽度且总开关开着时用手机背景源；已清除（null）或非手机宽度仍走桌面图池 */
+  const mSrc = (!isLogin && on && isPhoneWidth()) ? mobileBgSources() : null;
+  const key = (isLogin ? 'L' : 'C') + (on ? 'R' : 'D') + '|' + pool.join(',')
+    + (isLogin ? '' : (isPhoneWidth() ? '|P' + (mSrc ? mobileBgFit() + '|' + mSrc.join(',') : 'F') : '|W'));
   if (!force && key === _bgKey) return;
   _bgKey = key;
   stopInnerBg();
   const layers = [a, b];
   if (isLogin || !on) {
     layers[0].style.opacity = '0'; layers[1].style.opacity = '0';
+    layers.forEach((l) => { l.style.backgroundSize = ''; l.style.backgroundPosition = ''; });
     document.body.classList.remove('has-bg');
     return;
   }
   document.body.classList.add('has-bg');
-  const url = (f) => `url("./${f}")`;
+  let effPool = pool, refOf = (f) => './' + f;
+  if (mSrc) {
+    /* 手机专用图：按显示方式（铺满/完整）呈现，位置居中；轮换机制与桌面图池共用下面的计时器 */
+    effPool = mSrc; refOf = (f) => f;
+    layers.forEach((l) => { l.style.backgroundSize = mobileBgFit(); l.style.backgroundPosition = 'center'; });
+  } else {
+    /* 桌面图池（含手机端清除后的兜底）：清掉手机行内样式，位置交给 CSS（≤743px 时有竖屏兜底规则） */
+    layers.forEach((l) => { l.style.backgroundSize = ''; l.style.backgroundPosition = ''; });
+  }
+  const url = (f) => `url("${refOf(f)}")`;
   const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   let idx = 0, front = 0;
-  layers[0].style.backgroundImage = url(pool[0]);
+  layers[0].style.backgroundImage = url(effPool[0]);
   layers[0].style.opacity = '1'; layers[1].style.opacity = '0';
-  if (pool.length > 1) { const im = new Image(); im.src = './' + pool[1]; } // 预加载下一张
-  if (pool.length < 2 || reduced) return; // 单张或减弱动效：静止显示
+  if (effPool.length > 1) { const im = new Image(); im.src = refOf(effPool[1]); } // 预加载下一张
+  if (effPool.length < 2 || reduced) return; // 单张或减弱动效：静止显示
   _bgTimer = setInterval(() => {
-    idx = (idx + 1) % pool.length;
+    idx = (idx + 1) % effPool.length;
     const back = 1 - front;
-    layers[back].style.backgroundImage = url(pool[idx]); // 已预加载，直接换不闪
+    layers[back].style.backgroundImage = url(effPool[idx]); // 已预加载，直接换不闪
     layers[back].style.opacity = '1';
     layers[front].style.opacity = '0';
     front = back;
-    const nx = new Image(); nx.src = './' + pool[(idx + 1) % pool.length]; // 预加载再下一张
+    const nx = new Image(); nx.src = refOf(effPool[(idx + 1) % effPool.length]); // 预加载再下一张
   }, 30000);
+}
+/* 登录页背景：桌面/平板用 config.js 的 adminBg；手机宽度跟随同一套手机背景设置
+ * （轮换开 → 从三张内置竖图随机抽一张；关 → 固定选图；已清除或总开关关 → 桌面图 + CSS 竖屏位置兜底） */
+function paintLoginStage() {
+  const stage = document.querySelector('.login-stage');
+  if (!stage) return;
+  const bgFile = (CFG.adminBg || 'login-art.jpg').replace(/^\/+/, '');
+  let src = './' + bgFile, size = '', pos = '';
+  if (isPhoneWidth() && bgRotateOn() && mobileBgFixed() !== 'none') {
+    if (mobileBgRotateOn()) src = './' + MOBILE_BG_BUILTINS[Math.floor(Math.random() * MOBILE_BG_BUILTINS.length)];
+    else { const f = mobileBgFixed(); src = /^https?:\/\//.test(f) ? f : './' + f; }
+    size = mobileBgFit(); pos = 'center';
+  }
+  stage.style.backgroundImage = `url("${src}")`;
+  stage.style.backgroundSize = size;
+  stage.style.backgroundPosition = pos;
+}
+/* 窗口跨过手机断点（旋转/缩放）时重套背景：内页层 + 登录页舞台 */
+if (window.matchMedia && !window._phoneMqWired) {
+  window._phoneMqWired = true;
+  const phoneMq = matchMedia(PHONE_BG_MQ);
+  const onPhoneChange = () => { applyInnerBg(true); paintLoginStage(); };
+  if (phoneMq.addEventListener) phoneMq.addEventListener('change', onPhoneChange);
+  else if (phoneMq.addListener) phoneMq.addListener(onPhoneChange);
 }
 
 /* 登录页：装饰图原图完整鲜明呈现（不做淡化/半透明处理），hue 174 青绿品牌风 */
@@ -726,9 +796,8 @@ routes.login = () => {
     s.style.animationDelay = (-Math.random() * 12) + 's';
     stage.appendChild(s);
   }
-  /* 控制台背景图：config.js 的 adminBg 可切换（图片管理 → 控制台背景） */
-  const bgFile = (CFG.adminBg || 'login-art.jpg').replace(/^\/+/, '');
-  stage.style.backgroundImage = `url("./${bgFile}")`;
+  /* 控制台背景图：config.js 的 adminBg 可切换（图片管理 → 控制台背景）；手机宽度走手机背景设置（paintLoginStage 内判断） */
+  paintLoginStage();
   /* 时钟 + 每日名言（nekro.top 式） */
   if (window._loginTimer) { clearInterval(window._loginTimer); window._loginTimer = null; }
   const week = ['日', '一', '二', '三', '四', '五', '六'];

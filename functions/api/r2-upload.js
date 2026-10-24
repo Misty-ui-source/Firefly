@@ -34,7 +34,7 @@ export async function onRequestPost({ request, env }) {
       await env.R2_BUCKET.put(key, f.stream(), {
         httpMetadata: { contentType: f.type || 'application/octet-stream' },
       });
-      urls.push(`${env.R2_PUBLIC_BASE.replace(/\/+$/, '')}/${key}`);
+      urls.push(`${(env.R2_PUBLIC_BASE || 'https://img.lanerc.me').replace(/\/+$/, '')}/${key}`);
     }
     return Response.json({ urls });
   } catch (e) {

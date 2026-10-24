@@ -383,6 +383,13 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
   .login-id { flex-direction: column; gap: 10px; }
   .site-grid { grid-template-columns: repeat(2, 1fr); }
 }
+/* 手机端背景适配（≤743px，仅手机横竖屏；平板/桌面不命中此规则）：
+ * 未用手机专用图（已清除手机背景）时，桌面横版图位置往主体方向挪，避免竖屏硬铺裁乱。
+ * 用手机专用图时位置/尺寸由 JS 行内样式给出（居中 + 铺满/完整），优先级高于此处。 */
+@media (max-width: 743px) {
+  .bg-layer { background-position: 50% 30%; }
+  .login-stage { background-position: 50% 30%; }
+}
 
 /* ============================================================
  * part3：图片 / 音乐管理、编辑器细节、移动端适配（新视觉）
