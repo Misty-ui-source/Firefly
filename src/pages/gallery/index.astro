@@ -82,17 +82,6 @@ const allTags = [...new Set(albums.flatMap((a) => a.tags || []))].sort();
       )}
     </div>
 
-    <!-- 时间线入口 -->
-    <a href="/gallery/timeline/" class="card-base px-6 py-4 mb-4 flex items-center gap-4 hover:shadow-lg transition-shadow">
-      <div class="page-icon" aria-hidden="true">
-        <Icon name="material-symbols:timeline" />
-      </div>
-      <div>
-        <div class="font-bold text-lg">时间线</div>
-        <div class="text-sm text-neutral-500">我的历程记录</div>
-      </div>
-    </a>
-
     <!-- 相册卡片网格（独立于标题面板） -->
     {albums.length > 0 ? (
       <>
