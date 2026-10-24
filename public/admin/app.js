@@ -79,6 +79,146 @@ async function ghDelFile(path, sha, message) {
   });
 }
 
+/* ---------- 控制台操作日志（总结报告的数据来源） ----------
+ * 设计：
+ * - 日志文件：src/data/console-oplog.json，JSON 数组，条目 {ts, type, action, target, detail}。
+ * - 同 commit 原则：仓库类保存（配置/文章/友链等）走 saveWithLog，用 Git Data API
+ *   把主文件 + 日志文件合成 1 个 commit，不多触发构建。
+ * - R2 上传类操作本身不产生仓库 commit，硬绑日志会多一次构建，所以只记 pending
+ *   队列，下次 saveWithLog 时一并带上；报告页读取时合并仓库日志 + pending，不丢数。
+ * - 容错：Git Data API 失败时回落到原来的单文件 PUT，操作本身一定保存成功，
+ *   日志条目留在 pending 里等下次同步，绝不因日志拖垮保存。
+ * - 注意：saveWithLog 一次保存约 7 次 API 调用（ref/commit/blob/tree/commit/ref），
+ *   是用户手动点保存的人类节奏，不是脚本批量调用；不要在循环里调它。
+ */
+const OPLOG_PATH = 'src/data/console-oplog.json';
+const OPLOG_PENDING_KEY = 'admin_oplog_pending';
+const OPLOG_MAX_ENTRIES = 2000;
+function oplogLoadPending() {
+  try { const v = JSON.parse(localStorage.getItem(OPLOG_PENDING_KEY) || '[]'); return Array.isArray(v) ? v : []; }
+  catch (e) { return []; }
+}
+function oplogSavePending(list) {
+  try { localStorage.setItem(OPLOG_PENDING_KEY, JSON.stringify(list)); } catch (e) {}
+}
+/* 记一条操作：只写本地 pending，绝不抛错、绝不阻塞保存 */
+function oplogRecord(type, action, target, detail) {
+  const entry = { ts: new Date().toISOString(), type, action, target: target || '', detail: detail || '' };
+  const pending = oplogLoadPending();
+  pending.push(entry);
+  oplogSavePending(pending);
+  if (Array.isArray(window._oplogEntries)) window._oplogEntries.push(entry);
+  return entry;
+}
+function oplogDedup(list) {
+  const seen = new Set(), out = [];
+  for (const e of list) {
+    const k = [e.ts, e.type, e.action, e.target].join('|');
+    if (seen.has(k)) continue;
+    seen.add(k); out.push(e);
+  }
+  return out;
+}
+/* Git Data API：多文件合成 1 个 commit。files: [{path, content, encoding?} | {path, del: true}] */
+async function ghCommitMulti(files, message) {
+  const base = `/repos/${CFG.owner}/${CFG.repo}`;
+  const ref = await gh(`${base}/git/ref/heads/${CFG.branch}`);
+  const baseCommitSha = ref.object.sha;
+  const baseCommit = await gh(`${base}/git/commits/${baseCommitSha}`);
+  const treeEntries = [];
+  const blobShas = {};
+  for (const f of files) {
+    if (f.del) {
+      treeEntries.push({ path: f.path, mode: '100644', type: 'blob', sha: null });
+      continue;
+    }
+    const blob = await gh(`${base}/git/blobs`, {
+      method: 'POST',
+      body: JSON.stringify({ content: f.content, encoding: f.encoding || 'utf-8' }),
+    });
+    blobShas[f.path] = blob.sha;
+    treeEntries.push({ path: f.path, mode: '100644', type: 'blob', sha: blob.sha });
+  }
+  const tree = await gh(`${base}/git/trees`, {
+    method: 'POST',
+    body: JSON.stringify({ base_tree: baseCommit.tree.sha, tree: treeEntries }),
+  });
+  const commit = await gh(`${base}/git/commits`, {
+    method: 'POST',
+    body: JSON.stringify({ message, tree: tree.sha, parents: [baseCommitSha] }),
+  });
+  await gh(`${base}/git/ref/heads/${CFG.branch}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ sha: commit.sha }),
+  });
+  return { commitSha: commit.sha, blobShas };
+}
+async function oplogCurrentText() {
+  if (typeof window._oplogText === 'string') return window._oplogText;
+  try {
+    const data = await ghGetFile(OPLOG_PATH);
+    window._oplogText = data.text;
+    try { window._oplogEntries = JSON.parse(data.text); } catch (e) { window._oplogEntries = []; }
+    if (!Array.isArray(window._oplogEntries)) window._oplogEntries = [];
+  } catch (e) {
+    window._oplogText = '[]'; // 文件还不存在：从空日志开始，本次提交会创建它
+    window._oplogEntries = [];
+  }
+  return window._oplogText;
+}
+/* ghPutFile 的直接替代：主文件 + 日志文件同 1 个 commit。返回 {content: {sha}} 保持调用方不变 */
+async function saveWithLog(path, text, sha, message, op, opts = {}) {
+  const entry = op ? { ts: new Date().toISOString(), type: op.type, action: op.action, target: op.target || '', detail: op.detail || '' } : null;
+  try {
+    const curText = await oplogCurrentText();
+    let entries = [];
+    try { entries = JSON.parse(curText); } catch (e) { entries = []; }
+    if (!Array.isArray(entries)) entries = [];
+    const merged = oplogDedup([...entries, ...oplogLoadPending(), ...(entry ? [entry] : [])]).slice(-OPLOG_MAX_ENTRIES);
+    const oplogText = JSON.stringify(merged, null, 2) + '\n';
+    const files = [{ path, content: text, encoding: opts.isBase64 ? 'base64' : 'utf-8' }];
+    files.push({ path: OPLOG_PATH, content: oplogText, encoding: 'utf-8' });
+    const r = await ghCommitMulti(files, message);
+    window._oplogText = oplogText;
+    window._oplogEntries = merged;
+    oplogSavePending([]);
+    return { content: { sha: r.blobShas[path] }, commitSha: r.commitSha };
+  } catch (e) {
+    /* 回落：主文件照常保存，日志条目留 pending 等下次同步 */
+    if (entry) {
+      const pending = oplogLoadPending();
+      const key = [entry.ts, entry.type, entry.action, entry.target].join('|');
+      if (!pending.some((p) => [p.ts, p.type, p.action, p.target].join('|') === key)) pending.push(entry);
+      oplogSavePending(pending);
+    }
+    if (opts.isBase64) {
+      return gh(`/repos/${CFG.owner}/${CFG.repo}/contents/${path}`, {
+        method: 'PUT',
+        body: JSON.stringify({ message, content: text, branch: CFG.branch, ...(sha ? { sha } : {}) }),
+      });
+    }
+    return ghPutFile(path, text, sha, message);
+  }
+}
+/* 单文件删除 + 日志同 commit（回落：先删文件，日志留 pending） */
+async function delWithLog(path, sha, message, op) {
+  const entry = op ? { ts: new Date().toISOString(), type: op.type, action: op.action, target: op.target || '', detail: op.detail || '' } : null;
+  try {
+    const curText = await oplogCurrentText();
+    let entries = [];
+    try { entries = JSON.parse(curText); } catch (e) { entries = []; }
+    if (!Array.isArray(entries)) entries = [];
+    const merged = oplogDedup([...entries, ...oplogLoadPending(), ...(entry ? [entry] : [])]).slice(-OPLOG_MAX_ENTRIES);
+    await ghCommitMulti([{ path, del: true }, { path: OPLOG_PATH, content: JSON.stringify(merged, null, 2) + '\n', encoding: 'utf-8' }], message);
+    window._oplogText = JSON.stringify(merged, null, 2) + '\n';
+    window._oplogEntries = merged;
+    oplogSavePending([]);
+  } catch (e) {
+    if (entry) oplogRecord(entry.type, entry.action, entry.target, entry.detail);
+    await ghDelFile(path, sha, message);
+  }
+}
+
 /* ---------- OAuth PKCE 登录 ---------- */
 function randStr(n) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
@@ -267,7 +407,7 @@ function nav() {
   n.classList.remove('hidden');
   const { primary, secondary } = navLayout();
   const cur = location.hash.replace('#/', '');
-  const isActive = (key) => cur === key || (location.hash === '' && key === 'dashboard') || (key === 'gallery' && cur.startsWith('gallery-'));
+  const isActive = (key) => cur === key || (location.hash === '' && key === 'dashboard') || (key === 'gallery' && cur.startsWith('gallery-')) || (key === 'stats' && cur.startsWith('stats/'));
   const mkBtn = (key) => {
     const b = document.createElement('button');
     b.textContent = navLabel(key);
@@ -317,8 +457,8 @@ function router() {
     else routes.dashboard();
   };
   const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (page === 'login' || reduced) { render(); return; }
-  if (wasLogin) { playCRT(); render(); return; } // 从登录页进入：CRT 开机动画
+  if (page === 'login' || reduced) { render(); queueReportPopup(page); return; }
+  if (wasLogin) { playCRT(); render(); queueReportPopup(page); return; } // 从登录页进入：CRT 开机动画
   /* 栏目切换：虫洞过渡（旧视图缩+模糊+淡出，新视图由大恢复） */
   const seq = ++router._seq;
   view.classList.add('view-out');
@@ -329,6 +469,12 @@ function router() {
     view.classList.add('view-in');
     setTimeout(() => { if (seq === router._seq) view.classList.remove('view-in'); }, 240);
   }, 180);
+  queueReportPopup(page);
+}
+/* 总结报告弹窗延后检查：等 CRT/虫洞动画跑完再弹，不抢动画；只在主页面（dashboard）触发 */
+function queueReportPopup(page) {
+  if (page !== 'dashboard' || !token()) return;
+  setTimeout(() => { maybeShowReportPopup(); }, 900);
 }
 router._seq = 0;
 /* CRT 开机动画：白横线从中间展开 → 纵向闪光 → 内容淡入，约 700ms */
@@ -619,16 +765,32 @@ async function fetchDynDates() {
       .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d));
   } catch (e) { return []; }
 }
-/* 写作数据栏目：折线图 + 热力图 */
-routes.stats = async () => {
+/* 写作数据栏目：折线图 + 热力图 + 总结报告区块（报告已入写作页，旧 #/reports 路由重定向到这里） */
+routes.stats = async (arg) => {
   view.innerHTML = '<div class="card"><h2>📊 写作数据</h2><p class="hint">正在读取仓库数据…</p></div>';
   const [postDates, dynDates] = await Promise.all([fetchPostDates(), fetchDynDates()]);
   if (!postDates.length && !dynDates.length) {
     view.innerHTML = '<div class="card"><h2>📊 写作数据</h2><p class="hint">没有读到写作数据。</p></div>';
-    return;
+  } else {
+    view.innerHTML = '<div class="card"><h2>📊 写作数据</h2><p class="hint">文章与动态的发布统计，数据来自仓库实时读取。</p></div>';
+    renderWriteCharts(postDates, dynDates);
   }
-  view.innerHTML = '<div class="card"><h2>📊 写作数据</h2><p class="hint">文章与动态的发布统计，数据来自仓库实时读取。</p></div>';
-  renderWriteCharts(postDates, dynDates);
+  /* 总结报告区块：与写作数据无关，始终渲染在页尾 */
+  const wrap = document.createElement('div');
+  wrap.id = 'report-section';
+  view.appendChild(wrap);
+  /* 深链形式 #/stats/report:<type>:<key>（弹窗「查看完整报告」与旧路由重定向共用） */
+  let repType = 'month', repKey = '';
+  if (arg && arg.startsWith('report')) {
+    const parts = arg.split(':'); // report / type / key（含 '-'，不含 ':'）
+    if (['month', 'quarter', 'annual'].includes(parts[1])) repType = parts[1];
+    if (parts[2]) repKey = parts.slice(2).join(':');
+  }
+  await renderReportSection(wrap, repType, repKey);
+  if (arg && arg.startsWith('report')) {
+    const el = document.getElementById('report-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 };
 routes.dashboard = async () => {
   view.innerHTML = '<div class="card"><h2>加载中…</h2></div>';
@@ -846,10 +1008,12 @@ function listRoute(key) {
           if (!confirm(`确定删除 ${e.name}？`)) return;
           try {
             if (e.type === 'dir') {
+              /* 多文件目录删除保持逐文件删，日志记一条 pending，下次仓库保存时一并同步，避免一次提交塞几十个文件 */
+              oplogRecord(col.label || key, '删除', e.name, '删除目录');
               const files = await ghGetFile(`${col.path}/${e.name}`);
               for (const f of files) await ghDelFile(`${col.path}/${e.name}/${f.name}`, f.sha, `删除 ${e.name}/${f.name} [管理台]`);
             } else {
-              await ghDelFile(`${col.path}/${e.name}`, e.sha);
+              await delWithLog(`${col.path}/${e.name}`, e.sha, `删除 ${e.name} [管理台]`, { type: col.label || key, action: '删除', target: e.name });
             }
             toast('已删除');
             router();
@@ -1193,7 +1357,7 @@ routes.edit = async (arg) => {
     const text = serializeFrontmatter(newFm, newBody);
     $('#btn-save').disabled = true;
     try {
-      await ghPutFile(path, text, sha, `${isNew ? '新建' : '更新'} ${path} [管理台]`);
+      await saveWithLog(path, text, sha, `${isNew ? '新建' : '更新'} ${path} [管理台]`, { type: col.label || key, action: isNew ? '新建' : '更新', target: path });
       toast('保存成功！');
       location.hash = '#/' + key;
     } catch (err) { toast(err.message, true); $('#btn-save').disabled = false; }
@@ -1300,7 +1464,7 @@ routes.announce = async () => {
     const btn = $('#btn-save-ann');
     btn.disabled = true;
     try {
-      await ghPutFile(ANN_PATH, text, sha, '更新网站公告 [管理台]');
+      await saveWithLog(ANN_PATH, text, sha, '更新网站公告 [管理台]', { type: '公告', action: '更新', target: '网站公告' });
       toast('公告已保存，重新构建网站后生效');
     } catch (e) { toast(e.message, true); }
     btn.disabled = false;
@@ -1555,7 +1719,7 @@ async function friendsMgr(body, invalidateCache) {
       const n = list.length;
       const body = list.map((f, i) => friendToTs(f, n - i)).join('\n');
       const text = head + '\n' + body + '\n' + tail;
-      const r = await ghPutFile(FRIENDS_PATH, text, sha, '更新友链 [管理台]');
+      const r = await saveWithLog(FRIENDS_PATH, text, sha, '更新友链 [管理台]', { type: '友链', action: '更新', target: '友链配置' });
       sha = r.content.sha;
       dirty.v = false;
       if (invalidateCache) invalidateCache();
@@ -1768,7 +1932,7 @@ routes.booknav = async () => {
     const btn = $('#btn-bsave'); btn.disabled = true;
     try {
       const text = head + '\n' + booknavToTs(groups) + '\n' + tail;
-      const r = await ghPutFile(BOOKNAV_PATH, text, sha, '更新书签导航 [管理台]');
+      const r = await saveWithLog(BOOKNAV_PATH, text, sha, '更新书签导航 [管理台]', { type: '书签', action: '更新', target: '书签导航' });
       sha = r.content.sha; toast('已保存，构建后生效');
     } catch (e) { toast(e.message, true); btn.disabled = false; }
   };
@@ -1853,7 +2017,7 @@ routes.navmgr = async () => {
       const newLayout = `navLayout: {\n    primary: [${layout.primary.map(q).join(', ')}],\n    secondary: [${layout.secondary.map(q).join(', ')}],\n    labels: { ${labelsStr} },\n  },`;
       const text = cfgText.replace(/navLayout\s*:\s*\{[\s\S]*?\n\s*\},/, newLayout);
       if (text === cfgText) throw new Error('配置未变化或格式不匹配');
-      const r = await ghPutFile(NAVMGR_PATH, text, sha, '更新控制台导航栏 [管理台]');
+      const r = await saveWithLog(NAVMGR_PATH, text, sha, '更新控制台导航栏 [管理台]', { type: '导航', action: '更新', target: '控制台导航栏' });
       sha = r.content.sha; cfgText = text;
       // 同步到当前页
       CFG.navLayout = { primary: layout.primary.slice(), secondary: layout.secondary.slice(), labels: { ...layout.labels } };
@@ -1986,7 +2150,7 @@ routes.timeline = async () => {
     try {
       const text = genTS(items);
       if (text === cfgText) throw new Error('配置未变化');
-      const r = await ghPutFile(TIMELINE_PATH, text, sha, '更新时间线 [管理台]');
+      const r = await saveWithLog(TIMELINE_PATH, text, sha, '更新时间线 [管理台]', { type: '时间线', action: '更新', target: '时间线配置' });
       sha = r.content.sha; cfgText = text;
       toast('已保存，重新构建后生效');
     } catch (e) { toast(e.message, true); btn.disabled = false; }
@@ -2097,7 +2261,7 @@ routes.thoughts = async () => {
     try {
       const text = genTS(items);
       if (text === cfgText) throw new Error('配置未变化');
-      const r = await ghPutFile(THOUGHTS_PATH, text, sha, '更新碎碎念 [管理台]');
+      const r = await saveWithLog(THOUGHTS_PATH, text, sha, '更新碎碎念 [管理台]', { type: '碎碎念', action: '更新', target: '碎碎念配置' });
       sha = r.content.sha; cfgText = text;
       toast('已保存，重新构建后生效');
     } catch (e) { toast(e.message, true); btn.disabled = false; }
@@ -2154,7 +2318,7 @@ routes.videos = async () => {
               body: JSON.stringify({ keys: [o.key] }) });
             const j = await r.json();
             if (j.error) throw new Error(j.error);
-            toast('已删除'); load();
+            toast('已删除'); oplogRecord('视频', '删除', o.key.split('/').pop(), 'R2 视频删除'); load();
           } catch (e) { toast(e.message, true); }
         };
       });
@@ -2177,6 +2341,7 @@ routes.videos = async () => {
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || `上传失败: ${r.status}`);
       toast(`上传成功 ${j.urls.length} 个`);
+      oplogRecord('视频', '上传', dir, `${j.urls.length} 个视频`);
       load();
     } catch (err) { toast(err.message, true); }
   };
@@ -2290,7 +2455,7 @@ routes.profile = async () => {
       for (const repoPath of ['public/avatar.png', 'public/avatar.avif']) {
         let sha = null;
         try { sha = (await ghGetFile(repoPath)).sha; } catch (_) {}
-        await ghPutFile(repoPath, b64, sha, `替换头像 ${repoPath} [管理台]`, true);
+        await saveWithLog(repoPath, b64, sha, `替换头像 ${repoPath} [管理台]`, { type: '图片', action: '替换', target: repoPath }, { isBase64: true });
       }
       toast('两个地址都已更新，构建后全网生效');
     } catch (err) { toast(err.message, true); }
@@ -2328,7 +2493,7 @@ routes.profile = async () => {
         else if (c === ']') { depth--; if (!depth) break; }
       }
       text = text.slice(0, as + 1) + '\n' + linksTs + '\n\t' + text.slice(i);
-      const r = await ghPutFile(PROFILE_PATH, text, sha, '更新简介卡片 [管理台]');
+      const r = await saveWithLog(PROFILE_PATH, text, sha, '更新简介卡片 [管理台]', { type: '简介', action: '更新', target: '简介卡片' });
       sha = r.content.sha; src = text; toast('已保存，构建后生效');
     } catch (e) { toast(e.message, true); btn.disabled = false; }
   };
@@ -2444,11 +2609,425 @@ routes.banner = async () => {
         const arrTs = subtitles.map((s) => `\t\t\t\t${q(s)},`).join('\n');
         text = text.slice(0, as + 1) + '\n' + arrTs + '\n\t\t\t' + text.slice(i);
       }
-      const r = await ghPutFile(BANNER_PATH, text, sha, '更新横幅文字 [管理台]');
+      const r = await saveWithLog(BANNER_PATH, text, sha, '更新横幅文字 [管理台]', { type: '横幅', action: '更新', target: '横幅文字' });
       sha = r.content.sha; src = text; toast('已保存，构建后生效');
     } catch (e) { toast(e.message, true); btn.disabled = false; }
   };
 };
+
+/* ---------- 总结报告（月度/季度/年度，控制台内部功能） ----------
+ * 时间表（规格 2026-10-24）：从 2026-10-15 起算；月度每月底弹；季度 3/6/9/1 月底弹
+ * （Q4 放次年 1 月，避开年度）；年度每年 12 月 30 号弹。弹窗只在主页面（dashboard）
+ * 触发，挂着直到点叉确认，确认过的周期不再弹；叉掉的报告不丢失，写作页（stats）的
+ * 报告区块里有全部往期存档，任一往期可点开看。
+ * 数据：控制台操作日志（仓库文件 + 本地 pending 合并）+ 历史回填（见下节）；
+ * 评语是固定模板句按数据自动挑；视角第二人称“你”；版式参考小红书周报
+ * （浅色底、红色点缀、卡片 + 大数字 + 柱状图 + 亮点 + 实在话）。
+ */
+const REPORT_START = new Date(2026, 9, 15);
+const REPORT_DISMISSED_KEY = 'admin_reports_dismissed';
+const REPORT_GALLERY_KEY = 'admin_report_gallery';
+/* 报告背景池：控制台自带的波奇图（星空海滨站那张不是波奇，不进池）+ 用户上传的图 */
+const REPORT_BOCHI = ['login-art.jpg', 'login-art-sketch.png'];
+const REPORT_CONTENT_TYPES = ['文章', '动态', '碎碎念'];
+function reportPad(n) { return String(n).padStart(2, '0'); }
+function reportMonthKey(d) { return `${d.getFullYear()}-${reportPad(d.getMonth() + 1)}`; }
+function reportIsLastDay(d) { return d.getDate() === new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); }
+/* 周期范围：month 'YYYY-MM' / quarter 'YYYY-Qn' / annual 'YYYY' */
+function reportRange(type, key) {
+  if (type === 'month') {
+    const [y, m] = key.split('-').map(Number);
+    return { start: new Date(y, m - 1, 1), end: new Date(y, m, 0, 23, 59, 59, 999), label: `${y} 年 ${m} 月` };
+  }
+  if (type === 'quarter') {
+    const [y, q] = key.split('-Q').map(Number);
+    const m0 = (q - 1) * 3;
+    return { start: new Date(y, m0, 1), end: new Date(y, m0 + 3, 0, 23, 59, 59, 999), label: `${y} 年 Q${q}` };
+  }
+  const y = Number(key);
+  return { start: new Date(y, 0, 1), end: new Date(y, 11, 31, 23, 59, 59, 999), label: `${y} 年` };
+}
+function reportTypeWord(type) { return type === 'month' ? '月' : type === 'quarter' ? '季度' : '年'; }
+/* 今天该弹哪些周期（未过滤确认状态） */
+function reportDuePeriods(today) {
+  const out = [];
+  if (today < REPORT_START) return out;
+  const y = today.getFullYear(), m = today.getMonth(), d = today.getDate();
+  if (m === 11 && d === 30) out.push({ type: 'annual', key: String(y), label: `${y} 年年度总结` });
+  if (reportIsLastDay(today)) {
+    if (m === 2) out.push({ type: 'quarter', key: `${y}-Q1`, label: `${y} 年 Q1 总结` });
+    else if (m === 5) out.push({ type: 'quarter', key: `${y}-Q2`, label: `${y} 年 Q2 总结` });
+    else if (m === 8) out.push({ type: 'quarter', key: `${y}-Q3`, label: `${y} 年 Q3 总结` });
+    else if (m === 0) out.push({ type: 'quarter', key: `${y - 1}-Q4`, label: `${y - 1} 年 Q4 总结` });
+    out.push({ type: 'month', key: reportMonthKey(today), label: `${y} 年 ${m + 1} 月总结` });
+  }
+  return out;
+}
+function reportDismissedMap() {
+  try { return JSON.parse(localStorage.getItem(REPORT_DISMISSED_KEY) || '{}') || {}; }
+  catch (e) { return {}; }
+}
+function reportDismiss(type, key) {
+  const map = reportDismissedMap();
+  map[`${type}:${key}`] = true;
+  try { localStorage.setItem(REPORT_DISMISSED_KEY, JSON.stringify(map)); } catch (e) {}
+}
+function reportIsDismissed(type, key) { return !!reportDismissedMap()[`${type}:${key}`]; }
+function reportGallery() {
+  try { const v = JSON.parse(localStorage.getItem(REPORT_GALLERY_KEY) || '[]'); return Array.isArray(v) ? v : []; }
+  catch (e) { return []; }
+}
+function reportBgPool() { return [...REPORT_BOCHI, ...reportGallery()]; }
+function reportPickBg() {
+  const pool = reportBgPool();
+  return pool[Math.floor(Math.random() * pool.length)] || REPORT_BOCHI[0];
+}
+/* 合并后的日志条目（仓库缓存 + 本地 pending，去重，按时间升序） */
+function reportAllEntries() {
+  const repo = Array.isArray(window._oplogEntries) ? window._oplogEntries : [];
+  return oplogDedup([...repo, ...oplogLoadPending()]).sort((a, b) => String(a.ts).localeCompare(String(b.ts)));
+}
+async function reportLoadEntries() {
+  try {
+    const data = await ghGetFile(OPLOG_PATH);
+    window._oplogText = data.text;
+    const parsed = JSON.parse(data.text);
+    window._oplogEntries = Array.isArray(parsed) ? parsed : [];
+  } catch (e) { /* 仓库无日志文件或离线：用缓存 + pending，报告页会标示例数据 */ }
+  return reportAllEntries();
+}
+/* ---------- 历史回填：2026-10-15 到 oplog 起记之前，用 commit 历史近似补齐 ----------
+ * - 入口：reportLoadMergedEntries()，报告区块与到期弹窗共用；只读 GET，失败只降级
+ *   （回填失败 → 仅显示 oplog，并提示），绝不影响已有数据。
+ * - 窗口：since = 2026-10-15；until = 最早一条 oplog 之前（严格取 <，杜绝与 oplog
+ *   重叠双倍计数）；oplog 为空时 until = 现在，首次保存后窗口自动收缩。
+ * - 过滤：自动化提交按作者/message 表排除（见下两张表，后续可加）；拉到 commit
+ *   详情后文件数为 0 的空提交（定时构建触发类）也排除。
+ * - 分类：commit 详情的 changed files 按路径归类（文章 src/content/posts、动态
+ *   src/content/dynamic、友链/时间线/碎碎念各自配置，其余 = 其他）；条目标记
+ *   source:'backfill'，UI 明确标注“回填近似数据”（commit 粒度 ≠ 操作粒度）。
+ * - 详情按 sha 缓存进 localStorage，只拉一次；列表分页拉，条数有上限。
+ */
+const REPORT_BACKFILL_START_ISO = '2026-10-15T00:00:00Z';
+const REPORT_BACKFILL_CACHE_KEY = 'admin_report_backfill_details';
+const REPORT_BACKFILL_MAX_COMMITS = 200;
+/* 自动化提交过滤表一：作者登录名（Actions bot / 依赖 bot 等） */
+const REPORT_BACKFILL_EXCLUDE_AUTHORS = ['github-actions', 'github-actions[bot]', 'dependabot[bot]', 'renovate[bot]'];
+/* 自动化提交过滤表二：commit message 特征（定时构建、数据脚本等；命中即排除） */
+const REPORT_BACKFILL_EXCLUDE_MESSAGES = [
+  /rebuild/i,
+  /trigger.*build/i,
+  /^(chore|ci)(\(.+\))?:\s*(daily|auto|scheduled)/i,
+  /fetch-(umami|friend|github|steam)|gen-post-meta/i,
+  /\[automated\]/i,
+];
+/* 只读 GET（回填专用）：不走 gh()，失败不触发登出，回填是增强项不该把人踢下线 */
+async function ghGetQuiet(path) {
+  const res = await fetch(GH_API + path, {
+    headers: { 'Accept': 'application/vnd.github+json', 'Authorization': `Bearer ${token()}` },
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message || `GitHub API 错误: ${res.status}`);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+function reportBackfillCacheLoad() {
+  try { const v = JSON.parse(localStorage.getItem(REPORT_BACKFILL_CACHE_KEY) || '{}'); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; }
+  catch (e) { return {}; }
+}
+function reportBackfillCacheSave(cache) {
+  try {
+    const keys = Object.keys(cache);
+    if (keys.length > 500) keys.slice(0, keys.length - 500).forEach((k) => delete cache[k]);
+    localStorage.setItem(REPORT_BACKFILL_CACHE_KEY, JSON.stringify(cache));
+  } catch (e) { /* localStorage 满：放弃缓存，下次重拉，不影响功能 */ }
+}
+function reportBackfillIsAutomated(c) {
+  const login = (c.author && c.author.login) || (c.committer && c.committer.login) || '';
+  if (REPORT_BACKFILL_EXCLUDE_AUTHORS.includes(login)) return true;
+  const msg = (c.commit && c.commit.message) || '';
+  return REPORT_BACKFILL_EXCLUDE_MESSAGES.some((re) => re.test(msg));
+}
+/* 单文件归类：返回 {type, action, target} 或 null（null = 不属于已知分类） */
+function reportBackfillClassifyFile(filename, status) {
+  if (/^src\/content\/posts\//.test(filename)) {
+    return { type: '文章', action: status === 'added' ? '新建' : '更新', target: filename.split('/')[3] || filename };
+  }
+  if (/^src\/content\/dynamic\//.test(filename)) {
+    return { type: '动态', action: status === 'added' ? '新建' : '更新', target: filename.split('/').pop() || filename };
+  }
+  if (filename === 'src/config/friendsConfig.ts') return { type: '友链', action: '更新', target: '友链配置' };
+  if (filename === 'src/config/timelineConfig.ts') return { type: '时间线', action: '更新', target: '时间线配置' };
+  if (filename === 'src/config/thoughtsConfig.ts') return { type: '碎碎念', action: '更新', target: '碎碎念配置' };
+  return null;
+}
+/* 一个 commit → 若干条回填记录（同一篇文章的多个文件只算一次；全不属于已知分类时记 1 条“其他”） */
+function reportBackfillClassifyCommit(commit, files) {
+  const rawTs = (commit.commit && ((commit.commit.committer || {}).date || (commit.commit.author || {}).date)) || '';
+  /* 统一成 toISOString 格式，与 oplog 条目同格式，去重键才对得上 */
+  const ts = rawTs ? new Date(rawTs).toISOString() : '';
+  const entries = [];
+  const seenPosts = new Set();
+  for (const f of files) {
+    const c = reportBackfillClassifyFile(f.filename, f.status);
+    if (!c) continue;
+    if (c.type === '文章') {
+      if (seenPosts.has(c.target)) continue;
+      seenPosts.add(c.target);
+    }
+    entries.push({ ts, type: c.type, action: c.action, target: c.target, detail: '', source: 'backfill' });
+  }
+  if (!entries.length && files.length) {
+    entries.push({ ts, type: '其他', action: '更新', target: files[0].filename, detail: '', source: 'backfill' });
+  }
+  return entries;
+}
+async function reportFetchBackfill(oplogEntries) {
+  const earliest = oplogEntries && oplogEntries.length ? oplogEntries[0].ts : null;
+  /* until 再往前让 1 秒 + 末尾严格过滤，双保险防与 oplog 重叠 */
+  const until = earliest ? new Date(new Date(earliest).getTime() - 1000).toISOString() : new Date().toISOString();
+  const base = `/repos/${CFG.owner}/${CFG.repo}/commits?sha=${encodeURIComponent(CFG.branch)}&since=${encodeURIComponent(REPORT_BACKFILL_START_ISO)}&until=${encodeURIComponent(until)}&per_page=100`;
+  const commits = [];
+  for (let page = 1; page <= 10; page++) {
+    const list = await ghGetQuiet(`${base}&page=${page}`);
+    if (!Array.isArray(list) || !list.length) break;
+    commits.push(...list);
+    if (list.length < 100 || commits.length >= REPORT_BACKFILL_MAX_COMMITS) break;
+    const last = list[list.length - 1];
+    const lastDate = (last.commit && ((last.commit.committer || {}).date || (last.commit.author || {}).date)) || '';
+    if (lastDate && lastDate < REPORT_BACKFILL_START_ISO) break;
+  }
+  const cache = reportBackfillCacheLoad();
+  const entries = [];
+  const todo = [];
+  for (const c of commits.slice(0, REPORT_BACKFILL_MAX_COMMITS)) {
+    if (reportBackfillIsAutomated(c)) continue;
+    if (Array.isArray(cache[c.sha])) entries.push(...reportBackfillClassifyCommit(c, cache[c.sha]));
+    else todo.push(c);
+  }
+  /* 未缓存的详情分批拉（每批 5 个，保持人类节奏）；失败跳过该 commit，不编造数据 */
+  for (let i = 0; i < todo.length; i += 5) {
+    const results = await Promise.all(todo.slice(i, i + 5).map(async (c) => {
+      try {
+        const detail = await ghGetQuiet(`/repos/${CFG.owner}/${CFG.repo}/commits/${c.sha}`);
+        return { c, files: (detail.files || []).map((f) => ({ filename: f.filename, status: f.status })) };
+      } catch (e) { return { c, files: null }; }
+    }));
+    for (const r of results) {
+      if (!r.files) continue;
+      cache[r.c.sha] = r.files;
+      if (!r.files.length) continue; // 空提交（定时构建触发类）排除
+      entries.push(...reportBackfillClassifyCommit(r.c, r.files));
+    }
+    reportBackfillCacheSave(cache);
+  }
+  /* 严格窗口：回填条目必须早于最早一条 oplog */
+  const filtered = earliest ? entries.filter((e) => e.ts && e.ts < earliest) : entries;
+  return { entries: filtered };
+}
+/* 报告数据源：oplog + 回填合并（按 ts+type+action+target 去重，升序） */
+async function reportLoadMergedEntries() {
+  const oplog = await reportLoadEntries();
+  let backfill = { entries: [], failed: false };
+  try { backfill = { ...(await reportFetchBackfill(oplog)), failed: false }; }
+  catch (e) { backfill = { entries: [], failed: true }; }
+  /* oplog 在前：同键时保留精确的 oplog 条目，回填条目被去重掉 */
+  const merged = oplogDedup([...oplog, ...backfill.entries]).sort((a, b) => String(a.ts).localeCompare(String(b.ts)));
+  return { entries: merged, backfillCount: backfill.entries.length, backfillFailed: backfill.failed };
+}
+/* 空日志时的示例数据（明确标注，仅用于跑通页面） */
+function reportDemoEntries() {
+  const day = (d, type, action, target) => ({ ts: `2026-10-${d}T12:00:00+08:00`, type, action, target, detail: '' });
+  return [
+    day('17', '友链', '更新', '友链配置'), day('18', '友链', '更新', '友链配置'),
+    day('19', '友链', '更新', '友链配置'), day('19', '动态', '新建', 'src/content/dynamic/2026-10-19.md'),
+    day('23', '时间线', '更新', '时间线配置'), day('23', '碎碎念', '更新', '碎碎念配置'),
+    day('24', '时间线', '更新', '时间线配置'), day('24', '碎碎念', '更新', '碎碎念配置'),
+    day('24', '导航', '更新', '控制台导航栏'), day('24', '公告', '更新', '网站公告'),
+  ];
+}
+function reportAggregate(entries, range) {
+  const inRange = entries.filter((e) => {
+    const t = new Date(e.ts);
+    return t >= range.start && t <= range.end;
+  });
+  const posts = inRange.filter((e) => REPORT_CONTENT_TYPES.includes(e.type)).length;
+  const friends = inRange.filter((e) => e.type === '友链').length;
+  const days = new Set(inRange.map((e) => String(e.ts).slice(0, 10)));
+  const byDay = {};
+  inRange.forEach((e) => { const d = String(e.ts).slice(0, 10); byDay[d] = (byDay[d] || 0) + 1; });
+  const byType = {};
+  inRange.forEach((e) => { byType[e.type] = (byType[e.type] || 0) + 1; });
+  const daily = [];
+  for (let d = new Date(range.start); d <= range.end; d.setDate(d.getDate() + 1)) {
+    const k = `${d.getFullYear()}-${reportPad(d.getMonth() + 1)}-${reportPad(d.getDate())}`;
+    daily.push({ date: k, count: byDay[k] || 0 });
+  }
+  return { total: inRange.length, posts, friends, activeDays: days.size, daily, byType, latest: inRange.slice(-5).reverse(), list: inRange };
+}
+/* 固定模板评语：按数据阈值自动挑，不现写 */
+function reportReview(stats, word) {
+  const s = [];
+  if (stats.posts >= 5) s.push(`你这个${word}高产，继续保持！`);
+  else if (stats.posts === 0) s.push(`你这个${word}没发东西，偷懒了？`);
+  if (stats.total >= 20) s.push(`你这个${word}折腾得很勤快。`);
+  else if (stats.total > 0 && stats.total < 5) s.push(`你这个${word}比较安静。`);
+  if (stats.friends >= 3) s.push('朋友圈又扩大了。');
+  return s.length ? s.join(' ') : `你这个${word}稳步推进中。`;
+}
+function reportPeriodOptions(entries, type) {
+  const keys = new Set();
+  entries.forEach((e) => {
+    const d = new Date(e.ts);
+    if (type === 'month') keys.add(reportMonthKey(d));
+    else if (type === 'quarter') keys.add(`${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`);
+    else keys.add(String(d.getFullYear()));
+  });
+  const now = new Date();
+  if (type === 'month') keys.add(reportMonthKey(now));
+  else if (type === 'quarter') keys.add(`${now.getFullYear()}-Q${Math.floor(now.getMonth() / 3) + 1}`);
+  else keys.add(String(now.getFullYear()));
+  return [...keys].sort().reverse();
+}
+function reportRenderBody(stats, range, word, demo, backfillCount) {
+  /* 柱状图：月内每天都画；季度/年度按月聚合 */
+  let bars = stats.daily;
+  if (word !== '月') {
+    const byMonth = {};
+    stats.daily.forEach((d) => { const k = d.date.slice(0, 7); byMonth[k] = (byMonth[k] || 0) + d.count; });
+    bars = Object.keys(byMonth).sort().map((k) => ({ date: k, count: byMonth[k] }));
+  }
+  const maxBar = Math.max(1, ...bars.map((b) => b.count));
+  const topType = Object.entries(stats.byType).sort((a, b) => b[1] - a[1])[0];
+  const busyDay = stats.daily.slice().sort((a, b) => b.count - a.count)[0];
+  const bg = reportPickBg();
+  return `<div class="report-page" style="background-image:url('${esc(bg)}')">
+    <div class="report-veil">
+      ${demo ? '<p class="report-demo">暂无操作记录，以下为示例数据</p>' : ''}
+      ${backfillCount ? `<p class="report-backfill">其中 ${backfillCount} 条为 commit 回填近似数据（commit 粒度不等于操作粒度，仅供参考）</p>` : ''}
+      <h2 class="report-title">✨ 你的 ${esc(range.label)}小结 ✨</h2>
+      <p class="report-greet">${esc(reportReview(stats, word))}</p>
+      <div class="report-cards">
+        <div class="report-card"><div class="report-num">${stats.total}</div><div class="report-label">总操作</div></div>
+        <div class="report-card"><div class="report-num">${stats.posts}</div><div class="report-label">文章/动态/碎碎念</div></div>
+        <div class="report-card"><div class="report-num">${stats.friends}</div><div class="report-label">友链操作</div></div>
+        <div class="report-card"><div class="report-num">${stats.activeDays}</div><div class="report-label">活跃天数</div></div>
+      </div>
+      <div class="report-section">
+        <h3>📈 ${word === '月' ? '每日' : '每月'}操作量</h3>
+        <div class="report-bars">${bars.map((b) => `<div class="report-bar-wrap"><span class="report-bar-val">${b.count || ''}</span><div class="report-bar" style="height:${Math.max(2, Math.round((b.count / maxBar) * 90))}px"></div><span class="report-bar-date">${esc(b.date.slice(5))}</span></div>`).join('')}</div>
+      </div>
+      <div class="report-section">
+        <h3>🌟 本周期亮点</h3>
+        ${topType ? `<p>📌 你最常折腾的是「${esc(topType[0])}」，共 ${topType[1]} 次</p>` : '<p>📌 本周期还没有操作记录</p>'}
+        ${busyDay && busyDay.count ? `<p>🔥 最忙的一天是 ${esc(busyDay.date)}，${busyDay.count} 次操作</p>` : ''}
+        ${stats.latest.length ? `<p>🕘 最近一次：${esc(stats.latest[0].type)}${esc(stats.latest[0].action)}「${esc(stats.latest[0].target)}」</p>` : ''}
+      </div>
+      <div class="report-section report-review">
+        <h3>💭 说点实在的</h3>
+        <p>${esc(reportReview(stats, word))}</p>
+        <p class="hint">数据来源：控制台操作日志（仓库 + 本地 pending 合并）。日志随每次保存同 commit 写入，不多触发构建。</p>
+      </div>
+    </div>
+  </div>`;
+}
+/* 总结报告区块：渲染进 stats（写作）页尾的容器；切换类型/周期/往期都在区块内就地重渲 */
+async function renderReportSection(wrap, initType, initKey) {
+  let type = ['month', 'quarter', 'annual'].includes(initType) ? initType : 'month';
+  let key = initKey || '';
+  wrap.innerHTML = '<div class="card"><h2>📊 总结报告</h2><p class="hint">正在读取操作日志与历史回填…</p></div>';
+  let entries = [], backfillFailed = false;
+  try {
+    const r = await reportLoadMergedEntries();
+    entries = r.entries; backfillFailed = r.backfillFailed;
+  } catch (e) {
+    entries = reportAllEntries(); backfillFailed = true;
+  }
+  const render = () => {
+    if (!key) {
+      const now = new Date();
+      key = type === 'month' ? reportMonthKey(now) : type === 'quarter' ? `${now.getFullYear()}-Q${Math.floor(now.getMonth() / 3) + 1}` : String(now.getFullYear());
+    }
+    const range = reportRange(type, key);
+    const demo = !entries.length;
+    /* 完全无数据才用示例数据并标注；有回填/oplog 时一律真实数据 */
+    const shown = demo ? reportDemoEntries() : entries;
+    const stats = reportAggregate(shown, range);
+    const word = reportTypeWord(type);
+    const options = reportPeriodOptions(shown, type);
+    const past = options.filter((k) => k !== key);
+    const backfillInRange = entries.filter((e) => e.source === 'backfill' && new Date(e.ts) >= range.start && new Date(e.ts) <= range.end).length;
+    wrap.innerHTML = `<div class="toolbar">
+        <button class="btn${type === 'month' ? '' : ' btn-ghost'}" data-t="month">月度</button>
+        <button class="btn${type === 'quarter' ? '' : ' btn-ghost'}" data-t="quarter">季度</button>
+        <button class="btn${type === 'annual' ? '' : ' btn-ghost'}" data-t="annual">年度</button>
+        <select class="report-select" data-role="period">${options.map((k) => `<option value="${esc(k)}"${k === key ? ' selected' : ''}>${esc(reportRange(type, k).label)}</option>`).join('')}</select>
+        <span class="spacer"></span><span class="hint">月度每月底、季度 3/6/9/1 月底、年度 12 月 30 号在主页面弹窗；平时从这里看往期</span>
+      </div>
+      ${reportRenderBody(stats, range, word, demo, backfillInRange)}
+      ${backfillFailed ? '<div class="card"><p class="hint">历史回填没拉到（网络或 GitHub API 异常），以上仅为操作日志数据；刷新页面会再试一次。</p></div>' : ''}
+      ${past.length ? `<div class="card"><h3>往期报告</h3><div class="toolbar">${past.map((k) => `<button class="btn btn-small" data-p="${esc(k)}">${esc(reportRange(type, k).label)}</button>`).join('')}</div></div>` : ''}`;
+    wrap.querySelectorAll('[data-t]').forEach((b) => { b.onclick = () => { type = b.dataset.t; key = ''; render(); }; });
+    const sel = wrap.querySelector('[data-role="period"]');
+    if (sel) sel.onchange = (e) => { key = e.target.value; render(); };
+    wrap.querySelectorAll('[data-p]').forEach((b) => { b.onclick = () => { key = b.dataset.p; render(); }; });
+  };
+  render();
+}
+/* 旧报告路由：重定向到写作页的报告区块（深链 #/stats/report:<type>:<key>），不留两个入口 */
+routes.reports = (arg) => {
+  location.hash = '#/stats/report' + (arg ? ':' + arg : '');
+};
+/* 到期弹窗：只在主页面（dashboard）触发（900ms 后复查一次当前页，防切页误弹）；同会话只处理一次 */
+async function maybeShowReportPopup() {
+  const cur = location.hash.replace('#/', '') || 'dashboard';
+  if (!token() || cur !== 'dashboard' || window._reportPopupDone) return;
+  const due = reportDuePeriods(new Date()).filter((p) => !reportIsDismissed(p.type, p.key));
+  if (!due.length) return;
+  window._reportPopupDone = true; // 本会话内只弹一轮（多周期同框处理）
+  let entries = [];
+  try { const r = await reportLoadMergedEntries(); entries = r.entries; } catch (e) { entries = reportAllEntries(); }
+  /* 弹窗只用真实数据：没有日志就是 0 次操作，不套示例数据 */
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-mask';
+  const rows = (list) => list.map((p) => {
+    const stats = reportAggregate(entries, reportRange(p.type, p.key));
+    return `<div class="report-popup-row" data-k="${p.type}:${p.key}">
+      <div><b>${esc(p.label)}</b> · ${stats.total} 次操作 · ${stats.posts} 篇内容 · ${stats.friends} 次友链</div>
+      <div class="hint">${esc(reportReview(stats, reportTypeWord(p.type)))}</div>
+      <div class="modal-ops">
+        <button class="btn btn-small" data-view="${p.type}:${p.key}">查看完整报告</button>
+        <button class="btn btn-small btn-ghost" data-x="${p.type}:${p.key}">× 确认</button>
+      </div>
+    </div>`;
+  }).join('');
+  overlay.innerHTML = `<div class="modal-card report-modal">
+    <h3>📊 总结报告到了</h3>
+    <p class="hint">下面这些周期的报告已生成，确认后不再重复弹；随时可以从「写作」页的报告区块查看往期。</p>
+    ${rows(due)}
+    <div class="modal-ops"><button class="btn btn-small" id="report-all-ok">全部确认</button></div>
+  </div>`;
+  const closeIfEmpty = () => { if (!overlay.querySelector('.report-popup-row')) overlay.remove(); };
+  overlay.querySelectorAll('[data-x]').forEach((b) => {
+    b.onclick = () => {
+      const [t, ...rest] = b.dataset.x.split(':');
+      reportDismiss(t, rest.join(':'));
+      b.closest('.report-popup-row').remove();
+      closeIfEmpty();
+    };
+  });
+  overlay.querySelectorAll('[data-view]').forEach((b) => {
+    b.onclick = () => { overlay.remove(); location.hash = '#/stats/report:' + b.dataset.view; };
+  });
+  overlay.querySelector('#report-all-ok').onclick = () => {
+    due.forEach((p) => reportDismiss(p.type, p.key));
+    overlay.remove();
+  };
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) { /* 点遮罩不关闭：必须点叉确认 */ } });
+  document.body.appendChild(overlay);
+}
 
 /* ---------- 启动 ---------- */
 function hideLoader() {

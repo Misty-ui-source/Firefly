@@ -58,7 +58,7 @@ async function replaceRepoImage(repoPath, file, { format = 'image/webp', quality
   const blob = await convertImage(file, { format, quality, maxDim });
   const b64 = await blobToBase64(blob);
   const sha = await getSha(repoPath);
-  await ghPutBinary(repoPath, b64, sha, `替换图片 ${repoPath} [管理台]`);
+  await saveWithLog(repoPath, b64, sha, `替换图片 ${repoPath} [管理台]`, { type: '图片', action: '替换', target: repoPath }, { isBase64: true });
   toast(`已更新 ${label || repoPath}`);
 }
 // 仓库文件 → raw 预览地址（公开仓库免鉴权，面板里直接 <img> 可用）
@@ -121,7 +121,7 @@ async function updateStringListConfig(path, key, newItems, label) {
   const next = data.text.slice(0, found.start)
     + found.indent + key + ': ' + serializeStringList(newItems, found.indent)
     + data.text.slice(found.end);
-  const res = await ghPutFile(path, next, data.sha, `更新 ${label || key} [管理台]`);
+  const res = await saveWithLog(path, next, data.sha, `更新 ${label || key} [管理台]`, { type: '配置', action: '更新', target: label || key });
   return res;
 }
 // 按花括号配平切出数组里的每个 {...}（字符串感知，lrc 长文本也安全）
@@ -192,7 +192,7 @@ routes.images = async () => {
     const next = data.text.slice(0, found.start)
       + found.indent + 'stickers: [\n' + lines.join('\n') + '\n' + found.indent + ']'
       + data.text.slice(found.end);
-    await ghPutFile(STICKER_CONFIG, next, data.sha, msg || '更新首页贴纸 [管理台]');
+    await saveWithLog(STICKER_CONFIG, next, data.sha, msg || '更新首页贴纸 [管理台]', { type: '贴纸', action: '更新', target: '首页贴纸' });
     toast('贴纸配置已保存（构建后生效）');
   }
 
@@ -415,10 +415,65 @@ routes.images = async () => {
         <input type="file" id="innerbg-file" accept="image/*" class="hidden">
         <button class="btn btn-small" id="innerbg-btn">📤 上传图片加入轮换</button>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>📊 报告图库（波奇酱） <span class="sub">总结报告的背景轮换池</span></h2>
+      <p class="hint">总结报告每次打开会随机抽一张这里的图当背景。内置两张波奇图（默认、草稿）；上传的图片走 R2（自动转 WebP），地址存在本机，报告页直接取用。删除仅移出轮换池，不删 R2 文件。仓库侧图库文件同步待联调。</p>
+      <div class="img-grid" id="report-g-grid"></div>
+      <div class="toolbar">
+        <input type="file" id="report-g-file" accept="image/*" class="hidden">
+        <button class="btn btn-small" id="report-g-btn">📤 上传图片加入报告图库</button>
+      </div>
     </div>`;
 
   renderWallpapers();
   renderStickers();
+
+  // ---- 报告图库（波奇酱）：内置两张 + 本机上传（R2 直链，存 localStorage） ----
+  // 待联调：图库列表的仓库侧文件同步（需一次 commit；为避免每次上传都触发构建，暂只存本机）。
+  function renderReportGallery() {
+    const g = $('#report-g-grid');
+    if (!g) return;
+    const builtins = [
+      { url: 'login-art.jpg', name: '波奇酱（默认）', builtin: true },
+      { url: 'login-art-sketch.png', name: '波奇草稿（旧版）', builtin: true },
+    ];
+    const uploaded = reportGallery().map((url) => ({ url, name: '用户上传', builtin: false }));
+    const all = [...builtins, ...uploaded];
+    g.innerHTML = all.map((it, i) => `<div class="img-cell">
+      <img loading="lazy" src="${esc(it.url)}" alt="${esc(it.name)}">
+      <div class="ops" style="gap:6px"><span class="hint">${esc(it.name)}</span>
+      ${it.builtin ? '' : `<button class="mini-btn" data-del="${i - builtins.length}">删除</button>`}</div>
+    </div>`).join('') || '<p class="hint">空的，传一张吧 👇</p>';
+    g.querySelectorAll('[data-del]').forEach((b) => {
+      b.onclick = () => {
+        const list = reportGallery();
+        list.splice(+b.dataset.del, 1);
+        try { localStorage.setItem(REPORT_GALLERY_KEY, JSON.stringify(list)); } catch (e) {}
+        renderReportGallery();
+        toast('已移出报告图库（R2 文件未删）');
+      };
+    });
+  }
+  renderReportGallery();
+  $('#report-g-btn').onclick = () => $('#report-g-file').click();
+  $('#report-g-file').onchange = async (e) => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    toast('上传中…');
+    try {
+      const { urls } = await uploadImages([f], 'admin/report-bocchi');
+      const list = reportGallery();
+      list.push(urls[0]);
+      try { localStorage.setItem(REPORT_GALLERY_KEY, JSON.stringify(list)); } catch (err) {}
+      /* R2 上传本身不产生仓库 commit，日志记 pending，下次仓库保存时一并同步 */
+      oplogRecord('图片', '上传', '报告图库', f.name);
+      renderReportGallery();
+      toast('已加入报告图库，打开报告时会随机抽到');
+    } catch (err) { toast(err.message, true); }
+  };
 
   // ---- 控制台背景 ----
   const ADMINBG_PRESETS = [
@@ -430,7 +485,7 @@ routes.images = async () => {
     const data = await ghGetFile('public/admin/config.js');
     if (!/adminBg\s*:\s*'[^']*'/.test(data.text)) throw new Error('config.js 里找不到 adminBg 字段');
     const next = data.text.replace(/adminBg\s*:\s*'[^']*'/, `adminBg: '${file}'`);
-    await ghPutFile('public/admin/config.js', next, data.sha, `切换控制台背景为 ${file} [管理台]`);
+    await saveWithLog('public/admin/config.js', next, data.sha, `切换控制台背景为 ${file} [管理台]`, { type: '图片', action: '切换', target: file });
     CFG.adminBg = file;
     renderAdminBg();
     toast('控制台背景已切换（重新进登录页生效）');
@@ -549,7 +604,7 @@ routes.images = async () => {
         const avif = await convertImage(f, { format: 'image/avif', quality: 0.8, maxDim: 1024 });
         if (avif.type && avif.type.includes('avif')) {
           const b64 = await blobToBase64(avif);
-          await ghPutBinary('public/avatar.avif', b64, await getSha('public/avatar.avif'), '替换图片 public/avatar.avif [管理台]');
+          await saveWithLog('public/avatar.avif', b64, await getSha('public/avatar.avif'), '替换图片 public/avatar.avif [管理台]', { type: '图片', action: '替换', target: 'public/avatar.avif' }, { isBase64: true });
           toast('头像已更新（PNG + AVIF）');
         } else {
           toast('头像 PNG 已更新；当前浏览器不支持 AVIF 编码，avatar.avif 未动', false);
@@ -697,7 +752,7 @@ routes.music = async () => {
     const next = cfg.text.slice(0, plBlock.start)
       + plBlock.indent + 'playlist: [\n' + items.join('\n') + '\n' + plBlock.indent + ']'
       + cfg.text.slice(plBlock.end);
-    await ghPutFile(MUSIC_CONFIG, next, cfg.sha, msg || '更新播放器歌单 [管理台]');
+    await saveWithLog(MUSIC_CONFIG, next, cfg.sha, msg || '更新播放器歌单 [管理台]', { type: '音乐', action: '更新', target: '播放器歌单' });
     // 重新读取，sha 与文本位置都刷新
     cfg = await ghGetFile(MUSIC_CONFIG);
     plBlock = extractConfigValue(cfg.text, 'playlist');
