@@ -1,0 +1,18 @@
+---
+import Timeline from "@/components/widget/Timeline.astro";
+import { siteConfig } from "@/config";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+
+// 检查相册页面是否启用
+if (!siteConfig.pages.gallery) {
+	return Astro.redirect("/404/");
+}
+---
+
+<MainGridLayout title="时间线" description="我的历程时间线">
+  <div class="page-shell">
+    <div class="card-base z-10 px-9 py-6 mb-4 relative w-full">
+      <Timeline />
+    </div>
+  </div>
+</MainGridLayout>
