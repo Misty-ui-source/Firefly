@@ -1245,6 +1245,8 @@ routes.edit = async (arg) => {
   const [key, name] = arg.split('/');
   const col = CFG.collections[key];
   const isNew = name === '__new__';
+  /* 本地草稿键：按 集合+目标 区分（文章/动态/项目/单页 各自独立，互不覆盖） */
+  const draftKey = `admin-edit-draft:${key}:${name}`;
   view.innerHTML = '<div class="card"><h2>加载中…</h2></div>';
   let fm = {}, body = '', sha = null, filePath = '', dirName = '';
 
@@ -1359,6 +1361,7 @@ routes.edit = async (arg) => {
     <button class="btn btn-ghost" id="btn-back">← 返回</button>
     <span class="spacer"></span>
     <button class="btn btn-ghost" id="btn-preview">👁 预览</button>
+    <button class="btn btn-ghost hidden" id="btn-discard-draft" type="button">🗑 丢弃草稿</button>
     <button class="btn" id="btn-save">💾 保存发布</button>
   </div>
   <div class="card"><h2>${isNew ? '新建' : '编辑'}${col.label} <span class="sub">${esc(filePath || '')}</span></h2>
@@ -1397,6 +1400,74 @@ routes.edit = async (arg) => {
   const ta = $('#md-body');
   const updCount = () => { $('#char-count').textContent = ta.value.replace(/\s/g, '').length; };
   ta.addEventListener('input', updCount); updCount();
+  /* ---------- 本地草稿（自动保存）：写作中途退出/手机后台被杀也不丢 ----------
+   * 文章/动态/项目/单页共用本编辑器，一处实现、四处生效。草稿只存本机浏览器，
+   * 内容与打开时一致不落草稿；输入防抖 400ms 写一次，切后台/关页时立即补写；
+   * 下次打开同一篇时自动恢复并提示，可用工具栏「🗑 丢弃草稿」放弃；保存成功即清。 */
+  const draftCollect = () => {
+    const d = { fields: {}, body: ta.value };
+    view.querySelectorAll('[data-f]').forEach((el) => {
+      d.fields[el.dataset.f] = el.type === 'checkbox' ? { c: el.checked } : { v: el.value };
+    });
+    ['f-published', 'f-updated', 'f-dirname', 'f-filename'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) d[id] = el.value;
+    });
+    return d;
+  };
+  const draftBaseline = JSON.stringify(draftCollect());
+  const draftSession = {}; window._editDraftSession = draftSession;
+  const draftWrite = () => {
+    if (window._editDraftSession !== draftSession) return; /* 已切走/重开编辑器：旧会话不写 */
+    if (!document.body.contains(ta)) return; /* 编辑器已不在页面上（在别的栏目打字不许污染草稿） */
+    try {
+      const cur = JSON.stringify(draftCollect());
+      if (cur === draftBaseline) { localStorage.removeItem(draftKey); return; }
+      localStorage.setItem(draftKey, JSON.stringify({ ts: Date.now(), data: JSON.parse(cur) }));
+    } catch (e) {}
+  };
+  let draftTimer = null;
+  const draftSchedule = () => { if (draftTimer) clearTimeout(draftTimer); draftTimer = setTimeout(draftWrite, 400); };
+  view.addEventListener('input', draftSchedule);
+  view.addEventListener('change', draftSchedule);
+  window.addEventListener('pagehide', draftWrite);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) draftWrite(); });
+  try {
+    const rawDraft = localStorage.getItem(draftKey);
+    if (rawDraft) {
+      const savedDraft = JSON.parse(rawDraft);
+      if (savedDraft && savedDraft.data && JSON.stringify(savedDraft.data) !== draftBaseline) {
+        const d = savedDraft.data;
+        view.querySelectorAll('[data-f]').forEach((el) => {
+          const s = d.fields[el.dataset.f];
+          if (!s) return;
+          if (el.type === 'checkbox') {
+            el.checked = !!s.c;
+            const p = el.closest('.pill'); if (p) p.classList.toggle('on', el.checked);
+            if (el.dataset.f === '_pw') { const z = $('#pw-zone'); if (z) z.classList.toggle('hidden', !el.checked); }
+          } else el.value = s.v ?? '';
+        });
+        ['f-published', 'f-updated', 'f-dirname', 'f-filename'].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el && d[id] !== undefined) el.value = d[id];
+        });
+        ta.value = d.body || '';
+        updCount();
+        const dbtn = $('#btn-discard-draft');
+        if (dbtn) {
+          dbtn.classList.remove('hidden');
+          dbtn.onclick = () => {
+            try { localStorage.removeItem(draftKey); } catch (e) {}
+            toast('草稿已丢弃，恢复为已保存的版本');
+            router();
+          };
+        }
+        toast(`已恢复 ${new Date(savedDraft.ts).toLocaleString()} 未保存的草稿`);
+      } else {
+        localStorage.removeItem(draftKey);
+      }
+    }
+  } catch (e) {}
   /* markdown 快捷按钮：在光标处包裹/插入 */
   const wrapSel = (before, after, placeholder) => {
     const s = ta.selectionStart, e = ta.selectionEnd;
@@ -1569,6 +1640,7 @@ routes.edit = async (arg) => {
     $('#btn-save').disabled = true;
     try {
       await saveWithLog(path, text, sha, `${isNew ? '新建' : '更新'} ${path} [管理台]`, { type: col.label || key, action: isNew ? '新建' : '更新', target: path });
+      try { localStorage.removeItem(draftKey); } catch (e) {} /* 已正式保存：清掉本地草稿 */
       toast('保存成功！');
       location.hash = '#/' + key;
     } catch (err) { toast(err.message, true); $('#btn-save').disabled = false; }
@@ -1795,6 +1867,47 @@ routes.announce = async () => {
       if (el.id === 'ann-link-enable') $('#ann-link-zone').classList.toggle('hidden', !el.checked);
     };
   });
+  /* 本地草稿（自动保存）：与正文编辑器同款机制，改到一半退出也不丢；保存成功即清 */
+  const annDraftKey = 'admin-edit-draft:announce';
+  const annCollect = () => ({
+    content: $('#ann-content').value, closable: $('#ann-closable').checked,
+    linkEnable: $('#ann-link-enable').checked,
+    linkText: $('#ann-link-text').value, linkUrl: $('#ann-link-url').value,
+  });
+  const annBaseline = JSON.stringify(annCollect());
+  const annSession = {}; window._annDraftSession = annSession;
+  const annWrite = () => {
+    if (window._annDraftSession !== annSession) return;
+    const ac = $('#ann-content'); if (!ac || !document.body.contains(ac)) return; /* 已离开公告页：不写 */
+    try {
+      const cur = JSON.stringify(annCollect());
+      if (cur === annBaseline) { localStorage.removeItem(annDraftKey); return; }
+      localStorage.setItem(annDraftKey, JSON.stringify({ ts: Date.now(), data: JSON.parse(cur) }));
+    } catch (e) {}
+  };
+  let annTimer = null;
+  const annSchedule = () => { if (annTimer) clearTimeout(annTimer); annTimer = setTimeout(annWrite, 400); };
+  view.addEventListener('input', annSchedule);
+  view.addEventListener('change', annSchedule);
+  window.addEventListener('pagehide', annWrite);
+  try {
+    const rawAnn = localStorage.getItem(annDraftKey);
+    if (rawAnn) {
+      const savedAnn = JSON.parse(rawAnn);
+      if (savedAnn && savedAnn.data && JSON.stringify(savedAnn.data) !== annBaseline) {
+        const d = savedAnn.data;
+        $('#ann-content').value = d.content ?? '';
+        $('#ann-link-text').value = d.linkText ?? '';
+        $('#ann-link-url').value = d.linkUrl ?? '';
+        [['#ann-closable', d.closable], ['#ann-link-enable', d.linkEnable]].forEach(([sel, v]) => {
+          const el = $(sel); el.checked = !!v;
+          el.closest('.pill').classList.toggle('on', el.checked);
+        });
+        $('#ann-link-zone').classList.toggle('hidden', !$('#ann-link-enable').checked);
+        toast(`已恢复 ${new Date(savedAnn.ts).toLocaleString()} 未保存的公告草稿`);
+      } else localStorage.removeItem(annDraftKey);
+    }
+  } catch (e) {}
   $('#btn-save-ann').onclick = async () => {
     const text = buildAnnouncementTs({
       content: $('#ann-content').value.trim(),
@@ -1808,6 +1921,7 @@ routes.announce = async () => {
     btn.disabled = true;
     try {
       await saveWithLog(ANN_PATH, text, sha, '更新网站公告 [管理台]', { type: '公告', action: '更新', target: '网站公告' });
+      try { localStorage.removeItem('admin-edit-draft:announce'); } catch (e) {} /* 已正式保存：清草稿 */
       toast('公告已保存，重新构建网站后生效');
     } catch (e) { toast(e.message, true); }
     btn.disabled = false;
