@@ -35,8 +35,15 @@ const nowISO = () => {
 /* ---------- GitHub API ---------- */
 function token() { return localStorage.getItem(TOKEN_KEY); }
 async function gh(path, opts = {}) {
-  const res = await fetch(GH_API + path, {
+  const isGet = !opts.method || opts.method === 'GET';
+  /* GitHub 的 GET 响应带 Cache-Control: private, max-age=60，浏览器会缓存；
+   * 而写入用的 URL（无参数）与读取用的（带 ?ref=）不同，写操作不会让缓存失效——
+   * 刚保存就读回会拿到旧内容（新建相册后立刻打开报「找不到相册」的元凶）。
+   * 故 GET 一律绕缓存：cache:'no-store' + 时间戳参数双保险。 */
+  const url = GH_API + path + (isGet ? (path.includes('?') ? '&' : '?') + '_t=' + Date.now() : '');
+  const res = await fetch(url, {
     ...opts,
+    cache: 'no-store',
     headers: {
       'Accept': 'application/vnd.github+json',
       'Authorization': `Bearer ${token()}`,
@@ -1362,6 +1369,7 @@ routes.edit = async (arg) => {
     <span class="spacer"></span>
     <button class="btn btn-ghost" id="btn-preview">👁 预览</button>
     <button class="btn btn-ghost hidden" id="btn-discard-draft" type="button">🗑 丢弃草稿</button>
+    <button class="btn btn-ghost hidden" id="btn-restore-draft" type="button">↩ 仍用旧草稿</button>
     <button class="btn" id="btn-save">💾 保存发布</button>
   </div>
   <div class="card"><h2>${isNew ? '新建' : '编辑'}${col.label} <span class="sub">${esc(filePath || '')}</span></h2>
@@ -1423,7 +1431,7 @@ routes.edit = async (arg) => {
     try {
       const cur = JSON.stringify(draftCollect());
       if (cur === draftBaseline) { localStorage.removeItem(draftKey); return; }
-      localStorage.setItem(draftKey, JSON.stringify({ ts: Date.now(), data: JSON.parse(cur) }));
+      localStorage.setItem(draftKey, JSON.stringify({ ts: Date.now(), baseSha: sha, data: JSON.parse(cur) }));
     } catch (e) {}
   };
   let draftTimer = null;
@@ -1437,6 +1445,7 @@ routes.edit = async (arg) => {
     if (rawDraft) {
       const savedDraft = JSON.parse(rawDraft);
       if (savedDraft && savedDraft.data && JSON.stringify(savedDraft.data) !== draftBaseline) {
+        const applyDraft = () => {
         const d = savedDraft.data;
         view.querySelectorAll('[data-f]').forEach((el) => {
           const s = d.fields[el.dataset.f];
@@ -1453,16 +1462,34 @@ routes.edit = async (arg) => {
         });
         ta.value = d.body || '';
         updCount();
-        const dbtn = $('#btn-discard-draft');
-        if (dbtn) {
-          dbtn.classList.remove('hidden');
-          dbtn.onclick = () => {
-            try { localStorage.removeItem(draftKey); } catch (e) {}
-            toast('草稿已丢弃，恢复为已保存的版本');
-            router();
-          };
+        };
+        const showDiscard = () => {
+          const dbtn = $('#btn-discard-draft');
+          if (dbtn) {
+            dbtn.classList.remove('hidden');
+            dbtn.onclick = () => {
+              try { localStorage.removeItem(draftKey); } catch (e) {}
+              toast('草稿已丢弃，恢复为已保存的版本');
+              router();
+            };
+          }
+        };
+        /* 版本守卫：草稿写作时文件的 sha 与现在对不上 = 这篇已在别处更新过，不自动恢复防旧盖新；
+         * 旧版草稿没有 baseSha，同样按对不上处理（安全优先）。新建文章无版本可盖，不守卫。 */
+        const shaMismatch = !isNew && !!sha && savedDraft.baseSha !== sha;
+        if (!shaMismatch) {
+          applyDraft();
+          showDiscard();
+          toast(`已恢复 ${new Date(savedDraft.ts).toLocaleString()} 未保存的草稿`);
+        } else {
+          showDiscard();
+          const rbtn = $('#btn-restore-draft');
+          if (rbtn) {
+            rbtn.classList.remove('hidden');
+            rbtn.onclick = () => { applyDraft(); rbtn.classList.add('hidden'); toast('已恢复旧草稿——这篇已在别处更新过，保存前请核对内容'); };
+          }
+          toast(`这篇已在其他地方更新过，${new Date(savedDraft.ts).toLocaleString()} 的旧草稿没有自动恢复`, true);
         }
-        toast(`已恢复 ${new Date(savedDraft.ts).toLocaleString()} 未保存的草稿`);
       } else {
         localStorage.removeItem(draftKey);
       }
@@ -1842,6 +1869,8 @@ routes.announce = async () => {
   <div class="toolbar">
     <button class="btn btn-ghost" id="btn-back">← 返回</button>
     <span class="spacer"></span>
+    <button class="btn btn-ghost hidden" id="btn-ann-discard" type="button">🗑 丢弃草稿</button>
+    <button class="btn btn-ghost hidden" id="btn-ann-restore" type="button">↩ 仍用旧草稿</button>
     <button class="btn" id="btn-save-ann">💾 保存公告</button>
   </div>
   <div class="card"><h2>📢 网站公告 <span class="sub">${ANN_PATH}</span></h2>
@@ -1882,7 +1911,7 @@ routes.announce = async () => {
     try {
       const cur = JSON.stringify(annCollect());
       if (cur === annBaseline) { localStorage.removeItem(annDraftKey); return; }
-      localStorage.setItem(annDraftKey, JSON.stringify({ ts: Date.now(), data: JSON.parse(cur) }));
+      localStorage.setItem(annDraftKey, JSON.stringify({ ts: Date.now(), baseSha: sha, data: JSON.parse(cur) }));
     } catch (e) {}
   };
   let annTimer = null;
@@ -1895,6 +1924,7 @@ routes.announce = async () => {
     if (rawAnn) {
       const savedAnn = JSON.parse(rawAnn);
       if (savedAnn && savedAnn.data && JSON.stringify(savedAnn.data) !== annBaseline) {
+        const applyAnn = () => {
         const d = savedAnn.data;
         $('#ann-content').value = d.content ?? '';
         $('#ann-link-text').value = d.linkText ?? '';
@@ -1904,7 +1934,22 @@ routes.announce = async () => {
           el.closest('.pill').classList.toggle('on', el.checked);
         });
         $('#ann-link-zone').classList.toggle('hidden', !$('#ann-link-enable').checked);
-        toast(`已恢复 ${new Date(savedAnn.ts).toLocaleString()} 未保存的公告草稿`);
+        };
+        const showAnnDiscard = () => {
+          const b = $('#btn-ann-discard');
+          if (b) { b.classList.remove('hidden'); b.onclick = () => { try { localStorage.removeItem(annDraftKey); } catch (e) {} toast('草稿已丢弃，恢复为已保存的版本'); router(); }; }
+        };
+        /* 版本守卫（同编辑器）：公告已在别处更新过时不自动恢复旧草稿 */
+        if (!sha || savedAnn.baseSha === sha) {
+          applyAnn();
+          showAnnDiscard();
+          toast(`已恢复 ${new Date(savedAnn.ts).toLocaleString()} 未保存的公告草稿`);
+        } else {
+          showAnnDiscard();
+          const rb = $('#btn-ann-restore');
+          if (rb) { rb.classList.remove('hidden'); rb.onclick = () => { applyAnn(); rb.classList.add('hidden'); toast('已恢复旧草稿——公告已在别处更新过，保存前请核对'); }; }
+          toast(`公告已在其他地方更新过，${new Date(savedAnn.ts).toLocaleString()} 的旧草稿没有自动恢复`, true);
+        }
       } else localStorage.removeItem(annDraftKey);
     }
   } catch (e) {}
@@ -2490,30 +2535,39 @@ routes.navmgr = async () => {
  * 草稿只存本机浏览器；与仓库内容一致时自动清除；正式保存成功后清除。 */
 function makeListDraft(listKey, modalKey) {
   return {
-    saveItems(items, baselineJson) {
+    saveItems(items, baselineJson, baseSha) {
       try {
         if (JSON.stringify(items) === baselineJson) { localStorage.removeItem(listKey); return; }
-        localStorage.setItem(listKey, JSON.stringify({ ts: Date.now(), items }));
+        localStorage.setItem(listKey, JSON.stringify({ ts: Date.now(), baseSha, items }));
       } catch (e) {}
     },
-    loadItems(baselineJson) {
+    /* 返回 null=无草稿；{stale:false}=版本没变可直接恢复；{stale:true}=配置已在别处更新过，别自动恢复 */
+    loadItems(baselineJson, curSha) {
       try {
         const raw = localStorage.getItem(listKey);
         if (!raw) return null;
         const d = JSON.parse(raw);
-        if (d && Array.isArray(d.items) && JSON.stringify(d.items) !== baselineJson) return d;
+        if (d && Array.isArray(d.items)) {
+          if (JSON.stringify(d.items) === baselineJson) { localStorage.removeItem(listKey); return null; }
+          d.stale = !!(curSha && d.baseSha !== curSha);
+          return d;
+        }
         localStorage.removeItem(listKey);
       } catch (e) {}
       return null;
     },
     clearItems() { try { localStorage.removeItem(listKey); } catch (e) {} },
     saveModal(data) { try { localStorage.setItem(modalKey, JSON.stringify({ ts: Date.now(), data })); } catch (e) {} },
-    loadModal(idx) {
+    /* guardTitle：编辑已有条目时传它现在的标题；对不上说明条目已在别处变过，弹窗草稿作废 */
+    loadModal(idx, guardTitle) {
       try {
         const raw = localStorage.getItem(modalKey);
         if (!raw) return null;
         const d = JSON.parse(raw);
-        if (d && d.data && d.data.idx === idx) return d;
+        if (d && d.data && d.data.idx === idx) {
+          if (idx >= 0 && d.data.guardTitle !== undefined && d.data.guardTitle !== guardTitle) { localStorage.removeItem(modalKey); return null; }
+          return d;
+        }
       } catch (e) {}
       return null;
     },
@@ -2545,9 +2599,9 @@ routes.timeline = async () => {
   /* 本地草稿接入：恢复未保存的 items 改动；此后每次改动自动落草稿 */
   const tlDraft = makeListDraft('admin-edit-draft:timeline', 'admin-edit-draft:timeline-modal');
   const tlBaseline = JSON.stringify(items);
-  const tlSaved = tlDraft.loadItems(tlBaseline);
-  if (tlSaved) items = tlSaved.items;
-  const markDirty = () => { $('#btn-tlsave').disabled = false; tlDraft.saveItems(items, tlBaseline); };
+  const tlSaved = tlDraft.loadItems(tlBaseline, sha);
+  if (tlSaved && !tlSaved.stale) items = tlSaved.items;
+  const markDirty = () => { $('#btn-tlsave').disabled = false; tlDraft.saveItems(items, tlBaseline, sha); };
   const genTS = (list) => {
     const escS = (s) => (s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
     const itemStr = (it) => {
@@ -2612,7 +2666,7 @@ routes.timeline = async () => {
       </div>`;
     document.body.appendChild(overlay);
     /* 弹窗草稿：写到一半退出/App 被杀也不丢；恢复仅限草稿属于当前这条时 */
-    const tlModalSaved = tlDraft.loadModal(idx);
+    const tlModalSaved = tlDraft.loadModal(idx, idx >= 0 && items[idx] ? items[idx].title : null);
     if (tlModalSaved) {
       const d = tlModalSaved.data;
       const setF = (id, v) => { const el = overlay.querySelector(id); if (el && v !== undefined) el.value = v; };
@@ -2625,7 +2679,7 @@ routes.timeline = async () => {
     const tlModalWrite = () => {
       if (!document.body.contains(overlay)) return; /* 弹窗已关：不写 */
       const g = (id) => overlay.querySelector(id).value;
-      tlDraft.saveModal({ idx, date: g('#tl-date'), type: g('#tl-type'), featured: overlay.querySelector('#tl-featured').checked, title: g('#tl-title'), subtitle: g('#tl-subtitle'), desc: g('#tl-desc'), details: g('#tl-details'), tags: g('#tl-tags'), link: g('#tl-link'), image: g('#tl-image') });
+      tlDraft.saveModal({ idx, guardTitle: idx >= 0 && items[idx] ? items[idx].title : null, date: g('#tl-date'), type: g('#tl-type'), featured: overlay.querySelector('#tl-featured').checked, title: g('#tl-title'), subtitle: g('#tl-subtitle'), desc: g('#tl-desc'), details: g('#tl-details'), tags: g('#tl-tags'), link: g('#tl-link'), image: g('#tl-image') });
     };
     let tlModalTimer = null;
     const tlModalSchedule = () => { if (tlModalTimer) clearTimeout(tlModalTimer); tlModalTimer = setTimeout(tlModalWrite, 400); };
@@ -2662,16 +2716,24 @@ routes.timeline = async () => {
       <button class="btn" id="btn-tladd">＋ 新增节点</button>
       <span class="spacer"></span>
       <button class="btn btn-ghost hidden" id="btn-tldiscard" type="button">🗑 丢弃草稿</button>
+      <button class="btn btn-ghost hidden" id="btn-tlrestore" type="button">↩ 仍用旧草稿</button>
       <button class="btn" id="btn-tlsave" disabled>💾 保存到仓库</button></div>
     <p class="hint">时间线显示在博客首页。↑↓ 排序，新增的节点默认排最前面。保存后重新构建生效。</p>
     <div id="tl-list"></div>`;
   render();
-  if (tlSaved) {
+  if (tlSaved && !tlSaved.stale) {
     markDirty();
     const tdb = $('#btn-tldiscard');
     tdb.classList.remove('hidden');
     tdb.onclick = () => { tlDraft.clearItems(); tlDraft.clearModal(); toast('草稿已丢弃，恢复为仓库里的版本'); router(); };
     toast(`已恢复 ${new Date(tlSaved.ts).toLocaleString()} 未保存的时间线草稿`);
+  } else if (tlSaved && tlSaved.stale) {
+    /* 版本守卫：配置已在别处更新过，旧草稿不自动套上，亮出两个按钮让用户自己选 */
+    const tdb = $('#btn-tldiscard'), trb = $('#btn-tlrestore');
+    tdb.classList.remove('hidden'); trb.classList.remove('hidden');
+    tdb.onclick = () => { tlDraft.clearItems(); tlDraft.clearModal(); toast('草稿已丢弃'); router(); };
+    trb.onclick = () => { items = tlSaved.items; render(); markDirty(); tdb.classList.add('hidden'); trb.classList.add('hidden'); toast('已恢复旧草稿——时间线已在别处更新过，保存前请核对'); };
+    toast(`时间线已在其他地方更新过，${new Date(tlSaved.ts).toLocaleString()} 的旧草稿没有自动恢复`, true);
   }
   $('#btn-tladd').onclick = () => openEditor(-1);
   $('#btn-tlsave').onclick = async () => {
@@ -2709,9 +2771,9 @@ routes.thoughts = async () => {
   /* 本地草稿接入（与时间线同款）：恢复未保存改动；此后每次改动自动落草稿 */
   const thDraft = makeListDraft('admin-edit-draft:thoughts', 'admin-edit-draft:thoughts-modal');
   const thBaseline = JSON.stringify(items);
-  const thSaved = thDraft.loadItems(thBaseline);
-  if (thSaved) items = thSaved.items;
-  const markDirty = () => { $('#btn-thsave').disabled = false; thDraft.saveItems(items, thBaseline); };
+  const thSaved = thDraft.loadItems(thBaseline, sha);
+  if (thSaved && !thSaved.stale) items = thSaved.items;
+  const markDirty = () => { $('#btn-thsave').disabled = false; thDraft.saveItems(items, thBaseline, sha); };
   const fmtDT = (iso) => {
     try {
       const d = new Date(iso);
@@ -2768,7 +2830,7 @@ routes.thoughts = async () => {
       </div>`;
     document.body.appendChild(overlay);
     /* 弹窗草稿：写到一半退出/App 被杀也不丢；恢复仅限草稿属于当前这条时 */
-    const thModalSaved = thDraft.loadModal(idx);
+    const thModalSaved = thDraft.loadModal(idx, idx >= 0 && items[idx] ? items[idx].title : null);
     if (thModalSaved) {
       const d = thModalSaved.data;
       const tEl = overlay.querySelector('#th-title'); if (tEl && d.title !== undefined) tEl.value = d.title;
@@ -2777,7 +2839,7 @@ routes.thoughts = async () => {
     }
     const thModalWrite = () => {
       if (!document.body.contains(overlay)) return; /* 弹窗已关：不写 */
-      thDraft.saveModal({ idx, title: overlay.querySelector('#th-title').value, content: overlay.querySelector('#th-content').value });
+      thDraft.saveModal({ idx, guardTitle: idx >= 0 && items[idx] ? items[idx].title : null, title: overlay.querySelector('#th-title').value, content: overlay.querySelector('#th-content').value });
     };
     let thModalTimer = null;
     const thModalSchedule = () => { if (thModalTimer) clearTimeout(thModalTimer); thModalTimer = setTimeout(thModalWrite, 400); };
@@ -2804,16 +2866,24 @@ routes.thoughts = async () => {
       <button class="btn" id="btn-thadd">＋ 新增碎碎念</button>
       <span class="spacer"></span>
       <button class="btn btn-ghost hidden" id="btn-thdiscard" type="button">🗑 丢弃草稿</button>
+      <button class="btn btn-ghost hidden" id="btn-threstore" type="button">↩ 仍用旧草稿</button>
       <button class="btn" id="btn-thsave" disabled>💾 保存到仓库</button></div>
     <p class="hint">碎碎念显示在 /gallery/thoughts/ 星空页面。新增自动记录发布时间，编辑自动记录更新时间。保存后重新构建生效。</p>
     <div id="th-list"></div>`;
   render();
-  if (thSaved) {
+  if (thSaved && !thSaved.stale) {
     markDirty();
     const tdb = $('#btn-thdiscard');
     tdb.classList.remove('hidden');
     tdb.onclick = () => { thDraft.clearItems(); thDraft.clearModal(); toast('草稿已丢弃，恢复为仓库里的版本'); router(); };
     toast(`已恢复 ${new Date(thSaved.ts).toLocaleString()} 未保存的碎碎念草稿`);
+  } else if (thSaved && thSaved.stale) {
+    /* 版本守卫：配置已在别处更新过，旧草稿不自动套上，亮出两个按钮让用户自己选 */
+    const tdb = $('#btn-thdiscard'), trb = $('#btn-threstore');
+    tdb.classList.remove('hidden'); trb.classList.remove('hidden');
+    tdb.onclick = () => { thDraft.clearItems(); thDraft.clearModal(); toast('草稿已丢弃'); router(); };
+    trb.onclick = () => { items = thSaved.items; render(); markDirty(); tdb.classList.add('hidden'); trb.classList.add('hidden'); toast('已恢复旧草稿——碎碎念已在别处更新过，保存前请核对'); };
+    toast(`碎碎念已在其他地方更新过，${new Date(thSaved.ts).toLocaleString()} 的旧草稿没有自动恢复`, true);
   }
   $('#btn-thadd').onclick = () => openEditor(-1);
   $('#btn-thsave').onclick = async () => {
@@ -3284,7 +3354,8 @@ const REPORT_BACKFILL_EXCLUDE_MESSAGES = [
 ];
 /* 只读 GET（回填专用）：不走 gh()，失败不触发登出，回填是增强项不该把人踢下线 */
 async function ghGetQuiet(path) {
-  const res = await fetch(GH_API + path, {
+  const res = await fetch(GH_API + path + (path.includes('?') ? '&' : '?') + '_t=' + Date.now(), {
+    cache: 'no-store', /* 同 gh()：绕过浏览器对 GitHub GET 的 60 秒缓存 */
     headers: { 'Accept': 'application/vnd.github+json', 'Authorization': `Bearer ${token()}` },
   });
   if (!res.ok) {
