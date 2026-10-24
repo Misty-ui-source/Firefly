@@ -2484,6 +2484,43 @@ routes.navmgr = async () => {
 };
 
 /* ---------- 时间线管理 ---------- */
+/* ---------- 列表型编辑器（时间线/碎碎念）本地草稿 ----------
+ * 两层：① items 未保存改动（点了「确定」没点「保存到仓库」就退出也不丢）
+ *       ② 弹窗里写一半的字段（App 被杀也不丢；仅草稿 idx 与当前编辑条目一致时恢复）
+ * 草稿只存本机浏览器；与仓库内容一致时自动清除；正式保存成功后清除。 */
+function makeListDraft(listKey, modalKey) {
+  return {
+    saveItems(items, baselineJson) {
+      try {
+        if (JSON.stringify(items) === baselineJson) { localStorage.removeItem(listKey); return; }
+        localStorage.setItem(listKey, JSON.stringify({ ts: Date.now(), items }));
+      } catch (e) {}
+    },
+    loadItems(baselineJson) {
+      try {
+        const raw = localStorage.getItem(listKey);
+        if (!raw) return null;
+        const d = JSON.parse(raw);
+        if (d && Array.isArray(d.items) && JSON.stringify(d.items) !== baselineJson) return d;
+        localStorage.removeItem(listKey);
+      } catch (e) {}
+      return null;
+    },
+    clearItems() { try { localStorage.removeItem(listKey); } catch (e) {} },
+    saveModal(data) { try { localStorage.setItem(modalKey, JSON.stringify({ ts: Date.now(), data })); } catch (e) {} },
+    loadModal(idx) {
+      try {
+        const raw = localStorage.getItem(modalKey);
+        if (!raw) return null;
+        const d = JSON.parse(raw);
+        if (d && d.data && d.data.idx === idx) return d;
+      } catch (e) {}
+      return null;
+    },
+    clearModal() { try { localStorage.removeItem(modalKey); } catch (e) {} },
+  };
+}
+
 const TIMELINE_PATH = 'src/config/timelineConfig.ts';
 routes.timeline = async () => {
   view.innerHTML = '<div class="card"><h2>🕘 时间线</h2><p class="hint">正在读取配置…</p></div>';
@@ -2505,7 +2542,12 @@ routes.timeline = async () => {
   };
   let items = parseItems(cfgText);
   if (!items) { view.innerHTML = '<div class="card">解析时间线配置失败，格式不匹配。</div>'; return; }
-  const markDirty = () => { $('#btn-tlsave').disabled = false; };
+  /* 本地草稿接入：恢复未保存的 items 改动；此后每次改动自动落草稿 */
+  const tlDraft = makeListDraft('admin-edit-draft:timeline', 'admin-edit-draft:timeline-modal');
+  const tlBaseline = JSON.stringify(items);
+  const tlSaved = tlDraft.loadItems(tlBaseline);
+  if (tlSaved) items = tlSaved.items;
+  const markDirty = () => { $('#btn-tlsave').disabled = false; tlDraft.saveItems(items, tlBaseline); };
   const genTS = (list) => {
     const escS = (s) => (s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
     const itemStr = (it) => {
@@ -2569,8 +2611,29 @@ routes.timeline = async () => {
           <button class="btn" id="tl-ok">确定</button></div>
       </div>`;
     document.body.appendChild(overlay);
-    overlay.querySelector('#tl-cancel').onclick = () => overlay.remove();
-    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    /* 弹窗草稿：写到一半退出/App 被杀也不丢；恢复仅限草稿属于当前这条时 */
+    const tlModalSaved = tlDraft.loadModal(idx);
+    if (tlModalSaved) {
+      const d = tlModalSaved.data;
+      const setF = (id, v) => { const el = overlay.querySelector(id); if (el && v !== undefined) el.value = v; };
+      setF('#tl-date', d.date); setF('#tl-type', d.type); setF('#tl-title', d.title);
+      setF('#tl-subtitle', d.subtitle); setF('#tl-desc', d.desc); setF('#tl-details', d.details);
+      setF('#tl-tags', d.tags); setF('#tl-link', d.link); setF('#tl-image', d.image);
+      const fcb = overlay.querySelector('#tl-featured'); if (fcb) fcb.checked = !!d.featured;
+      toast(`已恢复 ${new Date(tlModalSaved.ts).toLocaleString()} 未写完的节点草稿`);
+    }
+    const tlModalWrite = () => {
+      if (!document.body.contains(overlay)) return; /* 弹窗已关：不写 */
+      const g = (id) => overlay.querySelector(id).value;
+      tlDraft.saveModal({ idx, date: g('#tl-date'), type: g('#tl-type'), featured: overlay.querySelector('#tl-featured').checked, title: g('#tl-title'), subtitle: g('#tl-subtitle'), desc: g('#tl-desc'), details: g('#tl-details'), tags: g('#tl-tags'), link: g('#tl-link'), image: g('#tl-image') });
+    };
+    let tlModalTimer = null;
+    const tlModalSchedule = () => { if (tlModalTimer) clearTimeout(tlModalTimer); tlModalTimer = setTimeout(tlModalWrite, 400); };
+    overlay.addEventListener('input', tlModalSchedule);
+    overlay.addEventListener('change', tlModalSchedule);
+    window.addEventListener('pagehide', tlModalWrite);
+    overlay.querySelector('#tl-cancel').onclick = () => { tlDraft.clearModal(); overlay.remove(); };
+    overlay.onclick = (e) => { if (e.target === overlay) { tlDraft.clearModal(); overlay.remove(); } };
     overlay.querySelector('#tl-ok').onclick = () => {
       const v = (id) => overlay.querySelector(id).value.trim();
       const date = v('#tl-date'), type = v('#tl-type'), title = v('#tl-title'), desc = v('#tl-desc');
@@ -2590,6 +2653,7 @@ routes.timeline = async () => {
       const img = v('#tl-image'); if (img) obj.image = img;
       if (idx >= 0) items[idx] = { ...items[idx], ...obj };
       else items.unshift(obj);
+      tlDraft.clearModal();
       overlay.remove();
       markDirty(); render();
     };
@@ -2597,10 +2661,18 @@ routes.timeline = async () => {
   view.innerHTML = `<div class="toolbar">
       <button class="btn" id="btn-tladd">＋ 新增节点</button>
       <span class="spacer"></span>
+      <button class="btn btn-ghost hidden" id="btn-tldiscard" type="button">🗑 丢弃草稿</button>
       <button class="btn" id="btn-tlsave" disabled>💾 保存到仓库</button></div>
     <p class="hint">时间线显示在博客首页。↑↓ 排序，新增的节点默认排最前面。保存后重新构建生效。</p>
     <div id="tl-list"></div>`;
   render();
+  if (tlSaved) {
+    markDirty();
+    const tdb = $('#btn-tldiscard');
+    tdb.classList.remove('hidden');
+    tdb.onclick = () => { tlDraft.clearItems(); tlDraft.clearModal(); toast('草稿已丢弃，恢复为仓库里的版本'); router(); };
+    toast(`已恢复 ${new Date(tlSaved.ts).toLocaleString()} 未保存的时间线草稿`);
+  }
   $('#btn-tladd').onclick = () => openEditor(-1);
   $('#btn-tlsave').onclick = async () => {
     const btn = $('#btn-tlsave'); btn.disabled = true;
@@ -2609,6 +2681,7 @@ routes.timeline = async () => {
       if (text === cfgText) throw new Error('配置未变化');
       const r = await saveWithLog(TIMELINE_PATH, text, sha, '更新时间线 [管理台]', { type: '时间线', action: '更新', target: '时间线配置' });
       sha = r.content.sha; cfgText = text;
+      tlDraft.clearItems(); /* 已正式保存：清本地草稿 */
       toast('已保存，重新构建后生效');
     } catch (e) { toast(e.message, true); btn.disabled = false; }
   };
@@ -2633,7 +2706,12 @@ routes.thoughts = async () => {
   };
   let items = parseItems(cfgText);
   if (!items) { view.innerHTML = '<div class="card">解析碎碎念配置失败。</div>'; return; }
-  const markDirty = () => { $('#btn-thsave').disabled = false; };
+  /* 本地草稿接入（与时间线同款）：恢复未保存改动；此后每次改动自动落草稿 */
+  const thDraft = makeListDraft('admin-edit-draft:thoughts', 'admin-edit-draft:thoughts-modal');
+  const thBaseline = JSON.stringify(items);
+  const thSaved = thDraft.loadItems(thBaseline);
+  if (thSaved) items = thSaved.items;
+  const markDirty = () => { $('#btn-thsave').disabled = false; thDraft.saveItems(items, thBaseline); };
   const fmtDT = (iso) => {
     try {
       const d = new Date(iso);
@@ -2689,8 +2767,24 @@ routes.thoughts = async () => {
           <button class="btn" id="th-ok">确定</button></div>
       </div>`;
     document.body.appendChild(overlay);
-    overlay.querySelector('#th-cancel').onclick = () => overlay.remove();
-    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    /* 弹窗草稿：写到一半退出/App 被杀也不丢；恢复仅限草稿属于当前这条时 */
+    const thModalSaved = thDraft.loadModal(idx);
+    if (thModalSaved) {
+      const d = thModalSaved.data;
+      const tEl = overlay.querySelector('#th-title'); if (tEl && d.title !== undefined) tEl.value = d.title;
+      const cEl = overlay.querySelector('#th-content'); if (cEl && d.content !== undefined) cEl.value = d.content;
+      toast(`已恢复 ${new Date(thModalSaved.ts).toLocaleString()} 未写完的碎碎念草稿`);
+    }
+    const thModalWrite = () => {
+      if (!document.body.contains(overlay)) return; /* 弹窗已关：不写 */
+      thDraft.saveModal({ idx, title: overlay.querySelector('#th-title').value, content: overlay.querySelector('#th-content').value });
+    };
+    let thModalTimer = null;
+    const thModalSchedule = () => { if (thModalTimer) clearTimeout(thModalTimer); thModalTimer = setTimeout(thModalWrite, 400); };
+    overlay.addEventListener('input', thModalSchedule);
+    window.addEventListener('pagehide', thModalWrite);
+    overlay.querySelector('#th-cancel').onclick = () => { thDraft.clearModal(); overlay.remove(); };
+    overlay.onclick = (e) => { if (e.target === overlay) { thDraft.clearModal(); overlay.remove(); } };
     overlay.querySelector('#th-ok').onclick = () => {
       const title = overlay.querySelector('#th-title').value.trim();
       const content = overlay.querySelector('#th-content').value.trim();
@@ -2701,6 +2795,7 @@ routes.thoughts = async () => {
       } else {
         items.unshift({ title, content, createdAt: now });
       }
+      thDraft.clearModal();
       overlay.remove();
       markDirty(); render();
     };
@@ -2708,10 +2803,18 @@ routes.thoughts = async () => {
   view.innerHTML = `<div class="toolbar">
       <button class="btn" id="btn-thadd">＋ 新增碎碎念</button>
       <span class="spacer"></span>
+      <button class="btn btn-ghost hidden" id="btn-thdiscard" type="button">🗑 丢弃草稿</button>
       <button class="btn" id="btn-thsave" disabled>💾 保存到仓库</button></div>
     <p class="hint">碎碎念显示在 /gallery/thoughts/ 星空页面。新增自动记录发布时间，编辑自动记录更新时间。保存后重新构建生效。</p>
     <div id="th-list"></div>`;
   render();
+  if (thSaved) {
+    markDirty();
+    const tdb = $('#btn-thdiscard');
+    tdb.classList.remove('hidden');
+    tdb.onclick = () => { thDraft.clearItems(); thDraft.clearModal(); toast('草稿已丢弃，恢复为仓库里的版本'); router(); };
+    toast(`已恢复 ${new Date(thSaved.ts).toLocaleString()} 未保存的碎碎念草稿`);
+  }
   $('#btn-thadd').onclick = () => openEditor(-1);
   $('#btn-thsave').onclick = async () => {
     const btn = $('#btn-thsave'); btn.disabled = true;
@@ -2720,6 +2823,7 @@ routes.thoughts = async () => {
       if (text === cfgText) throw new Error('配置未变化');
       const r = await saveWithLog(THOUGHTS_PATH, text, sha, '更新碎碎念 [管理台]', { type: '碎碎念', action: '更新', target: '碎碎念配置' });
       sha = r.content.sha; cfgText = text;
+      thDraft.clearItems(); /* 已正式保存：清本地草稿 */
       toast('已保存，重新构建后生效');
     } catch (e) { toast(e.message, true); btn.disabled = false; }
   };
