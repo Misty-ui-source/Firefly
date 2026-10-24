@@ -185,19 +185,30 @@ async function saveWithLog(path, text, sha, message, op, opts = {}) {
     return { content: { sha: r.blobShas[path] }, commitSha: r.commitSha };
   } catch (e) {
     /* 回落：主文件照常保存，日志条目留 pending 等下次同步 */
+    console.warn('[saveWithLog] 多文件提交失败，回落单文件保存：', e && e.message);
     if (entry) {
       const pending = oplogLoadPending();
       const key = [entry.ts, entry.type, entry.action, entry.target].join('|');
       if (!pending.some((p) => [p.ts, p.type, p.action, p.target].join('|') === key)) pending.push(entry);
       oplogSavePending(pending);
     }
-    if (opts.isBase64) {
-      return gh(`/repos/${CFG.owner}/${CFG.repo}/contents/${path}`, {
-        method: 'PUT',
-        body: JSON.stringify({ message, content: text, branch: CFG.branch, ...(sha ? { sha } : {}) }),
-      });
+    /* sha 缺失时先查现有文件的 sha：新建撞上已有文件（如同一天的动态）时，
+     * 不带 sha 的 PUT 会被 GitHub 以 "sha wasn't supplied" 拒绝；查不到（真新建）才不带 sha */
+    let useSha = sha;
+    if (!useSha) {
+      try { const cur = await ghGetFile(path); if (cur && !Array.isArray(cur) && cur.sha) useSha = cur.sha; } catch (e2) {}
     }
-    return ghPutFile(path, text, sha, message);
+    try {
+      if (opts.isBase64) {
+        return await gh(`/repos/${CFG.owner}/${CFG.repo}/contents/${path}`, {
+          method: 'PUT',
+          body: JSON.stringify({ message, content: text, branch: CFG.branch, ...(useSha ? { sha: useSha } : {}) }),
+        });
+      }
+      return await ghPutFile(path, text, useSha, message);
+    } catch (e2) {
+      throw new Error(`保存失败：多文件提交（${e.message}）；单文件回落（${e2.message}）`);
+    }
   }
 }
 /* 单文件删除 + 日志同 commit（回落：先删文件，日志留 pending） */
@@ -1525,6 +1536,9 @@ routes.edit = async (arg) => {
         path = `${col.path}/${d}/${fn}`;
       }
       sha = null;
+      /* 新建也可能撞上已存在的文件（同一天的动态、同名文章）：先查它的 sha 按更新保存，
+       * 否则保存会被 GitHub 以 "sha wasn't supplied" 拒掉（2026-10-24 动态发布实测） */
+      try { const cur = await ghGetFile(path); if (cur && !Array.isArray(cur) && cur.sha) sha = cur.sha; } catch (e) {}
     }
     const text = serializeFrontmatter(newFm, newBody);
     $('#btn-save').disabled = true;
