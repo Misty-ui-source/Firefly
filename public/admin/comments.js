@@ -37,6 +37,7 @@ function wlEnsureStyle() {
   s.textContent = `
     .wl-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
     .wl-tabs .btn.on{background:var(--accent,#c0392b);color:#fff}
+    .wl-tabs .btn:not(.on){background:transparent;color:var(--text);border:1px solid var(--card-border);box-shadow:none}
     .wl-head{display:flex;gap:10px;align-items:center}
     .wl-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none;background:#ddd}
     .wl-nick{font-weight:700}
@@ -118,7 +119,14 @@ routes['waline'] = async () => {
   $('#wl-logout').onclick = () => { try { localStorage.removeItem(WL_TOKEN_KEY); } catch (e) {} toast('已退出 Waline'); router(); };
 
   const listEl = $('#wl-list');
-  const fmtTime = (v) => { try { return new Date(v).toLocaleString('zh-CN', { hour12: false }); } catch (e) { return v || ''; } };
+  /* Waline 的时间字段是 time（毫秒数）；兼容 insertedAt/createdAt 与秒级数值、$date 对象 */
+  const fmtTime = (c) => {
+    const v = c.time ?? c.insertedAt ?? c.createdAt;
+    if (v == null || v === '') return '';
+    const raw = (typeof v === 'object' && v.$date) ? v.$date : v;
+    const d = new Date(typeof raw === 'number' && raw < 1e12 ? raw * 1000 : raw);
+    return isNaN(d) ? '' : d.toLocaleString('zh-CN', { hour12: false });
+  };
   const statusChip = (c) => {
     const map = { waiting: '待审核', approved: '已通过', spam: '垃圾' };
     return `<span class="wl-status ${esc(c.status || 'approved')}">${map[c.status] || c.status || '已通过'}</span>${c.sticky ? ' <span class="wl-badge">置顶</span>' : ''}`;
@@ -130,7 +138,7 @@ routes['waline'] = async () => {
     return `<div class="card" data-oid="${esc(c.objectId)}">
       <div class="wl-head">${avatar}<div>
         <span class="wl-nick">${esc(c.nick || '匿名')}</span>${c.type === 'administrator' ? '<span class="wl-badge admin">博主</span>' : ''}
-        <div class="wl-meta">${fmtTime(c.insertedAt)} · ${statusChip(c)}</div>
+        <div class="wl-meta">${fmtTime(c)} · ${statusChip(c)}</div>
       </div></div>
       <div class="wl-content">${c.comment || ''}</div>
       <div class="wl-meta">页面：<a href="${esc(pageUrl)}" target="_blank" rel="noopener">${esc(c.url || '')}</a>${c.mail ? ` · ${esc(c.mail)}` : ''}${c.ip ? ` · IP ${esc(c.ip)}` : ''}</div>
@@ -178,7 +186,8 @@ routes['waline'] = async () => {
       const qs = `type=list&pageSize=20&page=${page}${status ? `&status=${status}` : ''}${keyword ? `&keyword=${encodeURIComponent(keyword)}` : ''}`;
       const data = await walineFetch(`/api/comment?${qs}`);
       totalPages = data.totalPages || 1;
-      $('#wl-count').textContent = `共 ${data.count ?? ''} 条`;
+      const totalCount = data.count ?? data.total;
+      $('#wl-count').textContent = totalCount != null ? `共 ${totalCount} 条` : (totalPages > 1 ? `共 ${totalPages} 页` : '');
       const rows = data.data || [];
       if (reset) listEl.innerHTML = rows.length ? '' : '<p class="hint">这个分类下还没有评论。</p>';
       rows.forEach((c) => {
