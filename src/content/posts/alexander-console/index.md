@@ -9,6 +9,7 @@ tags:
   - 网络
   - AI
 series: 博客搭建
+seriesOrder: 1
 description: 为了让写博客这件事变得赏心悦目，我重构了整套系统：自研控制台、评论迁移，与一个未解决的难题
 image: https://img.lanerc.me/covers/mvmlrz7h-1c5e7c0d463b38aa0256f1362becc554_720.webp
 draft: false
@@ -45,7 +46,7 @@ updated: 2026-10-25T00:19:00+08:00
 
 都已经到这个地步了，我觉得有必要先上全景。目前我的博客是一套「仓库即后台」的静态架构：
 
-​```
+```
 lanerc.me（Cloudflare Pages · Astro 静态站）
 ├─ 内容：GitHub 仓库（文章、动态、相册、导航全是文件）
 │    └─ Alexander Console → GitHub API 读写 → 保存即 commit → 自动重建
@@ -54,11 +55,11 @@ lanerc.me（Cloudflare Pages · Astro 静态站）
 │    └─ zhz-ai 机器人：轮询新评论，自动回复
 ├─ 统计：Umami 自建，前端直连公开接口
 └─ 构建：数据脚本五件套 → pnpm build → Pagefind 站内搜索
-​```
+```
 
 拆开看就三层：**写作层**是控制台和仓库，我只管写，保存就是提交；**托管层**是 Pages，代码一推全站自动重建上线；**服务层**是评论、图床、统计三个独立小服务，各自跑在最适合的免费额度上，坏一个不影响其他。
 
-更详细的可以查看站点博客日志，文章最后我也会说一下的。
+更详细的可以查看站点[博客日志](https://lanerc.me/changelog/)，文章最后我也会说一下的。
 
 ## 排错：为什么 CF Pages 自定义域名「慢得要死」？
 
