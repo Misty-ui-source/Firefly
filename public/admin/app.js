@@ -1411,7 +1411,11 @@ routes.edit = async (arg) => {
     }
   }
 
-  const r2dirDefault = isDynamic ? `dynamic/${new Date().toISOString().slice(0, 10)}` : '';
+  const r2dirDefault = isDynamic
+    ? `dynamic/${new Date().toISOString().slice(0, 10)}`
+    : col.mode === 'dir'
+      ? `${key}/${filePath ? filePath.split('/').slice(-2, -1)[0] : new Date().toISOString().slice(0, 10)}`
+      : '';
   view.innerHTML = `
   <div class="toolbar">
     <button class="btn btn-ghost" id="btn-back">← 返回</button>
@@ -1441,7 +1445,7 @@ routes.edit = async (arg) => {
       <input type="file" id="f-img" accept="image/*" multiple class="hidden">
       <button class="btn btn-small" id="btn-import" type="button" title="也可以直接把文件拖到页面上">📥 导入文件</button>
       <input type="file" id="f-import" accept=".md,.markdown,.txt,.png,.jpg,.jpeg,.gif,.webp,.avif" multiple class="hidden">
-      <input type="text" id="f-r2dir" value="${r2dirDefault}" placeholder="R2 目录，如 dynamic/2026-10-23">
+      <input type="text" id="f-r2dir" value="${r2dirDefault}" placeholder="R2 目录，如 posts/2026-10-24">
     </div>
     <div class="field"><textarea id="md-body" class="code" rows="20">${esc(body)}</textarea></div>
     <div id="preview" class="preview hidden"></div>
@@ -1675,7 +1679,7 @@ routes.edit = async (arg) => {
       const f = el.dataset.f;
       if (f === '_pw') return; // 仅作开关，不写入
       if (el.type === 'checkbox') newFm[f] = el.checked ? 'true' : 'false';
-      else if (f === 'tags') newFm[f] = el.value.split(',').map((s) => s.trim()).filter(Boolean);
+      else if (f === 'tags') newFm[f] = el.value.split(/[,，、]/).map((s) => s.trim()).filter(Boolean);
       else if (el.value.trim() !== '') newFm[f] = el.value.trim();
     });
     /* 密码保护未勾选 → 不写 password 字段 */
@@ -1853,6 +1857,18 @@ routes.edit = async (arg) => {
   document.addEventListener('dragover', onDropDragOver);
   document.addEventListener('dragleave', onDropDragLeave);
   document.addEventListener('drop', onDropDrop);
+  /* 剪贴板粘贴图片：剪贴板里是图片时（右键粘贴 / Ctrl+V）上传 R2 并插入光标处，走与拖放相同的管线；纯文字粘贴不受影响 */
+  ta.addEventListener('paste', async (e) => {
+    const cd = e.clipboardData || window.clipboardData;
+    if (!cd) return;
+    let imgs = Array.from(cd.files || []).filter((f) => f.type && f.type.startsWith('image/'));
+    if (!imgs.length) {
+      imgs = Array.from(cd.items || []).filter((it) => it.kind === 'file' && it.type.startsWith('image/')).map((it) => it.getAsFile()).filter(Boolean);
+    }
+    if (!imgs.length) return;
+    e.preventDefault();
+    await importDroppedImages(imgs);
+  });
 };
 
 /* ---------- 网站公告：src/config/announcementConfig.ts ---------- */
@@ -2224,7 +2240,7 @@ async function friendsMgr(body, invalidateCache) {
           fe.querySelectorAll('[data-k]').forEach((el) => {
             const k = el.dataset.k;
             if (k === 'enabled') f.enabled = el.checked;
-            else if (k === 'tags') f.tags = el.value.split(',').map((s) => s.trim()).filter(Boolean);
+            else if (k === 'tags') f.tags = el.value.split(/[,，、]/).map((s) => s.trim()).filter(Boolean);
             else f[k] = el.value.trim();
           });
           if (!f.title || !f.siteurl) { toast('站名和网址必填', true); return; }
@@ -2256,7 +2272,7 @@ async function friendsMgr(body, invalidateCache) {
       box.querySelectorAll('[data-k]').forEach((el) => {
         const k = el.dataset.k;
         if (k === 'enabled') f.enabled = el.checked;
-        else if (k === 'tags') f.tags = el.value.split(',').map((s) => s.trim()).filter(Boolean);
+        else if (k === 'tags') f.tags = el.value.split(/[,，、]/).map((s) => s.trim()).filter(Boolean);
         else f[k] = el.value.trim();
       });
       if (!f.title || !f.siteurl) { toast('站名和网址必填', true); return; }
@@ -2799,7 +2815,7 @@ routes.timeline = async () => {
       const sub = v('#tl-subtitle'); if (sub) obj.subtitle = sub;
       const det = v('#tl-details').split('\n').map((s) => s.trim()).filter(Boolean);
       if (det.length) obj.details = det;
-      const tags = v('#tl-tags').split(/[,，]/).map((s) => s.trim()).filter(Boolean);
+      const tags = v('#tl-tags').split(/[,，、]/).map((s) => s.trim()).filter(Boolean);
       if (tags.length) obj.tags = tags;
       const link = v('#tl-link'); if (link) obj.link = link;
       const img = v('#tl-image'); if (img) obj.image = img;

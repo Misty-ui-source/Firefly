@@ -399,7 +399,7 @@ routes['gallery-new'] = async () => {
       description: $('#af-desc').value.trim(),
       location: $('#af-location').value.trim(),
       date: $('#af-date').value,
-      tags: $('#af-tags').value.split(',').map((s) => s.trim()).filter(Boolean),
+      tags: $('#af-tags').value.split(/[,，、]/).map((s) => s.trim()).filter(Boolean),
       cover: '',
       password: $('#af-pw').value,
       passwordHint: $('#af-pwhint').value.trim(),
@@ -440,7 +440,7 @@ routes['gallery-edit'] = async (id) => {
       description: $('#af-desc').value.trim(),
       location: $('#af-location').value.trim(),
       date: $('#af-date').value,
-      tags: $('#af-tags').value.split(',').map((s) => s.trim()).filter(Boolean),
+      tags: $('#af-tags').value.split(/[,，、]/).map((s) => s.trim()).filter(Boolean),
       passwordHint: $('#af-pwhint').value.trim(),
       password: pwClear ? '' : (pwInput ? pwInput : album.password),
     };
