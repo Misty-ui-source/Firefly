@@ -574,9 +574,18 @@ routes.login = () => {
     { text: '山重水复疑无路，柳暗花明又一村。', from: '陆游' },
     { text: '纸上得来终觉浅，绝知此事要躬行。', from: '陆游' },
   ];
-  const q = quotes[Math.floor(Math.random() * quotes.length)];
-  $('#quote-text').textContent = '\u201C' + q.text + '\u201D';
-  $('#quote-from').textContent = '— ' + q.from;
+  const showQuote = (text, from) => {
+    const qt = $('#quote-text'), qf = $('#quote-from');
+    if (qt) qt.textContent = '\u201C' + text + '\u201D';
+    if (qf) qf.textContent = '— ' + from;
+  };
+  const local = quotes[Math.floor(Math.random() * quotes.length)];
+  showQuote(local.text, local.from);
+  /* 一言接口优先，失败回落本地 */
+  fetch('https://v1.hitokoto.cn/?c=a&c=b&c=c&c=d&c=e&c=f&c=g&c=h&c=i&c=j&c=k')
+    .then(r => r.ok ? r.json() : null)
+    .then(d => { if (d && d.hitokoto) showQuote(d.hitokoto, d.from_who || d.from || '一言'); })
+    .catch(() => { /* 保持本地名言 */ });
 };
 
 /* 首页 */
