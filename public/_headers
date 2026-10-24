@@ -1,0 +1,9 @@
+# 控制台是管理工具，代码文件不许被浏览器长缓存：
+# 线上默认 Cache-Control 是 max-age=14400（4 小时），新版 app.js 推上去后旧设备 4 小时内都不回源，
+# 2026-10-24 手机端背景上线时就被这个坑挡住。no-cache = 可以存，但每次用前必须回源校验（ETag 304 很便宜）。
+/admin
+  Cache-Control: no-cache
+/admin/
+  Cache-Control: no-cache
+/admin/*
+  Cache-Control: no-cache

@@ -3,7 +3,7 @@
  * /api/*、GitHub、R2、Umami 都不进缓存，保证打开看到的永远是新鲜数据。
  * 同源静态资源走 network-first：有网永远拿最新版，断网才用缓存兜底。
  */
-const CACHE = 'console-shell-v1';
+const CACHE = 'console-shell-v2';
 const SHELL = [
   './',
   './index.html',
@@ -40,7 +40,8 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
   if (url.pathname.includes('/api/')) return;
   e.respondWith(
-    fetch(e.request)
+    /* cache:'no-cache' 强制回源校验：绕开浏览器 4 小时 HTTP 长缓存，否则 network-first 会被本地缓存截胡 */
+    fetch(e.request, { cache: 'no-cache' })
       .then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));
