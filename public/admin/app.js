@@ -1572,6 +1572,77 @@ routes.edit = async (arg) => {
       else if (k === 'hr') insertAtCursor('\n---\n');
     };
   });
+  /* ---------- 正文右键菜单：工具栏全部 Markdown 动作搬到光标处，写长文不用滚回顶部 ---------- */
+  const ctxMenu = document.createElement('div');
+  ctxMenu.className = 'ctx-menu hidden';
+  ctxMenu.innerHTML = `
+    <div class="ctx-group">格式</div>
+    <button type="button" data-c="bold">加粗</button>
+    <button type="button" data-c="italic">斜体</button>
+    <button type="button" data-c="quote">引用</button>
+    <button type="button" data-c="code">行内代码</button>
+    <button type="button" data-c="link">链接</button>
+    <button type="button" data-c="hl">高亮</button>
+    <div class="ctx-group">插入</div>
+    <button type="button" data-c="task">任务列表</button>
+    <button type="button" data-c="table">表格</button>
+    <button type="button" data-c="hr">分割线</button>
+    <button type="button" data-c="video">🎬 视频</button>
+    <button type="button" data-c="img">🖼 图片</button>
+    <button type="button" data-c="import">📥 导入文件</button>
+    <div class="ctx-group">代码块</div>
+    <button type="button" data-c="cb:powershell">PowerShell</button>
+    <button type="button" data-c="cb:batch">CMD / Batch</button>
+    <button type="button" data-c="cb:bash">Bash</button>
+    <button type="button" data-c="cb:js">JavaScript</button>
+    <button type="button" data-c="cb:ts">TypeScript</button>
+    <button type="button" data-c="cb:python">Python</button>
+    <button type="button" data-c="cb:text">纯文本</button>`;
+  view.appendChild(ctxMenu);
+  let ctxSel = null; /* 打开菜单时存下选区，执行前还原，防点菜单把选区弄丢 */
+  const hideCtx = () => { ctxMenu.classList.add('hidden'); };
+  const insertCodeBlock = (lang) => {
+    const s = ta.selectionStart, e = ta.selectionEnd;
+    const sel = ta.value.slice(s, e);
+    const head = '\n```' + lang + '\n';
+    const text = head + sel + '\n```\n';
+    ta.value = ta.value.slice(0, s) + text + ta.value.slice(e);
+    ta.focus();
+    ta.selectionStart = ta.selectionEnd = s + head.length + sel.length;
+    updCount();
+  };
+  const runCtx = (c) => {
+    if (ctxSel) { ta.focus(); ta.selectionStart = ctxSel[0]; ta.selectionEnd = ctxSel[1]; }
+    if (c === 'bold') wrapSel('**', '**', '加粗文字');
+    else if (c === 'italic') wrapSel('*', '*', '斜体文字');
+    else if (c === 'quote') wrapSel('\n> ', '', '引用内容');
+    else if (c === 'code') wrapSel('`', '`', '代码');
+    else if (c === 'link') wrapSel('[', '](https://)', '链接文字');
+    else if (c === 'hl') wrapSel('==', '==', '高亮文字');
+    else if (c === 'task') insertAtCursor('\n- [ ] 任务\n');
+    else if (c === 'table') insertAtCursor('\n| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n|  |  |  |\n');
+    else if (c === 'hr') insertAtCursor('\n---\n');
+    else if (c === 'video') $('#btn-video').click();
+    else if (c === 'img') $('#btn-img').click();
+    else if (c === 'import') $('#btn-import').click();
+    else if (c.startsWith('cb:')) insertCodeBlock(c.slice(3));
+  };
+  ctxMenu.querySelectorAll('button[data-c]').forEach((b) => {
+    b.addEventListener('mousedown', (ev) => ev.preventDefault());
+    b.addEventListener('click', () => { hideCtx(); runCtx(b.dataset.c); });
+  });
+  ta.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    ctxSel = [ta.selectionStart, ta.selectionEnd];
+    ctxMenu.classList.remove('hidden');
+    const mw = ctxMenu.offsetWidth, mh = ctxMenu.offsetHeight;
+    ctxMenu.style.left = Math.min(e.clientX, window.innerWidth - mw - 8) + 'px';
+    ctxMenu.style.top = Math.min(e.clientY, window.innerHeight - mh - 8) + 'px';
+  });
+  document.addEventListener('mousedown', (e) => { if (!ctxMenu.contains(e.target)) hideCtx(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideCtx(); });
+  window.addEventListener('blur', hideCtx);
+  ta.addEventListener('scroll', hideCtx);
   /* 在光标处插入文本（不包裹选区） */
   function insertAtCursor(text) {
     const s = ta.selectionStart, e = ta.selectionEnd;
