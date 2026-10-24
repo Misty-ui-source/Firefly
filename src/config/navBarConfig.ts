@@ -66,7 +66,18 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 			LinkPresets.Projects,
 
 			// 相册
-			LinkPresets.Gallery,
+			{
+				name: "相册",
+				url: "/gallery/",
+				icon: "material-symbols:photo-library",
+				children: [
+					{
+						name: "时间线",
+						url: "/gallery/timeline/",
+						icon: "material-symbols:timeline",
+					},
+				],
+			},
 
 			// 书签导航
 			LinkPresets.Booknav,
