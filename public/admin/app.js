@@ -561,10 +561,19 @@ const BG_ROTATE_KEY = 'admin-inner-bg-rotate';
 function bgRotateOn() {
   try { return localStorage.getItem(BG_ROTATE_KEY) !== '0'; } catch (e) { return true; }
 }
+const INNER_BG_CUSTOMS_KEY = 'admin-inner-bg-customs';
 function innerBgPool() {
   const pool = INNER_BG_POOL.slice();
   if (BG_CUSTOM_EXISTS) pool.push(INNER_BG_CUSTOM);
-  return pool;
+  return pool.concat(bgCustomsList(INNER_BG_CUSTOMS_KEY, null));
+}
+/* 自定义背景图列表读取（本机 localStorage，JSON 数组 of R2 直链）；
+ * 旧版单张时代 fixed 本身是直链时把它并入列表（只读迁移，不丢图） */
+function bgCustomsList(listKey, fixedVal) {
+  let list = [];
+  try { const v = JSON.parse(localStorage.getItem(listKey) || '[]'); if (Array.isArray(v)) list = v.filter((u) => /^https?:\/\//.test(u)); } catch (e) {}
+  if (fixedVal && /^https?:\/\//.test(fixedVal) && !list.includes(fixedVal)) list = [fixedVal, ...list];
+  return list;
 }
 /* ---------- 手机端背景：登录页（外部）与内页（内部）各一套独立设置（键名前缀 login / inner） ----------
  * 仅 ≤743px 宽度生效（手机横竖屏）；平板/桌面完全不受影响，仍走上面的桌面图池。
@@ -596,7 +605,10 @@ function mobileBgFit() {
 function mobileBgSources() {
   const fixed = mobileBgFixed();
   if (fixed === 'none') return null;
-  if (mobileBgRotateOn()) return MOBILE_BG_BUILTINS.map((f) => './' + f);
+  if (mobileBgRotateOn()) {
+    const refs = MOBILE_BG_BUILTINS.map((f) => './' + f);
+    return refs.concat(bgCustomsList(MOBILE_BG_KEY + '-customs', fixed));
+  }
   return [/^https?:\/\//.test(fixed) ? fixed : './' + fixed];
 }
 /* 登录页手机图：独立的一套设置（admin-login-bg-mobile*），与内页互不影响；
@@ -650,7 +662,7 @@ function applyInnerBg(force) {
     return;
   }
   document.body.classList.add('has-bg');
-  let effPool = pool, refOf = (f) => './' + f;
+  let effPool = pool, refOf = (f) => (/^https?:\/\//.test(f) ? f : './' + f);
   if (mSrc) {
     /* 手机专用图：按显示方式（铺满/完整）呈现，位置居中；轮换机制与桌面图池共用下面的计时器 */
     effPool = mSrc; refOf = (f) => f;
@@ -682,9 +694,12 @@ function paintLoginStage() {
   const stage = document.querySelector('.login-stage');
   if (!stage) return;
   const bgFile = (CFG.adminBg || 'login-art.jpg').replace(/^\/+/, '');
-  let src = './' + bgFile, size = '', pos = '';
+  let src = /^https?:\/\//.test(bgFile) ? bgFile : './' + bgFile, size = '', pos = '';
   if (isPhoneWidth() && bgRotateOn() && loginBgFixed() !== 'none') {
-    if (loginBgRotateOn()) src = './' + MOBILE_BG_BUILTINS[Math.floor(Math.random() * MOBILE_BG_BUILTINS.length)];
+    if (loginBgRotateOn()) {
+      const pool = MOBILE_BG_BUILTINS.map((f) => './' + f).concat(bgCustomsList(LOGIN_BG_KEY + '-customs', loginBgFixed()));
+      src = pool[Math.floor(Math.random() * pool.length)];
+    }
     else { const f = loginBgFixed(); src = /^https?:\/\//.test(f) ? f : './' + f; }
     size = loginBgFit(); pos = 'center';
   }

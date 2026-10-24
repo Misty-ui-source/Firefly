@@ -396,18 +396,18 @@ routes.images = async () => {
 
     <div class="card">
       <h2>🖥 控制台背景 <span class="sub">public/admin/login-art.jpg（登录页全屏背景）</span></h2>
-      <p class="hint">登录页的背景图。预设一键切换，或自己上传一张（自动转 JPEG 覆盖 login-art.jpg）。config.js 的 adminBg 决定当前用哪张。</p>
+      <p class="hint">登录页的背景图。预设一键切换，或自己上传（走 R2，保留在列表里随时切换，不覆盖原图）。config.js 的 adminBg 决定当前用哪张。</p>
       <div class="img-grid" id="adminbg-grid"></div>
       <div class="toolbar">
         <input type="file" id="adminbg-file" accept="image/*" class="hidden">
-        <button class="btn btn-small" id="adminbg-btn">📤 上传替换当前背景</button>
+        <button class="btn btn-small" id="adminbg-btn">📤 上传新背景图</button>
       </div>
       <h3 class="sub-h">📱 手机版登录背景 <span class="sub">仅手机宽度（≤743px）· 桌面/平板仍用上面的图</span></h3>
       <div class="switch-row">
         <label class="switch"><input type="checkbox" id="lmbg-rotate" checked><span class="slider"></span></label>
-        <span>三图轮换 <span class="hint">每次打开登录页随机抽一张竖版波奇图；关闭则固定用下面选中的图</span></span>
+        <span>图片轮换 <span class="hint">每次打开登录页从内置竖图和自定义图里随机抽一张；关闭则固定用下面选中的图</span></span>
       </div>
-      <p class="hint">点任意一张即固定为该图（自动关轮换）。自定义上传走 R2 并固定使用。清除后手机登录页回退用上面的桌面背景。</p>
+      <p class="hint">点任意一张即固定为该图（自动关轮换）。上传的自定义图会保留在列表里，也会加入轮换；删除只是移出列表，不删 R2 原图。清除后手机登录页回退用上面的桌面背景。</p>
       <div class="img-grid" id="lmbg-grid"></div>
       <div class="switch-row">
         <span>显示方式</span>
@@ -428,7 +428,7 @@ routes.images = async () => {
         <label class="switch"><input type="checkbox" id="innerbg-rotate" checked><span class="slider"></span></label>
         <span>背景轮换 <span class="hint">多张背景每 30 秒淡入淡出切换；关闭则用纯色主题背景</span></span>
       </div>
-      <p class="hint">轮换池：下面这些图会自动轮换播放。上传新图会加入轮换（自动转 JPEG 存为 admin-inner-bg.jpg）。</p>
+      <p class="hint">轮换池：下面这些图会自动轮换播放。上传新图走 R2 加入轮换池并一直保留，可逐张删除（只移出池子，不删 R2 原图）。</p>
       <div class="img-grid" id="innerbg-grid"></div>
       <div class="toolbar">
         <input type="file" id="innerbg-file" accept="image/*" class="hidden">
@@ -437,9 +437,9 @@ routes.images = async () => {
       <h3 class="sub-h">📱 手机版内页背景 <span class="sub">仅手机宽度（≤743px）· 桌面/平板仍用上面的轮换池</span></h3>
       <div class="switch-row">
         <label class="switch"><input type="checkbox" id="mbg-rotate" checked><span class="slider"></span></label>
-        <span>三图轮换 <span class="hint">3 张内置竖版波奇图在内页每 30 秒轮换；关闭则固定用下面选中的图</span></span>
+        <span>图片轮换 <span class="hint">内置竖图和自定义图在内页每 30 秒轮换；关闭则固定用下面选中的图</span></span>
       </div>
-      <p class="hint">点任意一张即固定为该图（自动关轮换）。自定义上传走 R2 并固定使用。清除后手机端内页回退用桌面背景（位置做竖屏适配）。</p>
+      <p class="hint">点任意一张即固定为该图（自动关轮换）。上传的自定义图会保留在列表里，也会加入轮换；删除只是移出列表，不删 R2 原图。清除后手机端内页回退用桌面背景（位置做竖屏适配）。</p>
       <div class="img-grid" id="mbg-grid"></div>
       <div class="switch-row">
         <span>显示方式</span>
@@ -529,6 +529,9 @@ routes.images = async () => {
     renderAdminBg();
     toast('控制台背景已切换（重新进登录页生效）');
   }
+  /* 桌面登录背景的自定义图列表（R2 直链存本机，可多张保留） */
+  function adminBgCustoms() { try { const v = JSON.parse(localStorage.getItem('admin-bg-customs') || '[]'); return Array.isArray(v) ? v.filter((u) => /^https?:\/\//.test(u)) : []; } catch (e) { return []; } }
+  function saveAdminBgCustoms(list) { try { localStorage.setItem('admin-bg-customs', JSON.stringify(list)); } catch (e) {} }
   function renderAdminBg() {
     const g = $('#adminbg-grid');
     g.innerHTML = '';
@@ -544,6 +547,25 @@ routes.images = async () => {
       };
       g.appendChild(d);
     });
+    adminBgCustoms().forEach((u, i, arr) => {
+      const name = '自定义上传' + (arr.length > 1 ? ' ' + (i + 1) : '');
+      const d = document.createElement('div');
+      d.className = 'img-cell';
+      d.innerHTML = `<img loading="lazy" src="${esc(u)}" alt="${esc(name)}">
+        <div class="url" title="${esc(name)}">${esc(name)}${u === cur ? ' ✅ 使用中' : ''}</div>
+        <div class="ops"><button class="mini-btn" data-a="use"${u === cur ? ' disabled' : ''}>设为背景</button><button class="mini-btn" data-a="del">删除</button></div>`;
+      d.querySelector('[data-a=use]').onclick = async () => {
+        try { await setAdminBg(u); } catch (e) { toast(e.message, true); }
+      };
+      d.querySelector('[data-a=del]').onclick = async () => {
+        if (!confirm('删除这张自定义背景？只是移出列表，R2 上的原图不会删。')) return;
+        saveAdminBgCustoms(adminBgCustoms().filter((x) => x !== u));
+        if (CFG.adminBg === u) { try { await setAdminBg('login-art.jpg'); } catch (e) { toast(e.message, true); } }
+        renderAdminBg();
+        toast('已删除这张自定义背景');
+      };
+      g.appendChild(d);
+    });
   }
   renderAdminBg();
   $('#adminbg-btn').onclick = () => $('#adminbg-file').click();
@@ -551,12 +573,13 @@ routes.images = async () => {
     const f = e.target.files[0];
     e.target.value = '';
     if (!f) return;
-    if (!confirm('用这张替换当前登录页背景图（login-art.jpg）？原图会被覆盖。')) return;
-    toast('背景替换中…');
+    toast('上传中…');
     try {
-      await replaceRepoImage('public/admin/login-art.jpg', f, { format: 'image/jpeg', quality: 0.85, label: '控制台背景' });
-      toast('背景已替换（重新进登录页生效）');
-      renderAdminBg();
+      const { urls } = await uploadImages([f], 'admin/login-bg');
+      const list = adminBgCustoms();
+      if (!list.includes(urls[0])) { list.push(urls[0]); saveAdminBgCustoms(list); }
+      oplogRecord('图片', '上传', '登录页背景自定义图', f.name);
+      await setAdminBg(urls[0]); // 上传完直接设为当前背景（setAdminBg 内部会重渲染并提示）
     } catch (err) { toast(err.message, true); }
   };
 
@@ -566,6 +589,9 @@ routes.images = async () => {
     { file: 'login-art-alt.jpg', name: '星空海滨站' },
     { file: 'login-art-sketch.png', name: '波奇草稿' },
   ];
+  /* 桌面内页背景的自定义图列表（R2 直链存本机，进轮换池，可多张保留） */
+  function innerCustoms() { try { const v = JSON.parse(localStorage.getItem('admin-inner-bg-customs') || '[]'); return Array.isArray(v) ? v.filter((u) => /^https?:\/\//.test(u)) : []; } catch (e) { return []; } }
+  function saveInnerCustoms(list) { try { localStorage.setItem('admin-inner-bg-customs', JSON.stringify(list)); } catch (e) {} }
   function renderInnerBg() {
     const g = $('#innerbg-grid');
     if (!g) return;
@@ -576,13 +602,23 @@ routes.images = async () => {
       hasCustom = (typeof BG_CUSTOM_EXISTS !== 'undefined') && BG_CUSTOM_EXISTS;
       customName = localStorage.getItem('admin-inner-bg-custom-name') || '自定义上传';
     } catch (e) {}
-    const list = INNERBG_PRESETS.concat(hasCustom ? [{ file: 'admin-inner-bg.jpg', name: customName, custom: true }] : []);
+    const list = INNERBG_PRESETS.concat(hasCustom ? [{ file: 'admin-inner-bg.jpg', name: customName, custom: true }] : [])
+      .concat(innerCustoms().map((u, i, arr) => ({ file: u, name: '自定义上传' + (arr.length > 1 ? ' ' + (i + 1) : ''), customUrl: true })));
     list.forEach((p) => {
       const d = document.createElement('div');
       d.className = 'img-cell';
-      d.innerHTML = `<img loading="lazy" src="${repoRawUrl('public/admin/' + p.file)}" alt="${esc(p.name)}">
+      d.innerHTML = `<img loading="lazy" src="${p.customUrl ? esc(p.file) : repoRawUrl('public/admin/' + p.file)}" alt="${esc(p.name)}">
         <div class="url" title="${esc(p.name)}">${esc(p.name)}</div>
-        ${p.custom ? '<div class="ops"><button class="mini-btn" data-a="rename">✏️ 改名</button></div>' : ''}`;
+        ${p.custom ? '<div class="ops"><button class="mini-btn" data-a="rename">✏️ 改名</button></div>' : ''}${p.customUrl ? '<div class="ops"><button class="mini-btn" data-a="del">删除</button></div>' : ''}`;
+      if (p.customUrl) {
+        d.querySelector('[data-a=del]').onclick = () => {
+          if (!confirm('删除这张自定义背景？只是移出轮换池，R2 上的原图不会删。')) return;
+          saveInnerCustoms(innerCustoms().filter((u) => u !== p.file));
+          applyInnerBg(true);
+          renderInnerBg();
+          toast('已移出轮换池');
+        };
+      }
       if (p.custom) {
         d.querySelector('[data-a=rename]').onclick = () => {
           const v = prompt('给这张自定义背景起个名字：', customName);
@@ -614,14 +650,15 @@ routes.images = async () => {
     const f = e.target.files[0];
     e.target.value = '';
     if (!f) return;
-    if (typeof BG_CUSTOM_EXISTS !== 'undefined' && BG_CUSTOM_EXISTS && !confirm('已经有一张自定义内部背景了，上传这张会替换掉它，继续？')) return;
     toast('上传中…');
     try {
-      await replaceRepoImage('public/admin/admin-inner-bg.jpg', f, { format: 'image/jpeg', quality: 0.85, maxDim: 1920, label: '内部背景' });
-      try { if (typeof BG_CUSTOM_EXISTS !== 'undefined') BG_CUSTOM_EXISTS = true; } catch (e2) {}
+      const { urls } = await uploadImages([f], 'admin/inner-bg');
+      const list = innerCustoms();
+      if (!list.includes(urls[0])) { list.push(urls[0]); saveInnerCustoms(list); }
+      oplogRecord('图片', '上传', '内部背景自定义图', f.name);
       applyInnerBg(true);
       renderInnerBg();
-      toast('已加入轮换');
+      toast('已加入轮换（会一直保留在池子里）');
     } catch (err) { toast(err.message, true); }
   };
 
@@ -635,6 +672,16 @@ routes.images = async () => {
   function mbgSet(key, v) { try { localStorage.setItem(key, v); } catch (e) {} }
   /* scope: { p 元素 id 前缀, fixed/rotate/fit 三个 localStorage 键, dir R2 上传目录, noun 名称, apply 改完立即生效的刷新函数 } */
   function setupPhoneBg(scope) {
+    const CKEY = scope.fixed + '-customs'; // 自定义图列表键（JSON 数组 of R2 直链）
+    function customs() {
+      let list = [];
+      try { const v = JSON.parse(mbgGet(CKEY, '[]')); if (Array.isArray(v)) list = v.filter((u) => /^https?:\/\//.test(u)); } catch (e) {}
+      const fx = mbgGet(scope.fixed, '');
+      /* 旧版单张时代 fixed 本身是直链：并入列表并落盘，那张图不丢 */
+      if (/^https?:\/\//.test(fx) && !list.includes(fx)) { list = [fx, ...list]; mbgSet(CKEY, JSON.stringify(list)); }
+      return list;
+    }
+    function saveCustoms(list) { mbgSet(CKEY, JSON.stringify(list)); }
     function render() {
       const g = $('#' + scope.p + '-grid');
       if (!g) return;
@@ -643,15 +690,15 @@ routes.images = async () => {
       const fit = mbgGet(scope.fit, 'cover');
       const cleared = fixed === 'none';
       const cells = MBG_BUILTINS.slice();
-      if (/^https?:\/\//.test(fixed)) cells.push({ file: fixed, name: '自定义上传', custom: true });
+      customs().forEach((u, i, arr) => cells.push({ file: u, name: '自定义上传' + (arr.length > 1 ? ' ' + (i + 1) : ''), custom: true }));
       g.innerHTML = cleared ? '<p class="hint">当前已清除：手机端回退使用桌面背景。点任意一张图可重新启用手机背景。</p>' : '';
       cells.forEach((p) => {
         const active = !cleared && !rotate && fixed === p.file;
         const d = document.createElement('div');
         d.className = 'img-cell';
         d.innerHTML = `<img loading="lazy" src="${p.custom ? esc(p.file) : repoRawUrl('public/admin/' + p.file)}" alt="${esc(p.name)}">
-          <div class="url" title="${esc(p.name)}">${esc(p.name)}${active ? ' ✅ 固定使用中' : (!cleared && rotate && !p.custom ? ' · 轮换中' : '')}</div>
-          <div class="ops"><button class="mini-btn" data-a="fix"${active ? ' disabled' : ''}>固定这张</button></div>`;
+          <div class="url" title="${esc(p.name)}">${esc(p.name)}${active ? ' ✅ 固定使用中' : (!cleared && rotate ? ' · 轮换中' : '')}</div>
+          <div class="ops"><button class="mini-btn" data-a="fix"${active ? ' disabled' : ''}>固定这张</button>${p.custom ? '<button class="mini-btn" data-a="del">删除</button>' : ''}</div>`;
         d.querySelector('[data-a=fix]').onclick = () => {
           mbgSet(scope.fixed, p.file);
           mbgSet(scope.rotate, '0');
@@ -659,6 +706,14 @@ routes.images = async () => {
           scope.apply();
           render();
           toast(`手机版${scope.noun}背景已固定为「${p.name}」`);
+        };
+        if (p.custom) d.querySelector('[data-a=del]').onclick = () => {
+          if (!confirm('删除这张自定义背景？只是移出列表，R2 上的原图不会删。')) return;
+          saveCustoms(customs().filter((u) => u !== p.file));
+          if (mbgGet(scope.fixed, '') === p.file) mbgSet(scope.fixed, 'bg-m-pink.webp');
+          scope.apply();
+          render();
+          toast('已删除这张自定义背景');
         };
         g.appendChild(d);
       });
@@ -671,7 +726,7 @@ routes.images = async () => {
           if (sw.checked && mbgGet(scope.fixed, '') === 'none') mbgSet(scope.fixed, 'bg-m-pink.webp');
           scope.apply();
           render();
-          toast(sw.checked ? `手机版${scope.noun}背景轮换已开启（三张竖图轮换）` : `手机版${scope.noun}背景轮换已关闭，固定当前选图`);
+          toast(sw.checked ? `手机版${scope.noun}背景轮换已开启（内置图与自定义图一起轮换）` : `手机版${scope.noun}背景轮换已关闭，固定当前选图`);
         };
       } else if (sw) { sw.checked = rotate; }
       const fc = $('#' + scope.p + '-fit-cover'), ft = $('#' + scope.p + '-fit-contain');
@@ -692,6 +747,8 @@ routes.images = async () => {
       toast('上传中…');
       try {
         const { urls } = await uploadImages([f], scope.dir);
+        const list = customs();
+        if (!list.includes(urls[0])) { list.push(urls[0]); saveCustoms(list); }
         mbgSet(scope.fixed, urls[0]);
         mbgSet(scope.rotate, '0');
         const sw = $('#' + scope.p + '-rotate'); if (sw) sw.checked = false;
