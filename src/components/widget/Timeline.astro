@@ -4,142 +4,87 @@ import type { TimelineItem } from "@/types/timelineConfig";
 
 const { items, title, enabled } = timelineConfig;
 const activeItems = items.filter((item) => item.enabled !== false);
+
+// 按日期分组（日期倒序）
+const groups = new Map<string, TimelineItem[]>();
+for (const item of activeItems) {
+  const k = item.date;
+  if (!groups.has(k)) groups.set(k, []);
+  groups.get(k)!.push(item);
+}
+const sortedKeys = [...groups.keys()].sort((a, b) => b.localeCompare(a));
 ---
 
 {enabled && activeItems.length > 0 && (
-	<section class="timeline-section">
-		<h2 class="timeline-title">{title || "时间线"}</h2>
-		<div class="timeline">
-			{activeItems.map((item: TimelineItem) => (
-				<div class={`timeline-item ${item.featured ? "featured" : ""}`}>
-					<div class="timeline-date">
-						<span class="date">{item.date}</span>
-						<span class="type">{item.type}</span>
-						{item.featured && <span class="featured-badge">精选</span>}
-					</div>
-					<div class="timeline-content">
-						<h3>{item.title}</h3>
-						{item.subtitle && <p class="subtitle">{item.subtitle}</p>}
-						<p class="description">{item.description}</p>
-						{item.details && item.details.length > 0 && (
-							<ul class="details">
-								{item.details.map((d) => (
-									<li>{d}</li>
-								))}
-							</ul>
-						)}
-						{item.tags && item.tags.length > 0 && (
-							<div class="tags">
-								{item.tags.map((t) => (
-									<span class="tag">{t}</span>
-								))}
-							</div>
-						)}
-						{item.link && (
-							<a href={item.link} target="_blank" rel="noopener" class="timeline-link">
-								查看详情 →
-							</a>
-						)}
-					</div>
-				</div>
-			))}
-		</div>
-	</section>
-)}
+  <div class="border-2 border-black dark:border-white rounded-2xl p-6 md:p-8 bg-white dark:bg-black">
+    <div class="flex items-center gap-4 mb-8">
+      <div class="w-14 h-14 rounded-2xl bg-[var(--primary)] flex items-center justify-center shrink-0">
+        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-3xl font-bold">{title || "时间线"}</h1>
+        <p class="text-sm opacity-60 mt-1">我的历程记录</p>
+      </div>
+    </div>
 
-<style>
-	.timeline-section {
-		margin: 2rem 0;
-	}
-	.timeline-title {
-		font-size: 1.5rem;
-		font-weight: 700;
-		margin-bottom: 1.5rem;
-	}
-	.timeline {
-		position: relative;
-		padding-left: 1.5rem;
-		border-left: 2px solid var(--card-border);
-	}
-	.timeline-item {
-		position: relative;
-		margin-bottom: 2rem;
-		padding-left: 1rem;
-	}
-	.timeline-item::before {
-		content: "";
-		position: absolute;
-		left: -1.5rem;
-		top: 0.3rem;
-		width: 0.7rem;
-		height: 0.7rem;
-		border-radius: 50%;
-		background: var(--accent);
-		transform: translateX(-50%);
-	}
-	.timeline-item.featured::before {
-		width: 1rem;
-		height: 1rem;
-		background: #dc2626;
-	}
-	.timeline-date {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-		margin-bottom: 0.5rem;
-		font-size: 0.85rem;
-		color: var(--text-muted);
-	}
-	.timeline-date .date {
-		font-weight: 700;
-		color: var(--text);
-	}
-	.timeline-date .type {
-		background: var(--card-bg);
-		border: 1px solid var(--card-border);
-		border-radius: 4px;
-		padding: 0.1rem 0.4rem;
-	}
-	.featured-badge {
-		background: #dc2626;
-		color: #fff;
-		border-radius: 4px;
-		padding: 0.1rem 0.4rem;
-		font-size: 0.75rem;
-	}
-	.timeline-content h3 {
-		font-size: 1.2rem;
-		margin-bottom: 0.3rem;
-	}
-	.timeline-content .subtitle {
-		color: var(--text-muted);
-		margin-bottom: 0.5rem;
-	}
-	.timeline-content .description {
-		margin-bottom: 0.5rem;
-	}
-	.timeline-content .details {
-		margin: 0.5rem 0;
-		padding-left: 1.2rem;
-	}
-	.timeline-content .details li {
-		margin-bottom: 0.3rem;
-	}
-	.timeline-content .tags {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem;
-		margin-top: 0.5rem;
-	}
-	.timeline-content .tag {
-		background: var(--teal-light);
-		border-radius: 4px;
-		padding: 0.15rem 0.5rem;
-		font-size: 0.8rem;
-	}
-	.timeline-link {
-		display: inline-block;
-		margin-top: 0.5rem;
-		color: var(--accent);
-	}
-</style>
+    <div>
+      {sortedKeys.map((key) => {
+        const items = groups.get(key)!;
+        return (
+          <div class="relative pl-12 pb-8 last:pb-0">
+            <div class="absolute left-5 top-10 bottom-0 w-px bg-black/10 dark:bg-white/10"></div>
+            <div class="absolute left-0 top-0 w-10 h-10 rounded-full border-2 border-[var(--primary)] bg-white dark:bg-black flex items-center justify-center">
+              <svg class="w-4 h-4 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div class="flex items-center gap-3 mb-4 pt-1">
+              <span class="text-xl font-bold">{key}</span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)]">
+                {items.length} 条
+              </span>
+            </div>
+            <div class="space-y-4">
+              {items.map((item) => (
+                <div class="border border-black/10 dark:border-white/10 rounded-2xl p-4 hover:border-[var(--primary)] transition-colors">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-black/5 dark:bg-white/5">{item.type}</span>
+                    {item.featured && (
+                      <span class="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-500">精选</span>
+                    )}
+                  </div>
+                  <h2 class="font-bold mb-1 leading-snug text-lg">{item.title}</h2>
+                  {item.subtitle && (
+                    <p class="text-sm opacity-60 mb-2">{item.subtitle}</p>
+                  )}
+                  <p class="text-sm opacity-70 mb-2">{item.description}</p>
+                  {item.details && item.details.length > 0 && (
+                    <ul class="text-sm opacity-70 mb-2 space-y-1">
+                      {item.details.map((d) => (
+                        <li class="flex gap-2"><span>•</span><span>{d}</span></li>
+                      ))}
+                    </ul>
+                  )}
+                  {item.tags && item.tags.length > 0 && (
+                    <div class="flex flex-wrap gap-2 mt-2">
+                      {item.tags.map((t) => (
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)]">{t}</span>
+                      ))}
+                    </div>
+                  )}
+                  {item.link && (
+                    <a href={item.link} target="_blank" rel="noopener" class="inline-block mt-2 text-sm text-[var(--primary)] hover:underline">
+                      查看详情 →
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
