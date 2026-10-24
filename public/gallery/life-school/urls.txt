@@ -1,3 +1,7 @@
 # 相册图片 URL 列表：每行一个图片 URL（支持 jpg/png/webp/avif/gif）
 # # 开头的是注释行，会被忽略；空行也会被忽略
 # 由管理台自动维护，也可以手动编辑
+https://img.lanerc.me/admin/gallery/life-school/mvmcelw5-3.20________1.webp
+https://img.lanerc.me/admin/gallery/life-school/mvmcelw5-3.20________2.webp
+https://img.lanerc.me/admin/gallery/life-school/mvmcelw5-_____1.webp
+https://img.lanerc.me/admin/gallery/life-school/mvmcelw5-_____2.webp
