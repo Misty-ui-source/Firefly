@@ -13,9 +13,9 @@ export async function onRequestPost({ request, env }) {
     // 校验 GitHub token：必须能读到目标仓库（有 public_repo 权限的本人 token 才行）
     const check = await fetch(
       `https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}`,
-      { headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${ghToken}` } }
+      { headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${ghToken}`, 'User-Agent': 'AlexanderConsole' } }
     );
-    if (!check.ok) return Response.json({ error: 'GitHub 鉴权失败' }, { status: 401 });
+    if (!check.ok) return Response.json({ error: `GitHub 鉴权失败（${check.status}）` }, { status: 401 });
 
     const form = await request.formData();
     const dir = String(form.get('dir') || '').replace(/^\/+|\/+$/g, '').replace(/\.\./g, '');
