@@ -64,13 +64,13 @@ window.ADMIN_CONFIG = {
   navLayout: {
     primary: ['dashboard', 'stats', 'posts', 'dynamic', 'projects', 'spec'],
     secondary: ['images', 'music', 'gallery', 'announce', 'friends', 'booknav', 'blog', 'waline', 'umami'],
+    homeCards: ['posts', 'dynamic', 'projects', 'spec', 'friends', 'gallery', 'timeline', 'thoughts', 'music', 'waline', 'blog', 'umami'],
     labels: {}, // 自定义名称，如 { dashboard: '🏠 主页' }；不填则用默认
   },
 
   // 外部跳转入口：导航栏点击在新标签页打开，不走控制台内部路由
   navExternal: {
     blog: 'https://lanerc.me/',
-    waline: 'https://waline.lanerc.me/ui',
     umami: 'https://umami.lanerc.me/share/EG15WwHeRvz2lmd2',
   },
 };

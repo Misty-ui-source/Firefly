@@ -999,23 +999,7 @@ routes.dashboard = async () => {
     return { total: n, details: [] };
   };
 
-  const jobs = { posts: postStats, dynamic: dynStats };
-  for (const [key, col] of Object.entries(CFG.collections)) {
-    const d = document.createElement('div');
-    d.className = 'stat';
-    d.innerHTML = `<div class="stat-head"><span class="lbl">${col.label}</span><span class="num">…</span></div><div class="stat-rows"></div>`;
-    d.onclick = () => { location.hash = '#/' + key; };
-    grid.appendChild(d);
-    (async () => {
-      const fn = jobs[key] || simpleStats;
-      const { total, details } = await fn(col);
-      const numEl = d.querySelector('.num');
-      if (numEl) numEl.textContent = total;
-      const rowsEl = d.querySelector('.stat-rows');
-      if (rowsEl) rowsEl.innerHTML = details.map(([icon, label, val]) =>
-        `<div class="stat-row"><span class="dot"></span>${icon} ${label} <b>${esc(String(val))}</b></div>`).join('');
-    })();
-  }
+  /* 首页卡片在下方统一渲染（CARD_DEFS + homeCards 配置），这里只备统计函数 */
 
   // 快捷入口卡：友链 / 相册 / 时间线 / 碎碎念（与上面同款 .stat 卡，点卡跳对应管理页；读不到数据就停在「…」，不挡首页其他内容）
   const parseCfgItems = (text) => {
@@ -1059,28 +1043,70 @@ routes.dashboard = async () => {
       ],
     };
   };
-  const extraCards = [
-    { key: 'friends', label: '友链', fn: friendsCardStats },
-    { key: 'gallery', label: '相册', fn: galleryCardStats },
-    { key: 'timeline', label: '时间线', fn: () => cfgCardStats(TIMELINE_PATH, (it) => it.date) },
-    { key: 'thoughts', label: '碎碎念', fn: () => cfgCardStats(THOUGHTS_PATH, (it) => it.createdAt) },
-  ];
-  for (const { key, label, fn } of extraCards) {
+  /* ---------- 首页卡片（统一注册表）：显示哪些、什么顺序由「🧭 导航」页的 homeCards 配置决定 ---------- */
+  const walineCardStats = async () => {
+    if (typeof walineFetch !== 'function' || typeof wlToken !== 'function' || !wlToken()) {
+      return { total: '—', details: [['🔑', '点开登录后显示数量', '']] };
+    }
+    const all = await walineFetch('/api/comment?type=list&pageSize=1');
+    const wait = await walineFetch('/api/comment?type=list&pageSize=1&status=waiting').catch(() => null);
+    return {
+      total: all && all.count != null ? all.count : '—',
+      details: [['⏳', '待审核', wait && wait.count != null ? wait.count : '—']],
+    };
+  };
+  const musicCardStats = async () => {
+    if (typeof extractConfigValue !== 'function' || typeof splitBraceObjects !== 'function') return null;
+    const data = await ghGetFile('src/config/musicConfig.ts');
+    const blk = extractConfigValue(data.text, 'playlist');
+    if (!blk) return null;
+    return { total: splitBraceObjects(blk.raw).length, details: [] };
+  };
+  /* key 集合要与「🧭 导航」页的 HOME_CARD_KEYS 保持一致 */
+  const CARD_DEFS = {
+    posts: { label: '文章', fn: () => postStats(CFG.collections.posts) },
+    dynamic: { label: '动态', fn: () => dynStats(CFG.collections.dynamic) },
+    projects: { label: '项目', fn: () => simpleStats(CFG.collections.projects) },
+    spec: { label: '单页', fn: () => simpleStats(CFG.collections.spec) },
+    friends: { label: '友链', fn: friendsCardStats },
+    gallery: { label: '相册', fn: galleryCardStats },
+    timeline: { label: '时间线', fn: () => cfgCardStats(TIMELINE_PATH, (it) => it.date) },
+    thoughts: { label: '碎碎念', fn: () => cfgCardStats(THOUGHTS_PATH, (it) => it.createdAt) },
+    music: { label: '音乐', fn: musicCardStats },
+    waline: { label: '评论', fn: walineCardStats },
+    blog: { label: '博客', ext: 'blog', details: [['🌐', 'lanerc.me', '']] },
+    umami: { label: '数据统计', ext: 'umami', details: [['📈', 'Umami 访问统计', '']] },
+  };
+  const homeOrder = (() => {
+    const cfgList = (CFG.navLayout && Array.isArray(CFG.navLayout.homeCards)) ? CFG.navLayout.homeCards : [];
+    const list = cfgList.filter((k, i) => CARD_DEFS[k] && cfgList.indexOf(k) === i);
+    return list.length ? list : Object.keys(CARD_DEFS);
+  })();
+  for (const key of homeOrder) {
+    const def = CARD_DEFS[key];
     const d = document.createElement('div');
     d.className = 'stat';
-    d.innerHTML = `<div class="stat-head"><span class="lbl">${label}</span><span class="num">…</span></div><div class="stat-rows"></div>`;
-    d.onclick = () => { location.hash = '#/' + key; };
+    d.innerHTML = `<div class="stat-head"><span class="lbl">${def.label}</span><span class="num">${def.ext ? '↗' : '…'}</span></div><div class="stat-rows"></div>`;
+    d.onclick = () => {
+      if (def.ext) { const u = CFG.navExternal && CFG.navExternal[def.ext]; if (u) window.open(u, '_blank', 'noopener'); }
+      else location.hash = '#/' + key;
+    };
     grid.appendChild(d);
-    (async () => {
-      let r = null;
-      try { r = await fn(); } catch (e) { /* 单卡失败留「…」占位 */ }
-      if (!r) return;
-      const numEl = d.querySelector('.num');
-      if (numEl) numEl.textContent = r.total;
-      const rowsEl = d.querySelector('.stat-rows');
-      if (rowsEl) rowsEl.innerHTML = r.details.map(([icon, sub, val]) =>
-        `<div class="stat-row"><span class="dot"></span>${icon} ${sub} <b>${esc(String(val))}</b></div>`).join('');
-    })();
+    const rowsHtml = (details) => (details || []).map(([icon, sub, val]) =>
+      `<div class="stat-row"><span class="dot"></span>${icon} ${sub} <b>${esc(String(val))}</b></div>`).join('');
+    if (def.ext) {
+      d.querySelector('.stat-rows').innerHTML = rowsHtml(def.details);
+    } else {
+      (async () => {
+        let r = null;
+        try { r = await def.fn(); } catch (e) { /* 单卡失败留「…」占位 */ }
+        if (!r) return;
+        const numEl = d.querySelector('.num');
+        if (numEl) numEl.textContent = r.total;
+        const rowsEl = d.querySelector('.stat-rows');
+        if (rowsEl) rowsEl.innerHTML = rowsHtml(r.details);
+      })();
+    }
   }
 };
 
@@ -2466,15 +2492,19 @@ routes.navmgr = async () => {
     const labels = {};
     const lm = blk.match(/labels\s*:\s*\{([^}]*)\}/);
     if (lm) lm[1].split(',').forEach((p) => { const mm = p.match(/(\w+)\s*:\s*['"]([^'"]*)['"]/); if (mm) labels[mm[1]] = mm[2]; });
-    return { primary: arr('primary'), secondary: arr('secondary'), labels };
+    return { primary: arr('primary'), secondary: arr('secondary'), homeCards: arr('homeCards'), labels };
   };
-  let layout = parseLayout(cfgText) || { primary: [], secondary: [], labels: {} };
+  let layout = parseLayout(cfgText) || { primary: [], secondary: [], homeCards: [], labels: {} };
   const defs = navDefs();
   const allKeys = Object.keys(defs);
   // 补齐漏掉的 key
   allKeys.forEach((k) => { if (!layout.primary.includes(k) && !layout.secondary.includes(k)) layout.secondary.push(k); });
   layout.primary = layout.primary.filter((k) => allKeys.includes(k));
   layout.secondary = layout.secondary.filter((k) => allKeys.includes(k));
+  /* 首页卡片可选项（与首页 CARD_DEFS 对齐）；配置里没写过 homeCards 时用默认全套 */
+  const HOME_CARD_KEYS = ['posts', 'dynamic', 'projects', 'spec', 'friends', 'gallery', 'timeline', 'thoughts', 'music', 'waline', 'blog', 'umami'];
+  layout.homeCards = (layout.homeCards || []).filter((k) => HOME_CARD_KEYS.includes(k));
+  if (!/homeCards\s*:/.test(cfgText)) layout.homeCards = HOME_CARD_KEYS.slice();
   const markDirty = () => { $('#btn-navmsave').disabled = false; };
   const labelOf = (k) => layout.labels[k] || defs[k] || k;
   function render() {
@@ -2513,24 +2543,55 @@ routes.navmgr = async () => {
         markDirty(); render();
       };
     });
+    /* 🏠 首页卡片区：单独容器，避免与上面导航行的接线互相干扰 */
+    const homeBox = $('#navm-home');
+    if (homeBox) {
+      const homeRow = (k) => `
+      <div class="list-item" data-hk="${k}">
+        <span class="title">${esc(labelOf(k))}</span><span class="meta">${esc(k)}</span>
+        <button class="btn btn-small" data-ha="up">↑</button><button class="btn btn-small" data-ha="down">↓</button>
+        <button class="btn btn-small" data-ha="remove">移除</button>
+      </div>`;
+      const pool = HOME_CARD_KEYS.filter((k) => !layout.homeCards.includes(k));
+      const poolRow = (k) => `
+      <div class="list-item" data-pk="${k}">
+        <span class="title">${esc(labelOf(k))}</span><span class="meta">${esc(k)}</span>
+        <button class="btn btn-small" data-pa="add">＋ 加到首页</button>
+      </div>`;
+      homeBox.innerHTML = `
+      <div class="card"><b>🏠 首页卡片</b><p class="hint">控制台首页显示哪些功能卡、什么顺序；移除只是不显示，功能还在导航里</p>
+        ${layout.homeCards.map(homeRow).join('') || '<p class="hint">空（首页会回退为默认全套）</p>'}</div>
+      ${pool.length ? `<div class="card"><b>未显示的卡片</b>${pool.map(poolRow).join('')}</div>` : ''}`;
+      homeBox.querySelectorAll('[data-hk]').forEach((el) => {
+        const k = el.dataset.hk;
+        const i = layout.homeCards.indexOf(k);
+        el.querySelector('[data-ha=up]').onclick = () => { if (i > 0) { [layout.homeCards[i - 1], layout.homeCards[i]] = [layout.homeCards[i], layout.homeCards[i - 1]]; markDirty(); render(); } };
+        el.querySelector('[data-ha=down]').onclick = () => { if (i < layout.homeCards.length - 1) { [layout.homeCards[i + 1], layout.homeCards[i]] = [layout.homeCards[i], layout.homeCards[i + 1]]; markDirty(); render(); } };
+        el.querySelector('[data-ha=remove]').onclick = () => { layout.homeCards.splice(i, 1); markDirty(); render(); };
+      });
+      homeBox.querySelectorAll('[data-pk]').forEach((el) => {
+        const k = el.dataset.pk;
+        el.querySelector('[data-pa=add]').onclick = () => { layout.homeCards.push(k); markDirty(); render(); };
+      });
+    }
   }
   view.innerHTML = `<div class="toolbar"><span class="spacer"></span>
       <button class="btn" id="btn-navmsave" disabled>💾 保存到仓库</button></div>
-    <p class="hint">调整控制台导航栏：↑↓ 排序，→··· / ←主栏 切换分组，改名自定义显示名称。保存后所有设备生效。</p>
-    <div id="navm-list"></div>`;
+    <p class="hint">调整控制台导航栏：↑↓ 排序，→··· / ←主栏 切换分组，改名自定义显示名称。下方还能定首页显示哪些卡片。保存后所有设备生效。</p>
+    <div id="navm-list"></div><div id="navm-home"></div>`;
   render();
   $('#btn-navmsave').onclick = async () => {
     const btn = $('#btn-navmsave'); btn.disabled = true;
     try {
       const q = (s) => `'${s}'`;
       const labelsStr = Object.entries(layout.labels).map(([k, v]) => `${k}: '${v.replace(/'/g, "\\'")}'`).join(', ');
-      const newLayout = `navLayout: {\n    primary: [${layout.primary.map(q).join(', ')}],\n    secondary: [${layout.secondary.map(q).join(', ')}],\n    labels: { ${labelsStr} },\n  },`;
+      const newLayout = `navLayout: {\n    primary: [${layout.primary.map(q).join(', ')}],\n    secondary: [${layout.secondary.map(q).join(', ')}],\n    homeCards: [${layout.homeCards.map(q).join(', ')}],\n    labels: { ${labelsStr} },\n  },`;
       const text = cfgText.replace(/navLayout\s*:\s*\{[\s\S]*?\n\s*\},/, newLayout);
       if (text === cfgText) throw new Error('配置未变化或格式不匹配');
       const r = await saveWithLog(NAVMGR_PATH, text, sha, '更新控制台导航栏 [管理台]', { type: '导航', action: '更新', target: '控制台导航栏' });
       sha = r.content.sha; cfgText = text;
       // 同步到当前页
-      CFG.navLayout = { primary: layout.primary.slice(), secondary: layout.secondary.slice(), labels: { ...layout.labels } };
+      CFG.navLayout = { primary: layout.primary.slice(), secondary: layout.secondary.slice(), homeCards: layout.homeCards.slice(), labels: { ...layout.labels } };
       toast('已保存，刷新页面生效');
     } catch (e) { toast(e.message, true); btn.disabled = false; }
   };

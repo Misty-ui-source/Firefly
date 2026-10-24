@@ -143,6 +143,22 @@ async function removeAlbum(id) {
   const next = data.text.slice(0, lineStart) + data.text.slice(delEnd);
   await ghPutFile(GALLERY_CONFIG, next, data.sha, `删除相册 ${id} [管理台]`);
 }
+/* 按给定 id 顺序重排 albums[]：只重组对象区，数组前的注释与各对象原文一字不动 */
+async function reorderAlbums(orderedIds) {
+  const { data, blk, blockText, albums } = await readAlbums();
+  if (albums.length < 2) return;
+  const byId = {};
+  albums.forEach((a) => { byId[a.id] = blockText.slice(a._pos.start, a._pos.end); });
+  if (!orderedIds.every((id) => byId[id])) throw new Error('排序数据对不上，已取消');
+  const first = albums[0]._pos.start;
+  const lastEnd = albums[albums.length - 1]._pos.end;
+  const sep = ',\n' + blk.indent + '\t';
+  const mid = orderedIds.map((id) => byId[id]).join(sep) + ',';
+  /* lastEnd 处是旧的尾逗号，mid 已自带，跳过它 */
+  const nextBlock = blockText.slice(0, first) + mid + blockText.slice(lastEnd + 1);
+  const next = data.text.slice(0, blk.openIdx) + nextBlock + data.text.slice(blk.closeIdx + 1);
+  await ghPutFile(GALLERY_CONFIG, next, data.sha, '相册排序 [管理台]');
+}
 
 /* ---------- urls.txt 与目录 ---------- */
 function parseUrlsTxt(text) {
@@ -208,9 +224,19 @@ routes.gallery = async () => {
         <div class="meta">${esc(a.id)} · ${count} 张照片${a.date ? ' · ' + esc(a.date) : ''}</div>
         ${a.description ? `<div class="meta">${esc(a.description)}</div>` : ''}
       </div>
+      <button class="btn btn-small btn-ghost" data-a="up" ${i === 0 ? 'disabled' : ''}>↑</button>
+      <button class="btn btn-small btn-ghost" data-a="down" ${i === albums.length - 1 ? 'disabled' : ''}>↓</button>
       <button class="btn btn-small" data-a="open">管理照片</button>
       <button class="btn btn-small btn-ghost" data-a="edit">编辑信息</button>
       <button class="btn btn-small btn-danger" data-a="del">删除</button>`;
+    const swap = async (j) => {
+      const ids = albums.map((x) => x.id);
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+      try { toast('排序保存中…'); await reorderAlbums(ids); toast('顺序已保存，重新构建后生效'); router(); }
+      catch (e) { toast(e.message, true); }
+    };
+    row.querySelector('[data-a=up]').onclick = () => { if (i > 0) swap(i - 1); };
+    row.querySelector('[data-a=down]').onclick = () => { if (i < albums.length - 1) swap(i + 1); };
     row.querySelector('[data-a=open]').onclick = () => { location.hash = '#/gallery-album/' + encodeURIComponent(a.id); };
     row.querySelector('[data-a=edit]').onclick = () => { location.hash = '#/gallery-edit/' + encodeURIComponent(a.id); };
     row.querySelector('[data-a=del]').onclick = async () => {
