@@ -309,6 +309,41 @@ function serializeFrontmatter(fm, body) {
   return lines.join('\n') + body;
 }
 
+/* ---------- 拖文件导入：纯逻辑（分类 / 标题提取，可独立测试） ---------- */
+const DROP_TEXT_EXTS = ['md', 'markdown', 'txt'];
+const DROP_IMG_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif'];
+const DROP_TEXT_MAX = 2 * 1024 * 1024; // 文本文件上限 2MB
+/* 把拖入的文件分成：文本（只取第一个）、图片（全部）、超限文本、不支持
+ * 返回 { text, images, oversized, ignored }，元素都是原始 File 对象 */
+function classifyDropFiles(files) {
+  const out = { text: null, images: [], oversized: [], ignored: [] };
+  for (const f of files || []) {
+    const name = String(f.name || '');
+    const ext = (name.split('.').pop() || '').toLowerCase();
+    if (DROP_TEXT_EXTS.includes(ext)) {
+      if (f.size > DROP_TEXT_MAX) out.oversized.push(f);
+      else if (!out.text) out.text = f;
+      else out.ignored.push(f);
+    } else if (DROP_IMG_EXTS.includes(ext) || String(f.type || '').startsWith('image/')) {
+      out.images.push(f);
+    } else {
+      out.ignored.push(f);
+    }
+  }
+  return out;
+}
+/* 无 frontmatter 时：取第一个一级标题或第一行作标题建议，其余作正文 */
+function splitTitleFromBody(text) {
+  const lines = String(text || '').replace(/\r\n/g, '\n').split('\n');
+  let i = 0;
+  while (i < lines.length && lines[i].trim() === '') i++;
+  if (i >= lines.length) return { title: '', body: '' };
+  const h = lines[i].match(/^#\s+(.+)$/);
+  const title = (h ? h[1] : lines[i]).trim();
+  const body = lines.slice(i + 1).join('\n').replace(/^\n+/, '');
+  return { title, body };
+}
+
 /* YouTube / B站链接 → iframe 嵌入地址；识别不了返回 null */
 function parseVideoUrl(u) {
   u = String(u || '').trim();
@@ -1362,6 +1397,125 @@ routes.edit = async (arg) => {
       location.hash = '#/' + key;
     } catch (err) { toast(err.message, true); $('#btn-save').disabled = false; }
   };
+
+  /* ---------- 拖文件导入：拖到编辑页松手即导入，只填草稿不自动保存 ---------- */
+  /* 把解析出的 frontmatter 填进表单字段（走现有 [data-f] 字段，保存流程不变） */
+  function fillFormFromFm(newFm) {
+    for (const [k, v] of Object.entries(newFm)) {
+      if (v === undefined || v === null || v === '') continue;
+      if (k === 'published' || k === 'updated') {
+        const inp = k === 'published' ? $('#f-published') : $('#f-updated');
+        if (inp) { const lv = dtLocal(v); if (lv) inp.value = lv; }
+        continue;
+      }
+      const el = view.querySelector(`[data-f="${k}"]`);
+      if (!el) continue;
+      if (el.type === 'checkbox') {
+        el.checked = isTrue(v);
+        const pillEl = el.closest('.pill');
+        if (pillEl) pillEl.classList.toggle('on', el.checked);
+      } else {
+        el.value = Array.isArray(v) ? v.join(', ') : String(v);
+      }
+    }
+    /* 封面预览同步 */
+    if (newFm.image) {
+      const cp = $('#cover-prev');
+      if (cp) cp.innerHTML = `<img src="${esc(newFm.image)}" alt="封面预览">`;
+    }
+    /* 原文带密码 → 勾上密码保护开关并展开密码区 */
+    if (newFm.password || newFm.passwordHint) {
+      const pw = view.querySelector('[data-f="_pw"]');
+      if (pw && !pw.checked) { pw.checked = true; pw.dispatchEvent(new Event('change')); }
+    }
+  }
+  async function importDroppedText(file) {
+    const raw = await file.text();
+    const parsed = parseFrontmatter(raw);
+    const ifm = parsed.fm;
+    let bodyToSet = parsed.body;
+    let filled = false;
+    /* 编辑器里已有内容（正文或标题）时先确认，防误拖覆盖丢稿 */
+    const titleEl = view.querySelector('[data-f="title"]');
+    const hasContent = ta.value.trim() !== '' || (titleEl && titleEl.value.trim() !== '');
+    if (hasContent && !confirm('编辑器里已有内容，导入将覆盖正文和相关字段，继续？')) return;
+    if (Object.keys(ifm).length) {
+      fillFormFromFm(ifm);
+      filled = true;
+    } else if (isPost) {
+      /* 没有 frontmatter：第一个一级标题/第一行作标题建议，其余作正文 */
+      const sp = splitTitleFromBody(parsed.body);
+      if (sp.title && titleEl) { titleEl.value = sp.title; bodyToSet = sp.body; filled = true; }
+    }
+    ta.value = bodyToSet;
+    updCount();
+    ta.focus();
+    toast(filled ? `已导入 ${file.name}：字段与正文已填好（未保存）` : `已导入 ${file.name} 的正文（未保存）`);
+  }
+  async function importDroppedImages(imgs) {
+    const dirEl = $('#f-r2dir');
+    const dir = dirEl ? dirEl.value.trim() : '';
+    toast(`上传图片中…（${imgs.length} 张）`);
+    try {
+      const { urls } = await uploadImages(imgs, dir);
+      insertAtCursor('\n' + urls.map((u) => `![图片](${u})`).join('\n') + '\n');
+      toast(`图片已插入 ${urls.length} 张`);
+    } catch (err) { toast(err.message, true); }
+  }
+  /* 拖放监听挂在 document 上，离开编辑页后自清理（textarea 已不在 DOM / hash 已变） */
+  const dropOverlay = document.createElement('div');
+  dropOverlay.className = 'drop-overlay hidden';
+  dropOverlay.innerHTML = '<div class="drop-overlay-inner">📥 松开导入文件<div class="drop-overlay-sub">.md / .txt 导入正文（带 frontmatter 自动填字段）· 图片上传后插入光标处</div></div>';
+  view.appendChild(dropOverlay);
+  let dragDepth = 0;
+  const dropAlive = () => document.contains(ta) && location.hash.startsWith('#/edit');
+  const hasFiles = (e) => !!(e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files'));
+  function cleanupDropImport() {
+    document.removeEventListener('dragenter', onDropDragEnter);
+    document.removeEventListener('dragover', onDropDragOver);
+    document.removeEventListener('dragleave', onDropDragLeave);
+    document.removeEventListener('drop', onDropDrop);
+    dropOverlay.remove();
+    if (view._dropImportCleanup === cleanupDropImport) view._dropImportCleanup = null;
+  }
+  function onDropDragEnter(e) {
+    if (!hasFiles(e)) return;
+    if (!dropAlive()) { cleanupDropImport(); return; }
+    e.preventDefault();
+    dragDepth++;
+    dropOverlay.classList.remove('hidden');
+  }
+  function onDropDragOver(e) {
+    if (!hasFiles(e)) return;
+    if (!dropAlive()) { cleanupDropImport(); return; }
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+  }
+  function onDropDragLeave(e) {
+    if (!hasFiles(e)) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) dropOverlay.classList.add('hidden');
+  }
+  async function onDropDrop(e) {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth = 0;
+    dropOverlay.classList.add('hidden');
+    if (!dropAlive()) { cleanupDropImport(); return; }
+    const files = Array.from(e.dataTransfer.files || []);
+    if (!files.length) return;
+    const cls = classifyDropFiles(files);
+    if (cls.oversized.length) toast(`文件超过 2MB，已忽略：${cls.oversized.map((f) => f.name).join('、')}`, true);
+    if (cls.ignored.length) toast(`不支持的文件，已忽略：${cls.ignored.map((f) => f.name).join('、')}`, true);
+    if (cls.text) await importDroppedText(cls.text);
+    if (cls.images.length) await importDroppedImages(cls.images);
+  }
+  if (view._dropImportCleanup) view._dropImportCleanup();
+  view._dropImportCleanup = cleanupDropImport;
+  document.addEventListener('dragenter', onDropDragEnter);
+  document.addEventListener('dragover', onDropDragOver);
+  document.addEventListener('dragleave', onDropDragLeave);
+  document.addEventListener('drop', onDropDrop);
 };
 
 /* ---------- 网站公告：src/config/announcementConfig.ts ---------- */

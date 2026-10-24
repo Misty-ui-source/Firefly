@@ -576,3 +576,7 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
   .report-cards { grid-template-columns: repeat(2, 1fr); }
   .report-veil { padding: 16px; }
 }
+/* 拖文件导入：全屏虚线高亮提示（仅视觉，不拦截拖放事件） */
+.drop-overlay { position: fixed; inset: 12px; z-index: 150; pointer-events: none; display: grid; place-items: center; border: 3px dashed #b91c1c; border-radius: 16px; background: rgba(255, 245, 245, .82); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.drop-overlay-inner { font-size: 26px; font-weight: 800; color: #b91c1c; text-align: center; line-height: 1.5; }
+.drop-overlay-sub { font-size: 14px; font-weight: 500; color: #666; margin-top: 6px; }
