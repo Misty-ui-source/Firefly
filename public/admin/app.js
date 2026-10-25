@@ -1272,9 +1272,10 @@ function listRoute(key) {
         listEl.appendChild(div);
         rows.push({ e, div });
       }
-      /* 文章列表：异步回填 published 写作时间 + 真实标题（每批 4 个并发） */
+      /* 文章列表：异步回填 published 写作时间 + 真实标题（每批 4 个并发），回填完按发布时间倒序重排 */
       if (key === 'posts' && rows.length) {
-        const fill = async ({ e, div }) => {
+        const fill = async (row) => {
+          const { e, div } = row;
           try {
             const files = await ghGetFile(`${col.path}/${e.name}`);
             const md = (Array.isArray(files) ? files : []).find((f) => f.name.endsWith('.md'));
@@ -1282,7 +1283,7 @@ function listRoute(key) {
             const data = await ghGetFile(`${col.path}/${e.name}/${md.name}`);
             const { fm } = parseFrontmatter(data.text);
             const dEl = div.querySelector('.date');
-            if (dEl && fm.published) dEl.textContent = '📅 ' + String(fm.published).slice(0, 10);
+            if (dEl && fm.published) { dEl.textContent = '📅 ' + String(fm.published).slice(0, 10); row.date = String(fm.published); }
             const tEl = div.querySelector('.title');
             if (tEl && fm.title) tEl.textContent = fm.title;
           } catch (err) { /* 单篇失败不影响其他 */ }
@@ -1290,6 +1291,8 @@ function listRoute(key) {
         for (let i = 0; i < rows.length; i += 4) {
           await Promise.all(rows.slice(i, i + 4).map(fill));
         }
+        rows.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+        rows.forEach(({ div }) => listEl.appendChild(div));
       }
     } catch (e) { listEl.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; }
   };
@@ -1579,6 +1582,7 @@ routes.edit = async (arg) => {
     <button type="button" data-c="cut">剪切</button>
     <button type="button" data-c="copy">复制</button>
     <button type="button" data-c="paste">粘贴</button>
+    <button type="button" data-c="cbmenu">代码块 <span class="ctx-arrow">▸</span></button>
     <div class="ctx-group">格式</div>
     <button type="button" data-c="bold">加粗</button>
     <button type="button" data-c="italic">斜体</button>
@@ -1592,18 +1596,40 @@ routes.edit = async (arg) => {
     <button type="button" data-c="hr">分割线</button>
     <button type="button" data-c="video">🎬 视频</button>
     <button type="button" data-c="img">🖼 图片</button>
-    <button type="button" data-c="import">📥 导入文件</button>
-    <div class="ctx-group">代码块</div>
-    <button type="button" data-c="cb:powershell">PowerShell</button>
-    <button type="button" data-c="cb:batch">CMD / Batch</button>
-    <button type="button" data-c="cb:bash">Bash</button>
-    <button type="button" data-c="cb:js">JavaScript</button>
-    <button type="button" data-c="cb:ts">TypeScript</button>
-    <button type="button" data-c="cb:python">Python</button>
-    <button type="button" data-c="cb:text">纯文本</button>`;
+    <button type="button" data-c="import">📥 导入文件</button>`;
   view.appendChild(ctxMenu);
+  /* 代码块辅栏：悬停/点「代码块」时在主菜单旁展开，选语言 */
+  const ctxSub = document.createElement('div');
+  ctxSub.className = 'ctx-menu ctx-sub hidden';
+  ctxSub.innerHTML = `
+    <button type="button" data-cb="powershell">PowerShell</button>
+    <button type="button" data-cb="batch">CMD / Batch</button>
+    <button type="button" data-cb="bash">Bash</button>
+    <button type="button" data-cb="js">JavaScript</button>
+    <button type="button" data-cb="ts">TypeScript</button>
+    <button type="button" data-cb="python">Python</button>
+    <button type="button" data-cb="text">纯文本</button>`;
+  view.appendChild(ctxSub);
   let ctxSel = null; /* 打开菜单时存下选区，执行前还原，防点菜单把选区弄丢 */
-  const hideCtx = () => { ctxMenu.classList.add('hidden'); };
+  const hideCtx = () => { ctxMenu.classList.add('hidden'); ctxSub.classList.add('hidden'); };
+  let subTimer = null;
+  const cbBtn = ctxMenu.querySelector('button[data-c="cbmenu"]');
+  const showSub = () => {
+    clearTimeout(subTimer);
+    ctxSub.classList.remove('hidden');
+    const r = cbBtn.getBoundingClientRect();
+    const sw = ctxSub.offsetWidth, sh = ctxSub.offsetHeight;
+    let left = r.right + 4;
+    if (left + sw > window.innerWidth - 8) left = r.left - sw - 4;
+    ctxSub.style.left = left + 'px';
+    ctxSub.style.top = Math.max(8, Math.min(r.top, window.innerHeight - sh - 8)) + 'px';
+  };
+  const scheduleHideSub = () => { subTimer = setTimeout(() => ctxSub.classList.add('hidden'), 250); };
+  cbBtn.addEventListener('mouseenter', showSub);
+  cbBtn.addEventListener('click', () => { if (ctxSub.classList.contains('hidden')) showSub(); else ctxSub.classList.add('hidden'); });
+  ctxMenu.addEventListener('mouseleave', scheduleHideSub);
+  ctxSub.addEventListener('mouseenter', () => clearTimeout(subTimer));
+  ctxSub.addEventListener('mouseleave', scheduleHideSub);
   const insertCodeBlock = (lang) => {
     const s = ta.selectionStart, e = ta.selectionEnd;
     const sel = ta.value.slice(s, e);
@@ -1650,7 +1676,11 @@ routes.edit = async (arg) => {
   };
   ctxMenu.querySelectorAll('button[data-c]').forEach((b) => {
     b.addEventListener('mousedown', (ev) => ev.preventDefault());
-    b.addEventListener('click', () => { hideCtx(); runCtx(b.dataset.c); });
+    b.addEventListener('click', () => { if (b.dataset.c === 'cbmenu') return; hideCtx(); runCtx(b.dataset.c); });
+  });
+  ctxSub.querySelectorAll('button[data-cb]').forEach((b) => {
+    b.addEventListener('mousedown', (ev) => ev.preventDefault());
+    b.addEventListener('click', () => { hideCtx(); runCtx('cb:' + b.dataset.cb); });
   });
   ta.addEventListener('contextmenu', (e) => {
     e.preventDefault();
@@ -1660,7 +1690,7 @@ routes.edit = async (arg) => {
     ctxMenu.style.left = Math.min(e.clientX, window.innerWidth - mw - 8) + 'px';
     ctxMenu.style.top = Math.min(e.clientY, window.innerHeight - mh - 8) + 'px';
   });
-  document.addEventListener('mousedown', (e) => { if (!ctxMenu.contains(e.target)) hideCtx(); });
+  document.addEventListener('mousedown', (e) => { if (!ctxMenu.contains(e.target) && !ctxSub.contains(e.target)) hideCtx(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideCtx(); });
   window.addEventListener('blur', hideCtx);
   ta.addEventListener('scroll', hideCtx);
