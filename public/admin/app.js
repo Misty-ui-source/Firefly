@@ -1576,6 +1576,9 @@ routes.edit = async (arg) => {
   const ctxMenu = document.createElement('div');
   ctxMenu.className = 'ctx-menu hidden';
   ctxMenu.innerHTML = `
+    <button type="button" data-c="cut">剪切</button>
+    <button type="button" data-c="copy">复制</button>
+    <button type="button" data-c="paste">粘贴</button>
     <div class="ctx-group">格式</div>
     <button type="button" data-c="bold">加粗</button>
     <button type="button" data-c="italic">斜体</button>
@@ -1611,9 +1614,27 @@ routes.edit = async (arg) => {
     ta.selectionStart = ta.selectionEnd = s + head.length + sel.length;
     updCount();
   };
+  const ctxCutCopy = (cut) => {
+    /* runCtx 已还原选区并聚焦：先走系统命令（与 Ctrl+X/C 完全一致），失败再用剪贴板 API 兜底 */
+    if (document.execCommand(cut ? 'cut' : 'copy')) { if (cut) updCount(); return; }
+    const s = ta.selectionStart, e = ta.selectionEnd;
+    const sel = ta.value.slice(s, e);
+    if (!sel) return;
+    navigator.clipboard.writeText(sel).then(() => {
+      if (cut) { ta.value = ta.value.slice(0, s) + ta.value.slice(e); ta.focus(); ta.selectionStart = ta.selectionEnd = s; updCount(); }
+    }).catch(() => {});
+  };
+  const ctxPaste = () => {
+    if (!navigator.clipboard || !navigator.clipboard.readText) return;
+    navigator.clipboard.readText().then((t) => { if (t) insertAtCursor(t); }).catch(() => {});
+    /* 浏览器不给读剪贴板权限时静默，用户可用 Ctrl+V */
+  };
   const runCtx = (c) => {
     if (ctxSel) { ta.focus(); ta.selectionStart = ctxSel[0]; ta.selectionEnd = ctxSel[1]; }
-    if (c === 'bold') wrapSel('**', '**', '加粗文字');
+    if (c === 'cut') ctxCutCopy(true);
+    else if (c === 'copy') ctxCutCopy(false);
+    else if (c === 'paste') ctxPaste();
+    else if (c === 'bold') wrapSel('**', '**', '加粗文字');
     else if (c === 'italic') wrapSel('*', '*', '斜体文字');
     else if (c === 'quote') wrapSel('\n> ', '', '引用内容');
     else if (c === 'code') wrapSel('`', '`', '代码');
