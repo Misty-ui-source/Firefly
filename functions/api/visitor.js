@@ -12,6 +12,7 @@ export async function onRequestGet({ request }) {
     {
       country: cf.country || '',
       region: cf.region || '',
+      regionCode: cf.regionCode || '',
       city: cf.city || '',
       latitude: num(cf.latitude),
       longitude: num(cf.longitude),

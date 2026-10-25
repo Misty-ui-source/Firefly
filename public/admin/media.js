@@ -124,7 +124,91 @@ async function updateStringListConfig(path, key, newItems, label) {
   const res = await saveWithLog(path, next, data.sha, `更新 ${label || key} [管理台]`, { type: '配置', action: '更新', target: label || key });
   return res;
 }
-// 按花括号配平切出数组里的每个 {...}（字符串感知，lrc 长文本也安全）
+/* 从 openIdx 的 { 开始按括号配平切出整块文本（字符串/注释感知） */
+function scanBraceText(text, openIdx) {
+  let depth = 0, inStr = false, escNext = false, q = '', inLine = false;
+  for (let i = openIdx; i < text.length; i++) {
+    const c = text[i];
+    if (inLine) { if (c === '\n') inLine = false; continue; }
+    if (inStr) {
+      if (escNext) escNext = false;
+      else if (c === '\\') escNext = true;
+      else if (c === q) inStr = false;
+      continue;
+    }
+    if (c === '/' && text[i + 1] === '/') { inLine = true; continue; }
+    if (c === '"' || c === "'") { inStr = true; q = c; continue; }
+    if (c === '{') depth++;
+    else if (c === '}') { depth--; if (!depth) return text.slice(openIdx, i + 1); }
+  }
+  return text.slice(openIdx);
+}
+/* 分模式壁纸（modeSrc / modeCarousel）解析：某模式某端有专属图就用专属图，空则回退共享 */
+const WP_MODES = ['banner', 'fullscreen', 'overlay'];
+function parseModeWallpapers(text) {
+  const out = {
+    src: { banner: { desktop: [], mobile: [] }, fullscreen: { desktop: [], mobile: [] }, overlay: { desktop: [], mobile: [] } },
+    carousel: { banner: true, fullscreen: true, overlay: true },
+  };
+  const gm = text.match(/carousel\s*:\s*\{\s*enable\s*:\s*(true|false)/);
+  const gDef = gm ? gm[1] === 'true' : true;
+  WP_MODES.forEach((mode) => { out.carousel[mode] = gDef; });
+  const bi = text.indexOf('modeSrc:');
+  if (bi >= 0) {
+    const block = scanBraceText(text, text.indexOf('{', bi));
+    WP_MODES.forEach((mode) => {
+      const mi = block.indexOf(mode + ':');
+      if (mi < 0) return;
+      const mb = scanBraceText(block, block.indexOf('{', mi));
+      out.src[mode].desktop = parseConfigStrings(extractConfigValue(mb, 'desktop'));
+      out.src[mode].mobile = parseConfigStrings(extractConfigValue(mb, 'mobile'));
+    });
+  }
+  const ci = text.indexOf('modeCarousel:');
+  if (ci >= 0) {
+    const block = scanBraceText(text, text.indexOf('{', ci));
+    WP_MODES.forEach((mode) => {
+      const m = block.match(new RegExp(mode + '\\s*:\\s*(true|false)'));
+      if (m) out.carousel[mode] = m[1] === 'true';
+    });
+  }
+  return out;
+}
+function buildModeSrcBlock(srcMap) {
+  const lines = ['\tmodeSrc: {'];
+  WP_MODES.forEach((mode) => {
+    lines.push(`\t\t${mode}: {`);
+    lines.push(`\t\t\tdesktop: ${serializeStringList(srcMap[mode].desktop, '\t\t\t')},`);
+    lines.push(`\t\t\tmobile: ${serializeStringList(srcMap[mode].mobile, '\t\t\t')},`);
+    lines.push('\t\t},');
+  });
+  lines.push('\t},');
+  return lines.join('\n');
+}
+function buildModeCarouselBlock(carMap) {
+  const lines = ['\tmodeCarousel: {'];
+  WP_MODES.forEach((mode) => lines.push(`\t\t${mode}: ${carMap[mode] ? 'true' : 'false'},`));
+  lines.push('\t},');
+  return lines.join('\n');
+}
+/* 替换（或首次插入）配置里的某个对象块，块由控制台维护、整体重写 */
+function replaceConfigBlock(text, key, blockText) {
+  const re = new RegExp(`^\\t${key}\\s*:`, 'm');
+  const m = text.match(re);
+  if (m) {
+    const open = text.indexOf('{', m.index);
+    const span = scanBraceText(text, open);
+    let end = m.index + 0; // 计算绝对结束位置
+    const absOpen = open;
+    const absEnd = absOpen + span.length;
+    end = absEnd;
+    if (text[end] === ',') end++;
+    return text.slice(0, m.index) + blockText + text.slice(end);
+  }
+  const anchor = text.indexOf('\n\tdisabled:');
+  if (anchor >= 0) return text.slice(0, anchor + 1) + blockText + '\n' + text.slice(anchor + 1);
+  return text + '\n' + blockText + '\n';
+}
 function splitBraceObjects(arrayRaw) {
   const objs = [];
   let depth = 0, inStr = false, escNext = false, q = '', start = -1;
@@ -157,7 +241,7 @@ const BG_CONFIG = 'src/config/backgroundWallpaper.ts';
 const STICKER_CONFIG = 'src/config/stickerConfig.ts';
 const GALLERY_CONFIG = 'src/config/galleryConfig.ts';
 
-routes.images = async () => {
+routes.images = async (arg) => {
   view.innerHTML = '<div class="card"><h2>🖼 加载中…</h2></div>';
   let bg, sticker, gallery;
   try {
@@ -169,6 +253,9 @@ routes.images = async () => {
   let wpDesktop = parseConfigStrings(extractConfigValue(bg.text, 'desktop'));
   let wpMobile = parseConfigStrings(extractConfigValue(bg.text, 'mobile'));
   let wpDisabled = parseConfigStrings(extractConfigValue(bg.text, 'disabled'));
+  const wpParsed = parseModeWallpapers(bg.text);
+  let wpModeSrc = wpParsed.src;
+  let wpModeCarousel = wpParsed.carousel;
   let stickers = splitBraceObjects((extractConfigValue(sticker.text, 'stickers') || { raw: '[]' }).raw)
     .map((o) => ({ src: getStrField(o, 'src'), x: getNumField(o, 'x'), y: getNumField(o, 'y'), size: getNumField(o, 'size') }));
   const albums = [];
@@ -183,6 +270,14 @@ routes.images = async () => {
     await updateStringListConfig(BG_CONFIG, 'mobile', wpMobile, '手机壁纸');
     await updateStringListConfig(BG_CONFIG, 'disabled', wpDisabled, '禁用壁纸');
     toast('壁纸配置已保存（构建后生效）');
+  }
+  async function saveModeWallpapers() {
+    const data = await ghGetFile(BG_CONFIG);
+    let text = data.text;
+    text = replaceConfigBlock(text, 'modeSrc', buildModeSrcBlock(wpModeSrc));
+    text = replaceConfigBlock(text, 'modeCarousel', buildModeCarouselBlock(wpModeCarousel));
+    await saveWithLog(BG_CONFIG, text, data.sha, '更新分模式壁纸 [管理台]', { type: '配置', action: '更新', target: '分模式壁纸' });
+    toast('分模式壁纸已保存（构建后生效）');
   }
   async function saveStickers(msg) {
     const data = await ghGetFile(STICKER_CONFIG);
@@ -249,7 +344,7 @@ routes.images = async () => {
       const { urls } = await uploadImages([file], 'admin/wallpaper');
       list.push(urls[0]);
       await saveWallpapers();
-      renderWallpapers();
+          renderWallpapers();
     } catch (e) { toast(e.message, true); }
   }
 
@@ -324,6 +419,37 @@ routes.images = async () => {
         <input type="file" id="wp-m-file" accept="image/*" class="hidden">
         <button class="btn btn-small" id="wp-m-add">＋ 添加手机壁纸</button>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>🎠 分模式壁纸 <span class="sub">给每个壁纸模式配专属图和轮播开关（在「🎨 主题」页切换默认模式）</span></h2>
+      <p class="hint">规则：某模式某端<b>有专属图就只用专属图</b>，空着就回退用上面的共享图库。每次改动即时保存 = 一次 commit，构建后生效。</p>
+      ${[['banner', '横幅模式'], ['fullscreen', '全屏模式'], ['overlay', '透明覆盖']].map(([mode, label]) => `
+      <div class="wp-mode-sec" id="wp-sec-${mode}">
+        <h3>${label}专属图
+          <label class="pill wp-carousel-pill" title="这个模式下是否自动轮播"><input type="checkbox" class="wp-carousel" data-mode="${mode}">🎠 轮播</label>
+        </h3>
+        <h4 class="sub-h">桌面端（<span id="wp-cnt-${mode}-desktop">0</span> 张）</h4>
+        <div class="img-grid" id="wp-m-${mode}-desktop"></div>
+        <div class="toolbar">
+          <input type="text" class="wp-url-in" data-mode="${mode}" data-dev="desktop" placeholder="粘贴图片 URL">
+          <button class="btn btn-small wp-url-add" data-mode="${mode}" data-dev="desktop">＋ URL 添加</button>
+          <input type="file" accept="image/*" class="hidden wp-file" data-mode="${mode}" data-dev="desktop">
+          <button class="btn btn-small wp-up" data-mode="${mode}" data-dev="desktop">📤 上传</button>
+          <button class="btn btn-small wp-pick" data-mode="${mode}" data-dev="desktop">🖼 从共享图库选</button>
+        </div>
+        <div class="img-grid wp-picker hidden" data-mode="${mode}" data-dev="desktop"></div>
+        <h4 class="sub-h">移动端（<span id="wp-cnt-${mode}-mobile">0</span> 张）</h4>
+        <div class="img-grid" id="wp-m-${mode}-mobile"></div>
+        <div class="toolbar">
+          <input type="text" class="wp-url-in" data-mode="${mode}" data-dev="mobile" placeholder="粘贴图片 URL">
+          <button class="btn btn-small wp-url-add" data-mode="${mode}" data-dev="mobile">＋ URL 添加</button>
+          <input type="file" accept="image/*" class="hidden wp-file" data-mode="${mode}" data-dev="mobile">
+          <button class="btn btn-small wp-up" data-mode="${mode}" data-dev="mobile">📤 上传</button>
+          <button class="btn btn-small wp-pick" data-mode="${mode}" data-dev="mobile">🖼 从共享图库选</button>
+        </div>
+        <div class="img-grid wp-picker hidden" data-mode="${mode}" data-dev="mobile"></div>
+      </div>`).join('')}
     </div>
 
     <div class="card">
@@ -465,7 +591,129 @@ routes.images = async () => {
       </div>
     </div>`;
 
+  function modeImgCell(url, list, idx) {
+    const d = document.createElement('div');
+    d.className = 'img-cell';
+    d.innerHTML = `<img loading="lazy" src="${esc(cfgImgPreview(url))}" alt="">
+      <div class="url" title="${esc(url)}">${esc(url)}</div>
+      <div class="ops">
+        <button class="mini-btn" data-a="up">↑</button>
+        <button class="mini-btn" data-a="down">↓</button>
+        <button class="mini-btn danger" data-a="del">删除</button>
+      </div>`;
+    d.querySelector('[data-a=up]').onclick = async () => {
+      if (idx === 0) return;
+      [list[idx - 1], list[idx]] = [list[idx], list[idx - 1]];
+      try { await saveModeWallpapers(); renderModeWallpapers(); } catch (e) { toast(e.message, true); }
+    };
+    d.querySelector('[data-a=down]').onclick = async () => {
+      if (idx === list.length - 1) return;
+      [list[idx + 1], list[idx]] = [list[idx], list[idx - 1]];
+      try { await saveModeWallpapers(); renderModeWallpapers(); } catch (e) { toast(e.message, true); }
+    };
+    d.querySelector('[data-a=del]').onclick = async () => {
+      if (!confirm('确定移除这张专属图？')) return;
+      list.splice(idx, 1);
+      try { await saveModeWallpapers(); renderModeWallpapers(); } catch (e) { toast(e.message, true); }
+    };
+    return d;
+  }
+  function renderModeWallpapers() {
+    WP_MODES.forEach((mode) => {
+      ['desktop', 'mobile'].forEach((dev) => {
+        const g = $(`#wp-m-${mode}-${dev}`);
+        if (!g) return;
+        const list = wpModeSrc[mode][dev];
+        g.innerHTML = '';
+        list.forEach((u, i) => g.appendChild(modeImgCell(u, list, i)));
+        if (!list.length) g.innerHTML = '<p class="hint">暂无专属图，用共享图库 👆</p>';
+        const cnt = $(`#wp-cnt-${mode}-${dev}`);
+        if (cnt) cnt.textContent = list.length;
+      });
+      const chk = view.querySelector(`.wp-carousel[data-mode="${mode}"]`);
+      if (chk) {
+        chk.checked = !!wpModeCarousel[mode];
+        chk.closest('.pill').classList.toggle('on', !!wpModeCarousel[mode]);
+      }
+    });
+  }
+  function wireModeWallpapers() {
+    view.querySelectorAll('.wp-carousel').forEach((chk) => {
+      chk.onchange = async () => {
+        wpModeCarousel[chk.dataset.mode] = chk.checked;
+        chk.closest('.pill').classList.toggle('on', chk.checked);
+        try { await saveModeWallpapers(); } catch (e) { toast(e.message, true); }
+      };
+    });
+    view.querySelectorAll('.wp-url-add').forEach((btn) => {
+      btn.onclick = async () => {
+        const { mode, dev } = btn.dataset;
+        const input = view.querySelector(`.wp-url-in[data-mode="${mode}"][data-dev="${dev}"]`);
+        const url = input.value.trim();
+        if (!url) { toast('先粘贴图片 URL', true); return; }
+        if (wpModeSrc[mode][dev].includes(url)) { toast('这张已经在了', true); return; }
+        wpModeSrc[mode][dev].push(url);
+        input.value = '';
+        try { await saveModeWallpapers(); renderModeWallpapers(); } catch (e) { toast(e.message, true); }
+      };
+    });
+    view.querySelectorAll('.wp-up').forEach((btn) => {
+      btn.onclick = () => {
+        const { mode, dev } = btn.dataset;
+        view.querySelector(`.wp-file[data-mode="${mode}"][data-dev="${dev}"]`).click();
+      };
+    });
+    view.querySelectorAll('.wp-file').forEach((fi) => {
+      fi.onchange = async (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        const { mode, dev } = fi.dataset;
+        toast('上传中…');
+        try {
+          const { urls } = await uploadImages([f], 'admin/wallpaper');
+          wpModeSrc[mode][dev].push(urls[0]);
+          await saveModeWallpapers();
+          renderModeWallpapers();
+        } catch (err) { toast(err.message, true); }
+        e.target.value = '';
+      };
+    });
+    view.querySelectorAll('.wp-pick').forEach((btn) => {
+      btn.onclick = () => {
+        const { mode, dev } = btn.dataset;
+        const picker = view.querySelector(`.wp-picker[data-mode="${mode}"][data-dev="${dev}"]`);
+        const shared = dev === 'desktop' ? wpDesktop : wpMobile;
+        picker.innerHTML = '';
+        shared.forEach((u) => {
+          const c = document.createElement('div');
+          c.className = 'img-cell';
+          c.innerHTML = `<img loading="lazy" src="${esc(cfgImgPreview(u))}" alt=""><div class="ops"><button class="mini-btn" type="button">＋ 加入</button></div>`;
+          c.querySelector('button').onclick = async () => {
+            if (wpModeSrc[mode][dev].includes(u)) { toast('这张已经在了', true); return; }
+            wpModeSrc[mode][dev].push(u);
+            try { await saveModeWallpapers(); renderModeWallpapers(); } catch (e) { toast(e.message, true); }
+          };
+          picker.appendChild(c);
+        });
+        if (!shared.length) picker.innerHTML = '<p class="hint">共享图库是空的</p>';
+        picker.classList.toggle('hidden');
+      };
+    });
+  }
+
   renderWallpapers();
+  renderModeWallpapers();
+  wireModeWallpapers();
+  if (arg && arg.startsWith('wp-')) {
+    const target = document.getElementById('wp-sec-' + arg.slice(3)) || document.getElementById(arg);
+    if (target) {
+      setTimeout(() => {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        target.classList.add('flash-anchor');
+        setTimeout(() => target.classList.remove('flash-anchor'), 2200);
+      }, 80);
+    }
+  }
   renderStickers();
 
   // ---- 报告图库（波奇酱）：内置两张 + 本机上传（R2 直链，存 localStorage） ----

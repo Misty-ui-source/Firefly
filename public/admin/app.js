@@ -452,7 +452,7 @@ const routes = {};
 function navDefs() {
   const defs = {
     dashboard: '🏠 首页', stats: '📊 写作', search: '🔍 搜索', medialib: '🗂 媒体库', tags: '🏷 标签', fonts: '🔤 字体',
-    images: '🖼 图片', music: '🎵 音乐', gallery: '📷 相册',
+    theme: '🎨 主题', images: '🖼 图片', music: '🎵 音乐', gallery: '📷 相册',
     announce: '📢 公告', friends: '🔗 友链', booknav: '🔖 书签', navmgr: '🧭 导航', videos: '🎬 视频', profile: '👤 简介', banner: '🖼️ 横幅',
     timeline: '🕘 时间线', thoughts: '💭 碎碎念', sitenav: '🌐 站点导航',
     blog: '🌐 博客', waline: '💬 评论', umami: '📈 数据统计',
@@ -2729,7 +2729,7 @@ async function friendsRss(body, getList) {
 }
 async function friendsMgr(body, invalidateCache) {
   body.innerHTML = '<div class="card"><p class="hint">正在读取仓库…</p></div>';
-  let sha = null, head = '', tail = '', list = [];
+  let sha = null, head = '', tail = '', list = [], randomize = false;
   try {
     const data = await ghGetFile(FRIENDS_PATH);
     sha = data.sha;
@@ -2737,6 +2737,7 @@ async function friendsMgr(body, invalidateCache) {
     head = parts.head; tail = parts.tail;
     list = friendsParseBody(parts.body);
     list.sort((a, b) => b.weight - a.weight);
+    randomize = /randomizeSort\s*:\s*true/.test(data.text);
   } catch (e) { body.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
 
   const dirty = { v: false };
@@ -2834,12 +2835,21 @@ async function friendsMgr(body, invalidateCache) {
   body.innerHTML = `<div class="toolbar">
       <button class="btn" id="btn-fadd">＋ 添加友链</button>
       <span class="spacer"></span><span class="hint" id="friend-count"></span>
+      <label class="pill" id="pill-random" title="开启后友链页每次构建随机展示顺序"><input type="checkbox" id="chk-random">🔀 随机排序</label>
       <button class="btn" id="btn-fsave" disabled>💾 保存到仓库</button>
     </div>
-    <p class="hint">↑↓ 调整顺序（保存后按此顺序展示）；停用=前台隐藏但保留。</p>
+    <p class="hint">↑↓ 调整顺序（保存后按此顺序展示）；停用=前台隐藏但保留；🔀 随机排序开启后每次构建随机展示，↑↓ 顺序暂时不生效。</p>
     <div id="friend-new"></div>
     <div id="friend-list"></div>`;
   render();
+  const chkRandom = $('#chk-random');
+  chkRandom.checked = randomize;
+  $('#pill-random').classList.toggle('on', randomize);
+  chkRandom.onchange = () => {
+    randomize = chkRandom.checked;
+    $('#pill-random').classList.toggle('on', randomize);
+    markDirty();
+  };
 
   $('#btn-fadd').onclick = () => {
     const box = $('#friend-new');
@@ -2866,7 +2876,11 @@ async function friendsMgr(body, invalidateCache) {
     try {
       const n = list.length;
       const body = list.map((f, i) => friendToTs(f, n - i)).join('\n');
-      const text = head + '\n' + body + '\n' + tail;
+      let outHead = head;
+      if (/randomizeSort\s*:\s*(true|false)/.test(outHead)) {
+        outHead = outHead.replace(/randomizeSort\s*:\s*(true|false)/, `randomizeSort: ${randomize}`);
+      }
+      const text = outHead + '\n' + body + '\n' + tail;
       const r = await saveWithLog(FRIENDS_PATH, text, sha, '更新友链 [管理台]', { type: '友链', action: '更新', target: '友链配置' });
       sha = r.content.sha;
       dirty.v = false;
@@ -4767,6 +4781,71 @@ async function r2ListAll(prefix) {
   return out;
 }
 const fmtSize = (n) => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n > 1024 ? Math.round(n / 1024) + ' KB' : n + ' B';
+/* 🎨 主题：切换博客默认壁纸模式；每个模式的图片设置在图片页 */
+routes.theme = async () => {
+  view.innerHTML = '<p class="hint">加载中…</p>';
+  const PATH = 'src/config/backgroundWallpaper.ts';
+  let cfgText;
+  try { cfgText = (await ghGetFile(PATH)).text; } catch (e) { view.innerHTML = `<p class="hint">读取失败：${esc(e.message)}</p>`; return; }
+  const mm = cfgText.match(/^\tmode\s*:\s*"(\w+)"/m);
+  let current = mm ? mm[1] : 'banner';
+  let picked = current;
+  const MODES = [
+    { id: 'banner', icon: '🖼️', name: '横幅模式', desc: '顶部一条横幅，内容在下方滚动（现在用的就是它）' },
+    { id: 'fullscreen', icon: '🌄', name: '全屏模式', desc: '壁纸铺满整个页面当背景' },
+    { id: 'overlay', icon: '🫧', name: '透明覆盖', desc: '壁纸在内容上方半透明覆盖' },
+    { id: 'none', icon: '⬜', name: '纯色模式', desc: '不显示壁纸，只用纯色背景' },
+  ];
+  function render() {
+    view.innerHTML = `
+    <div class="card">
+      <h2>🎨 默认壁纸模式 <span class="sub">访客第一次打开博客时看到的样子；访客自己也能在博客顶栏的调色板面板里切换</span></h2>
+      <div class="theme-modes">
+        ${MODES.map((m) => `
+        <div class="theme-mode ${picked === m.id ? 'sel' : ''}" data-mode="${m.id}">
+          <div class="tm-icon">${m.icon}</div>
+          <div class="tm-name">${m.name}${m.id === current ? ' <span class="tag">当前默认</span>' : ''}</div>
+          <div class="tm-desc">${m.desc}</div>
+          ${m.id !== 'none' ? `<button class="btn btn-small" data-img="${m.id}">🖼 图片设置</button>` : '<span class="hint">纯色模式没有壁纸图</span>'}
+        </div>`).join('')}
+      </div>
+      <div class="toolbar">
+        <button class="btn" id="theme-save" ${picked === current ? 'disabled' : ''}>💾 保存到仓库</button>
+        <span class="hint">这里只切默认模式；每个模式用哪些图、轮不轮播，点卡片上的「图片设置」去图片页管 👉</span>
+      </div>
+    </div>`;
+    view.querySelectorAll('.theme-mode').forEach((card) => {
+      card.onclick = (e) => {
+        if (e.target.closest('[data-img]')) return;
+        picked = card.dataset.mode;
+        render();
+      };
+    });
+    view.querySelectorAll('[data-img]').forEach((b) => {
+      b.onclick = () => { location.hash = '#/images/wp-' + b.dataset.img; };
+    });
+    const saveBtn = $('#theme-save');
+    if (saveBtn) saveBtn.onclick = async () => {
+      saveBtn.disabled = true;
+      saveBtn.textContent = '保存中…';
+      try {
+        const data = await ghGetFile(PATH);
+        const fresh = data.text;
+        if (!/^\tmode\s*:\s*"\w+"/m.test(fresh)) throw new Error('没找到 mode 字段，已中止');
+        const next = fresh.replace(/^\tmode\s*:\s*"\w+"/m, `\tmode: "${picked}"`);
+        await saveWithLog(PATH, next, data.sha, `主题：默认壁纸模式改为 ${picked} [管理台]`, { type: '配置', action: '更新', target: `主题模式 → ${picked}` });
+        current = picked;
+        toast('默认模式已保存 ✅ 重新构建后生效');
+        render();
+      } catch (e) {
+        toast(e.message, true);
+        saveBtn.disabled = false;
+        saveBtn.textContent = '💾 保存到仓库';
+      }
+    };
+  }
+  render();
+};
 routes.medialib = async () => {
   view.innerHTML = `<div class="card"><h2>🗂 媒体库 <span class="sub">R2 桶里已上传的文件</span></h2>
     <div class="toolbar" id="ml-chips"></div>

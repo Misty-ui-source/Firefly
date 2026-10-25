@@ -66,7 +66,6 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 			"assets/images/MobileWallpaper/m4.avif",
 			"assets/images/MobileWallpaper/m5.avif",
 			"assets/images/MobileWallpaper/m6.avif",
-			"https://img.lanerc.me/admin/wallpaper/mvnj7hgt-1000053299.webp",
 		],
 		// 背景视频播放地址
 		// 支持单个视频路径（字符串）或多个视频循环（数组，参考上面壁纸配置）
@@ -74,8 +73,30 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 		// playerUrl: "/assets/videos/firefly.mp4",
 		playerUrl: "https://bed.twoleaf.cn/file/1785658612716_firefly.mp4",
 	},
+	// 分模式专属图片（Alexander Console「图片」页维护）：某模式某端有图用专属图，空着回退上面的共享 src
+	modeSrc: {
+		banner: {
+			desktop: [],
+			mobile: [],
+		},
+		fullscreen: {
+			desktop: [],
+			mobile: [],
+		},
+		overlay: {
+			desktop: [],
+			mobile: [],
+		},
+	},
+	// 分模式轮播开关（Alexander Console「图片」页维护）：删掉某行 = 回退 common.carousel.enable
+	modeCarousel: {
+		banner: true,
+		fullscreen: true,
+		overlay: true,
+	},
 	// 已禁用的壁纸（不参与轮换，保留在上面列表中可随时恢复）。由管理台维护，手动编辑请保持 URL 与上面一致
-	disabled: [],
+	disabled: [
+	],
 	// 横幅壁纸和全屏壁纸共享配置
 	common: {
 		// 壁纸遮罩暗度，让横幅文字显示更清晰，0-1之间，值越大越暗
@@ -98,7 +119,6 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 				"Upon Lighted Fyrefly, I Soon Gaze",
 				"From Undreamt Night, I Thence Shine",
 				"In Finalized Morrow, I Full Bloom",
-				"君踏光至，茶已温妥",
 			],
 			// 主页横幅副标题字体大小
 			subtitleSize: "1.5rem",

@@ -9,16 +9,43 @@ import type {
 	BannerPostMeta,
 	BannerVisibilityState,
 } from "@/utils/banner-visibility-utils";
-import type { BackgroundImages } from "@/utils/layout-utils";
+import type { BackgroundImages, ModeBackgroundImagesSet } from "@/utils/layout-utils";
+import { getModeCarouselEnabled } from "@/utils/layout-utils";
 
 interface Props {
 	state: BannerVisibilityState;
 	backgroundImages: BackgroundImages;
+	modeImages: ModeBackgroundImagesSet;
 	title?: string;
 	bannerPostMeta?: BannerPostMeta;
 }
 
-const { state, backgroundImages, title, bannerPostMeta } = Astro.props;
+const { state, backgroundImages, modeImages, title, bannerPostMeta } = Astro.props;
+
+/* slide 分组：共享组（data-wp-mode="all"）+ 有专属图的模式组；默认模式的组排最前，保证 SSR 首张正确 */
+type SlideGroup = { mode: string; desktop: string[]; mobile: string[] };
+const allGroups: SlideGroup[] = [
+	{ mode: "all", desktop: backgroundImages.desktop, mobile: backgroundImages.mobile },
+	...(["banner", "fullscreen", "overlay"] as const)
+		.filter((m) => modeImages.hasOwn[m])
+		.map((m) => ({ mode: m, desktop: modeImages.modes[m].desktop, mobile: modeImages.modes[m].mobile })),
+];
+const defaultGroupMode = (backgroundWallpaper.mode !== "none" && modeImages.hasOwn[backgroundWallpaper.mode as "banner" | "fullscreen" | "overlay"])
+	? backgroundWallpaper.mode
+	: "all";
+const slideGroups: SlideGroup[] = [
+	...allGroups.filter((g) => g.mode === defaultGroupMode),
+	...allGroups.filter((g) => g.mode !== defaultGroupMode),
+];
+const useCarousel =
+	state.hasMultipleImages ||
+	slideGroups.length > 1 ||
+	slideGroups.some((g) => g.desktop.length > 1 || g.mobile.length > 1);
+const carouselModes = {
+	banner: getModeCarouselEnabled("banner"),
+	fullscreen: getModeCarouselEnabled("fullscreen"),
+	overlay: getModeCarouselEnabled("overlay"),
+};
 const wallpaperPosition = state.isFullscreenMode
 	? (backgroundWallpaper.fullscreen?.position ??
 		backgroundWallpaper.banner?.position)
@@ -29,17 +56,18 @@ const wallpaperPosition = state.isFullscreenMode
 {(state.isWallpaperSwitchable || state.isBannerMode || state.isFullscreenMode || state.isOverlayMode) && (
 <div id="wallpaper-wrapper" class="absolute z-10 w-full overflow-hidden" style="--overlay-opacity: ${backgroundWallpaper.overlay?.opacity ?? 0.8}; --overlay-z-index: ${backgroundWallpaper.overlay?.zIndex ?? -1}; --overlay-blur: ${backgroundWallpaper.overlay?.blur ?? 0}px;">
 <!-- 背景图片显示 -->
-    {state.hasMultipleImages ? (
+    {useCarousel ? (
     /* 轮播模式：渲染所有图片为 slide-item */
     <div class:list={["relative h-full w-full bg-(--page-bg)", `effect-${state.bannerCarouselEffect}`]} id="banner-images-container"
          style={`z-index: 5; --carousel-interval: ${state.bannerCarouselInterval}ms`}
          data-carousel-enabled={state.bannerCarouselEnabledDefault}
+         data-carousel-modes={JSON.stringify(carouselModes)}
          data-carousel-switchable={state.bannerCarouselSwitchable}
          data-carousel-interval={state.bannerCarouselInterval}
          data-carousel-effect={state.bannerCarouselEffect}>
         {/* 图片放在 <template> 里，浏览器不会发起请求；由轮播脚本挑中随机那张后克隆进 DOM */}
-        {backgroundImages.mobile.map((src, index) => (
-            <div class:list={["slide-item block lg:hidden", index === 0 && "active"]} data-index={index}>
+        {slideGroups.map((g) => g.mobile.map((src, index) => (
+            <div class:list={["slide-item block lg:hidden", index === 0 && g.mode === defaultGroupMode && "active"]} data-index={index} data-wp-mode={g.mode}>
                 <template>
                     <ImageWrapper
                         alt="Mobile background image of the blog"
@@ -54,9 +82,9 @@ const wallpaperPosition = state.isFullscreenMode
                     />
                 </template>
             </div>
-        ))}
-        {backgroundImages.desktop.map((src, index) => (
-            <div class:list={["slide-item hidden lg:block", index === 0 && "active"]} data-index={index}>
+        )))}
+        {slideGroups.map((g) => g.desktop.map((src, index) => (
+            <div class:list={["slide-item hidden lg:block", index === 0 && g.mode === defaultGroupMode && "active"]} data-index={index} data-wp-mode={g.mode}>
                 <template>
                     <ImageWrapper
                         alt="Desktop background image of the blog"
@@ -71,7 +99,7 @@ const wallpaperPosition = state.isFullscreenMode
                     />
                 </template>
             </div>
-        ))}
+        )))}
         <noscript>
             {backgroundImages.mobile.length > 0 && (
                 <div class="slide-item active block lg:hidden">
@@ -188,7 +216,7 @@ const wallpaperPosition = state.isFullscreenMode
     )}
 
     <!-- 壁纸轮播脚本（基于 CSS transition） -->
-    {state.hasMultipleImages && (
+    {useCarousel && (
     <script is:inline data-swup-ignore-script>
         (function initBannerCarousel() {
             var container = document.getElementById('banner-images-container');
@@ -201,7 +229,20 @@ const wallpaperPosition = state.isFullscreenMode
             var effect = container.dataset.carouselEffect || 'fade';
             var transitioning = false;
 
+            function currentWallpaperMode() {
+                return document.documentElement.getAttribute('data-wallpaper-mode') || 'banner';
+            }
+
             function isCarouselEnabled() {
+                // 分模式轮播开关（管理台配置）优先
+                var modesAttr = container.dataset.carouselModes;
+                if (modesAttr) {
+                    try {
+                        var map = JSON.parse(modesAttr);
+                        var m = currentWallpaperMode();
+                        if (typeof map[m] === 'boolean') return map[m];
+                    } catch (e) {}
+                }
                 if (!switchable) return defaultEnabled;
                 var stored = localStorage.getItem('bannerCarouselEnabled');
                 if (stored === null) return defaultEnabled;
@@ -280,7 +321,16 @@ const wallpaperPosition = state.isFullscreenMode
                 if (visible.length === 0) {
                     for (var j = 0; j < all.length; j++) visible.push(all[j]);
                 }
-                return visible;
+                // 分模式过滤：当前模式有专属图（data-wp-mode=模式名）时只轮专属图，否则用共享图（all）
+                var mode = currentWallpaperMode();
+                var own = [];
+                var shared = [];
+                for (var k = 0; k < visible.length; k++) {
+                    var gm = visible[k].getAttribute('data-wp-mode') || 'all';
+                    if (gm === mode) own.push(visible[k]);
+                    else if (gm === 'all') shared.push(visible[k]);
+                }
+                return own.length ? own : shared;
             }
 
             function getCurrentIndex(slides) {
@@ -403,6 +453,21 @@ const wallpaperPosition = state.isFullscreenMode
                 e.detail && e.detail.enabled ? startAutoPlay() : stopAutoPlay();
             });
             window.addEventListener('wallpaperModeChange', function(e) {
+                // 模式变了先把 active 换到新模式的图组上（没有可用的 active 就激活第一张并实例化）
+                var slides = getVisibleSlides();
+                if (slides.length) {
+                    var hasActive = false;
+                    for (var i = 0; i < slides.length; i++) {
+                        if (slides[i].classList.contains('active')) { hasActive = true; break; }
+                    }
+                    if (!hasActive) {
+                        var actives = container.querySelectorAll('.slide-item.active');
+                        for (var a = 0; a < actives.length; a++) actives[a].classList.remove('active');
+                        slides[0].classList.add('active');
+                        materialize(slides[0], false);
+                        if (isCarouselEnabled()) materializeAhead(slides, 0);
+                    }
+                }
                 if (e.detail && (e.detail.mode === 'banner' || e.detail.mode === 'fullscreen')) {
                     if (isCarouselEnabled()) startAutoPlay();
                 } else {
@@ -412,6 +477,11 @@ const wallpaperPosition = state.isFullscreenMode
 
             // 随机首张：只有被抽中的这一张会真的下载，其余仍留在 <template> 里
             var slides = getVisibleSlides();
+            // 清掉其他模式图组在 SSR 时带的 active，只留当前模式图组内的
+            var stray = container.querySelectorAll('.slide-item.active');
+            for (var s = 0; s < stray.length; s++) {
+                if (slides.indexOf(stray[s]) === -1) stray[s].classList.remove('active');
+            }
             var startIdx = slides.length > 1 ? Math.floor(Math.random() * slides.length) : 0;
             var firstSlide = slides[startIdx];
             // .slide-item 自带 1000ms 的 opacity 过渡，首张不该吃它（它是 LCP 元素）。

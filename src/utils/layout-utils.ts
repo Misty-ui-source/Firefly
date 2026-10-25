@@ -49,9 +49,46 @@ export const getBackgroundImages = (): BackgroundImages => {
 	};
 };
 
+export type WallpaperModeKey = "banner" | "fullscreen" | "overlay";
+
+/* 分模式图片解析：某模式某端在 modeSrc 里有专属图就用专属图，否则回退共享图（getBackgroundImages）。
+ * 返回每个模式最终生效的图片组，以及哪些模式拥有专属图（渲染时据此给 slide 打 data-wp-mode 标记）。 */
+export const getModeBackgroundImages = (): {
+	shared: BackgroundImages;
+	modes: Record<WallpaperModeKey, BackgroundImages>;
+	hasOwn: Record<WallpaperModeKey, boolean>;
+} => {
+	const shared = getBackgroundImages();
+	const modeSrc = (backgroundWallpaper as { modeSrc?: Record<string, { desktop?: string[]; mobile?: string[] }> }).modeSrc || {};
+	const modes = {} as Record<WallpaperModeKey, BackgroundImages>;
+	const hasOwn = {} as Record<WallpaperModeKey, boolean>;
+	(["banner", "fullscreen", "overlay"] as WallpaperModeKey[]).forEach((mode) => {
+		const own = modeSrc[mode] || {};
+		const ownDesktop = toArray(own.desktop);
+		const ownMobile = toArray(own.mobile);
+		hasOwn[mode] = ownDesktop.length > 0 || ownMobile.length > 0;
+		const desktop = ownDesktop.length > 0 ? ownDesktop : shared.desktop;
+		const mobile = ownMobile.length > 0 ? ownMobile : shared.mobile;
+		modes[mode] = {
+			desktop,
+			mobile,
+			isMultiple: desktop.length > 1 || mobile.length > 1,
+		};
+	});
+	return { shared, modes, hasOwn };
+};
+
+export type ModeBackgroundImagesSet = ReturnType<typeof getModeBackgroundImages>;
+
+/* 分模式轮播开关：modeCarousel 配置了该模式就用它，否则回退 common.carousel.enable */
+export const getModeCarouselEnabled = (mode: WallpaperModeKey): boolean => {
+	const mc = (backgroundWallpaper as { modeCarousel?: Record<string, boolean> }).modeCarousel;
+	if (mc && typeof mc[mode] === "boolean") return mc[mode];
+	return backgroundWallpaper.common?.carousel?.enable ?? false;
+};
+
 // 类型守卫函数
-export const isBannerSrcObject = (
-	src:
+export const isBannerSrcObject = (	src:
 		| string
 		| string[]
 		| { desktop?: string | string[]; mobile?: string | string[] },

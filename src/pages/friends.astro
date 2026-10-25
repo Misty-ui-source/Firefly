@@ -272,4 +272,95 @@ const description =
     }
   </script>
 
+  <script slot="head" is:inline>
+    (function () {
+      function initFriendApply() {
+        var box = document.getElementById("friend-apply");
+        if (!box || box.dataset.bound) return;
+        box.dataset.bound = "1";
+        var DEF = {
+          name: box.dataset.defName || "",
+          desc: box.dataset.defDesc || "",
+          avatar: box.dataset.defAvatar || "",
+        };
+        var $ = function (id) { return document.getElementById(id); };
+        var nameEl = $("fa-name"), emailEl = $("fa-email"), descEl = $("fa-desc"),
+          urlEl = $("fa-url"), avatarEl = $("fa-avatar"), rssEl = $("fa-rss");
+        var pA = $("fa-p-avatar"), pN = $("fa-p-name"), pD = $("fa-p-desc"), status = $("fa-status");
+        if (!nameEl || !pA) return;
+        function syncPreview() {
+          var target = avatarEl.value.trim() || DEF.avatar;
+          if (pA.getAttribute("src") !== target) pA.src = target;
+          pN.textContent = nameEl.value.trim() || DEF.name;
+          pD.textContent = descEl.value.trim() || DEF.desc;
+        }
+        [nameEl, descEl, avatarEl].forEach(function (el) {
+          el.addEventListener("input", syncPreview);
+        });
+        pA.addEventListener("error", function () {
+          if (pA.getAttribute("src") !== DEF.avatar) pA.src = DEF.avatar;
+        });
+        function findEditor() {
+          return (
+            document.querySelector(".wl-editor") ||
+            document.querySelector("#waline textarea") ||
+            document.querySelector("textarea.wl-editor")
+          );
+        }
+        function fillComment(text, tries, done) {
+          var ed = findEditor();
+          if (ed) {
+            try {
+              var setter = Object.getOwnPropertyDescriptor(
+                window.HTMLTextAreaElement.prototype,
+                "value",
+              ).set;
+              setter.call(ed, text);
+            } catch (e) {
+              ed.value = text;
+            }
+            ed.dispatchEvent(new Event("input", { bubbles: true }));
+            ed.focus();
+            ed.scrollIntoView({ behavior: "smooth", block: "center" });
+            done(true);
+            return;
+          }
+          if (tries > 0)
+            setTimeout(function () { fillComment(text, tries - 1, done); }, 700);
+          else done(false);
+        }
+        $("fa-submit").addEventListener("click", function () {
+          var name = nameEl.value.trim(), email = emailEl.value.trim(),
+            desc = descEl.value.trim(), url = urlEl.value.trim(),
+            avatar = avatarEl.value.trim(), rss = rssEl.value.trim();
+          if (!name || !email || !url) {
+            status.textContent = "站点名称、邮箱、站点链接是必填的，填好再点。";
+            status.style.color = "#dc2626";
+            return;
+          }
+          status.style.color = "";
+          var lines = ["【友链申请】", "站点名称：" + name];
+          if (desc) lines.push("站点描述：" + desc);
+          lines.push("站点链接：" + url);
+          if (avatar) lines.push("头像链接：" + avatar);
+          if (rss) lines.push("订阅链接：" + rss);
+          lines.push("联系邮箱：" + email);
+          var text = lines.join("\n");
+          if (navigator.clipboard && navigator.clipboard.writeText)
+            navigator.clipboard.writeText(text).catch(function () {});
+          status.textContent = "正在填入下方评论区…";
+          fillComment(text, 10, function (ok) {
+            status.textContent = ok
+              ? "已填入下方评论区（同时复制到剪切板了），核对无误后点评论区的提交即可。"
+              : "已复制到剪切板，评论区还没加载出来，手动粘贴到下方评论区提交即可。";
+          });
+        });
+      }
+      document.addEventListener("DOMContentLoaded", initFriendApply);
+      document.addEventListener("astro:page-load", initFriendApply);
+      document.addEventListener("swup:contentReplaced", initFriendApply);
+      if (document.readyState !== "loading") initFriendApply();
+    })();
+  </script>
+
 </MainGridLayout>
