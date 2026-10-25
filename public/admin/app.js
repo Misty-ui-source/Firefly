@@ -454,7 +454,7 @@ function navDefs() {
     dashboard: '🏠 首页', stats: '📊 写作', search: '🔍 搜索', medialib: '🗂 媒体库', tags: '🏷 标签', fonts: '🔤 字体',
     images: '🖼 图片', music: '🎵 音乐', gallery: '📷 相册',
     announce: '📢 公告', friends: '🔗 友链', booknav: '🔖 书签', navmgr: '🧭 导航', videos: '🎬 视频', profile: '👤 简介', banner: '🖼️ 横幅',
-    timeline: '🕘 时间线', thoughts: '💭 碎碎念',
+    timeline: '🕘 时间线', thoughts: '💭 碎碎念', sitenav: '🌐 站点导航',
     blog: '🌐 博客', waline: '💬 评论', umami: '📈 数据统计',
   };
   for (const [k, c] of Object.entries(CFG.collections)) defs[k] = c.label;
@@ -2998,6 +2998,203 @@ routes.navmgr = async () => {
   };
 };
 
+/* ---------- 站点导航管理：src/config/navBarConfig.ts（博客顶栏，非控制台自己的导航） ---------- */
+const SITENAV_PATH = 'src/config/navBarConfig.ts';
+/* 找一段 [...] 的配平结尾下标（字符串感知） */
+function snBracketEnd(s, start) {
+  let depth = 0, inStr = false, escN = false, q = '';
+  for (let i = start; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) { if (escN) escN = false; else if (c === '\\') escN = true; else if (c === q) inStr = false; continue; }
+    if (c === '"' || c === "'") { inStr = true; q = c; continue; }
+    if (c === '[') depth++;
+    else if (c === ']') { depth--; if (!depth) return i; }
+  }
+  return -1;
+}
+function parseSiteNavItem(raw) {
+  let children = [];
+  let rest = raw;
+  const ci = raw.indexOf('children:');
+  if (ci >= 0) {
+    const s = raw.indexOf('[', ci);
+    const e = s >= 0 ? snBracketEnd(raw, s) : -1;
+    if (e > s) {
+      children = splitBraceObjects(raw.slice(s + 1, e)).map(parseSiteNavItem);
+      rest = raw.slice(0, ci) + raw.slice(e + 1);
+    }
+  }
+  return {
+    name: getStrField(rest, 'name'), url: getStrField(rest, 'url'), icon: getStrField(rest, 'icon'),
+    external: /external\s*:\s*true/.test(rest), pageKey: getStrField(rest, 'pageKey'),
+    children, _drop: children.length > 0, _open: false,
+  };
+}
+function parseSiteNav(src) {
+  const li = src.indexOf('links:');
+  if (li < 0) return null;
+  const s = src.indexOf('[', li);
+  const e = s >= 0 ? snBracketEnd(src, s) : -1;
+  if (e < 0) return null;
+  return splitBraceObjects(src.slice(s + 1, e)).map(parseSiteNavItem);
+}
+function siteNavItemTs(it, indent) {
+  const t = '\t'.repeat(indent);
+  let s = `${t}{\n${t}\tname: "${tsEsc(it.name)}",\n${t}\turl: "${tsEsc(it.url)}",\n`;
+  if (it.external) s += `${t}\texternal: true,\n`;
+  if (it.icon) s += `${t}\ticon: "${tsEsc(it.icon)}",\n`;
+  if (it.pageKey) s += `${t}\tpageKey: "${tsEsc(it.pageKey)}",\n`;
+  if (it._drop && it.children && it.children.length) {
+    s += `${t}\tchildren: [\n${it.children.map((c) => siteNavItemTs(c, indent + 2)).join('\n')}\n${t}\t],\n`;
+  }
+  return s + `${t}}},`;
+}
+function buildSiteNavTs(items) {
+  return `import {
+\ttype NavBarConfig,
+\ttype NavBarLink,
+\ttype NavBarSearchConfig,
+\tNavBarSearchMethod,
+} from "../types/navBarConfig";
+
+// ============================================================================
+// 导航栏配置 - 根据顺序动态生成导航栏链接
+// 本文件为纯数据格式，由 Alexander Console「🌐 站点导航」页维护（增删/排序/改名）
+// ============================================================================
+export const navBarConfig: NavBarConfig = {
+\tlinks: [
+${items.map((it) => siteNavItemTs(it, 2)).join('\n')}
+\t],
+};
+
+// 导航搜索配置
+export const navBarSearchConfig: NavBarSearchConfig = {
+\tmethod: NavBarSearchMethod.PageFind,
+};
+`;
+}
+routes.sitenav = async () => {
+  view.innerHTML = '<p class="hint">加载中…</p>';
+  let sha = null, items = null;
+  try {
+    const data = await ghGetFile(SITENAV_PATH);
+    sha = data.sha;
+    items = parseSiteNav(data.text);
+    if (!items || !items.length) throw new Error('没解析出导航项，文件格式可能变了，先别保存');
+  } catch (e) { view.innerHTML = `<p class="hint">加载失败：${esc(e.message)}</p>`; return; }
+  view.innerHTML = `
+    <div class="toolbar"><button class="btn" id="btn-sn-add">＋ 添加顶级项</button><span class="spacer"></span>
+      <button class="btn" id="btn-sn-save">💾 保存到仓库</button></div>
+    <div class="card"><h2>🌐 站点导航 <span class="sub">${SITENAV_PATH}</span></h2>
+    <p class="hint">这里管的是<b>博客 lanerc.me 顶部</b>的导航栏（不是控制台自己的）。顶级项和下拉项都能 ↑↓ 排序、编辑、删除；带下拉的项点「管理下拉」展开。纯父项 URL 填 #。图标填 Iconify 名（如 material-symbols:home）。保存后重新构建生效。</p>
+    <div id="sn-list"></div></div>`;
+  const render = () => {
+    $('#sn-list').innerHTML = items.map((it, i) => `
+      <div class="card">
+        <div class="list-item">
+          <span class="title">${esc(it.name)}</span><span class="meta">${esc(it.url)}${it._drop ? ` · 下拉 ${it.children.length} 项` : ''}${it.external ? ' · 外链' : ''}</span><span class="spacer"></span>
+          <button class="mini-btn" data-ta="up" data-i="${i}">↑</button><button class="mini-btn" data-ta="down" data-i="${i}">↓</button>
+          <button class="mini-btn" data-ta="edit" data-i="${i}">编辑</button>
+          ${it._drop ? `<button class="mini-btn" data-ta="toggle" data-i="${i}">${it._open ? '收起下拉' : '管理下拉'}</button>` : ''}
+          <button class="mini-btn danger" data-ta="del" data-i="${i}">删除</button>
+        </div>
+        ${it._drop && it._open ? `<div class="sn-kids">${it.children.map((c, j) => `
+          <div class="list-item">
+            <span class="title">${esc(c.name)}</span><span class="meta">${esc(c.url)}${c.external ? ' · 外链' : ''}</span><span class="spacer"></span>
+            <button class="mini-btn" data-ca="up" data-i="${i}" data-j="${j}">↑</button><button class="mini-btn" data-ca="down" data-i="${i}" data-j="${j}">↓</button>
+            <button class="mini-btn" data-ca="edit" data-i="${i}" data-j="${j}">编辑</button>
+            <button class="mini-btn danger" data-ca="del" data-i="${i}" data-j="${j}">删除</button>
+          </div>`).join('') || '<p class="hint">还没有下拉项</p>'}
+          <button class="mini-btn" data-addkid="${i}">＋ 添加下拉项</button></div>` : ''}
+      </div>`).join('');
+    $('#sn-list').querySelectorAll('[data-ta]').forEach((b) => {
+      b.onclick = () => {
+        const i = parseInt(b.dataset.i, 10), act = b.dataset.ta, it = items[i];
+        if (act === 'up' && i > 0) { [items[i - 1], items[i]] = [items[i], items[i - 1]]; render(); }
+        if (act === 'down' && i < items.length - 1) { [items[i + 1], items[i]] = [items[i], items[i + 1]]; render(); }
+        if (act === 'toggle') { it._open = !it._open; render(); }
+        if (act === 'edit') openSnEditor(it, false, render);
+        if (act === 'del') {
+          if (!confirm(`删除顶级项「${it.name}」？${it._drop && it.children.length ? `\n它的 ${it.children.length} 个下拉项会一起删掉。` : ''}`)) return;
+          items.splice(i, 1); render();
+        }
+      };
+    });
+    $('#sn-list').querySelectorAll('[data-ca]').forEach((b) => {
+      b.onclick = () => {
+        const i = parseInt(b.dataset.i, 10), j = parseInt(b.dataset.j, 10), act = b.dataset.ca;
+        const kids = items[i].children, c = kids[j];
+        if (act === 'up' && j > 0) { [kids[j - 1], kids[j]] = [kids[j], kids[j - 1]]; render(); }
+        if (act === 'down' && j < kids.length - 1) { [kids[j + 1], kids[j]] = [kids[j], kids[j + 1]]; render(); }
+        if (act === 'edit') openSnEditor(c, true, render);
+        if (act === 'del') { if (confirm(`删除下拉项「${c.name}」？`)) { kids.splice(j, 1); render(); } }
+      };
+    });
+    $('#sn-list').querySelectorAll('[data-addkid]').forEach((b) => {
+      b.onclick = () => {
+        const i = parseInt(b.dataset.addkid, 10);
+        const draft = { name: '', url: '', icon: '', external: false, pageKey: '', children: [], _drop: false, _open: false };
+        openSnEditor(draft, true, () => { items[i].children.push(draft); items[i]._open = true; render(); });
+      };
+    });
+  };
+  const openSnEditor = (target, isChild, onOk) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal card">
+        <h3>${isChild ? '下拉项' : '导航项'}编辑</h3>
+        <div class="field"><label>名称 *</label><input id="sn-name" value="${esc(target.name || '')}" placeholder="如：文章"></div>
+        <div class="field"><label>链接 URL *</label><input id="sn-url" value="${esc(target.url || '')}" placeholder="/archive/ 或 https://…；纯下拉父项填 #"></div>
+        <div class="field"><label>图标（Iconify 名）</label><input id="sn-icon" value="${esc(target.icon || '')}" placeholder="material-symbols:home"></div>
+        <div class="field"><label>pageKey（可空，主题标当前页用）</label><input id="sn-pagekey" value="${esc(target.pageKey || '')}" placeholder="friends"></div>
+        <div class="field"><label><input type="checkbox" id="sn-ext" ${target.external ? 'checked' : ''}> 外链（新窗口打开）</label></div>
+        ${isChild ? '' : `<div class="field"><label><input type="checkbox" id="sn-drop" ${target._drop ? 'checked' : ''}> 这是下拉父项（能在下面加子项）</label></div>`}
+        <div class="toolbar"><span class="spacer"></span>
+          <button class="btn btn-ghost" id="sn-cancel">取消</button>
+          <button class="btn" id="sn-ok">确定</button></div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#sn-cancel').onclick = () => overlay.remove();
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    overlay.querySelector('#sn-ok').onclick = () => {
+      const name = overlay.querySelector('#sn-name').value.trim();
+      const url = overlay.querySelector('#sn-url').value.trim();
+      if (!name || !url) { toast('名称和 URL 必填', true); return; }
+      if (!isChild) {
+        const drop = overlay.querySelector('#sn-drop').checked;
+        if (!drop && target._drop && target.children && target.children.length) {
+          if (!confirm(`取消下拉会删掉已有的 ${target.children.length} 个子项，确定？`)) return;
+          target.children = [];
+        }
+        target._drop = drop;
+        if (drop) target._open = true;
+      }
+      target.name = name; target.url = url;
+      target.icon = overlay.querySelector('#sn-icon').value.trim();
+      target.pageKey = overlay.querySelector('#sn-pagekey').value.trim();
+      target.external = overlay.querySelector('#sn-ext').checked;
+      overlay.remove();
+      onOk();
+    };
+  };
+  render();
+  $('#btn-sn-add').onclick = () => {
+    const draft = { name: '', url: '', icon: '', external: false, pageKey: '', children: [], _drop: false, _open: false };
+    openSnEditor(draft, false, () => { items.push(draft); render(); });
+  };
+  $('#btn-sn-save').onclick = async () => {
+    const btn = $('#btn-sn-save');
+    btn.disabled = true;
+    try {
+      const r = await saveWithLog(SITENAV_PATH, buildSiteNavTs(items), sha, '更新站点导航 [管理台]', { type: '导航', action: '更新', target: '站点导航' });
+      sha = r.content.sha;
+      toast('站点导航已保存，重新构建网站后生效');
+    } catch (e) { toast(e.message, true); }
+    btn.disabled = false;
+  };
+};
+
 /* ---------- 时间线管理 ---------- */
 /* ---------- 列表型编辑器（时间线/碎碎念）本地草稿 ----------
  * 两层：① items 未保存改动（点了「确定」没点「保存到仓库」就退出也不丢）
@@ -4515,10 +4712,21 @@ routes.fonts = async () => {
     };
   } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
 
+  /* 下拉显示名中文化（只改显示，value 仍是 CSS 变量、配置里的字体名不动——那是加载器认的名字） */
+  const FONT_CN = {
+    '--font-noto-serif-sc': '思源宋体',
+    '--font-lxgw-wenkai': '霞鹜文楷',
+    '--font-zhuque-fangsong': '朱雀仿宋',
+    '--font-inter': 'Inter · 英文无衬线',
+    '--font-jetbrains-mono': 'JetBrains Mono · 代码等宽',
+    '--font-zen-maru-gothic': 'Zen Maru Gothic · 日系圆体',
+    '--font-greatvibes': 'Great Vibes · 手写花体',
+  };
+  const fontLabel = (f) => FONT_CN[f.var] || f.name;
   const fontOpts = (cur) => `<option value="system"${cur === 'system' ? ' selected' : ''}>系统字体（不加载网络字体）</option>` +
-    fonts.map((f) => `<option value="${esc(f.var)}"${cur === f.var ? ' selected' : ''}>${esc(f.name)}</option>`).join('');
+    fonts.map((f) => `<option value="${esc(f.var)}"${cur === f.var ? ' selected' : ''}>${esc(fontLabel(f))}</option>`).join('');
   const regionOpts = (cur) => `<option value=""${!cur ? ' selected' : ''}>（跟随全局）</option>` +
-    fonts.map((f) => `<option value="${esc(f.var)}"${cur === f.var ? ' selected' : ''}>${esc(f.name)}</option>`).join('');
+    fonts.map((f) => `<option value="${esc(f.var)}"${cur === f.var ? ' selected' : ''}>${esc(fontLabel(f))}</option>`).join('');
   const slotField = (id, label, opts) => `<div class="field"><label>${label}</label><select id="${id}">${opts}</select></div>`;
 
   view.innerHTML = `
