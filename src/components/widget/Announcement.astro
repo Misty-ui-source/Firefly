@@ -30,7 +30,7 @@ const activeLink = config.mode === "geo" ? (config.geoLink ?? config.link) : con
 >
   <div>
     <!-- 公告栏内容 -->
-    <div id="announcement-content" class="text-neutral-600 dark:text-neutral-300 leading-relaxed mb-3">
+    <div class="announcement-content text-neutral-600 dark:text-neutral-300 leading-relaxed mb-3">
       {config.content}
     </div>
 
@@ -75,8 +75,11 @@ const activeLink = config.mode === "geo" ? (config.geoLink ?? config.link) : con
         }}
       >
         (() => {
-          const el = document.getElementById('announcement-content');
-          if (!el) return;
+          // 公告在左右侧边栏各渲染一份（桌面/平板/手机看到的不是同一个实例），
+          // 必须按 class 更新全部实例：只按 id 取第一个会导致另一份永远停在静态文案
+          const els = Array.from(document.querySelectorAll('.announcement-content'));
+          if (!els.length) return;
+          const setAll = (txt) => els.forEach((e) => { e.textContent = txt; });
           const COUNTRY = { CN: '中国', HK: '中国香港', TW: '中国台湾', MO: '中国澳门', US: '美国', JP: '日本', KR: '韩国', GB: '英国', FR: '法国', DE: '德国', CA: '加拿大', AU: '澳大利亚', SG: '新加坡', RU: '俄罗斯', IN: '印度', NL: '荷兰', IT: '意大利', ES: '西班牙', BR: '巴西', TH: '泰国', VN: '越南', MY: '马来西亚', ID: '印度尼西亚', PH: '菲律宾', NZ: '新西兰', SE: '瑞典', CH: '瑞士', BE: '比利时', AT: '奥地利', PL: '波兰', TR: '土耳其', AE: '阿联酋', MX: '墨西哥', AR: '阿根廷', ZA: '南非', IE: '爱尔兰', PT: '葡萄牙', GR: '希腊', CZ: '捷克', UA: '乌克兰', NO: '挪威', DK: '丹麦', FI: '芬兰', IL: '以色列', CL: '智利', CO: '哥伦比亚', PE: '秘鲁', NG: '尼日利亚', KE: '肯尼亚', EG: '埃及', SA: '沙特阿拉伯', PK: '巴基斯坦', BD: '孟加拉国', MM: '缅甸', KH: '柬埔寨', NP: '尼泊尔', LK: '斯里兰卡', HU: '匈牙利', RO: '罗马尼亚' };
           /* 国外主要国家专属词条（国外只显示国家） */
           const COUNTRY_LINE = { US: '横跨太平洋的访客，这距离感先拉满了', JP: '樱花之国的朋友远渡重洋，欢迎来坐', KR: '一衣带水的朋友，欢迎来逛', GB: '英伦来的朋友，茶先泡上', FR: '浪漫之都的访客，bonjour，欢迎来坐', DE: '严谨本谨的朋友，能逛到这儿也是缘分', RU: '远东以西的访客，这距离是真远，欢迎', CA: '枫叶之国的访客，欢迎来坐', AU: '南半球的朋友季节正好相反，神奇的缘分', SG: '花园城市来的朋友，狮城排面', IN: '南亚的朋友远道而来，namaste', NL: '风车与郁金香之国的朋友，欢迎', IT: '罗马同款浪漫的访客，ciao', ES: '阳光海岸的热情，hola，欢迎来坐', BR: '桑巴的热情跨越半个地球，热烈欢迎', TH: '萨瓦迪卡，冬阴功先香为敬', VN: '河粉之国的朋友，欢迎来坐', MY: '肉骨茶先安排，欢迎来逛', ID: '千岛之国的访客，欢迎来坐', PH: '海岛之国的朋友，欢迎来坐', NZ: '长白云之乡、地球另一端的访客，欢迎', SE: '北欧的朋友，极光同款缘分', CH: '阿尔卑斯的访客，精准抵达，欢迎' };
@@ -115,18 +118,19 @@ const activeLink = config.mode === "geo" ? (config.geoLink ?? config.link) : con
           const GREET = [[0, '夜深了，还在熬夜冲浪呀'], [5, '早上好，新的一天开始啦'], [8, '上午好，精神不错'], [11, '中午好，吃饱了再来逛'], [13, '下午好，懒懒地睡个午觉吧'], [17, '傍晚好，夕阳无限好'], [19, '晚上好，今晚月色不错'], [23, '夜深了，早点休息吧']];
           const greeting = () => { const h = new Date().getHours(); let g = GREET[0][1]; for (const pair of GREET) if (h >= pair[0]) g = pair[1]; return g; };
           const render = (vals) => {
-            el.textContent = geoTemplate
+            setAll(geoTemplate
               .replaceAll('{place}', vals.place || vals.country || '远方')
               .replaceAll('{local}', vals.local || '跨越山海来看我，这份心意先收下了')
               .replaceAll('{country}', vals.country || '远方')
               .replaceAll('{region}', vals.region || '')
               .replaceAll('{city}', vals.city || '')
               .replaceAll('{distance}', vals.distance != null ? String(vals.distance) : '好几千')
-              .replaceAll('{greeting}', greeting());
+              .replaceAll('{greeting}', greeting()));
           };
           render({});
-          fetch('/api/visitor').then((r) => r.json()).then((v) => {
-            if (!v || !v.country) { el.textContent = staticContent; return; }
+          // 两个实例的脚本都会跑，共用同一个请求 Promise，避免重复打 /api/visitor
+          (window.__annVisitorP || (window.__annVisitorP = fetch('/api/visitor').then((r) => r.json()))).then((v) => {
+            if (!v || !v.country) { setAll(staticContent); return; }
             let distance = null;
             if (typeof v.latitude === 'number' && typeof v.longitude === 'number') {
               const rad = (d) => (d * Math.PI) / 180;
@@ -150,7 +154,7 @@ const activeLink = config.mode === "geo" ? (config.geoLink ?? config.link) : con
             else if (v.country === 'TW') { place = '中国台湾'; local = '海峡对岸的缘分，夜市小吃先想为敬'; }
             else { place = COUNTRY[v.country] || v.country; local = COUNTRY_LINE[v.country] || ''; }
             render({ place, local, country: COUNTRY[v.country] || v.country, region: provZh, city: cityZh, distance });
-          }).catch(() => { el.textContent = staticContent; });
+          }).catch(() => { setAll(staticContent); });
         })();
       </script>
     )
