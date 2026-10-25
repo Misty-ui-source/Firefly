@@ -1256,7 +1256,7 @@ async function mountSpecCommentCard() {
   const card = document.createElement('div');
   card.className = 'card';
   card.innerHTML = '<h2>💬 评论区开关</h2><p class="hint">加载中…</p>';
-  anchor.before(card);
+  anchor.after(card); // 开关卡放列表下面，手机上先看文件列表（2026-10-25 用户要求）
   const rows = [];
   for (const t of SPEC_COMMENT_TARGETS) {
     try {
@@ -2540,6 +2540,115 @@ function friendsParseBody(body) {
   }
   return list;
 }
+/* 友链剪切板解析：认博主通用的「本站信息」格式（带标签的行 + 裸 URL 兜底分类，也吃 JSON） */
+function parseFriendClipboard(text) {
+  const out = { title: '', siteurl: '', imgurl: '', desc: '', rss: '' };
+  if (!text) return out;
+  const t = String(text).trim();
+  if (t.startsWith('{')) {
+    try {
+      const j = JSON.parse(t);
+      out.title = j.title || j.name || '';
+      out.siteurl = j.siteurl || j.url || j.link || '';
+      out.imgurl = j.imgurl || j.avatar || j.img || j.icon || '';
+      out.desc = j.desc || j.description || '';
+      out.rss = j.rss || j.feed || '';
+      if (out.title || out.siteurl) return out;
+    } catch (e) { /* 不是 JSON，按文本继续 */ }
+  }
+  const urlRe = /https?:\/\/[^\s"'<>，。、；）)】\]]+/g;
+  const labelMap = [
+    ['title', /^(站点名称|网站名称|站名|名称|名字|博客名|title|name)\s*[:：]\s*(.+)$/i],
+    ['siteurl', /^(站点链接|网站链接|站点地址|网址|地址|链接|主页|url|link|site)\s*[:：]\s*(.+)$/i],
+    ['imgurl', /^(头像链接|头像地址|头像|avatar|imgurl|img|icon|logo)\s*[:：]\s*(.+)$/i],
+    ['desc', /^(站点描述|网站描述|描述|简介|介绍|签名|desc|description|intro)\s*[:：]\s*(.+)$/i],
+    ['rss', /^(rss|feed|订阅地址|订阅)\s*[:：]\s*(.+)$/i],
+  ];
+  const usedUrls = new Set();
+  const plainLines = [];
+  for (const rawLine of t.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    let matched = false;
+    for (const [key, re] of labelMap) {
+      const m = line.match(re);
+      if (m) {
+        const v = m[2].trim();
+        const um = v.match(urlRe);
+        out[key] = (key === 'title' || key === 'desc') ? v : (um ? um[0] : v);
+        if (um) um.forEach((u) => usedUrls.add(u));
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) plainLines.push(line);
+  }
+  const rest = [...new Set(t.match(urlRe) || [])].filter((u) => !usedUrls.has(u) && u !== out.siteurl && u !== out.imgurl && u !== out.rss);
+  for (const u of rest) {
+    if (!out.rss && /(rss|feed|atom|\.xml($|[?#]))/i.test(u)) out.rss = u;
+    else if (!out.imgurl && /\.(png|jpe?g|webp|avif|gif|svg|ico)($|[?#])/i.test(u)) out.imgurl = u;
+  }
+  const rest2 = rest.filter((u) => u !== out.rss && u !== out.imgurl);
+  if (!out.imgurl) { const av = rest2.find((u) => /avatar|logo|icon|favicon/i.test(u)); if (av) out.imgurl = av; }
+  if (!out.siteurl) { const site = rest2.find((u) => u !== out.imgurl); if (site) out.siteurl = site; }
+  for (const line of plainLines) {
+    const cleaned = line.replace(urlRe, '').replace(/^[-*·•#\s]+/, '').trim();
+    if (!cleaned) continue;
+    if (!out.title && cleaned.length <= 30) { out.title = cleaned; continue; }
+    if (!out.desc) out.desc = cleaned;
+  }
+  return out;
+}
+function wireClipFill(formEl) {
+  const btn = formEl.querySelector('[data-a=clipfill]');
+  if (!btn) return;
+  /* 对方没给 RSS 时，按常用路径逐个实测，测通哪个填哪个 */
+  const probeRss = async (siteurl) => {
+    let u0;
+    try { u0 = new URL(siteurl); } catch (e) { return ''; }
+    const cands = [];
+    if (u0.pathname && u0.pathname !== '/') {
+      const base = siteurl.replace(/\/+$/, '');
+      cands.push(base + '/rss.xml', base + '/atom.xml', base + '/feed');
+    }
+    for (const p of ['/rss.xml', '/atom.xml', '/feed', '/feed.xml', '/rss', '/index.xml']) cands.push(u0.origin + p);
+    for (const u of [...new Set(cands)]) {
+      try {
+        const r = await fetch('/api/rss-test?url=' + encodeURIComponent(u), { headers: { Authorization: `Bearer ${token()}` } });
+        const j = await r.json();
+        if (j && j.ok) return u;
+      } catch (e) { /* 测不通换下一个 */ }
+    }
+    return '';
+  };
+  const apply = async (text) => {
+    const p = parseFriendClipboard(text);
+    const filled = [];
+    const set = (k, v, label) => {
+      if (!v) return;
+      const el = formEl.querySelector(`[data-k="${k}"]`);
+      if (el) { el.value = v; filled.push(label); }
+    };
+    set('title', p.title, '站名'); set('siteurl', p.siteurl, '网址'); set('imgurl', p.imgurl, '头像'); set('desc', p.desc, '描述');
+    if (p.rss) set('rss', p.rss, 'RSS');
+    else if (p.siteurl) {
+      if (filled.length) toast('基本信息已填充，正在探测 RSS…');
+      const found = await probeRss(p.siteurl);
+      if (found) set('rss', found, 'RSS（自动探测）');
+    }
+    if (filled.length) toast('已从剪切板填充：' + filled.join('、'));
+    else toast('没认出友链信息，确认复制的是对方的本站信息', true);
+  };
+  btn.onclick = async () => {
+    let text = '';
+    try { text = await navigator.clipboard.readText(); } catch (e) { text = ''; }
+    if (text && text.trim()) { apply(text); return; }
+    const box = formEl.querySelector('.clip-paste');
+    if (box) { box.classList.remove('hidden'); const ta = box.querySelector('.clip-ta'); if (ta) ta.focus(); }
+  };
+  const go = formEl.querySelector('[data-a=clipgo]');
+  if (go) go.onclick = () => apply(formEl.querySelector('.clip-ta').value);
+}
 function friendToTs(f, weight) {
   const q = (s) => `"${String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
   return `\t{\n\t\ttitle: ${q(f.title)},\n\t\timgurl: ${q(f.imgurl)},\n\t\tdesc: ${q(f.desc)},\n\t\tsiteurl: ${q(f.siteurl)},\n\t\ttags: [${(f.tags || []).map(q).join(', ')}],\n\t\tweight: ${weight},\n\t\tenabled: ${f.enabled ? 'true' : 'false'},\n\t\trss: ${q(f.rss)},\n\t},`;
@@ -2660,9 +2769,16 @@ async function friendsMgr(body, invalidateCache) {
       ${inp('tags', '标签（逗号分隔）', (f.tags || []).join(', '))}
     </div>
     <label class="pill${f.enabled ? ' on' : ''}"><input type="checkbox" data-k="enabled"${f.enabled ? ' checked' : ''}>启用</label>
-    <div class="toolbar"><span class="spacer"></span>
+    <div class="toolbar">
+      <button class="btn btn-small btn-ghost" data-a="clipfill" type="button">📋 剪切板填充</button>
+      <span class="spacer"></span>
       <button class="btn btn-small btn-ghost" data-a="cancel">取消</button>
       <button class="btn btn-small" data-a="oksave">确定</button>
+    </div>
+    <div class="clip-paste hidden">
+      <div class="field"><label>浏览器没读到剪切板，把对方的「本站信息」粘贴到这里</label>
+      <textarea class="clip-ta" rows="4" placeholder="站点名称：……&#10;站点链接：https://……&#10;头像链接：https://……&#10;站点描述：……"></textarea></div>
+      <button class="btn btn-small" data-a="clipgo" type="button">按粘贴内容填充</button>
     </div></div>`;
   }
   function wireRssTest(formEl) {
@@ -2697,6 +2813,7 @@ async function friendsMgr(body, invalidateCache) {
         fe.innerHTML = formHtml(list[i]);
         fe.classList.remove('hidden');
         wireRssTest(fe);
+        wireClipFill(fe);
         fe.querySelector('[data-a=cancel]').onclick = () => { fe.classList.add('hidden'); fe.innerHTML = ''; };
         fe.querySelector('[data-a=oksave]').onclick = () => {
           const f = list[i];
@@ -2729,6 +2846,7 @@ async function friendsMgr(body, invalidateCache) {
     if (box.innerHTML) { box.innerHTML = ''; return; }
     box.innerHTML = formHtml({ title: '', siteurl: '', imgurl: '', desc: '', tags: ['Blog'], rss: '', enabled: true });
     wireRssTest(box);
+    wireClipFill(box);
     box.querySelector('[data-a=cancel]').onclick = () => { box.innerHTML = ''; };
     box.querySelector('[data-a=oksave]').onclick = () => {
       const f = { tags: [] };

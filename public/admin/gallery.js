@@ -166,6 +166,74 @@ async function reorderAlbums(orderedIds) {
   await ghPutFile(GALLERY_CONFIG, next, data.sha, '相册排序 [管理台]');
 }
 
+/* ---------- 相册批量暂存（统一提交） ----------
+ * 列表页的新建/编辑/排序/删除先只改内存里的 galStage，不立刻提交；
+ * 点「💾 统一提交」才用 ghCommitMulti 一次性写 galleryConfig.ts + 新建相册的 urls.txt
+ * + 删除相册的目录文件（全部合成一个 commit）。
+ * 暂存只在本次打开控制台期间有效：切换页面不丢，刷新页面会丢弃未提交改动。 */
+let galStage = null;
+
+async function galEnsureStage() {
+  if (galStage) return galStage;
+  const { data, blk, blockText, albums } = await readAlbums();
+  galStage = {
+    text: data.text,
+    blk,
+    blockText,
+    origIds: albums.map((a) => a.id),
+    origFirst: albums.length ? albums[0]._pos.start : -1,
+    origLastEnd: albums.length ? albums[albums.length - 1]._pos.end : -1,
+    albums: albums.map((a) => ({ ...a, _raw: blockText.slice(a._pos.start, a._pos.end), _new: false, _edited: false })),
+    deleted: [], // { id, filePaths: [] }
+  };
+  return galStage;
+}
+function galChangeSummary() {
+  if (!galStage) return { total: 0, parts: [], news: 0, edits: 0, dels: 0, reordered: 0 };
+  const news = galStage.albums.filter((a) => a._new).length;
+  const edits = galStage.albums.filter((a) => a._edited && !a._new).length;
+  const dels = galStage.deleted.length;
+  const survivors = galStage.albums.filter((a) => !a._new).map((a) => a.id);
+  const origSurvivors = galStage.origIds.filter((id) => survivors.includes(id));
+  const reordered = survivors.join('|') !== origSurvivors.join('|') ? 1 : 0;
+  const parts = [];
+  if (news) parts.push(`新建 ${news}`);
+  if (edits) parts.push(`编辑 ${edits}`);
+  if (dels) parts.push(`删除 ${dels}`);
+  if (reordered) parts.push('排序');
+  return { total: news + edits + dels + reordered, parts, news, edits, dels, reordered };
+}
+function galBuildText() {
+  const s = galStage;
+  const objIndent = s.blk.indent + '\t';
+  if (!s.albums.length) {
+    return s.text.slice(0, s.blk.openIdx + 1) + '\n' + s.blk.indent + s.text.slice(s.blk.closeIdx);
+  }
+  const objs = s.albums.map((a) => {
+    const t = (a._new || a._edited) ? serializeAlbum(a, objIndent) : a._raw;
+    return t.replace(/,\s*$/, '');
+  });
+  const mid = objs.join(',\n' + objIndent) + ',';
+  if (s.origFirst < 0) {
+    return s.text.slice(0, s.blk.openIdx + 1) + '\n' + mid + '\n' + s.blk.indent + s.text.slice(s.blk.closeIdx);
+  }
+  const nextBlock = s.blockText.slice(0, s.origFirst) + mid + s.blockText.slice(s.origLastEnd + 1);
+  return s.text.slice(0, s.blk.openIdx) + nextBlock + s.text.slice(s.blk.closeIdx + 1);
+}
+async function galCommitStage() {
+  const sum = galChangeSummary();
+  if (!sum.total) return;
+  const files = [{ path: GALLERY_CONFIG, content: galBuildText(), encoding: 'utf-8' }];
+  for (const a of galStage.albums) {
+    if (a._new) files.push({ path: `${GALLERY_DIR}/${a.id}/urls.txt`, content: URLS_HEADER, encoding: 'utf-8' });
+  }
+  for (const d of galStage.deleted) {
+    for (const p of d.filePaths) files.push({ path: p, del: true });
+  }
+  await ghCommitMulti(files, `相册批量更新（${sum.parts.join('、')}）[管理台]`);
+  galStage = null;
+}
+
 /* ---------- urls.txt 与目录 ---------- */
 function parseUrlsTxt(text) {
   return text.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
@@ -199,67 +267,96 @@ async function appendUrls(albumId, newUrls) {
 /* ---------- 相册列表 ---------- */
 routes.gallery = async () => {
   view.innerHTML = '<div class="card"><h2>📷 加载中…</h2></div>';
-  let albums;
-  try { ({ albums } = await readAlbums()); }
+  let stage;
+  try { stage = await galEnsureStage(); }
   catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
 
   view.innerHTML = `
     <div class="toolbar">
       <button class="btn" id="gal-new">＋ 新建相册</button>
+      <button class="btn" id="gal-commit">💾 统一提交</button>
+      <span class="hint" id="gal-pending"></span>
       <span class="spacer"></span>
       <span class="hint">${GALLERY_CONFIG} · 照片存 R2（urls.txt）或仓库目录</span>
     </div>
     <div id="gal-list"></div>`;
   $('#gal-new').onclick = () => { location.hash = '#/gallery-new'; };
+  $('#gal-commit').onclick = async () => {
+    const btn = $('#gal-commit');
+    btn.disabled = true;
+    try {
+      toast('统一提交中…');
+      await galCommitStage();
+      toast('已统一提交（一个 commit），重新构建后生效');
+      router();
+    } catch (e) { toast(e.message, true); btn.disabled = false; }
+  };
   const listEl = $('#gal-list');
-  listEl.innerHTML = '<div class="card">正在读取各相册照片数…</div>';
 
-  const photosArr = await Promise.all(albums.map((a) => loadAlbumPhotos(a.id).catch(() => null)));
-  listEl.innerHTML = '';
-  if (!albums.length) { listEl.innerHTML = '<div class="card">还没有相册，来建第一个吧 👆</div>'; return; }
-  albums.forEach((a, i) => {
-    const ph = photosArr[i] || { localImgs: [], remoteUrls: [], coverFile: null };
-    const count = ph.localImgs.length + ph.remoteUrls.length;
-    const cover = albumCoverPreview(a, ph);
-    const row = document.createElement('div');
-    row.className = 'list-item song gal-row';
-    row.innerHTML = `
-      ${cover ? `<img class="song-cover" loading="lazy" src="${esc(cover)}" alt="" onerror="this.style.visibility='hidden'">` : '<span class="song-cover"></span>'}
-      <div class="song-info">
-        <div class="title">${esc(a.name)} ${a.hasPassword ? '<span class="meta">🔒 加密</span>' : ''}</div>
-        <div class="meta">${esc(a.id)} · ${count} 张照片${a.date ? ' · ' + esc(a.date) : ''}</div>
-        ${a.description ? `<div class="meta">${esc(a.description)}</div>` : ''}
-      </div>
-      <div class="gal-actions">
-        <button class="btn btn-small btn-ghost" data-a="up" ${i === 0 ? 'disabled' : ''}>↑</button>
-        <button class="btn btn-small btn-ghost" data-a="down" ${i === albums.length - 1 ? 'disabled' : ''}>↓</button>
-        <button class="btn btn-small" data-a="open">管理照片</button>
-        <button class="btn btn-small btn-ghost" data-a="edit">编辑信息</button>
-        <button class="btn btn-small btn-danger" data-a="del">删除</button>
-      </div>`;
-    const swap = async (j) => {
-      const ids = albums.map((x) => x.id);
-      [ids[i], ids[j]] = [ids[j], ids[i]];
-      try { toast('排序保存中…'); await reorderAlbums(ids); toast('顺序已保存，重新构建后生效'); router(); }
-      catch (e) { toast(e.message, true); }
-    };
-    row.querySelector('[data-a=up]').onclick = () => { if (i > 0) swap(i - 1); };
-    row.querySelector('[data-a=down]').onclick = () => { if (i < albums.length - 1) swap(i + 1); };
-    row.querySelector('[data-a=open]').onclick = () => { location.hash = '#/gallery-album/' + encodeURIComponent(a.id); };
-    row.querySelector('[data-a=edit]').onclick = () => { location.hash = '#/gallery-edit/' + encodeURIComponent(a.id); };
-    row.querySelector('[data-a=del]').onclick = async () => {
-      if (!confirm(`确定删除相册「${a.name}」？\n这会从配置移除，并删除 public/gallery/${a.id}/ 下所有文件（不可恢复）。`)) return;
-      try {
-        toast('删除中…');
-        const ph2 = await loadAlbumPhotos(a.id);
-        for (const f of ph2.files) await ghDelFile(`${GALLERY_DIR}/${a.id}/${f.name}`, f.sha, `删除相册文件 ${a.id}/${f.name} [管理台]`);
-        await removeAlbum(a.id);
-        toast('相册已删除');
-        router();
-      } catch (e) { toast(e.message, true); }
-    };
-    listEl.appendChild(row);
-  });
+  async function renderRows() {
+    const sum = galChangeSummary();
+    const btn = $('#gal-commit');
+    if (btn) {
+      btn.disabled = sum.total === 0;
+      btn.textContent = sum.total ? `💾 统一提交（${sum.total} 处改动）` : '💾 统一提交';
+    }
+    const pend = $('#gal-pending');
+    if (pend) pend.textContent = sum.total ? `未提交：${sum.parts.join('、')}（刷新页面会丢弃）` : '';
+    listEl.innerHTML = '<div class="card">正在读取各相册照片数…</div>';
+    const albums = stage.albums;
+    const photosArr = await Promise.all(albums.map((a) => (a._new ? null : loadAlbumPhotos(a.id).catch(() => null))));
+    listEl.innerHTML = '';
+    if (!albums.length) { listEl.innerHTML = '<div class="card">还没有相册，来建第一个吧 👆</div>'; return; }
+    albums.forEach((a, i) => {
+      const ph = photosArr[i] || { localImgs: [], remoteUrls: [], coverFile: null };
+      const count = ph.localImgs.length + ph.remoteUrls.length;
+      const cover = a._new ? '' : albumCoverPreview(a, ph);
+      const row = document.createElement('div');
+      row.className = 'list-item song gal-row';
+      row.innerHTML = `
+        ${cover ? `<img class="song-cover" loading="lazy" src="${esc(cover)}" alt="" onerror="this.style.visibility='hidden'">` : '<span class="song-cover"></span>'}
+        <div class="song-info">
+          <div class="title">${esc(a.name)} ${a.hasPassword ? '<span class="meta">🔒 加密</span>' : ''} ${a._new ? '<span class="meta">🆕 未提交</span>' : ''} ${a._edited && !a._new ? '<span class="meta">✏️ 已改未提交</span>' : ''}</div>
+          <div class="meta">${esc(a.id)} · ${count} 张照片${a.date ? ' · ' + esc(a.date) : ''}</div>
+          ${a.description ? `<div class="meta">${esc(a.description)}</div>` : ''}
+        </div>
+        <div class="gal-actions">
+          <button class="btn btn-small btn-ghost" data-a="up" ${i === 0 ? 'disabled' : ''}>↑</button>
+          <button class="btn btn-small btn-ghost" data-a="down" ${i === albums.length - 1 ? 'disabled' : ''}>↓</button>
+          <button class="btn btn-small" data-a="open">管理照片</button>
+          <button class="btn btn-small btn-ghost" data-a="edit">编辑信息</button>
+          <button class="btn btn-small btn-danger" data-a="del">删除</button>
+        </div>`;
+      const swap = (j) => {
+        [stage.albums[i], stage.albums[j]] = [stage.albums[j], stage.albums[i]];
+        renderRows();
+      };
+      row.querySelector('[data-a=up]').onclick = () => { if (i > 0) swap(i - 1); };
+      row.querySelector('[data-a=down]').onclick = () => { if (i < albums.length - 1) swap(i + 1); };
+      row.querySelector('[data-a=open]').onclick = () => {
+        if (a._new) { toast('这个相册还没提交，先点「💾 统一提交」建好后才能管理照片', true); return; }
+        location.hash = '#/gallery-album/' + encodeURIComponent(a.id);
+      };
+      row.querySelector('[data-a=edit]').onclick = () => { location.hash = '#/gallery-edit/' + encodeURIComponent(a.id); };
+      row.querySelector('[data-a=del]').onclick = async () => {
+        if (!confirm(`确定删除相册「${a.name}」？\n先加入待提交，点「💾 统一提交」后才会真正从配置移除，并删除 public/gallery/${a.id}/ 下所有文件（不可恢复）。`)) return;
+        if (a._new) {
+          stage.albums.splice(i, 1);
+        } else {
+          try {
+            const ph2 = await loadAlbumPhotos(a.id);
+            stage.deleted.push({ id: a.id, filePaths: ph2.files.map((f) => `${GALLERY_DIR}/${a.id}/${f.name}`) });
+          } catch (e) {
+            stage.deleted.push({ id: a.id, filePaths: [] });
+          }
+          stage.albums.splice(i, 1);
+        }
+        renderRows();
+      };
+      listEl.appendChild(row);
+    });
+  }
+  renderRows();
 };
 
 /* ---------- 相册详情：照片管理 ---------- */
@@ -267,8 +364,11 @@ routes['gallery-album'] = async (id) => {
   view.innerHTML = '<div class="card"><h2>📷 加载中…</h2></div>';
   let album;
   try {
-    const { albums } = await readAlbums();
-    album = albums.find((a) => a.id === id);
+    if (galStage) album = galStage.albums.find((a) => a.id === id);
+    if (!album) {
+      const { albums } = await readAlbums();
+      album = albums.find((a) => a.id === id);
+    }
     if (!album) throw new Error('找不到相册 ' + id);
   } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
 
@@ -374,16 +474,17 @@ function albumFormHtml(a) {
     ${a.hasPassword ? '<div class="field"><label class="checkline"><input type="checkbox" id="af-pw-clear"> 清除密码（变公开相册）</label></div>' : ''}`;
 }
 routes['gallery-new'] = async () => {
-  let albums = [];
-  try { ({ albums } = await readAlbums()); }
+  let stage;
+  try { stage = await galEnsureStage(); }
   catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+  const albums = stage.albums;
   const today = new Date();
   const p = (n) => String(n).padStart(2, '0');
   view.innerHTML = `
     <div class="toolbar"><button class="btn btn-ghost" id="af-back">← 相册列表</button></div>
     <div class="card"><h2>＋ 新建相册</h2>${albumFormHtml({ date: `${today.getFullYear()}-${p(today.getMonth() + 1)}-${p(today.getDate())}` })}
-      <button class="btn" id="af-save">💾 创建相册</button>
-      <p class="hint">创建后会自动建好 public/gallery/&lt;id&gt;/ 目录与 urls.txt，然后去"管理照片"里加图。</p>
+      <button class="btn" id="af-save">＋ 加入待提交（排在最前）</button>
+      <p class="hint">新建先进入待提交列表并排在最前；回相册页点「💾 统一提交」后才会真正创建，并自动建好 public/gallery/&lt;id&gt;/ 目录与 urls.txt。</p>
     </div>`;
   $('#af-back').onclick = () => { location.hash = '#/gallery'; };
   $('#af-name').oninput = (e) => { if (!$('#af-id').dataset.touched) $('#af-id').value = slugify(e.target.value); };
@@ -405,50 +506,42 @@ routes['gallery-new'] = async () => {
       passwordHint: $('#af-pwhint').value.trim(),
     };
     $('#af-save').disabled = true;
-    try {
-      await appendAlbum(album);
-      await ghPutFile(`${GALLERY_DIR}/${id}/urls.txt`, URLS_HEADER, null, `新建相册目录 ${id} [管理台]`);
-      toast('相册已创建');
-      location.hash = '#/gallery-album/' + encodeURIComponent(id);
-    } catch (e) { toast(e.message, true); $('#af-save').disabled = false; }
+    stage.albums.unshift({ ...album, _raw: '', _new: true, _edited: false });
+    toast('已加入待提交（排在最前），回相册页点「💾 统一提交」生效');
+    location.hash = '#/gallery';
   };
 };
 routes['gallery-edit'] = async (id) => {
-  let album;
+  let stage, album;
   try {
-    const { albums } = await readAlbums();
-    album = albums.find((a) => a.id === id);
+    stage = await galEnsureStage();
+    album = stage.albums.find((a) => a.id === id);
     if (!album) throw new Error('找不到相册 ' + id);
   } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
   view.innerHTML = `
-    <div class="toolbar"><button class="btn btn-ghost" id="af-back">← 返回照片管理</button></div>
+    <div class="toolbar"><button class="btn btn-ghost" id="af-back">← 相册列表</button></div>
     <div class="card"><h2>✏️ 编辑相册信息 <span class="sub">${esc(album.id)}（ID 不可改）</span></h2>
       ${albumFormHtml(album)}
-      <button class="btn" id="af-save">💾 保存</button>
-      <p class="hint">密码框留空 = 保持原密码不变；勾选"清除密码"则变为公开相册。</p>
+      <button class="btn" id="af-save">💾 暂存（回列表统一提交）</button>
+      <p class="hint">保存只是先暂存；回相册列表点「💾 统一提交」才会真正写进配置。密码框留空 = 保持原密码不变；勾选"清除密码"则变为公开相册。</p>
     </div>`;
-  $('#af-back').onclick = () => { location.hash = '#/gallery-album/' + encodeURIComponent(id); };
+  $('#af-back').onclick = () => { location.hash = '#/gallery'; };
   $('#af-id').disabled = true;
   $('#af-save').onclick = async () => {
     const name = $('#af-name').value.trim();
     if (!name) { toast('请填写相册名称', true); return; }
     const pwInput = $('#af-pw').value;
     const pwClear = $('#af-pw-clear') && $('#af-pw-clear').checked;
-    const next = {
-      ...album,
-      name,
-      description: $('#af-desc').value.trim(),
-      location: $('#af-location').value.trim(),
-      date: $('#af-date').value,
-      tags: $('#af-tags').value.split(/[,，、]/).map((s) => s.trim()).filter(Boolean),
-      passwordHint: $('#af-pwhint').value.trim(),
-      password: pwClear ? '' : (pwInput ? pwInput : album.password),
-    };
-    $('#af-save').disabled = true;
-    try {
-      await replaceAlbum(id, next);
-      toast('已保存');
-      location.hash = '#/gallery-album/' + encodeURIComponent(id);
-    } catch (e) { toast(e.message, true); $('#af-save').disabled = false; }
+    album.name = name;
+    album.description = $('#af-desc').value.trim();
+    album.location = $('#af-location').value.trim();
+    album.date = $('#af-date').value;
+    album.tags = $('#af-tags').value.split(/[,，、]/).map((s) => s.trim()).filter(Boolean);
+    album.passwordHint = $('#af-pwhint').value.trim();
+    album.password = pwClear ? '' : (pwInput ? pwInput : album.password);
+    album.hasPassword = !!album.password;
+    if (!album._new) album._edited = true;
+    toast('已暂存（未提交），回相册页点「💾 统一提交」生效');
+    location.hash = '#/gallery';
   };
 };
