@@ -188,12 +188,26 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 		icon: "material-symbols:analytics",
 	});
 
-	// 开往旧站
+	// 开往（友链接力）：下拉第一项开往随机跳转，第二项回旧站
 	links.push({
-		name: "开往旧站",
-		url: "https://www.lanerc.me",
-		external: true,
+		name: "开往",
+		url: "#",
 		icon: "material-symbols:train",
+		// 子菜单
+		children: [
+			{
+				name: "开往",
+				url: "https://www.travellings.cn/go.html",
+				external: true,
+				icon: "material-symbols:train",
+			},
+			{
+				name: "开往旧站",
+				url: "https://www.lanerc.me",
+				external: true,
+				icon: "material-symbols:train",
+			},
+		],
 	});
 
 	// 文档链接
