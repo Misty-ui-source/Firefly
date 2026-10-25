@@ -1,0 +1,69 @@
+name: 友链申请自动处理
+
+# 有人通过「友链申请」Issue 模板提交后：解析内容 → 写进 friendsConfig.ts → 开 PR 等站长审核
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  apply:
+    if: contains(github.event.issue.labels.*.name, '友链申请')
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 解析申请并写入配置
+        id: apply
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: node .github/scripts/friend-link-apply.mjs
+
+      - name: 创建 PR（等站长审核合并）
+        id: pr
+        if: steps.apply.outputs.applied == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: friend-link/issue-${{ github.event.issue.number }}
+          delete-branch: true
+          title: "友链申请：${{ steps.apply.outputs.name }}"
+          commit-message: "友链申请：${{ steps.apply.outputs.name }}（来自 Issue #${{ github.event.issue.number }}）"
+          body: |
+            ### 🤖 自动生成的友链申请 PR
+
+            - 站点：[${{ steps.apply.outputs.name }}](${{ steps.apply.outputs.siteurl }})
+            - 来源 Issue：#${{ github.event.issue.number }}
+
+            条目已插入 friendsConfig.ts 最前（weight 最大）。审核要点：对方友链页是否已加上本站、站点是否正常访问。不满意位置可直接改本 PR，或合并后在 Alexander Console 友链管理里调顺序。
+
+            Closes #${{ github.event.issue.number }}
+
+      - name: 回帖申请人
+        if: always() && steps.apply.outputs.applied == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `✅ 申请已收到，自动生成了 PR #${{ steps.pr.outputs.pull-request-number }}，站长审核合并后就会出现在友链页，合并后本 Issue 会自动关闭。`
+            });
+
+      - name: 回帖说明未自动处理的原因
+        if: always() && steps.apply.outputs.applied == 'false' && steps.apply.outputs.reason != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `⚠️ 这条申请暂时没法自动处理：${{ steps.apply.outputs.reason }}。可以编辑 Issue 修正后会自动重试，也可以等站长人工处理。`
+            });
