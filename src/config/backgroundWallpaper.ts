@@ -82,6 +82,7 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 		fullscreen: {
 			desktop: [
 				"https://img.lanerc.me/admin/wallpaper/mvnwt3dy-1000052864.webp",
+				"https://img.lanerc.me/admin/wallpaper/mvnwtwm8-1000052866.webp",
 			],
 			mobile: [],
 		},
