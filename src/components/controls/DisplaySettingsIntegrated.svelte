@@ -74,7 +74,6 @@ import {
 	setWallpaperMode,
 	setWavesEnabled,
 } from "@utils/setting-utils";
-import { isArticleDetailPage } from "@utils/url-utils";
 import { onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import {
@@ -167,12 +166,8 @@ const isFullscreenLayoutSwitchable = $derived(
 		wallpaperMode === WALLPAPER_FULLSCREEN,
 );
 const allowLayoutSwitch = displaySettingsConfig.layoutSwitchable;
-// 2026-10-25 站长定：文章布局（列表/网格）开关只在文章/项目详情页出现，
-// 主页、归档、分类等列表页和其它页面都不显示（那些页面切了也没用、徒增干扰）
-let isDetailPage = $state(false);
-const refreshIsDetailPage = () => {
-	isDetailPage = isArticleDetailPage(window.location.pathname);
-};
+// 文章布局（列表/网格）开关：2026-10-25 晚曾定为只在文章/项目详情页出现，
+// 当晚站长改回所有页面都显示（访客在哪都能切，不必先进文章）
 let effectiveDefaultLayout = $derived(
 	isMobileWidth ? mobileDefaultLayout : defaultLayout,
 );
@@ -680,8 +675,6 @@ function switchLayout() {
 
 onMount(() => {
 	mounted = true;
-	refreshIsDetailPage();
-	document.addEventListener("swup:content:replace", refreshIsDetailPage);
 	checkScreenSize();
 
 	// 从localStorage读取保存的壁纸模式
@@ -873,8 +866,8 @@ $effect(() => {
 		</div>
 		{/if}
 
-		<!-- Layout Switch Section（只在文章/项目详情页显示，规则见 allowLayoutSwitch 旁注释） -->
-		{#if allowLayoutSwitch && isDetailPage}
+		<!-- Layout Switch Section（所有页面显示） -->
+		{#if allowLayoutSwitch}
 		<div class="">
 			<div class="section-title">
 				{i18n(I18nKey.postListLayout)}
