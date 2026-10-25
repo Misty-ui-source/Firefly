@@ -15,7 +15,7 @@ image: https://img.lanerc.me/covers/mvmlrz7h-1c5e7c0d463b38aa0256f1362becc554_72
 draft: false
 pinned: false
 published: 2026-10-24T23:30:00+08:00
-updated: 2026-10-25T00:19:00+08:00
+updated: 2026-10-25T11:19:00+08:00
 ---
 ## 引子
 
@@ -33,7 +33,18 @@ updated: 2026-10-25T00:19:00+08:00
 - **颜值与仪式感**：日夜双主题、毛玻璃细边框、波奇酱背景、CRT 开关机加虫洞切换动画，还能以 PWA 形态装到桌面和手机主屏，像个正经 App；
 - **彩蛋**：它会记操作日志，月底自己弹一份小红书周报风的总结报告，告诉我这个月写了几篇、折腾了什么。
 
+同时，站点有新增了两个板块：时间线板块（随便写写），时间线板块右上角新增了一个碎碎念板块，记录时不时迸发的灵感，页面采用星空底，模拟脑海想法条，滑动鼠标前后移动，点开可以看到详细说明。
+
+
+![图片](https://img.lanerc.me/posts/alexander-console/mvn8qp35-image.webp)
+
+
 话虽如此：写作的地方顺眼，人是真的更愿意打开它码字。而这一整套，是我提需求、AI 写代码、人机配合一点点攒出来的。
+
+
+![图片](https://img.lanerc.me/posts/alexander-console/mvn78p9o-image.webp)
+
+
 ## 基建优化：Waline 评论系统的零成本新家
 
 评论系统 Waline 最终落在 **Vercel + MongoDB Atlas** 免费层，零成本零运维。避坑点留三个，全是实锤：
@@ -106,6 +117,8 @@ nslookup firefly-6sp.pages.dev
 
 
 实锤：校园网 DNS（172.19.2.2）给 `lanerc.me` **先返回两个 IPv6 地址**再给 IPv4，而校园网的 IPv6 路由质量一向一言难尽；查 `.pages.dev` 时 DNS 干脆**先超时一次**才给出结果。嫌疑很大，但关 IPv6、换公共 DNS 这些候选解法，我还没逐一验证出唯一真凶，所以这一节的结论是：**未破案**。
+
+后续看看使用cf优选ip的功能来加速国内访问速度吧！
 
 ## 总结与启发
 
