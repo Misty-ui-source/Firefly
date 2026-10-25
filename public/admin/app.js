@@ -1243,6 +1243,52 @@ function heatmapSVG(byDay, label, palette) {
   return s + '</svg>';
 }
 
+/* 单页评论区开关：写各页专属配置里的 showComment（友链/打赏/动态）。
+ * 留言板跟全局评论走、一直开着；关于页模板里没评论组件，开不了——都不在此列。 */
+const SPEC_COMMENT_TARGETS = [
+  { label: '友链页', path: 'src/config/friendsConfig.ts' },
+  { label: '打赏页', path: 'src/config/sponsorConfig.ts' },
+  { label: '动态页', path: 'src/config/dynamicConfig.ts' },
+];
+async function mountSpecCommentCard() {
+  const anchor = $('#list');
+  if (!anchor) return;
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = '<h2>💬 评论区开关</h2><p class="hint">加载中…</p>';
+  anchor.before(card);
+  const rows = [];
+  for (const t of SPEC_COMMENT_TARGETS) {
+    try {
+      const d = await ghGetFile(t.path);
+      const m = d.text.match(/showComment\s*:\s*(true|false)/);
+      rows.push({ ...t, sha: d.sha, text: d.text, on: m ? m[1] === 'true' : true, ok: !!m });
+    } catch (e) { rows.push({ ...t, ok: false, on: false }); }
+  }
+  const render = () => {
+    card.innerHTML = `<h2>💬 评论区开关</h2>
+      <p class="hint">这三个页面的评论区在各自的配置文件里，切换后保存、重新构建才生效。留言板一直开着（跟全局评论走），不在这里管。</p>
+      ${rows.map((r, i) => `<div class="list-item"><span class="title">${esc(r.label)}</span><span class="meta">${esc(r.path)}</span><span class="spacer"></span>
+        ${r.ok ? `<label class="pill${r.on ? ' on' : ''}" data-sct="${i}"><input type="checkbox" ${r.on ? 'checked' : ''}>评论区${r.on ? '开' : '关'}</label>` : '<span class="meta">读取失败</span>'}</div>`).join('')}`;
+    card.querySelectorAll('[data-sct]').forEach((el) => {
+      el.querySelector('input').onchange = async (ev) => {
+        const r = rows[parseInt(el.dataset.sct, 10)];
+        const want = ev.target.checked;
+        ev.target.disabled = true;
+        try {
+          const text = r.text.replace(/showComment\s*:\s*(true|false)/, `showComment: ${want}`);
+          if (text === r.text) throw new Error('配置格式对不上，没改动');
+          const res = await saveWithLog(r.path, text, r.sha, `${want ? '开启' : '关闭'}${r.label}评论区 [管理台]`, { type: '评论', action: want ? '开启评论区' : '关闭评论区', target: r.label });
+          r.sha = res.content.sha; r.text = text; r.on = want;
+          toast(`${r.label}评论区已${want ? '开启' : '关闭'}，重新构建后生效`);
+        } catch (e) { toast(e.message, true); }
+        render();
+      };
+    });
+  };
+  render();
+}
+
 /* 列表页 */
 function listRoute(key) {
   return async () => {
@@ -1253,6 +1299,7 @@ function listRoute(key) {
         <span class="spacer"></span><span class="hint">${col.path}</span>
       </div><div id="list"></div>`;
     $('#btn-new').onclick = () => { location.hash = `#/edit/${key}/__new__`; };
+    if (key === 'spec') mountSpecCommentCard();
     const listEl = $('#list');
     /* 文章列表排序：默认文件名倒序，点按钮切到发布时间倒序（日期回填完会自动按当前模式重排） */
     let rowsRef = null;
@@ -3086,7 +3133,7 @@ routes.sitenav = async () => {
     <div class="toolbar"><button class="btn" id="btn-sn-add">＋ 添加顶级项</button><span class="spacer"></span>
       <button class="btn" id="btn-sn-save">💾 保存到仓库</button></div>
     <div class="card"><h2>🌐 站点导航 <span class="sub">${SITENAV_PATH}</span></h2>
-    <p class="hint">这里管的是<b>博客 lanerc.me 顶部</b>的导航栏（不是控制台自己的）。顶级项和下拉项都能 ↑↓ 排序、编辑、删除；带下拉的项点「管理下拉」展开。纯父项 URL 填 #。图标填 Iconify 名（如 material-symbols:home）。保存后重新构建生效。</p>
+    <p class="hint">这里管的是<b>博客 lanerc.me 顶部</b>的导航栏（不是控制台自己的）。顶级项和下拉项都能 ↑↓ 排序、编辑、删除；带下拉的项点「管理下拉」展开。纯父项 URL 填 #。图标填 Iconify 名（如 material-symbols:home）。保存后重新构建生效。<b>注意：这里只加菜单入口、不生成页面，新栏目先建单页再挂。</b></p>
     <div id="sn-list"></div></div>`;
   const render = () => {
     $('#sn-list').innerHTML = items.map((it, i) => `
@@ -3146,6 +3193,7 @@ routes.sitenav = async () => {
         <h3>${isChild ? '下拉项' : '导航项'}编辑</h3>
         <div class="field"><label>名称 *</label><input id="sn-name" value="${esc(target.name || '')}" placeholder="如：文章"></div>
         <div class="field"><label>链接 URL *</label><input id="sn-url" value="${esc(target.url || '')}" placeholder="/archive/ 或 https://…；纯下拉父项填 #"></div>
+        <p class="hint">说明：只加菜单链接，不生成页面；新栏目先建「单页」，地址不存在会 404。</p>
         <div class="field"><label>图标（Iconify 名） <a href="https://icon-sets.iconify.design/" target="_blank" rel="noopener">🔍 去 Iconify 找图标 ↗</a></label><input id="sn-icon" value="${esc(target.icon || '')}" placeholder="material-symbols:home"></div>
         <div class="field"><label>pageKey（可空，主题标当前页用）</label><input id="sn-pagekey" value="${esc(target.pageKey || '')}" placeholder="friends"></div>
         <div class="field"><label><input type="checkbox" id="sn-ext" ${target.external ? 'checked' : ''}> 外链（新窗口打开）</label></div>
