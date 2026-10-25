@@ -428,12 +428,17 @@ routes['gallery-album'] = async (id) => {
       <div class="toolbar">
         <input type="file" id="gal-files" accept="image/*" multiple class="hidden">
         <button class="btn btn-small" id="gal-add">＋ 添加照片（传 R2 → urls.txt）</button>
+        <button class="btn btn-small" id="gal-ml">🗂 从媒体库选</button>
         <span class="hint">多选图片，自动转 WebP</span>
       </div>
     </div>`;
   $('#gal-back').onclick = () => { location.hash = '#/gallery'; };
   $('#gal-edit').onclick = () => { location.hash = '#/gallery-edit/' + encodeURIComponent(id); };
   $('#gal-add').onclick = () => $('#gal-files').click();
+  $('#gal-ml').onclick = () => openMediaPicker(async (url) => {
+    try { await appendUrls(id, [url]); toast('已从媒体库添加 1 张照片'); render(); }
+    catch (e) { toast(e.message, true); }
+  });
   $('#gal-files').onchange = async (e) => {
     const files = Array.from(e.target.files);
     e.target.value = '';

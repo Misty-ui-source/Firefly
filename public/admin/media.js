@@ -412,12 +412,14 @@ routes.images = async (arg) => {
       <div class="toolbar">
         <input type="file" id="wp-d-file" accept="image/*" class="hidden">
         <button class="btn btn-small" id="wp-d-add">＋ 添加桌面壁纸</button>
+        <button class="btn btn-small" id="wp-d-ml">🗂 从媒体库选</button>
       </div>
       <h3>移动端壁纸（${wpMobile.length} 张）</h3>
       <div class="img-grid" id="wp-mobile"></div>
       <div class="toolbar">
         <input type="file" id="wp-m-file" accept="image/*" class="hidden">
         <button class="btn btn-small" id="wp-m-add">＋ 添加手机壁纸</button>
+        <button class="btn btn-small" id="wp-m-ml">🗂 从媒体库选</button>
       </div>
     </div>
 
@@ -437,6 +439,7 @@ routes.images = async (arg) => {
           <input type="file" accept="image/*" class="hidden wp-file" data-mode="${mode}" data-dev="desktop">
           <button class="btn btn-small wp-up" data-mode="${mode}" data-dev="desktop">📤 上传</button>
           <button class="btn btn-small wp-pick" data-mode="${mode}" data-dev="desktop">🖼 从共享图库选</button>
+          <button class="btn btn-small wp-mlpick" data-mode="${mode}" data-dev="desktop">🗂 从媒体库选</button>
         </div>
         <div class="img-grid wp-picker hidden" data-mode="${mode}" data-dev="desktop"></div>
         <h4 class="sub-h">移动端（<span id="wp-cnt-${mode}-mobile">0</span> 张）</h4>
@@ -447,6 +450,7 @@ routes.images = async (arg) => {
           <input type="file" accept="image/*" class="hidden wp-file" data-mode="${mode}" data-dev="mobile">
           <button class="btn btn-small wp-up" data-mode="${mode}" data-dev="mobile">📤 上传</button>
           <button class="btn btn-small wp-pick" data-mode="${mode}" data-dev="mobile">🖼 从共享图库选</button>
+          <button class="btn btn-small wp-mlpick" data-mode="${mode}" data-dev="mobile">🗂 从媒体库选</button>
         </div>
         <div class="img-grid wp-picker hidden" data-mode="${mode}" data-dev="mobile"></div>
       </div>`).join('')}
@@ -461,6 +465,7 @@ routes.images = async (arg) => {
           <div class="toolbar">
             <input type="file" id="avatar-file" accept="image/*" class="hidden">
             <button class="btn btn-small" id="avatar-btn">📤 上传替换头像</button>
+            <button class="btn btn-small" id="avatar-ml">🗂 从媒体库选</button>
           </div>
         </div>
       </div>
@@ -476,6 +481,7 @@ routes.images = async (arg) => {
           <div class="toolbar">
             <input type="file" id="fav-file" accept="image/*" class="hidden">
             <button class="btn btn-small" id="fav-btn">📤 上传替换 Favicon</button>
+            <button class="btn btn-small" id="fav-ml">🗂 从媒体库选</button>
           </div>
         </div>
       </div>
@@ -489,6 +495,7 @@ routes.images = async (arg) => {
         <input type="file" id="sticker-file" accept="image/*" class="hidden">
         <input type="text" id="sticker-name" placeholder="新贴纸文件名（英文，如 cat2）" style="border:3px solid #000;border-radius:10px;padding:6px 10px">
         <button class="btn btn-small" id="sticker-add">＋ 新增贴纸</button>
+        <button class="btn btn-small" id="sticker-ml">🗂 媒体库选图（先填文件名）</button>
       </div>
     </div>
 
@@ -498,12 +505,12 @@ routes.images = async (arg) => {
         <img class="slot-preview" src="${repoRawUrl('src/assets/images/logo/firefly-light.png')}" alt="浅色">
         <div>
           <p class="hint">浅色模式 Logo</p>
-          <div class="toolbar"><input type="file" id="logo-l-file" accept="image/*" class="hidden"><button class="btn btn-small" id="logo-l-btn">📤 替换浅色 Logo</button></div>
+          <div class="toolbar"><input type="file" id="logo-l-file" accept="image/*" class="hidden"><button class="btn btn-small" id="logo-l-btn">📤 替换浅色 Logo</button> <button class="btn btn-small" id="logo-l-ml">🗂 媒体库</button></div>
         </div>
         <img class="slot-preview" src="${repoRawUrl('src/assets/images/logo/firefly-dark.png')}" alt="深色">
         <div>
           <p class="hint">深色模式 Logo</p>
-          <div class="toolbar"><input type="file" id="logo-d-file" accept="image/*" class="hidden"><button class="btn btn-small" id="logo-d-btn">📤 替换深色 Logo</button></div>
+          <div class="toolbar"><input type="file" id="logo-d-file" accept="image/*" class="hidden"><button class="btn btn-small" id="logo-d-btn">📤 替换深色 Logo</button> <button class="btn btn-small" id="logo-d-ml">🗂 媒体库</button></div>
         </div>
       </div>
     </div>
@@ -527,6 +534,7 @@ routes.images = async (arg) => {
       <div class="toolbar">
         <input type="file" id="adminbg-file" accept="image/*" class="hidden">
         <button class="btn btn-small" id="adminbg-btn">📤 上传新背景图</button>
+        <button class="btn btn-small" id="adminbg-ml">🗂 从媒体库选</button>
       </div>
       <h3 class="sub-h">📱 手机版登录背景 <span class="sub">仅手机宽度（≤743px）· 桌面/平板仍用上面的图</span></h3>
       <div class="switch-row">
@@ -544,6 +552,7 @@ routes.images = async (arg) => {
       <div class="toolbar">
         <input type="file" id="lmbg-file" accept="image/*" class="hidden">
         <button class="btn btn-small" id="lmbg-btn">📤 自定义上传</button>
+        <button class="btn btn-small" id="lmbg-ml">🗂 从媒体库选</button>
         <button class="btn btn-small" id="lmbg-clear">🧹 清除（用桌面图兜底）</button>
       </div>
     </div>
@@ -559,6 +568,7 @@ routes.images = async (arg) => {
       <div class="toolbar">
         <input type="file" id="innerbg-file" accept="image/*" class="hidden">
         <button class="btn btn-small" id="innerbg-btn">📤 上传图片加入轮换</button>
+        <button class="btn btn-small" id="innerbg-ml">🗂 从媒体库选</button>
       </div>
       <h3 class="sub-h">📱 手机版内页背景 <span class="sub">仅手机宽度（≤743px）· 桌面/平板仍用上面的轮换池</span></h3>
       <div class="switch-row">
@@ -588,6 +598,7 @@ routes.images = async (arg) => {
       <div class="toolbar">
         <input type="file" id="report-g-file" accept="image/*" class="hidden">
         <button class="btn btn-small" id="report-g-btn">📤 上传图片加入报告图库</button>
+        <button class="btn btn-small" id="report-g-ml">🗂 从媒体库选</button>
       </div>
     </div>`;
 
@@ -697,6 +708,16 @@ routes.images = async (arg) => {
         });
         if (!shared.length) picker.innerHTML = '<p class="hint">共享图库是空的</p>';
         picker.classList.toggle('hidden');
+      };
+    });
+    view.querySelectorAll('.wp-mlpick').forEach((btn) => {
+      btn.onclick = () => {
+        const { mode, dev } = btn.dataset;
+        openMediaPicker(async (url) => {
+          if (wpModeSrc[mode][dev].includes(url)) { toast('这张已经在了', true); return; }
+          wpModeSrc[mode][dev].push(url);
+          try { await saveModeWallpapers(); renderModeWallpapers(); } catch (e) { toast(e.message, true); }
+        });
       };
     });
   }
@@ -1022,6 +1043,32 @@ routes.images = async (arg) => {
   $('#wp-m-add').onclick = () => $('#wp-m-file').click();
   $('#wp-d-file').onchange = (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) addWallpaper(f, wpDesktop); };
   $('#wp-m-file').onchange = (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) addWallpaper(f, wpMobile); };
+  /* 🗂 从媒体库选图：各图片位统一接线 */
+  async function addWallpaperUrl(url, list) {
+    if (list.includes(url)) { toast('这张已经在了', true); return; }
+    list.push(url);
+    try { await saveWallpapers(); renderWallpapers(); toast('已从媒体库添加'); } catch (e) { toast(e.message, true); }
+  }
+  const mlBind = (id, fn) => { const b = $(id); if (b) b.onclick = fn; };
+  mlBind('#wp-d-ml', () => openMediaPicker((url) => addWallpaperUrl(url, wpDesktop)));
+  mlBind('#wp-m-ml', () => openMediaPicker((url) => addWallpaperUrl(url, wpMobile)));
+  mlBind('#report-g-ml', () => openMediaPicker((url) => {
+    const list = reportGallery();
+    if (list.includes(url)) { toast('这张已经在报告图库里了', true); return; }
+    list.push(url);
+    try { localStorage.setItem(REPORT_GALLERY_KEY, JSON.stringify(list)); } catch (e) {}
+    oplogRecord('图片', '媒体库选图', '报告图库', url.split('/').pop());
+    renderReportGallery();
+    toast('已从媒体库加入报告图库');
+  }));
+  mlBind('#avatar-ml', () => pickMediaIntoFileInput($('#avatar-file')));
+  mlBind('#fav-ml', () => pickMediaIntoFileInput($('#fav-file')));
+  mlBind('#logo-l-ml', () => pickMediaIntoFileInput($('#logo-l-file')));
+  mlBind('#logo-d-ml', () => pickMediaIntoFileInput($('#logo-d-file')));
+  mlBind('#adminbg-ml', () => pickMediaIntoFileInput($('#adminbg-file')));
+  mlBind('#lmbg-ml', () => pickMediaIntoFileInput($('#lmbg-file')));
+  mlBind('#innerbg-ml', () => pickMediaIntoFileInput($('#innerbg-file')));
+  mlBind('#sticker-ml', () => pickMediaIntoFileInput($('#sticker-file')));
 
   // ---- 头像 ----
   $('#avatar-btn').onclick = () => $('#avatar-file').click();

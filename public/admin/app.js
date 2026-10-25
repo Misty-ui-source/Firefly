@@ -1509,6 +1509,7 @@ routes.edit = async (arg) => {
         <input type="text" data-f="image" id="f-image" value="${esc(fm.image ?? '')}" placeholder=https://… 或 /assets/…">
         <input type="file" id="f-cover" accept="image/*" class="hidden">
         <button class="btn btn-small" id="btn-cover" type="button">🖼 上传</button>
+        <button class="btn btn-small" id="btn-cover-ml" type="button">🗂 媒体库</button>
       </div>
       <div class="cover-prev" id="cover-prev">${fm.image ? `<img src="${esc(fm.image)}" alt="封面预览">` : '<span class="hint">暂无封面（留空则不显示）</span>'}</div>
     </div>
@@ -1908,6 +1909,12 @@ routes.edit = async (arg) => {
       toast('视频已插入');
     };
   };
+  /* 封面：从媒体库选 */
+  if ($('#btn-cover-ml')) $('#btn-cover-ml').onclick = () => openMediaPicker((url) => {
+    $('#f-image').value = url;
+    $('#cover-prev').innerHTML = `<img src="${esc(url)}" alt="封面预览">`;
+    toast('封面已从媒体库选择（记得保存）');
+  });
   /* 封面上传 */
   if ($('#btn-cover')) {
     $('#btn-cover').onclick = () => $('#f-cover').click();
@@ -4781,6 +4788,75 @@ async function r2ListAll(prefix) {
   return out;
 }
 const fmtSize = (n) => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n > 1024 ? Math.round(n / 1024) + ' KB' : n + ' B';
+/* 🗂 通用「从媒体库选图」选择器：列 R2 里的图片，点选回调完整 URL（结果按会话缓存，弹窗里可刷新） */
+let _mlPickerCache = null;
+async function openMediaPicker(onPick) {
+  const old = document.querySelector('.mlp-mask');
+  if (old) old.remove();
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask mlp-mask';
+  mask.innerHTML = `<div class="modal-card mlp-card">
+    <div class="mlp-head"><h3>🗂 从媒体库选图</h3><span class="hint" id="mlp-count">加载中…</span>
+    <input type="text" id="mlp-q" placeholder="按文件名筛选…">
+    <button class="btn btn-small btn-ghost" id="mlp-refresh" type="button">↻ 刷新</button>
+    <button class="btn btn-small btn-ghost" id="mlp-close" type="button">✕ 关闭</button></div>
+    <div class="img-grid mlp-grid" id="mlp-grid"><p class="hint">正在读取媒体库…</p></div></div>`;
+  document.body.appendChild(mask);
+  const close = () => mask.remove();
+  mask.querySelector('#mlp-close').onclick = close;
+  mask.querySelector('#mlp-refresh').onclick = () => { _mlPickerCache = null; close(); openMediaPicker(onPick); };
+  mask.addEventListener('click', (e) => { if (e.target === mask) close(); });
+  let objs = _mlPickerCache;
+  if (!objs) {
+    try {
+      objs = (await r2ListAll('')).filter((o) => /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(o.key));
+      objs.sort((a, b) => String(b.uploaded || '').localeCompare(String(a.uploaded || '')));
+      _mlPickerCache = objs;
+    } catch (e) {
+      const g = mask.querySelector('#mlp-grid');
+      if (g) g.innerHTML = `<p class="hint">媒体库读取失败：${esc(e.message)}</p>`;
+      return;
+    }
+  }
+  const grid = mask.querySelector('#mlp-grid'), cnt = mask.querySelector('#mlp-count'), q = mask.querySelector('#mlp-q');
+  if (!grid) return;
+  function render() {
+    const t = q.value.trim().toLowerCase();
+    const all = objs.filter((o) => !t || o.key.toLowerCase().includes(t));
+    const list = all.slice(0, 180);
+    cnt.textContent = `共 ${objs.length} 张` + (t ? `，匹配 ${all.length} 张` : '') + (all.length > 180 ? '（只显示前 180 张）' : '');
+    grid.innerHTML = '';
+    list.forEach((o) => {
+      const c = document.createElement('div');
+      c.className = 'img-cell mlp-cell';
+      c.innerHTML = `<img loading="lazy" src="${esc(o.url)}" alt=""><div class="url" title="${esc(o.key)}">${esc(o.key.split('/').pop())}</div>`;
+      c.onclick = () => { close(); onPick(o.url); };
+      grid.appendChild(c);
+    });
+    if (!list.length) grid.innerHTML = '<p class="hint">没有匹配的图片</p>';
+  }
+  q.addEventListener('input', render);
+  render();
+}
+/* 🗂 选媒体库图片 → 读成文件塞进指定的 file input 并触发 change，复用各槽位原有的上传/替换逻辑 */
+async function pickMediaIntoFileInput(inputEl) {
+  if (!inputEl) { toast('找不到对应的上传槽位', true); return; }
+  openMediaPicker(async (url) => {
+    try {
+      toast('正在读取所选图片…');
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const blob = await res.blob();
+      const name = (url.split('/').pop() || 'image').split('?')[0] || 'image';
+      const file = new File([blob], name, { type: blob.type || 'image/png' });
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      inputEl.files = dt.files;
+      inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+    } catch (e) { toast('读取这张图失败（可能跨域限制），可以先下载到本地再上传', true); }
+  });
+}
+
 /* 🎨 主题：切换博客默认壁纸模式；每个模式的图片设置在图片页 */
 routes.theme = async () => {
   view.innerHTML = '<p class="hint">加载中…</p>';

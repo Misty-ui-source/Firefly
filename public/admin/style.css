@@ -650,3 +650,12 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
 
 /* 主题页：色相渐变条 */
 .hue-bar { height: 14px; border-radius: 7px; margin: 6px 0 10px; background: linear-gradient(90deg, #f87171, #facc15, #4ade80, #22d3ee, #818cf8, #e879f9, #f87171); }
+
+/* 🗂 媒体库选图弹窗 */
+.mlp-card { width: min(880px, 96vw); max-height: 88vh; display: flex; flex-direction: column; }
+.mlp-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mlp-head h3 { margin: 0; }
+.mlp-head input[type=text] { flex: 1; min-width: 150px; }
+.mlp-grid { overflow-y: auto; margin-bottom: 0; }
+.mlp-cell { cursor: pointer; }
+.mlp-cell:hover { outline: 3px solid #14b8a6; outline-offset: -1px; }
