@@ -209,6 +209,15 @@ const managerConfigStr = JSON.stringify({
     function tryPlayCurrentTrackUrl(autoPlay, ver) {
         if (ver !== loadVersion) return;
         var playUrl = currentTrackUrls[currentTrackUrlIndex];
+        // crossOrigin 只对同源文件启用：跨域音源（如 R2 托管）若不返回
+        // Access-Control-Allow-Origin，anonymous 模式会被浏览器直接拦截导致播放失败
+        try {
+            if (new URL(playUrl, window.location.href).origin === window.location.origin) {
+                audio.crossOrigin = 'anonymous';
+            } else {
+                audio.removeAttribute('crossorigin');
+            }
+        } catch (e) { /* 解析失败时保持现状 */ }
         audio.src = playUrl;
 
         if (autoPlay) {
