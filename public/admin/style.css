@@ -656,6 +656,6 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
 .mlp-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .mlp-head h3 { margin: 0; }
 .mlp-head input[type=text] { flex: 1; min-width: 150px; }
-.mlp-grid { overflow-y: auto; margin-bottom: 0; }
+.mlp-grid { overflow-y: auto; margin-bottom: 0; grid-template-columns: repeat(auto-fill, minmax(160px, 190px)); justify-content: center; }
 .mlp-cell { cursor: pointer; }
 .mlp-cell:hover { outline: 3px solid #14b8a6; outline-offset: -1px; }

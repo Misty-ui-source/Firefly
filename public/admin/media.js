@@ -341,7 +341,7 @@ routes.images = async (arg) => {
   async function addWallpaper(file, list) {
     toast('上传中…');
     try {
-      const { urls } = await uploadImages([file], 'admin/wallpaper');
+      const { urls } = await uploadImages([file], 'admin/wallpaper', 0.72);
       list.push(urls[0]);
       await saveWallpapers();
           renderWallpapers();
@@ -681,7 +681,7 @@ routes.images = async (arg) => {
         const { mode, dev } = fi.dataset;
         toast('上传中…');
         try {
-          const { urls } = await uploadImages([f], 'admin/wallpaper');
+          const { urls } = await uploadImages([f], 'admin/wallpaper', 0.72);
           wpModeSrc[mode][dev].push(urls[0]);
           await saveModeWallpapers();
           renderModeWallpapers();
@@ -1384,6 +1384,17 @@ routes.music = async () => {
         <button class="btn btn-small btn-ghost" id="ms-mp3-btn">📤 上传 mp3 → R2</button>
         <span class="hint" id="ms-mp3-name">未选择文件</span>
       </div>
+      <div class="toolbar">
+        <label class="hint" for="ms-kbps">上传压缩（保存时在浏览器里重编码，标签已提取到表单，不受影响）</label>
+        <select id="ms-kbps">
+          <option value="0">不压缩（原文件）</option>
+          <option value="256">256 kbps · 轻压</option>
+          <option value="192">192 kbps · 推荐</option>
+          <option value="128">128 kbps · 省空间</option>
+          <option value="96">96 kbps · 最小</option>
+        </select>
+        <span class="hint" id="ms-kbps-note"></span>
+      </div>
       <div class="field"><label>封面</label></div>
       <div class="toolbar">
         <input type="file" id="ms-cover" accept="image/*" class="hidden">
@@ -1398,11 +1409,21 @@ routes.music = async () => {
   renderSongs();
 
   let mp3File = null, coverUrl = '';
+  /* 上传压缩档位：记住上次选择 */
+  try { const saved = localStorage.getItem('admin-mp3-kbps'); if (saved && $('#ms-kbps')) $('#ms-kbps').value = saved; } catch (e) {}
+  const kbpsNote = () => {
+    const k = parseInt(($('#ms-kbps') || {}).value || '0', 10);
+    $('#ms-kbps-note').textContent = !mp3File ? '' : k > 0
+      ? `原文件 ${(mp3File.size / 1048576).toFixed(1)} MB，保存时压到 ${k} kbps`
+      : `原文件 ${(mp3File.size / 1048576).toFixed(1)} MB，不压缩`;
+  };
+  if ($('#ms-kbps')) $('#ms-kbps').onchange = () => { try { localStorage.setItem('admin-mp3-kbps', $('#ms-kbps').value); } catch (e) {} kbpsNote(); };
   $('#ms-mp3-btn').onclick = () => $('#ms-mp3').click();
   $('#ms-mp3').onchange = async (e) => {
     mp3File = e.target.files[0] || null;
     if (!mp3File) { $('#ms-mp3-name').textContent = '未选择文件'; return; }
     $('#ms-url').value = '';
+    kbpsNote();
     $('#ms-mp3-name').textContent = `已选：${mp3File.name}（保存时上传）· 正在识别标签…`;
     /* 选中 MP3 立即解析 ID3：歌名/歌手直接填表单，封面自动上传 R2，歌词填歌词框 */
     try {
@@ -1455,8 +1476,16 @@ routes.music = async () => {
     $('#ms-add').disabled = true;
     try {
       if (mp3File) {
-        toast('mp3 上传中…');
-        const { urls } = await uploadRawFiles([mp3File], 'admin/music');
+        let upFile = mp3File;
+        const kbps = parseInt(($('#ms-kbps') || {}).value || '0', 10);
+        if (kbps > 0) {
+          try {
+            toast(`MP3 压缩中（${kbps} kbps）…`);
+            upFile = await compressMp3(mp3File, kbps, (p) => { $('#ms-mp3-name').textContent = `压缩中… ${Math.round(p * 100)}%`; });
+            toast(`压缩完成：${(mp3File.size / 1048576).toFixed(1)} MB → ${(upFile.size / 1048576).toFixed(1)} MB，上传中…`);
+          } catch (err) { toast('压缩失败，改用原文件上传：' + err.message, true); upFile = mp3File; }
+        } else toast('mp3 上传中…');
+        const { urls } = await uploadRawFiles([upFile], 'admin/music');
         url = urls[0];
       }
       if (!url) { toast('请填写音频 URL 或上传 mp3', true); $('#ms-add').disabled = false; return; }

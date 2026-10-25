@@ -161,8 +161,9 @@ export function getBannerVisibilityState(
 		!!title;
 
 	const backgroundImages = getBackgroundImages();
-	const configQuality = getImageQuality();
-	const mobileQuality = Math.round(configQuality * 0.9);
+	/* 壁纸再压一档（2026-10-25）：壁纸是背景图、常有覆盖层，质量从全局 80 降到 66，封面图不受影响 */
+	const configQuality = Math.round(getImageQuality() * 0.82);
+	const mobileQuality = Math.round(configQuality * 0.95);
 	const bannerCarouselEnabledDefault =
 		backgroundWallpaper.common?.carousel?.enable ?? false;
 	const bannerCarouselSwitchable =

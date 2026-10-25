@@ -409,7 +409,7 @@ function fileToWebp(file, quality = 0.8, maxDim = 2560) {
     img.src = url;
   });
 }
-async function uploadImages(files, dir) {
+async function uploadImages(files, dir, quality) {
   if (!dir) throw new Error('请先填写 R2 目录名');
   const fd = new FormData();
   fd.append('dir', dir);
@@ -422,7 +422,7 @@ async function uploadImages(files, dir) {
     const skipConvert = rawMode || !f.type.startsWith('image/') || f.type === 'image/gif' || f.type === 'image/svg+xml' || f.type === 'image/avif' || /\.webp$/i.test(f.name);
     if (!skipConvert) {
       try {
-        const webp = await fileToWebp(f);
+        const webp = quality ? await fileToWebp(f, quality) : await fileToWebp(f);
         if (webp.size < f.size * 0.98) {
           blob = webp;
           name = f.name.replace(/\.[^.]+$/, '') + '.webp';
@@ -444,6 +444,54 @@ async function uploadImages(files, dir) {
   const out = await res.json(); // { urls: [...] }
   out.compressed = { converted, savedBytes, origBytes };
   return out;
+}
+
+/* 🎵 MP3 压缩：浏览器解码后用 lamejs（按需加载 ./lame.min.js）按目标码率重编码；标签会丢，但音乐表单在选文件时已把标签提取进表单，不受影响 */
+let _lameLoading = null;
+function ensureLame() {
+  if (window.lamejs && window.lamejs.Mp3Encoder) return Promise.resolve();
+  if (_lameLoading) return _lameLoading;
+  _lameLoading = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = './lame.min.js';
+    s.onload = () => (window.lamejs && window.lamejs.Mp3Encoder) ? resolve() : reject(new Error('lamejs 加载异常'));
+    s.onerror = () => reject(new Error('lamejs 加载失败'));
+    document.head.appendChild(s);
+  });
+  return _lameLoading;
+}
+async function compressMp3(file, kbps, onProgress) {
+  await ensureLame();
+  const buf = await file.arrayBuffer();
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const actx = new AC();
+  const audio = await actx.decodeAudioData(buf);
+  const channels = Math.min(2, audio.numberOfChannels);
+  const enc = new window.lamejs.Mp3Encoder(channels, audio.sampleRate, kbps);
+  const left = audio.getChannelData(0);
+  const right = channels > 1 ? audio.getChannelData(1) : left;
+  const to16 = (f32, off, len) => {
+    const out = new Int16Array(len);
+    for (let i = 0; i < len; i++) { const v = Math.max(-1, Math.min(1, f32[off + i])); out[i] = v < 0 ? v * 0x8000 : v * 0x7FFF; }
+    return out;
+  };
+  const parts = [];
+  const BLOCK = 1152 * 48;
+  for (let off = 0; off < left.length; off += BLOCK) {
+    const len = Math.min(BLOCK, left.length - off);
+    for (let sub = 0; sub < len; sub += 1152) {
+      const l = Math.min(1152, len - sub);
+      const data = channels > 1 ? enc.encodeBuffer(to16(left, off + sub, l), to16(right, off + sub, l)) : enc.encodeBuffer(to16(left, off + sub, l));
+      if (data.length) parts.push(new Int8Array(data));
+    }
+    if (onProgress) onProgress(Math.min(1, (off + BLOCK) / left.length));
+    await new Promise((r) => setTimeout(r, 0));
+  }
+  const tail = enc.flush();
+  if (tail.length) parts.push(new Int8Array(tail));
+  try { actx.close(); } catch (e) {}
+  const blob = new Blob(parts, { type: 'audio/mpeg' });
+  return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.mp3', { type: 'audio/mpeg' });
 }
 
 /* ---------- 路由与视图 ---------- */
