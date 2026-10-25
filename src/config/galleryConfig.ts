@@ -23,7 +23,15 @@ export const galleryConfig: GalleryConfig = {
 			date: "2026-01-01",
 			tags: ["崩坏星穹铁道", "流萤"],
 		},
-				{
+		{
+			id: "life-school",
+			name: "校园",
+			description: "随手记一下校园",
+			location: "南京市",
+			date: "2026-10-24",
+			tags: ["日常"],
+		},
+		{
 			id: "encrypted-test",
 			name: "加密相册",
 			description: "这是一个加密相册的示例，设置了访问密码，只有输入正确的密码才能查看相册内容。",
@@ -32,14 +40,6 @@ export const galleryConfig: GalleryConfig = {
 			tags: ["加密相册", "示例"],
 			password: "2829",
 			passwordHint: "示例密码123456",
-		},
-		{
-			id: "life-school",
-			name: "校园",
-			description: "随手记一下校园",
-			location: "南京市",
-			date: "2026-10-24",
-			tags: ["日常"],
 		},
 	],
 
