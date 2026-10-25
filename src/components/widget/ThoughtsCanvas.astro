@@ -28,7 +28,7 @@ const dataJson = JSON.stringify(
 
 <div class="thoughts-starry">
 	<canvas id="thoughts-canvas"></canvas>
-	<div id="thoughts-tip" class="thoughts-tip">点击星空中的文字查看详情</div>
+	<div id="thoughts-tip" class="thoughts-tip">滚轮前后移动 · 点击星空中的文字查看详情</div>
 	<div id="thoughts-modal" class="thoughts-modal hidden">
 		<div class="thoughts-card">
 			<button id="thoughts-close" class="thoughts-close">×</button>
@@ -104,9 +104,17 @@ const dataJson = JSON.stringify(
 	resize();
 	window.addEventListener('resize', resize);
 
-	// 80 颗星，闪烁用查表减少计算
+	// 滚轮纵深：下滚向前飞（放大），上滚后退；目标值在 frame 里平滑趋近
+	let zoom = 1, zoomTarget = 1;
+	canvas.addEventListener('wheel', (e) => {
+		e.preventDefault();
+		const d = Math.max(-120, Math.min(120, e.deltaY));
+		zoomTarget = Math.max(0.55, Math.min(2.4, zoomTarget * Math.exp(-d * 0.0016)));
+	}, { passive: false });
+
+	// 220 颗星，闪烁用查表减少计算
 	const stars = [];
-	for (let i = 0; i < 80; i++) {
+	for (let i = 0; i < 220; i++) {
 		stars.push({
 			x: Math.random(), y: Math.random(),
 			r: Math.random() * 1.2 + 0.3,
@@ -131,27 +139,30 @@ const dataJson = JSON.stringify(
 	let t = 0;
 	function frame() {
 		t++;
+		zoom += (zoomTarget - zoom) * 0.07;
 		// 背景用 CSS 渐变，这里只清屏
 		ctx.fillStyle = '#050510';
 		ctx.fillRect(0, 0, W, H);
 
-		// 星星
+		const cx = W / 2, cy = H / 2;
+
+		// 星星（带轻微视差，跟随纵深缩放）
+		const sf = 0.75 + zoom * 0.25;
 		ctx.fillStyle = '#fff';
 		for (const s of stars) {
 			ctx.globalAlpha = 0.3 + 0.5 * Math.abs(Math.sin(t * 0.02 + s.ph));
-			ctx.fillRect(s.x * W, s.y * H, s.r, s.r);
+			ctx.fillRect(cx + (s.x * W - cx) * sf, cy + (s.y * H - cy) * sf, s.r, s.r);
 		}
 		ctx.globalAlpha = 1;
 
-		const cx = W / 2, cy = H / 2;
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
 
 		for (const n of nodes) {
 			const a = n.angle + t * n.spd;
-			const x = cx + Math.cos(a) * n.rad * W;
-			const y = cy + Math.sin(a) * n.rad * H * 0.65 + Math.sin(t * 0.01 + n.bobP) * 10;
-			const fs = Math.round(14 + n.sz * 10);
+			const x = cx + Math.cos(a) * n.rad * W * zoom;
+			const y = cy + Math.sin(a) * n.rad * H * 0.65 * zoom + Math.sin(t * 0.01 + n.bobP) * 10;
+			const fs = Math.round((11 + n.sz * 7) * Math.min(zoom, 1.7));
 			ctx.font = `500 ${fs}px sans-serif`;
 			n.x = x; n.y = y;
 			n.w = ctx.measureText(n.it.title).width + 20;

@@ -1650,10 +1650,25 @@ routes.edit = async (arg) => {
       if (cut) { ta.value = ta.value.slice(0, s) + ta.value.slice(e); ta.focus(); ta.selectionStart = ta.selectionEnd = s; updCount(); }
     }).catch(() => {});
   };
-  const ctxPaste = () => {
-    if (!navigator.clipboard || !navigator.clipboard.readText) return;
-    navigator.clipboard.readText().then((t) => { if (t) insertAtCursor(t); }).catch(() => {});
-    /* 浏览器不给读剪贴板权限时静默，用户可用 Ctrl+V */
+  const ctxPaste = async () => {
+    /* 右键粘贴：先读剪贴板里的图片（截图、复制的图片）→ 走图片上传管线插入；没有图片再贴文字 */
+    if (navigator.clipboard && navigator.clipboard.read) {
+      try {
+        const items = await navigator.clipboard.read();
+        const imgs = [];
+        for (const it of items) {
+          const t = (it.types || []).find((x) => x.startsWith('image/'));
+          if (!t) continue;
+          const blob = await it.getType(t);
+          const ext = (t.split('/')[1] || 'png').replace('jpeg', 'jpg');
+          imgs.push(new File([blob], `clipboard-${Date.now()}-${imgs.length + 1}.${ext}`, { type: t }));
+        }
+        if (imgs.length) { await importDroppedImages(imgs); return; }
+      } catch (err) { /* 浏览器不给读取权限/不支持时，落到下面的文字粘贴 */ }
+    }
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      try { const t = await navigator.clipboard.readText(); if (t) insertAtCursor(t); } catch (err) { /* 静默，Ctrl+V 仍可用 */ }
+    }
   };
   const runCtx = (c) => {
     if (ctxSel) { ta.focus(); ta.selectionStart = ctxSel[0]; ta.selectionEnd = ctxSel[1]; }
