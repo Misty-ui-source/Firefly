@@ -84,7 +84,9 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 			mobile: [],
 		},
 		overlay: {
-			desktop: [],
+			desktop: [
+				"https://img.lanerc.me/admin/wallpaper/mvnv9mab-275611a41af8b4a9786292fc3d85eed0_720.webp",
+			],
 			mobile: [],
 		},
 	},
