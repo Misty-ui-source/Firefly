@@ -99,7 +99,7 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	// 分模式轮播开关（Alexander Console「图片」页维护）：删掉某行 = 回退 common.carousel.enable
 	modeCarousel: {
 		banner: true,
-		fullscreen: true,
+		fullscreen: false,
 		overlay: true,
 	},
 	// 已禁用的壁纸（不参与轮换，保留在上面列表中可随时恢复）。由管理台维护，手动编辑请保持 URL 与上面一致
