@@ -10,6 +10,11 @@ export const thoughtsConfig: ThoughtsConfig = {
 	title: "碎碎念",
 	items: [
 		{
+			title: '电子系统设计好难啊',
+			content: '这个寄存状态能不能放过我 啊',
+			createdAt: '2026-10-25T03:05:07.684Z'
+		},
+		{
 			title: '同时拿到国励奖和秋奖了！yes！',
 			content: '上一年的努力果然没白费！但是为什么🧐昨晚我没及时发现，还是今天中午发现的',
 			createdAt: '2026-10-24T07:56:50.649Z'
