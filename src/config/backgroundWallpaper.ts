@@ -84,6 +84,7 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 				"https://img.lanerc.me/admin/wallpaper/mvnwt3dy-1000052864.webp",
 				"https://img.lanerc.me/admin/wallpaper/mvnwtwm8-1000052866.webp",
 				"https://img.lanerc.me/admin/wallpaper/mvnwvkk1-1000052863.webp",
+				"https://img.lanerc.me/admin/wallpaper/mvnww7i0-1000052860.webp",
 			],
 			mobile: [],
 		},
