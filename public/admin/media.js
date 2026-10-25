@@ -912,6 +912,93 @@ routes.images = async () => {
   }
 };
 
+/* ================= MP3 标签（ID3）自动识别 =================
+ * 浏览器端解析 ID3v2（TIT2 歌名 / TPE1 歌手 / TALB 专辑 / APIC 封面 / USLT 歌词），
+ * 无标签时回退 ID3v1。文本帧编码字节 0 名义上是 Latin-1，但中文文件实际多为 GBK
+ * 或 UTF-8，故按 UTF-8 严格解码失败 → GBK 的顺序兜底。解析失败不阻塞手动填写。 */
+function id3SyncSafe(u8, off) {
+  return ((u8[off] & 0x7f) << 21) | ((u8[off + 1] & 0x7f) << 14) | ((u8[off + 2] & 0x7f) << 7) | (u8[off + 3] & 0x7f);
+}
+function id3DecodeText(bytes) {
+  if (!bytes.length) return '';
+  const enc = bytes[0];
+  const body = bytes.subarray(1);
+  const strip = (s) => s.replace(/\0+$/, '').trim();
+  try {
+    if (enc === 3) return strip(new TextDecoder('utf-8').decode(body));
+    if (enc === 1) return strip(new TextDecoder('utf-16').decode(body));
+    if (enc === 2) return strip(new TextDecoder('utf-16be').decode(body));
+    try { return strip(new TextDecoder('utf-8', { fatal: true }).decode(body)); }
+    catch (e) { return strip(new TextDecoder('gbk').decode(body)); }
+  } catch (e) { return ''; }
+}
+function id3ParseApic(data) {
+  const enc = data[0];
+  let i = 1, mime = '';
+  while (i < data.length && data[i] !== 0) { mime += String.fromCharCode(data[i]); i++; }
+  i++; /* mime 的结束 0 */
+  i++; /* 图片类型字节 */
+  if (enc === 1 || enc === 2) {
+    while (i + 1 < data.length && !(data[i] === 0 && data[i + 1] === 0)) i += 2;
+    i += 2;
+  } else {
+    while (i < data.length && data[i] !== 0) i++;
+    i++;
+  }
+  const img = data.subarray(i);
+  if (!img.length) return null;
+  return new Blob([img], { type: mime && mime.startsWith('image/') ? mime : 'image/jpeg' });
+}
+async function readMp3Tags(file) {
+  const out = { title: '', artist: '', album: '', cover: null, lyrics: '' };
+  try {
+    const buf = await file.arrayBuffer();
+    const u8 = new Uint8Array(buf);
+    if (u8[0] === 0x49 && u8[1] === 0x44 && u8[2] === 0x33) { /* "ID3" */
+      const major = u8[3];
+      const tagSize = id3SyncSafe(u8, 6);
+      let off = 10;
+      if ((u8[5] & 0x40) && major === 3) off += 10; /* v2.3 扩展头（粗略跳过） */
+      if ((u8[5] & 0x40) && major === 4) off += 10 + id3SyncSafe(u8, 10);
+      const end = Math.min(10 + tagSize, u8.length);
+      while (off + 10 <= end) {
+        const id = String.fromCharCode(u8[off], u8[off + 1], u8[off + 2], u8[off + 3]);
+        if (!/^[A-Z0-9]{4}$/.test(id)) break;
+        const fsize = major === 4
+          ? id3SyncSafe(u8, off + 4)
+          : ((u8[off + 4] << 24) | (u8[off + 5] << 16) | (u8[off + 6] << 8) | u8[off + 7]) >>> 0;
+        if (fsize <= 0 || off + 10 + fsize > u8.length + 1024) break;
+        const data = u8.subarray(off + 10, off + 10 + fsize);
+        if (id === 'TIT2') out.title = id3DecodeText(data);
+        else if (id === 'TPE1') out.artist = id3DecodeText(data);
+        else if (id === 'TALB') out.album = id3DecodeText(data);
+        else if (id === 'APIC' && !out.cover) out.cover = id3ParseApic(data);
+        else if (id === 'USLT' && !out.lyrics) {
+          /* USLT = 编码(1) + 语言(3) + 描述（以编码对应的 0 结尾） + 歌词正文 */
+          const enc = data[0];
+          let j = 4;
+          if (enc === 1 || enc === 2) { while (j + 1 < data.length && !(data[j] === 0 && data[j + 1] === 0)) j += 2; j += 2; }
+          else { while (j < data.length && data[j] !== 0) j++; j++; }
+          const joined = new Uint8Array(data.length - j + 1);
+          joined[0] = enc; joined.set(data.subarray(j), 1);
+          out.lyrics = id3DecodeText(joined);
+        }
+        off += 10 + fsize;
+      }
+    }
+    if ((!out.title || !out.artist) && u8.length >= 128) {
+      const t = u8.subarray(u8.length - 128);
+      if (t[0] === 0x54 && t[1] === 0x41 && t[2] === 0x47) { /* "TAG" */
+        const dec = (b) => { try { return new TextDecoder('gbk').decode(b).replace(/\0+$/, '').trim(); } catch (e) { return ''; } };
+        if (!out.title) out.title = dec(t.subarray(3, 33));
+        if (!out.artist) out.artist = dec(t.subarray(33, 63));
+        if (!out.album) out.album = dec(t.subarray(63, 93));
+      }
+    }
+  } catch (e) { /* 解析失败：返回已读到的部分，表单仍可手动填 */ }
+  return out;
+}
+
 /* ================= 音乐管理 ================= */
 const MUSIC_CONFIG = 'src/config/musicConfig.ts';
 
@@ -1017,10 +1104,36 @@ routes.music = async () => {
 
   let mp3File = null, coverUrl = '';
   $('#ms-mp3-btn').onclick = () => $('#ms-mp3').click();
-  $('#ms-mp3').onchange = (e) => {
+  $('#ms-mp3').onchange = async (e) => {
     mp3File = e.target.files[0] || null;
-    $('#ms-mp3-name').textContent = mp3File ? `已选：${mp3File.name}（保存时上传）` : '未选择文件';
-    if (mp3File) $('#ms-url').value = '';
+    if (!mp3File) { $('#ms-mp3-name').textContent = '未选择文件'; return; }
+    $('#ms-url').value = '';
+    $('#ms-mp3-name').textContent = `已选：${mp3File.name}（保存时上传）· 正在识别标签…`;
+    /* 选中 MP3 立即解析 ID3：歌名/歌手直接填表单，封面自动上传 R2，歌词填歌词框 */
+    try {
+      const tags = await readMp3Tags(mp3File);
+      const got = [];
+      if (tags.title) { $('#ms-name').value = tags.title; got.push(`歌名《${tags.title}》`); }
+      if (tags.artist) { $('#ms-artist').value = tags.artist; got.push(`歌手 ${tags.artist}`); }
+      if (tags.album) got.push(`专辑《${tags.album}》`);
+      if (tags.lyrics && !$('#ms-lrc').value.trim()) { $('#ms-lrc').value = tags.lyrics; got.push('歌词'); }
+      if (tags.cover) {
+        try {
+          const ext = tags.cover.type.includes('png') ? 'png' : 'jpg';
+          const cf = new File([tags.cover], `cover-auto.${ext}`, { type: tags.cover.type });
+          const { urls } = await uploadImages([cf], 'admin/music-cover');
+          coverUrl = urls[0];
+          const p = $('#ms-cover-preview');
+          p.src = coverUrl; p.classList.remove('hidden');
+          $('#ms-cover-name').textContent = '已从 MP3 封面自动上传';
+          got.push('封面（已上传）');
+        } catch (err) { got.push('封面识别到但上传失败，可手动传'); }
+      }
+      $('#ms-mp3-name').textContent = `已选：${mp3File.name}（保存时上传）` + (got.length ? ` · 已自动识别：${got.join('、')}` : ' · 没读到 ID3 标签，请手动填写');
+      if (got.length) toast('MP3 标签已自动填好，核对后点「添加到歌单并保存」');
+    } catch (err) {
+      $('#ms-mp3-name').textContent = `已选：${mp3File.name}（保存时上传）· 标签识别失败，请手动填写`;
+    }
   };
   $('#ms-cover-btn').onclick = () => $('#ms-cover').click();
   $('#ms-cover').onchange = async (e) => {

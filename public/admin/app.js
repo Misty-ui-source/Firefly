@@ -386,15 +386,23 @@ function mdPreview(src) {
   return html;
 }
 
-/* ---------- R2 上传 ---------- */
-function fileToWebp(file, quality = 0.85) {
+/* ---------- R2 上传 ----------
+ * 图片统一在浏览器端处理后再上传：转 WebP（q0.8）+ 超尺寸等比缩放（长边 ≤2560）
+ * + canvas 重编码自动剥掉 EXIF。GIF（动图）/ SVG / AVIF 跳过转换保原样；
+ * 转换后反而更大（≥原图 98%）时也保留原图，别越压越肥。 */
+function fileToWebp(file, quality = 0.8, maxDim = 2560) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
+      let w = img.width, h = img.height;
+      if (maxDim > 0 && Math.max(w, h) > maxDim) {
+        const s = maxDim / Math.max(w, h);
+        w = Math.round(w * s); h = Math.round(h * s);
+      }
       const c = document.createElement('canvas');
-      c.width = img.width; c.height = img.height;
-      c.getContext('2d').drawImage(img, 0, 0);
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
       c.toBlob((b) => { URL.revokeObjectURL(url); b ? resolve(b) : reject(new Error('WebP 转换失败')); }, 'image/webp', quality);
     };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('图片读取失败')); };
@@ -405,12 +413,22 @@ async function uploadImages(files, dir) {
   if (!dir) throw new Error('请先填写 R2 目录名');
   const fd = new FormData();
   fd.append('dir', dir);
+  let savedBytes = 0, origBytes = 0, converted = 0;
   for (const f of files) {
     let blob = f, name = f.name;
-    if (f.type.startsWith('image/') && !f.name.endsWith('.webp')) {
-      blob = await fileToWebp(f);
-      name = f.name.replace(/\.[^.]+$/, '') + '.webp';
+    const skipConvert = !f.type.startsWith('image/') || f.type === 'image/gif' || f.type === 'image/svg+xml' || f.type === 'image/avif' || /\.webp$/i.test(f.name);
+    if (!skipConvert) {
+      try {
+        const webp = await fileToWebp(f);
+        if (webp.size < f.size * 0.98) {
+          blob = webp;
+          name = f.name.replace(/\.[^.]+$/, '') + '.webp';
+          savedBytes += f.size - webp.size;
+          converted++;
+        }
+      } catch (e) { /* 转换失败：原图照常上传 */ }
     }
+    origBytes += f.size;
     fd.append('files', blob, name);
   }
   const res = await fetch('/api/r2-upload', {
@@ -420,7 +438,9 @@ async function uploadImages(files, dir) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `上传失败: ${res.status}`);
   }
-  return res.json(); // { urls: [...] }
+  const out = await res.json(); // { urls: [...] }
+  out.compressed = { converted, savedBytes, origBytes };
+  return out;
 }
 
 /* ---------- 路由与视图 ---------- */
@@ -428,7 +448,7 @@ const routes = {};
 /* 控制台导航定义：key → 默认名称 */
 function navDefs() {
   const defs = {
-    dashboard: '🏠 首页', stats: '📊 写作',
+    dashboard: '🏠 首页', stats: '📊 写作', search: '🔍 搜索', medialib: '🗂 媒体库', tags: '🏷 标签',
     images: '🖼 图片', music: '🎵 音乐', gallery: '📷 相册',
     announce: '📢 公告', friends: '🔗 友链', booknav: '🔖 书签', navmgr: '🧭 导航', videos: '🎬 视频', profile: '👤 简介', banner: '🖼️ 横幅',
     timeline: '🕘 时间线', thoughts: '💭 碎碎念',
@@ -1226,10 +1246,25 @@ function listRoute(key) {
     const col = CFG.collections[key];
     view.innerHTML = `<div class="toolbar">
         <button class="btn" id="btn-new">＋ 新建${col.label}</button>
+        ${key === 'posts' ? '<button class="btn" id="btn-sort">🕒 按时间排</button>' : ''}
         <span class="spacer"></span><span class="hint">${col.path}</span>
       </div><div id="list"></div>`;
     $('#btn-new').onclick = () => { location.hash = `#/edit/${key}/__new__`; };
     const listEl = $('#list');
+    /* 文章列表排序：默认文件名倒序，点按钮切到发布时间倒序（日期回填完会自动按当前模式重排） */
+    let rowsRef = null;
+    let sortMode = 'default';
+    const applyOrder = () => {
+      if (!rowsRef) return;
+      const list = sortMode === 'time' ? [...rowsRef].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))) : rowsRef;
+      list.forEach(({ div }) => listEl.appendChild(div));
+    };
+    const btnSort = $('#btn-sort');
+    if (btnSort) btnSort.onclick = () => {
+      sortMode = sortMode === 'time' ? 'default' : 'time';
+      btnSort.textContent = sortMode === 'time' ? '🔤 默认序' : '🕒 按时间排';
+      applyOrder();
+    };
     listEl.innerHTML = '<div class="card">加载中…</div>';
     try {
       const items = await ghGetFile(col.path);
@@ -1272,7 +1307,8 @@ function listRoute(key) {
         listEl.appendChild(div);
         rows.push({ e, div });
       }
-      /* 文章列表：异步回填 published 写作时间 + 真实标题（每批 4 个并发），回填完按发布时间倒序重排 */
+      rowsRef = rows;
+      /* 文章列表：异步回填 published 写作时间 + 真实标题（每批 4 个并发），顺序默认不动 */
       if (key === 'posts' && rows.length) {
         const fill = async (row) => {
           const { e, div } = row;
@@ -1291,8 +1327,7 @@ function listRoute(key) {
         for (let i = 0; i < rows.length; i += 4) {
           await Promise.all(rows.slice(i, i + 4).map(fill));
         }
-        rows.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
-        rows.forEach(({ div }) => listEl.appendChild(div));
+        if (sortMode === 'time') applyOrder();
       }
     } catch (e) { listEl.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; }
   };
@@ -1424,6 +1459,7 @@ routes.edit = async (arg) => {
     <button class="btn btn-ghost" id="btn-back">← 返回</button>
     <span class="spacer"></span>
     <button class="btn btn-ghost" id="btn-preview">👁 预览</button>
+    ${isNew ? '' : '<button class="btn btn-ghost" id="btn-history" type="button">🕘 历史</button>'}
     <button class="btn btn-ghost hidden" id="btn-discard-draft" type="button">🗑 丢弃草稿</button>
     <button class="btn btn-ghost hidden" id="btn-restore-draft" type="button">↩ 仍用旧草稿</button>
     <button class="btn" id="btn-save">💾 保存发布</button>
@@ -1863,6 +1899,10 @@ routes.edit = async (arg) => {
     } catch (err) { toast(err.message, true); $('#btn-save').disabled = false; }
   };
 
+  /* 🕘 历史版本：git 历史本来就在仓库里，这里把它露出来（列表 / 对比 / 恢复） */
+  const btnHistory = $('#btn-history');
+  if (btnHistory) btnHistory.onclick = () => openFileHistory(filePath, () => { router(); });
+
   /* ---------- 拖文件导入：拖到编辑页松手即导入，只填草稿不自动保存 ---------- */
   /* 把解析出的 frontmatter 填进表单字段（走现有 [data-f] 字段，保存流程不变） */
   function fillFormFromFm(newFm) {
@@ -1922,9 +1962,11 @@ routes.edit = async (arg) => {
     const dir = dirEl ? dirEl.value.trim() : '';
     toast(`上传图片中…（${imgs.length} 张）`);
     try {
-      const { urls } = await uploadImages(imgs, dir);
+      const res = await uploadImages(imgs, dir);
+      const { urls } = res;
       insertAtCursor('\n' + urls.map((u) => `![图片](${u})`).join('\n') + '\n');
-      toast(`图片已插入 ${urls.length} 张`);
+      const cp = res.compressed;
+      toast(cp && cp.converted ? `图片已插入 ${urls.length} 张（已压缩，省了 ${Math.max(1, Math.round(cp.savedBytes / 1024))} KB）` : `图片已插入 ${urls.length} 张`);
     } catch (err) { toast(err.message, true); }
   }
   /* 拖放监听挂在 document 上，离开编辑页后自清理（textarea 已不在 DOM / hash 已变） */
@@ -3911,6 +3953,359 @@ async function maybeShowReportPopup() {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) { /* 点遮罩不关闭：必须点叉确认 */ } });
   document.body.appendChild(overlay);
 }
+
+/* ---------- 2026-10-25 新增：历史版本 / 全文搜索 / 媒体库 / 标签管理 ---------- */
+function bigModal(title, sub) {
+  const m = document.createElement('div');
+  m.className = 'modal-mask';
+  m.innerHTML = `<div class="modal-card modal-wide">
+    <div class="modal-head"><h3>${esc(title)}</h3><button class="btn btn-ghost btn-small" data-x type="button">✕ 关闭</button></div>
+    ${sub ? `<p class="hint">${esc(sub)}</p>` : ''}
+    <div class="modal-body"></div></div>`;
+  view.appendChild(m); /* 挂进 view：切换栏目时跟其它弹窗一样自动清掉，不残留 */
+  const close = () => m.remove();
+  m.querySelector('[data-x]').onclick = close;
+  m.addEventListener('mousedown', (ev) => { if (ev.target === m) close(); });
+  return { mask: m, body: m.querySelector('.modal-body'), close };
+}
+/* 逐行 diff（LCS）：返回带 +/-/空格 前缀的行数组；文件太大时返回 null */
+function diffRows(a, b) {
+  const n = a.length, m = b.length;
+  if (n * m > 9000000) return null;
+  const dp = new Array(n + 1);
+  for (let i = 0; i <= n; i++) dp[i] = new Uint32Array(m + 1);
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+  const rows = [];
+  let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (a[i] === b[j]) { rows.push({ t: ' ', s: a[i] }); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) { rows.push({ t: '-', s: a[i] }); i++; }
+    else { rows.push({ t: '+', s: b[j] }); j++; }
+  }
+  while (i < n) rows.push({ t: '-', s: a[i++] });
+  while (j < m) rows.push({ t: '+', s: b[j++] });
+  return rows;
+}
+function diffHtml(oldText, newText) {
+  const rows = diffRows(oldText.split('\n'), newText.split('\n'));
+  if (!rows) return '<p class="hint">文件太大，跳过逐行对比。</p>';
+  if (!rows.some((r) => r.t !== ' ')) return '<p class="hint">两个版本内容完全一致。</p>';
+  let html = '', folding = false;
+  rows.forEach((r, idx) => {
+    const nearChange = rows.some((q, k) => q.t !== ' ' && Math.abs(k - idx) <= 2);
+    if (r.t === ' ' && !nearChange) {
+      if (!folding) { html += '<div class="diff-fold">⋯ 未改动 ⋯</div>'; folding = true; }
+      return;
+    }
+    folding = false;
+    html += `<div class="diff-row${r.t === '+' ? ' diff-add' : r.t === '-' ? ' diff-del' : ''}"><span class="diff-sign">${r.t}</span><span>${esc(r.s) || ' '}</span></div>`;
+  });
+  return `<div class="diff-box">${html}</div>`;
+}
+/* 🕘 历史版本：列出某文件的提交记录，可看原文、与当前版对比、一键恢复（恢复=新提交） */
+async function openFileHistory(path, onRestored) {
+  const { body, close } = bigModal('🕘 历史版本', path);
+  body.innerHTML = '<p class="hint">加载提交记录中…</p>';
+  let commits;
+  try {
+    commits = await gh(`/repos/${CFG.owner}/${CFG.repo}/commits?path=${encodeURIComponent(path)}&per_page=30`);
+  } catch (e) { body.innerHTML = `<p class="hint">加载失败：${esc(e.message)}</p>`; return; }
+  if (!Array.isArray(commits) || !commits.length) { body.innerHTML = '<p class="hint">这个文件还没有提交记录。</p>'; return; }
+  body.innerHTML = `<div class="hist-list">${commits.map((c, i) => {
+    const d = new Date(c.commit.committer.date);
+    const when = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const msg = (c.commit.message || '').split('\n')[0];
+    return `<div class="list-item"><span class="title">${esc(when)}${i === 0 ? ' <span class="meta">（当前）</span>' : ''}</span><span class="meta">${esc(msg)}</span><span class="spacer"></span>
+      <button class="mini-btn" data-h="view" data-i="${i}">查看</button>
+      <button class="mini-btn" data-h="diff" data-i="${i}">与当前对比</button>
+      ${i === 0 ? '' : `<button class="mini-btn warn" data-h="restore" data-i="${i}">恢复此版</button>`}</div>`;
+  }).join('')}</div><div id="hist-detail"></div>`;
+  const detail = body.querySelector('#hist-detail');
+  const textCache = {};
+  const getVersionText = async (i) => {
+    if (textCache[i] !== undefined) return textCache[i];
+    const d = await gh(`/repos/${CFG.owner}/${CFG.repo}/contents/${path}?ref=${commits[i].sha}`);
+    textCache[i] = b64decodeUnicode(d.content.replace(/\n/g, ''));
+    return textCache[i];
+  };
+  body.querySelectorAll('[data-h]').forEach((btn) => {
+    btn.onclick = async () => {
+      const i = +btn.dataset.i, act = btn.dataset.h;
+      const d = new Date(commits[i].commit.committer.date);
+      const when = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      detail.innerHTML = '<p class="hint">读取该版本中…</p>';
+      try {
+        const verText = await getVersionText(i);
+        if (act === 'view') {
+          detail.innerHTML = `<h4>${when} 的版本原文</h4><pre class="hist-pre">${esc(verText)}</pre>`;
+        } else if (act === 'diff') {
+          const cur = await ghGetFile(path);
+          detail.innerHTML = `<h4>${when} 版 → 当前版（- 删除 / + 新增）</h4>${diffHtml(verText, cur.text)}`;
+        } else if (act === 'restore') {
+          if (!confirm(`把这个文件恢复到 ${when} 的版本？\n恢复会产生一个新提交，当前内容仍能在历史里找回。`)) { detail.innerHTML = ''; return; }
+          const cur = await ghGetFile(path);
+          await saveWithLog(path, verText, cur.sha, `恢复 ${path} 到 ${when} 的版本 [管理台]`, { type: '历史', action: '恢复', target: path });
+          toast('已恢复到该版本（新提交）');
+          close();
+          if (onRestored) onRestored();
+        }
+      } catch (e) { detail.innerHTML = `<p class="hint">操作失败：${esc(e.message)}</p>`; }
+    };
+  });
+}
+/* 读一个集合的全部文档（搜索索引 / 标签管理共用） */
+async function loadCollectionDocs(key) {
+  const col = CFG.collections[key];
+  const entries = await ghGetFile(col.path);
+  const list = (Array.isArray(entries) ? entries : []).filter((e) => col.mode === 'dir' ? e.type === 'dir' : e.name.endsWith('.md'));
+  const docs = [];
+  const run = async (e) => {
+    try {
+      let data, path;
+      if (col.mode === 'dir') {
+        const files = await ghGetFile(`${col.path}/${e.name}`);
+        const md = (Array.isArray(files) ? files : []).find((f) => f.name.endsWith('.md'));
+        if (!md) return;
+        path = `${col.path}/${e.name}/${md.name}`;
+        data = await ghGetFile(path);
+      } else {
+        path = `${col.path}/${e.name}`;
+        data = await ghGetFile(path);
+      }
+      const { fm, body } = parseFrontmatter(data.text);
+      docs.push({ key, label: col.label, name: e.name, path, fm, body });
+    } catch (err) { /* 单篇失败不影响整体 */ }
+  };
+  for (let i = 0; i < list.length; i += 4) await Promise.all(list.slice(i, i + 4).map(run));
+  return docs;
+}
+/* 🔍 全文搜索：索引只建一次（标题+正文都在浏览器内存里），之后输入即搜 */
+let _searchIndex = null;
+async function buildSearchIndex(onProgress) {
+  const items = [];
+  const keys = Object.keys(CFG.collections);
+  let doneKeys = 0;
+  for (const key of keys) {
+    const docs = await loadCollectionDocs(key);
+    docs.forEach((d) => items.push({
+      key, label: d.label, name: d.name,
+      title: d.fm.title || d.name,
+      date: String(d.fm.published || '').slice(0, 10),
+      text: (d.fm.title || '') + '\n' + d.body,
+    }));
+    doneKeys++;
+    if (onProgress) onProgress(doneKeys, keys.length);
+  }
+  _searchIndex = { items, at: Date.now() };
+  return _searchIndex;
+}
+routes.search = async () => {
+  view.innerHTML = `<div class="card"><h2>🔍 全文搜索 <span class="sub">搜标题和正文，点结果直接进编辑器</span></h2>
+    <div class="toolbar"><input type="text" id="q" placeholder="输入关键词，空格分隔多个词…" style="flex:1;min-width:200px">
+    <button class="btn btn-ghost btn-small" id="q-rebuild" type="button">↻ 重建索引</button></div>
+    <p class="hint" id="q-status"></p><div id="q-results"></div></div>`;
+  const input = $('#q'), status = $('#q-status'), results = $('#q-results');
+  const ensureIndex = async () => {
+    if (_searchIndex) { status.textContent = `索引就绪：共 ${_searchIndex.items.length} 篇（文章/动态/项目/单页）`; return; }
+    status.textContent = '正在建立索引（要把全部文章读一遍，稍等）…';
+    await buildSearchIndex((d, t) => { status.textContent = `正在建立索引… ${d}/${t} 个栏目`; });
+    status.textContent = `索引就绪：共 ${_searchIndex.items.length} 篇（文章/动态/项目/单页）`;
+  };
+  const snippet = (text, term) => {
+    const idx = text.toLowerCase().indexOf(term);
+    if (idx < 0) return esc(text.slice(0, 90)) + '…';
+    const s = Math.max(0, idx - 36), e = Math.min(text.length, idx + term.length + 54);
+    return (s > 0 ? '…' : '') + esc(text.slice(s, idx)) + '<mark>' + esc(text.slice(idx, idx + term.length)) + '</mark>' + esc(text.slice(idx + term.length, e)) + (e < text.length ? '…' : '');
+  };
+  const doSearch = () => {
+    if (!_searchIndex) return;
+    const terms = input.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!terms.length) { results.innerHTML = ''; return; }
+    const hits = [];
+    for (const it of _searchIndex.items) {
+      const hay = it.text.toLowerCase(), titleHay = it.title.toLowerCase();
+      if (!terms.every((t) => hay.includes(t))) continue;
+      let score = 0;
+      terms.forEach((t) => { if (titleHay.includes(t)) score += 10; score += Math.min(5, hay.split(t).length - 1); });
+      hits.push({ it, score });
+    }
+    hits.sort((a, b) => b.score - a.score);
+    results.innerHTML = hits.slice(0, 60).map(({ it }) => `
+      <div class="list-item sr-item" data-k="${esc(it.key)}" data-n="${esc(it.name)}">
+        <div class="sr-head"><span class="sr-chip">${esc(it.label)}</span><span class="title">${esc(it.title)} <span class="meta">${esc(it.date)}</span></span></div>
+        <div class="sr-snip">${snippet(it.text.replace(/\s+/g, ' '), terms[0])}</div>
+      </div>`).join('') || '<p class="hint">没搜到。换个词试试？</p>';
+    results.querySelectorAll('.sr-item').forEach((el) => {
+      el.onclick = () => { location.hash = `#/edit/${el.dataset.k}/${el.dataset.n}`; };
+    });
+  };
+  input.addEventListener('input', doSearch);
+  $('#q-rebuild').onclick = async () => { _searchIndex = null; await ensureIndex(); doSearch(); };
+  await ensureIndex();
+  input.focus();
+};
+/* 🗂 媒体库：浏览 R2 里已上传的文件（列表接口现成），复制链接 / 打开 / 删除（删前查引用） */
+async function r2ListPage(prefix, cursor) {
+  const qs = new URLSearchParams({ prefix: prefix || '', limit: '200' });
+  if (cursor) qs.set('cursor', cursor);
+  const res = await fetch('/api/r2-list?' + qs, { headers: { Authorization: `Bearer ${token()}` } });
+  if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error || `列表失败: ${res.status}`); }
+  return res.json();
+}
+async function r2ListAll(prefix) {
+  const out = [];
+  let cursor = null;
+  do {
+    const r = await r2ListPage(prefix, cursor);
+    out.push(...(r.objects || []));
+    cursor = r.truncated ? r.cursor : null;
+  } while (cursor);
+  return out;
+}
+const fmtSize = (n) => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n > 1024 ? Math.round(n / 1024) + ' KB' : n + ' B';
+routes.medialib = async () => {
+  view.innerHTML = `<div class="card"><h2>🗂 媒体库 <span class="sub">R2 桶里已上传的文件</span></h2>
+    <div class="toolbar" id="ml-chips"></div>
+    <div class="toolbar"><input type="text" id="ml-filter" placeholder="按文件名筛选…" style="flex:1;min-width:180px"><span class="hint" id="ml-count"></span></div>
+    <div class="img-grid" id="ml-grid"></div><p class="hint" id="ml-status">加载中…</p></div>`;
+  const grid = $('#ml-grid'), status = $('#ml-status'), count = $('#ml-count');
+  const CHIPS = [['', '全部'], ['posts/', '文章图'], ['dynamic/', '动态图'], ['projects/', '项目图'], ['admin/', '控制台'], ['videos/', '视频'], ['music/', '音乐']];
+  let prefix = '', objects = [], filterText = '';
+  const chipsEl = $('#ml-chips');
+  chipsEl.innerHTML = CHIPS.map(([p, label]) => `<button class="btn btn-small${p === '' ? '' : ' btn-ghost'}" data-p="${esc(p)}" type="button">${esc(label)}</button>`).join('');
+  chipsEl.querySelectorAll('[data-p]').forEach((b) => {
+    b.onclick = () => { prefix = b.dataset.p; chipsEl.querySelectorAll('[data-p]').forEach((x) => x.classList.toggle('btn-ghost', x !== b)); render(); };
+  });
+  $('#ml-filter').addEventListener('input', (e) => { filterText = e.target.value.trim().toLowerCase(); render(); });
+  const isImg = (k) => /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(k);
+  function render() {
+    const list = objects.filter((o) => o.key.startsWith(prefix) && (!filterText || o.key.toLowerCase().includes(filterText)));
+    count.textContent = `共 ${list.length} 个文件`;
+    grid.innerHTML = '';
+    list.forEach((o) => {
+      const cell = document.createElement('div');
+      cell.className = 'img-cell';
+      const fileName = o.key.split('/').pop();
+      cell.innerHTML = `${isImg(o.key)
+        ? `<img loading="lazy" src="${esc(o.url)}" alt="">`
+        : `<div class="ml-file-icon">${esc((fileName.split('.').pop() || 'file').toUpperCase().slice(0, 5))}</div>`}
+        <div class="url" title="${esc(o.key)}">${esc(fileName)}</div>
+        <div class="meta">${fmtSize(o.size)} · ${esc(String(o.uploaded || '').slice(0, 10))}</div>
+        <div class="ops">
+          <button class="mini-btn" data-a="copy">复制链接</button>
+          <button class="mini-btn" data-a="open">打开</button>
+          <button class="mini-btn danger" data-a="del">删除</button>
+        </div>`;
+      cell.querySelector('[data-a=copy]').onclick = async () => {
+        try { await navigator.clipboard.writeText(o.url); toast('链接已复制'); }
+        catch (e) { prompt('复制这条链接：', o.url); }
+      };
+      cell.querySelector('[data-a=open]').onclick = () => window.open(o.url, '_blank', 'noopener');
+      cell.querySelector('[data-a=del]').onclick = async () => {
+        /* 删前查引用：拿全文索引扫一遍，哪些文章/动态在用这张图 */
+        let refs = [];
+        try {
+          toast('正在检查引用…');
+          if (!_searchIndex) await buildSearchIndex();
+          refs = _searchIndex.items.filter((it) => it.text.includes(o.key) || (o.url && it.text.includes(o.url)));
+        } catch (e) { /* 索引失败：照常走确认，只是不带引用信息 */ }
+        const refMsg = refs.length
+          ? `\n⚠️ 有 ${refs.length} 篇在引用它：${refs.slice(0, 3).map((r) => `《${r.title}》`).join('、')}${refs.length > 3 ? ' 等' : ''}。删了它们会裂图！`
+          : '\n未发现文章/动态引用它（配置类引用不在检查范围）。';
+        if (!confirm(`确定删除 R2 文件？\n${o.key}${refMsg}`)) return;
+        try {
+          const res = await fetch('/api/r2-delete', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ keys: [o.key] }),
+          });
+          const b = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(b.error || `删除失败: ${res.status}`);
+          if (!b.deleted) throw new Error('服务端没有删除这个文件（可能路径受限）');
+          objects = objects.filter((x) => x.key !== o.key);
+          render();
+          toast('已删除');
+        } catch (e) { toast(e.message, true); }
+      };
+      grid.appendChild(cell);
+    });
+    if (!list.length) grid.innerHTML = '<p class="hint">这个范围里没有文件。</p>';
+  }
+  try {
+    objects = await r2ListAll('');
+    status.textContent = '删除前会自动检查文章/动态里的引用；配置（壁纸、封面等）里的引用不在检查范围，删之前心里有数。';
+    render();
+  } catch (e) { status.textContent = '加载失败：' + e.message; }
+};
+/* 🏷 标签管理：跨文章聚合标签/分类，改名/合并/删除一次 commit 全部改好 */
+routes.tags = async () => {
+  view.innerHTML = '<div class="card"><h2>🏷 加载中…（要把全部文章读一遍）</h2></div>';
+  let docs;
+  try {
+    const [posts, projects] = await Promise.all([loadCollectionDocs('posts'), loadCollectionDocs('projects')]);
+    docs = [...posts, ...projects];
+  } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+  const tagMap = new Map(), catMap = new Map();
+  docs.forEach((d, di) => {
+    const tags = Array.isArray(d.fm.tags) ? d.fm.tags : (d.fm.tags ? [d.fm.tags] : []);
+    tags.forEach((t) => { const k = String(t); if (!tagMap.has(k)) tagMap.set(k, new Set()); tagMap.get(k).add(di); });
+    if (d.fm.category) { const k = String(d.fm.category); if (!catMap.has(k)) catMap.set(k, new Set()); catMap.get(k).add(di); }
+  });
+  const sortEntries = (map) => [...map.entries()].sort((a, b) => b[1].size - a[1].size || a[0].localeCompare(b[0]));
+  async function applyChange(field, from, to) {
+    const affected = docs.filter((d) => field === 'tags'
+      ? (Array.isArray(d.fm.tags) ? d.fm.tags : []).map(String).includes(from)
+      : String(d.fm.category || '') === from);
+    if (!affected.length) { toast('没有文章用到它'); return; }
+    const label = field === 'tags' ? '标签' : '分类';
+    const what = to ? `把${label}「${from}」${tagMap.has(to) || catMap.has(to) ? '合并' : '改名'}为「${to}」` : `从所有文章删除${label}「${from}」`;
+    if (!confirm(`${what}，共 ${affected.length} 篇，一次提交全部改好。继续？`)) return;
+    const files = affected.map((d) => {
+      const fm = { ...d.fm };
+      if (field === 'tags') {
+        const seen = new Set(), out = [];
+        (Array.isArray(d.fm.tags) ? d.fm.tags : []).map(String).forEach((t) => {
+          const nt = t === from ? to : t;
+          if (nt && !seen.has(nt)) { seen.add(nt); out.push(nt); }
+        });
+        fm.tags = out;
+      } else if (to) fm.category = to;
+      else delete fm.category;
+      return { path: d.path, content: serializeFrontmatter(fm, d.body) };
+    });
+    try {
+      toast(`正在提交（${files.length} 篇合成 1 个 commit）…`);
+      await ghCommitMulti(files, `${label}${to ? `「${from}」→「${to}」` : `删除「${from}」`}（${files.length} 篇）[管理台]`);
+      oplogRecord('标签', to ? '改名' : '删除', `${from}${to ? ' → ' + to : ''}`, `${files.length} 篇`);
+      toast('已全部改好（Pages 重新构建后生效）');
+      routes.tags();
+    } catch (e) { toast(e.message, true); }
+  }
+  const rowHtml = (field, name, set) => `
+    <div class="list-item"><span class="title">${field === 'tags' ? '🏷' : '🗂'} ${esc(name)}</span>
+      <span class="meta">${set.size} 篇</span><span class="spacer"></span>
+      <button class="mini-btn" data-f="${field}" data-a="rename" data-n="${esc(name)}">改名</button>
+      <button class="mini-btn" data-f="${field}" data-a="merge" data-n="${esc(name)}">合并到…</button>
+      <button class="mini-btn danger" data-f="${field}" data-a="del" data-n="${esc(name)}">删除</button></div>`;
+  view.innerHTML = `
+    <div class="card"><h2>🏷 标签 <span class="sub">共 ${tagMap.size} 个 · 改名/合并/删除会把所有用到它的文章一次改好（1 个 commit）</span></h2>
+      ${sortEntries(tagMap).map(([n, s]) => rowHtml('tags', n, s)).join('') || '<p class="hint">还没有标签</p>'}</div>
+    <div class="card"><h2>🗂 分类 <span class="sub">共 ${catMap.size} 个</span></h2>
+      ${sortEntries(catMap).map(([n, s]) => rowHtml('category', n, s)).join('') || '<p class="hint">还没有分类</p>'}</div>`;
+  view.querySelectorAll('[data-a]').forEach((b) => {
+    b.onclick = () => {
+      const field = b.dataset.f, name = b.dataset.n, act = b.dataset.a;
+      if (act === 'del') { applyChange(field, name, null); return; }
+      const to = (prompt(act === 'rename' ? `把「${name}」改名为：` : `把「${name}」合并到哪个${field === 'tags' ? '标签' : '分类'}？（填已有的就是合并，填新的就是改名）`, name) || '').trim();
+      if (!to || to === name) return;
+      applyChange(field, name, to);
+    };
+  });
+};
 
 /* ---------- 启动 ---------- */
 function hideLoader() {

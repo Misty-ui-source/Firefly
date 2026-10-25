@@ -16,8 +16,8 @@ export async function onRequestPost({ request, env }) {
 
     const { keys } = await request.json();
     if (!Array.isArray(keys) || !keys.length) return Response.json({ error: '没有指定文件' }, { status: 400 });
-    // 安全：只允许删除 videos/ 下的文件
-    const safe = keys.filter((k) => typeof k === 'string' && k.startsWith('videos/') && !k.includes('..'));
+    // 安全：拒绝路径穿越；只允许删桶内正常对象键
+    const safe = keys.filter((k) => typeof k === 'string' && k.length > 0 && !k.includes('..') && !k.startsWith('/'));
     await Promise.all(safe.map((k) => env.R2_BUCKET.delete(k)));
     return Response.json({ deleted: safe.length });
   } catch (e) {
