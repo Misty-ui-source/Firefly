@@ -3146,7 +3146,7 @@ routes.sitenav = async () => {
         <h3>${isChild ? '下拉项' : '导航项'}编辑</h3>
         <div class="field"><label>名称 *</label><input id="sn-name" value="${esc(target.name || '')}" placeholder="如：文章"></div>
         <div class="field"><label>链接 URL *</label><input id="sn-url" value="${esc(target.url || '')}" placeholder="/archive/ 或 https://…；纯下拉父项填 #"></div>
-        <div class="field"><label>图标（Iconify 名）</label><input id="sn-icon" value="${esc(target.icon || '')}" placeholder="material-symbols:home"></div>
+        <div class="field"><label>图标（Iconify 名） <a href="https://icon-sets.iconify.design/" target="_blank" rel="noopener">🔍 去 Iconify 找图标 ↗</a></label><input id="sn-icon" value="${esc(target.icon || '')}" placeholder="material-symbols:home"></div>
         <div class="field"><label>pageKey（可空，主题标当前页用）</label><input id="sn-pagekey" value="${esc(target.pageKey || '')}" placeholder="friends"></div>
         <div class="field"><label><input type="checkbox" id="sn-ext" ${target.external ? 'checked' : ''}> 外链（新窗口打开）</label></div>
         ${isChild ? '' : `<div class="field"><label><input type="checkbox" id="sn-drop" ${target._drop ? 'checked' : ''}> 这是下拉父项（能在下面加子项）</label></div>`}

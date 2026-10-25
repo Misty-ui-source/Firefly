@@ -630,3 +630,7 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
 
 /* 站点导航：下拉子项区缩进 */
 .sn-kids { margin: 10px 0 2px 22px; display: flex; flex-direction: column; gap: 8px; }
+
+/* 列表型编辑器弹窗（时间线/碎碎念/站点导航共用）：以前 .modal-overlay 一直没写样式，弹窗裸奔到页面最底部 */
+.modal-overlay { position: fixed; inset: 0; z-index: 250; background: rgba(0, 0, 0, .42); display: grid; place-items: center; padding: 16px; overflow-y: auto; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.modal-overlay .modal { width: min(560px, 94vw); max-height: 88vh; overflow-y: auto; }
