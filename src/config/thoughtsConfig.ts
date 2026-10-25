@@ -10,6 +10,11 @@ export const thoughtsConfig: ThoughtsConfig = {
 	title: "碎碎念",
 	items: [
 		{
+			title: 'vibe coding好容易上瘾',
+			content: '本来说一小时前休息会呢，结果又拖延了一小时',
+			createdAt: '2026-10-25T07:34:19.095Z'
+		},
+		{
 			title: '电子系统设计好难啊',
 			content: '这个寄存状态能不能放过我 啊',
 			createdAt: '2026-10-25T03:05:07.684Z'
