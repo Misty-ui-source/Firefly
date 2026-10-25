@@ -92,11 +92,18 @@ const postsCollection: ContentCollection<PostData> = defineCollection({
 	}),
 });
 
-const specCollection: ContentCollection<Record<string, never>> =
-	defineCollection({
-		loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/spec" }),
-		schema: z.object({}),
-	});
+type SpecData = {
+	title: string;
+	description: string;
+};
+
+const specCollection: ContentCollection<SpecData> = defineCollection({
+	loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/spec" }),
+	schema: z.object({
+		title: z.string().optional().default(""),
+		description: z.string().optional().default(""),
+	}),
+});
 
 const dynamicCollection: ContentCollection<DynamicData> = defineCollection({
 	loader: glob({ pattern: "**/*.md", base: "./src/content/dynamic" }),

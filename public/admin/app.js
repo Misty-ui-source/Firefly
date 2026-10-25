@@ -1265,11 +1265,37 @@ async function mountSpecCommentCard() {
       rows.push({ ...t, sha: d.sha, text: d.text, on: m ? m[1] === 'true' : true, ok: !!m });
     } catch (e) { rows.push({ ...t, ok: false, on: false }); }
   }
+  /* 通用单页（[slug] 模板）：开关存 specCommentConfig.ts 的 specComments 表 */
+  const G_PATH = 'src/config/specCommentConfig.ts';
+  let gSlugs = [], gMap = {}, gSha = null, gOk = false;
+  try {
+    const dir = await ghGetFile(CFG.collections.spec.path);
+    if (Array.isArray(dir)) {
+      gSlugs = dir.filter((x) => x.type === 'file' && /\.(md|mdx)$/.test(x.name))
+        .map((x) => x.name.replace(/\.(md|mdx)$/, ''))
+        .filter((s) => !['about', 'friends', 'guestbook'].includes(s));
+    }
+    const gd = await ghGetFile(G_PATH);
+    gSha = gd.sha;
+    const re = /"([^"]+)":\s*(true|false)/g;
+    let mm;
+    while ((mm = re.exec(gd.text))) gMap[mm[1]] = mm[2] === 'true';
+    gOk = true;
+  } catch (e) { /* 通用单页部分读取失败时只显示固定三项 */ }
+  const buildGText = () => {
+    const keys = Object.keys(gMap).sort();
+    const body = keys.map((k) => `\t"${k}": ${gMap[k]},`).join('\n');
+    return `// 通用单页评论区开关：slug -> 是否显示评论区；没写的默认显示。\n// 通用单页指由 src/pages/[slug].astro 模板生成的单页（src/content/spec/ 里的文件）。\n// 由 Alexander Console「单页 → 💬 评论区开关」卡维护。\nexport const specComments: Record<string, boolean> = {${body ? `\n${body}\n` : ''}};\n`;
+  };
   const render = () => {
     card.innerHTML = `<h2>💬 评论区开关</h2>
-      <p class="hint">这三个页面的评论区在各自的配置文件里，切换后保存、重新构建才生效。留言板一直开着（跟全局评论走），不在这里管。</p>
+      <p class="hint">切换后保存、重新构建才生效。留言板一直开着（跟全局评论走），不在这里管。</p>
+      <p class="hint" style="margin-top:2px">展示单页（有专属版式，开关存在各自的配置文件里）：</p>
       ${rows.map((r, i) => `<div class="list-item"><span class="title">${esc(r.label)}</span><span class="meta">${esc(r.path)}</span><span class="spacer"></span>
-        ${r.ok ? `<label class="pill${r.on ? ' on' : ''}" data-sct="${i}"><input type="checkbox" ${r.on ? 'checked' : ''}>评论区${r.on ? '开' : '关'}</label>` : '<span class="meta">读取失败</span>'}</div>`).join('')}`;
+        ${r.ok ? `<label class="pill${r.on ? ' on' : ''}" data-sct="${i}"><input type="checkbox" ${r.on ? 'checked' : ''}>评论区${r.on ? '开' : '关'}</label>` : '<span class="meta">读取失败</span>'}</div>`).join('')}
+      <p class="hint" style="margin-top:14px">通用单页（通用模板生成，评论默认开）：</p>
+      ${gOk ? (gSlugs.map((s) => `<div class="list-item"><span class="title">${esc(s)}</span><span class="meta">/${esc(s)}/</span><span class="spacer"></span>
+        <label class="pill${gMap[s] !== false ? ' on' : ''}" data-gct="${esc(s)}"><input type="checkbox" ${gMap[s] !== false ? 'checked' : ''}>评论区${gMap[s] !== false ? '开' : '关'}</label></div>`).join('') || '<p class="hint">还没有通用单页。在下面新建一个单页文件（别用关于/友链/留言这些已有名字），构建后开关会出现在这里。</p>') : '<p class="hint">通用单页开关读取失败</p>'}`;
     card.querySelectorAll('[data-sct]').forEach((el) => {
       el.querySelector('input').onchange = async (ev) => {
         const r = rows[parseInt(el.dataset.sct, 10)];
@@ -1281,6 +1307,20 @@ async function mountSpecCommentCard() {
           const res = await saveWithLog(r.path, text, r.sha, `${want ? '开启' : '关闭'}${r.label}评论区 [管理台]`, { type: '评论', action: want ? '开启评论区' : '关闭评论区', target: r.label });
           r.sha = res.content.sha; r.text = text; r.on = want;
           toast(`${r.label}评论区已${want ? '开启' : '关闭'}，重新构建后生效`);
+        } catch (e) { toast(e.message, true); }
+        render();
+      };
+    });
+    card.querySelectorAll('[data-gct]').forEach((el) => {
+      el.querySelector('input').onchange = async (ev) => {
+        const slug = el.dataset.gct;
+        const want = ev.target.checked;
+        ev.target.disabled = true;
+        try {
+          gMap[slug] = want;
+          const res = await saveWithLog(G_PATH, buildGText(), gSha, `${want ? '开启' : '关闭'}通用单页「${slug}」评论区 [管理台]`, { type: '评论', action: want ? '开启评论区' : '关闭评论区', target: `单页 ${slug}` });
+          gSha = res.content.sha;
+          toast(`单页「${slug}」评论区已${want ? '开启' : '关闭'}，重新构建后生效`);
         } catch (e) { toast(e.message, true); }
         render();
       };
@@ -1323,6 +1363,12 @@ function listRoute(key) {
       listEl.innerHTML = '';
       // 动态按文件名倒序
       entries.sort((a, b) => b.name.localeCompare(a.name));
+      if (key === 'spec') {
+        // 单页分两组：展示单页（关于/友链/留言，专属模板）在前，通用单页（通用模板）在后（2026-10-25 用户定顺序）
+        const sRank = (n) => (['about', 'friends', 'guestbook'].includes(n.replace(/\.(md|mdx)$/, '')) ? 0 : 1);
+        entries.sort((a, b) => sRank(a.name) - sRank(b.name) || b.name.localeCompare(a.name));
+      }
+      let lastSpecGroup = null;
       const rows = [];
       for (const e of entries) {
         const div = document.createElement('div');
@@ -1354,6 +1400,20 @@ function listRoute(key) {
             router();
           } catch (err) { toast(err.message, true); }
         };
+        if (key === 'spec') {
+          const isShow = ['about', 'friends', 'guestbook'].includes(e.name.replace(/\.(md|mdx)$/, ''));
+          const grp = isShow ? 'show' : 'gen';
+          if (grp !== lastSpecGroup) {
+            lastSpecGroup = grp;
+            const head = document.createElement('div');
+            head.className = 'hint spec-group-head';
+            head.style.cssText = 'margin:12px 2px 2px;font-weight:700';
+            head.textContent = isShow ? '展示单页 · 专属模板（各有自己的版式）' : '通用单页 · 通用模板（新建文件自动生成页面）';
+            listEl.appendChild(head);
+          }
+          const metaEl = div.querySelector('.meta');
+          if (metaEl) metaEl.textContent = `${e.type} · ${isShow ? '专属模板' : '通用模板'}`;
+        }
         listEl.appendChild(div);
         rows.push({ e, div });
       }

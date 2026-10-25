@@ -1,0 +1,71 @@
+---
+import { getCollection, render } from "astro:content";
+import Comment from "@components/comment/index.astro";
+import Markdown from "@components/common/Markdown.astro";
+import { Icon } from "astro-icon/components";
+import { commentConfig } from "@/config";
+import { specComments } from "@/config/specCommentConfig";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import "@/styles/pages/common.css";
+
+// ============================================================================
+// 通用单页模板：src/content/spec/ 里没有专属模板的文件，统一由这里生成页面。
+// 排除名单：已有专属模板的（about/friends/guestbook）和已存在的顶级路由，
+// 避免同名 spec 文件悄悄顶掉现有页面（静态路由本来也优先，这里双保险）。
+// ============================================================================
+export async function getStaticPaths() {
+	const reserved = new Set([
+		"about", "friends", "guestbook",
+		"404", "archive", "analytics", "atom", "bangumi", "bilibili", "booknav",
+		"categories", "changelog", "devices", "dynamic", "gallery", "moments",
+		"myanimelist", "projects", "posts", "rss", "search", "series",
+		"sponsor", "steam", "tags",
+	]);
+	const entries = await getCollection("spec");
+	return entries
+		.filter((e) => !reserved.has(e.id) && !/^\d+$/.test(e.id))
+		.map((e) => ({ params: { slug: e.id }, props: { entry: e } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+
+const title = entry.data.title || entry.id;
+const description = entry.data.description || "";
+
+// 评论区：全局评论开着，且控制台开关没关（specComments 里没写 = 默认开）
+const isCommentEnabled =
+	commentConfig?.type &&
+	commentConfig.type !== "none" &&
+	specComments[entry.id] !== false;
+---
+
+<MainGridLayout title={title} description={description}>
+  <div
+    class="flex w-full rounded-(--radius-large) overflow-hidden relative min-h-32"
+  >
+    <div class="card-base z-10 px-9 py-6 relative w-full">
+      <div class="mb-8">
+        <div class="page-heading">
+          <div class="page-icon" aria-hidden="true">
+            <Icon name="material-symbols:article" />
+          </div>
+          <div>
+            <h2>{title}</h2>
+            {description && <p>{description}</p>}
+          </div>
+        </div>
+      </div>
+
+      <Markdown class="mt-2">
+        <Content />
+      </Markdown>
+    </div>
+  </div>
+
+  {isCommentEnabled && (
+    <div class="mt-4">
+      <Comment post={entry} customPath={`/${entry.id}/`} />
+    </div>
+  )}
+</MainGridLayout>
