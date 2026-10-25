@@ -24,3 +24,10 @@ export type SakuraConfig = {
 	};
 	zIndex: number; // 层级，确保樱花在合适的层级显示
 };
+
+// 通用粒子特效配置（雪花、萤火虫共用同一个轻量粒子引擎，见 ParticleEffects.astro）
+export type ParticleEffectConfig = {
+	enable: boolean; // 是否启用
+	count: number; // 粒子数量
+	zIndex: number; // 层级
+};

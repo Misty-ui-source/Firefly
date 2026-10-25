@@ -17,8 +17,17 @@ import {
 	backgroundWallpaper,
 	displaySettingsConfig,
 	expressiveCodeConfig,
+	bubblesConfig,
+	clickConfig,
+	fireflyConfig,
+	heartsConfig,
+	leavesConfig,
+	meteorConfig,
+	notesConfig,
+	rainConfig,
 	sakuraConfig,
 	siteConfig,
+	snowConfig,
 } from "../config";
 import { isHomePage as checkIsHomePage } from "./layout-utils";
 
@@ -788,6 +797,285 @@ export function setSakuraEnabled(enabled: boolean): void {
 	// 实时切换樱花特效
 	window.dispatchEvent(
 		new CustomEvent("sakuraToggle", { detail: { enabled } }),
+	);
+}
+
+// Snow effect functions
+export function getDefaultSnowEnabled(): boolean {
+	return snowConfig?.enable ?? false;
+}
+
+export function getStoredSnowEnabled(): boolean {
+	if (typeof localStorage === "undefined") {
+		return getDefaultSnowEnabled();
+	}
+	const stored = localStorage.getItem("snowEnabled");
+	if (stored === null) {
+		return getDefaultSnowEnabled();
+	}
+	return stored === "true";
+}
+
+export function setSnowEnabled(enabled: boolean): void {
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.setItem !== "function"
+	) {
+		return;
+	}
+	localStorage.setItem("snowEnabled", String(enabled));
+	document.documentElement.setAttribute("data-snow-enabled", String(enabled));
+	// 实时切换雪花特效
+	window.dispatchEvent(
+		new CustomEvent("snowToggle", { detail: { enabled } }),
+	);
+}
+
+// Firefly effect functions
+export function getDefaultFireflyEnabled(): boolean {
+	return fireflyConfig?.enable ?? false;
+}
+
+export function getStoredFireflyEnabled(): boolean {
+	if (typeof localStorage === "undefined") {
+		return getDefaultFireflyEnabled();
+	}
+	const stored = localStorage.getItem("fireflyEnabled");
+	if (stored === null) {
+		return getDefaultFireflyEnabled();
+	}
+	return stored === "true";
+}
+
+export function setFireflyEnabled(enabled: boolean): void {
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.setItem !== "function"
+	) {
+		return;
+	}
+	localStorage.setItem("fireflyEnabled", String(enabled));
+	document.documentElement.setAttribute("data-firefly-enabled", String(enabled));
+	// 实时切换萤火虫特效
+	window.dispatchEvent(
+		new CustomEvent("fireflyToggle", { detail: { enabled } }),
+	);
+}
+
+// Notes effect functions
+export function getDefaultNotesEnabled(): boolean {
+	return notesConfig?.enable ?? false;
+}
+
+export function getStoredNotesEnabled(): boolean {
+	if (typeof localStorage === "undefined") {
+		return getDefaultNotesEnabled();
+	}
+	const stored = localStorage.getItem("notesEnabled");
+	if (stored === null) {
+		return getDefaultNotesEnabled();
+	}
+	return stored === "true";
+}
+
+export function setNotesEnabled(enabled: boolean): void {
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.setItem !== "function"
+	) {
+		return;
+	}
+	localStorage.setItem("notesEnabled", String(enabled));
+	document.documentElement.setAttribute("data-notes-enabled", String(enabled));
+	// 实时切换音符特效
+	window.dispatchEvent(
+		new CustomEvent("notesToggle", { detail: { enabled } }),
+	);
+}
+
+// Rain effect functions
+export function getDefaultRainEnabled(): boolean {
+	return rainConfig?.enable ?? false;
+}
+
+export function getStoredRainEnabled(): boolean {
+	if (typeof localStorage === "undefined") {
+		return getDefaultRainEnabled();
+	}
+	const stored = localStorage.getItem("rainEnabled");
+	if (stored === null) {
+		return getDefaultRainEnabled();
+	}
+	return stored === "true";
+}
+
+export function setRainEnabled(enabled: boolean): void {
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.setItem !== "function"
+	) {
+		return;
+	}
+	localStorage.setItem("rainEnabled", String(enabled));
+	document.documentElement.setAttribute("data-rain-enabled", String(enabled));
+	// 实时切换雨滴特效
+	window.dispatchEvent(
+		new CustomEvent("rainToggle", { detail: { enabled } }),
+	);
+}
+
+// Meteor effect functions
+export function getDefaultMeteorEnabled(): boolean {
+	return meteorConfig?.enable ?? false;
+}
+
+export function getStoredMeteorEnabled(): boolean {
+	if (typeof localStorage === "undefined") {
+		return getDefaultMeteorEnabled();
+	}
+	const stored = localStorage.getItem("meteorEnabled");
+	if (stored === null) {
+		return getDefaultMeteorEnabled();
+	}
+	return stored === "true";
+}
+
+export function setMeteorEnabled(enabled: boolean): void {
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.setItem !== "function"
+	) {
+		return;
+	}
+	localStorage.setItem("meteorEnabled", String(enabled));
+	document.documentElement.setAttribute("data-meteor-enabled", String(enabled));
+	// 实时切换流星特效
+	window.dispatchEvent(
+		new CustomEvent("meteorToggle", { detail: { enabled } }),
+	);
+}
+
+// Bubbles effect functions
+export function getDefaultBubblesEnabled(): boolean {
+	return bubblesConfig?.enable ?? false;
+}
+
+export function getStoredBubblesEnabled(): boolean {
+	if (typeof localStorage === "undefined") {
+		return getDefaultBubblesEnabled();
+	}
+	const stored = localStorage.getItem("bubblesEnabled");
+	if (stored === null) {
+		return getDefaultBubblesEnabled();
+	}
+	return stored === "true";
+}
+
+export function setBubblesEnabled(enabled: boolean): void {
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.setItem !== "function"
+	) {
+		return;
+	}
+	localStorage.setItem("bubblesEnabled", String(enabled));
+	document.documentElement.setAttribute("data-bubbles-enabled", String(enabled));
+	// 实时切换泡泡特效
+	window.dispatchEvent(
+		new CustomEvent("bubblesToggle", { detail: { enabled } }),
+	);
+}
+
+// Hearts effect functions
+export function getDefaultHeartsEnabled(): boolean {
+	return heartsConfig?.enable ?? false;
+}
+
+export function getStoredHeartsEnabled(): boolean {
+	if (typeof localStorage === "undefined") {
+		return getDefaultHeartsEnabled();
+	}
+	const stored = localStorage.getItem("heartsEnabled");
+	if (stored === null) {
+		return getDefaultHeartsEnabled();
+	}
+	return stored === "true";
+}
+
+export function setHeartsEnabled(enabled: boolean): void {
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.setItem !== "function"
+	) {
+		return;
+	}
+	localStorage.setItem("heartsEnabled", String(enabled));
+	document.documentElement.setAttribute("data-hearts-enabled", String(enabled));
+	// 实时切换爱心特效
+	window.dispatchEvent(
+		new CustomEvent("heartsToggle", { detail: { enabled } }),
+	);
+}
+
+// Leaves effect functions
+export function getDefaultLeavesEnabled(): boolean {
+	return leavesConfig?.enable ?? false;
+}
+
+export function getStoredLeavesEnabled(): boolean {
+	if (typeof localStorage === "undefined") {
+		return getDefaultLeavesEnabled();
+	}
+	const stored = localStorage.getItem("leavesEnabled");
+	if (stored === null) {
+		return getDefaultLeavesEnabled();
+	}
+	return stored === "true";
+}
+
+export function setLeavesEnabled(enabled: boolean): void {
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.setItem !== "function"
+	) {
+		return;
+	}
+	localStorage.setItem("leavesEnabled", String(enabled));
+	document.documentElement.setAttribute("data-leaves-enabled", String(enabled));
+	// 实时切换落叶特效
+	window.dispatchEvent(
+		new CustomEvent("leavesToggle", { detail: { enabled } }),
+	);
+}
+
+// Click effect functions
+export function getDefaultClickEnabled(): boolean {
+	return clickConfig?.enable ?? false;
+}
+
+export function getStoredClickEnabled(): boolean {
+	if (typeof localStorage === "undefined") {
+		return getDefaultClickEnabled();
+	}
+	const stored = localStorage.getItem("clickEnabled");
+	if (stored === null) {
+		return getDefaultClickEnabled();
+	}
+	return stored === "true";
+}
+
+export function setClickEnabled(enabled: boolean): void {
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.setItem !== "function"
+	) {
+		return;
+	}
+	localStorage.setItem("clickEnabled", String(enabled));
+	document.documentElement.setAttribute("data-click-enabled", String(enabled));
+	// 实时切换点击特效
+	window.dispatchEvent(
+		new CustomEvent("clickToggle", { detail: { enabled } }),
 	);
 }
 

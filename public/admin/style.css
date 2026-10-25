@@ -647,3 +647,6 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
 /* 图片页分模式区跳转高亮 */
 .flash-anchor { animation: flashAnchor 2.2s ease; border-radius: 12px; }
 @keyframes flashAnchor { 0%, 60% { box-shadow: 0 0 0 3px var(--accent, #b03a2e); } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+/* 主题页：色相渐变条 */
+.hue-bar { height: 14px; border-radius: 7px; margin: 6px 0 10px; background: linear-gradient(90deg, #f87171, #facc15, #4ade80, #22d3ee, #818cf8, #e879f9, #f87171); }

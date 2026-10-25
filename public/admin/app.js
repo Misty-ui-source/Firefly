@@ -4784,58 +4784,360 @@ const fmtSize = (n) => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n > 1024
 /* 🎨 主题：切换博客默认壁纸模式；每个模式的图片设置在图片页 */
 routes.theme = async () => {
   view.innerHTML = '<p class="hint">加载中…</p>';
-  const PATH = 'src/config/backgroundWallpaper.ts';
-  let cfgText;
-  try { cfgText = (await ghGetFile(PATH)).text; } catch (e) { view.innerHTML = `<p class="hint">读取失败：${esc(e.message)}</p>`; return; }
-  const mm = cfgText.match(/^\tmode\s*:\s*"(\w+)"/m);
-  let current = mm ? mm[1] : 'banner';
-  let picked = current;
+  const P_SITE = 'src/config/siteConfig.ts';
+  const P_BGW = 'src/config/backgroundWallpaper.ts';
+  const P_FX = 'src/config/effectsConfig.ts';
+  /* 在对象的某个块内读/写某个 key：先按 key 名定位块的左花括号，再数花括号找块尾，只动块内第一处匹配 */
+  function blockOf(text, keyRe) {
+    const m = text.match(keyRe);
+    if (!m) return null;
+    const open = text.indexOf('{', m.index);
+    if (open < 0) return null;
+    let depth = 0;
+    for (let i = open; i < text.length; i++) {
+      if (text[i] === '{') depth++;
+      else if (text[i] === '}') { depth--; if (depth === 0) return { open, end: i }; }
+    }
+    return null;
+  }
+  function getIn(text, block, re) {
+    if (!block) return null;
+    const m = text.slice(block.open, block.end).match(re);
+    return m ? m[1] : null;
+  }
+  function setIn(text, block, re, replacement) {
+    if (!block) return null;
+    const inner = text.slice(block.open, block.end + 1);
+    if (!re.test(inner)) return null;
+    const next = inner.replace(re, replacement);
+    return text.slice(0, block.open) + next + text.slice(block.end + 1);
+  }
+  function parseSite(t) {
+    const tc = blockOf(t, /themeColor\s*:/);
+    const card = blockOf(t, /^\tcard\s*:/m);
+    const pl = blockOf(t, /postListLayout\s*:/);
+    const hue = getIn(t, tc, /hue\s*:\s*(\d+)/);
+    const border = getIn(t, card, /border\s*:\s*(true|false)/);
+    const follow = getIn(t, card, /followTheme\s*:\s*(true|false)/);
+    const layout = getIn(t, pl, /defaultMode\s*:\s*"(\w+)"/);
+    const layoutM = getIn(t, pl, /mobileDefaultMode\s*:\s*"(\w+)"/);
+    if (hue === null || border === null || follow === null || layout === null) return null;
+    return { hue: Number(hue), cardBorder: border === 'true', cardFollow: follow === 'true', layout, layoutMobile: layoutM || layout };
+  }
+  function parseBgw(t) {
+    const mm = t.match(/^\tmode\s*:\s*"(\w+)"/m);
+    const ht = blockOf(t, /homeText\s*:/);
+    const cr = blockOf(t, /carousel\s*:/);
+    const wv = blockOf(t, /waves\s*:/);
+    const gr = blockOf(t, /gradient\s*:/);
+    const homeTitle = getIn(t, ht, /enable\s*:\s*(true|false)/);
+    const linksEnable = getIn(t, ht, /linksEnable\s*:\s*(true|false)/);
+    let bannerLinks = [];
+    {
+      const seg = t.slice(ht.open, ht.end);
+      const lm = seg.match(/links\s*:\s*\[/);
+      if (lm) {
+        const aStart = lm.index + lm[0].length - 1;
+        let depth = 0, aEnd = -1;
+        for (let i = aStart; i < seg.length; i++) {
+          if (seg[i] === '[') depth++;
+          else if (seg[i] === ']') { depth--; if (depth === 0) { aEnd = i; break; } }
+        }
+        if (aEnd > aStart) {
+          const body = seg.slice(aStart + 1, aEnd);
+          for (const om of body.matchAll(/\{([\s\S]*?)\}/g)) {
+            const o = om[1];
+            const pick = (k) => { const m = o.match(new RegExp(k + '\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"')); return m ? JSON.parse('"' + m[1] + '"') : ''; };
+            const sn = o.match(/showName\s*:\s*(true|false)/);
+            const en = o.match(/enable\s*:\s*(true|false)/);
+            bannerLinks.push({ name: pick('name'), icon: pick('icon'), url: pick('url'), showName: sn ? sn[1] === 'true' : false, enable: en ? en[1] === 'true' : true });
+          }
+        }
+      }
+    }
+    const carousel = getIn(t, cr, /enable\s*:\s*(true|false)/);
+    const wD = getIn(t, wv, /desktop\s*:\s*(true|false)/);
+    const wM = getIn(t, wv, /mobile\s*:\s*(true|false)/);
+    const gD = getIn(t, gr, /desktop\s*:\s*(true|false)/);
+    const gM = getIn(t, gr, /mobile\s*:\s*(true|false)/);
+    if (!mm || homeTitle === null || carousel === null || wD === null || gD === null || linksEnable === null) return null;
+    return { mode: mm[1], homeTitle: homeTitle === 'true', carousel: carousel === 'true', waves: wD === 'true' && wM !== 'false', gradient: gD === 'true' && gM !== 'false', bannerEnable: linksEnable === 'true', bannerLinks };
+  }
+  function parseFx(t) {
+    const keys = ['sakura', 'snow', 'firefly', 'notes', 'rain', 'meteor', 'bubbles', 'hearts', 'leaves', 'click'];
+    const out = {};
+    for (const k of keys) {
+      const v = getIn(t, blockOf(t, new RegExp(k + 'Config\\s*:')), /enable\s*:\s*(true|false)/);
+      if (v === null) return null;
+      out[k] = v === 'true';
+    }
+    return out;
+  }
+  function applySite(t, s) {
+    let out = t;
+    out = setIn(out, blockOf(out, /themeColor\s*:/), /hue\s*:\s*\d+/, `hue: ${s.hue}`);
+    if (out === null) return null;
+    let card = blockOf(out, /^\tcard\s*:/m);
+    out = setIn(out, card, /border\s*:\s*(?:true|false)/, `border: ${s.cardBorder}`);
+    if (out === null) return null;
+    card = blockOf(out, /^\tcard\s*:/m);
+    out = setIn(out, card, /followTheme\s*:\s*(?:true|false)/, `followTheme: ${s.cardFollow}`);
+    if (out === null) return null;
+    let pl = blockOf(out, /postListLayout\s*:/);
+    out = setIn(out, pl, /defaultMode\s*:\s*"\w+"/, `defaultMode: "${s.layout}"`);
+    if (out === null) return null;
+    pl = blockOf(out, /postListLayout\s*:/);
+    out = setIn(out, pl, /mobileDefaultMode\s*:\s*"\w+"/, `mobileDefaultMode: "${s.layoutMobile}"`);
+    return out;
+  }
+  function applyBgw(t, s) {
+    let out = t.replace(/^\tmode\s*:\s*"\w+"/m, `\tmode: "${s.mode}"`);
+    out = setIn(out, blockOf(out, /homeText\s*:/), /enable\s*:\s*(?:true|false)/, `enable: ${s.homeTitle}`);
+    if (out === null) return null;
+    out = setIn(out, blockOf(out, /homeText\s*:/), /linksEnable\s*:\s*(?:true|false)/, `linksEnable: ${s.bannerEnable}`);
+    if (out === null) return null;
+    {
+      const ht2 = blockOf(out, /homeText\s*:/);
+      const seg = out.slice(ht2.open, ht2.end);
+      const lm = seg.match(/links\s*:\s*\[/);
+      if (!lm) return null;
+      const aStart = lm.index + lm[0].length - 1;
+      let depth = 0, aEnd = -1;
+      for (let i = aStart; i < seg.length; i++) {
+        if (seg[i] === '[') depth++;
+        else if (seg[i] === ']') { depth--; if (depth === 0) { aEnd = i; break; } }
+      }
+      if (aEnd < 0) return null;
+      const items = (s.bannerLinks || []).map((l) =>
+        '\t\t\t\t{\n' +
+        `\t\t\t\t\tname: ${JSON.stringify(l.name || '')},\n` +
+        `\t\t\t\t\ticon: ${JSON.stringify(l.icon || '')},\n` +
+        `\t\t\t\t\turl: ${JSON.stringify(l.url || '')},\n` +
+        (l.enable === false ? '\t\t\t\t\tenable: false,\n' : '') +
+        (l.showName ? '\t\t\t\t\tshowName: true,\n' : '') +
+        '\t\t\t\t},\n').join('');
+      const newSeg = seg.slice(0, aStart) + '[\n' + items + '\t\t\t]' + seg.slice(aEnd + 1);
+      out = out.slice(0, ht2.open) + newSeg + out.slice(ht2.end);
+    }
+    out = setIn(out, blockOf(out, /carousel\s*:/), /enable\s*:\s*(?:true|false)/, `enable: ${s.carousel}`);
+    if (out === null) return null;
+    let wv = blockOf(out, /waves\s*:/);
+    out = setIn(out, wv, /desktop\s*:\s*(?:true|false)/, `desktop: ${s.waves}`);
+    if (out === null) return null;
+    wv = blockOf(out, /waves\s*:/);
+    out = setIn(out, wv, /mobile\s*:\s*(?:true|false)/, `mobile: ${s.waves}`);
+    if (out === null) return null;
+    let gr = blockOf(out, /gradient\s*:/);
+    out = setIn(out, gr, /desktop\s*:\s*(?:true|false)/, `desktop: ${s.gradient}`);
+    if (out === null) return null;
+    gr = blockOf(out, /gradient\s*:/);
+    out = setIn(out, gr, /mobile\s*:\s*(?:true|false)/, `mobile: ${s.gradient}`);
+    return out;
+  }
+  function applyFx(t, s) {
+    let out = t;
+    for (const k of ['sakura', 'snow', 'firefly', 'notes', 'rain', 'meteor', 'bubbles', 'hearts', 'leaves', 'click']) {
+      out = setIn(out, blockOf(out, new RegExp(k + 'Config\\s*:')), /enable\s*:\s*(?:true|false)/, `enable: ${s[k]}`);
+      if (out === null) return null;
+    }
+    return out;
+  }
+  let siteT, bgwT, fxT;
+  try {
+    [siteT, bgwT, fxT] = await Promise.all([
+      ghGetFile(P_SITE).then((d) => d.text),
+      ghGetFile(P_BGW).then((d) => d.text),
+      ghGetFile(P_FX).then((d) => d.text),
+    ]);
+  } catch (e) { view.innerHTML = `<p class="hint">读取失败：${esc(e.message)}</p>`; return; }
+  const pSite = parseSite(siteT), pBgw = parseBgw(bgwT), pFx = parseFx(fxT);
+  if (!pSite || !pBgw || !pFx) { view.innerHTML = '<p class="hint">配置文件格式对不上（某个默认值没找到），已中止，没有改动任何文件。</p>'; return; }
+  let st = { ...pSite, ...pBgw, ...pFx };
+  let orig = JSON.stringify(st);
   const MODES = [
     { id: 'banner', icon: '🖼️', name: '横幅模式', desc: '顶部一条横幅，内容在下方滚动（现在用的就是它）' },
     { id: 'fullscreen', icon: '🌄', name: '全屏模式', desc: '壁纸铺满整个页面当背景' },
     { id: 'overlay', icon: '🫧', name: '透明覆盖', desc: '壁纸在内容上方半透明覆盖' },
     { id: 'none', icon: '⬜', name: '纯色模式', desc: '不显示壁纸，只用纯色背景' },
   ];
+  const dirty = () => JSON.stringify(st) !== orig;
+  function pill(key, label) {
+    return `<label class="pill${st[key] ? ' on' : ''}"><input type="checkbox" data-k="${key}"${st[key] ? ' checked' : ''}>${label}</label>`;
+  }
+  const BL_ICON_MAP = {
+    github: 'fa7-brands:github', telegram: 'fa7-brands:telegram', tg: 'fa7-brands:telegram', '电报': 'fa7-brands:telegram',
+    discord: 'fa7-brands:discord', email: 'fa7-solid:envelope', mail: 'fa7-solid:envelope', '邮箱': 'fa7-solid:envelope', '邮件': 'fa7-solid:envelope',
+    rss: 'fa7-solid:rss', '订阅': 'fa7-solid:rss', atom: 'fa7-solid:atom',
+    bilibili: 'fa7-brands:bilibili', '哔哩哔哩': 'fa7-brands:bilibili', 'b站': 'fa7-brands:bilibili',
+    youtube: 'fa7-brands:youtube', twitter: 'fa7-brands:x-twitter', x: 'fa7-brands:x-twitter',
+    instagram: 'fa7-brands:instagram', facebook: 'fa7-brands:facebook', linkedin: 'fa7-brands:linkedin',
+    steam: 'fa7-brands:steam', twitch: 'fa7-brands:twitch', qq: 'fa7-brands:qq',
+    '微信': 'fa7-brands:weixin', wechat: 'fa7-brands:weixin', '微博': 'fa7-brands:weibo', weibo: 'fa7-brands:weibo',
+  };
+  const blAutoIcon = {};
+  function guessIcon(name) { return BL_ICON_MAP[String(name || '').trim().toLowerCase()] || ''; }
+  function blRow(l, i) {
+    return `<div class="toolbar" style="gap:6px;margin-bottom:6px">
+      <label class="pill${l.enable ? ' on' : ''}" title="这一条单独的开关"><input type="checkbox" data-bl="${i}:enable"${l.enable ? ' checked' : ''}>显示</label>
+      <input type="text" data-bl="${i}:name" value="${esc(l.name)}" placeholder="名称" style="width:110px">
+      <input type="text" data-bl="${i}:icon" value="${esc(l.icon)}" placeholder="图标代码" style="width:185px">
+      <input type="text" data-bl="${i}:url" value="${esc(l.url)}" placeholder="链接" style="flex:1;min-width:150px">
+      <select data-bl="${i}:showName"><option value="0"${l.showName ? '' : ' selected'}>只图标</option><option value="1"${l.showName ? ' selected' : ''}>图标+文字</option></select>
+      <button type="button" class="btn btn-small btn-ghost" data-bl-del="${i}">删除</button>
+    </div>`;
+  }
+  function seg(key, val, label) {
+    return `<button type="button" class="btn btn-small${st[key] === val ? '' : ' btn-ghost'}" data-seg="${key}:${val}">${label}</button>`;
+  }
   function render() {
     view.innerHTML = `
     <div class="card">
-      <h2>🎨 默认壁纸模式 <span class="sub">访客第一次打开博客时看到的样子；访客自己也能在博客顶栏的调色板面板里切换</span></h2>
+      <h2>🎨 外观默认值 <span class="sub">访客第一次打开博客时显示设置面板里的初始值；访客自己改过之后以访客的为准</span></h2>
+      <div class="field"><label>主题色相（0–360，现在 ${st.hue}）</label>
+        <div class="hue-bar"></div>
+        <div class="toolbar"><input type="range" id="th-hue" min="0" max="360" step="1" value="${st.hue}" style="flex:1">
+        <input type="number" id="th-hue-num" min="0" max="360" value="${st.hue}" style="width:84px"></div>
+      </div>
+      <div class="field"><label>文章布局（桌面默认）</label><div class="pills">${seg('layout', 'list', '☰ 列表')}${seg('layout', 'grid', '⊞ 网格')}</div></div>
+      <div class="field"><label>文章布局（移动端默认）</label><div class="pills">${seg('layoutMobile', 'list', '☰ 列表')}${seg('layoutMobile', 'grid', '⊞ 网格')}</div></div>
+      <div class="field"><label>卡片样式</label><div class="pills">${pill('cardBorder', '卡片边框和阴影')}${pill('cardFollow', '卡片跟随主题色')}</div></div>
+    </div>
+    <div class="card">
+      <h2>🖼 默认壁纸模式 <span class="sub">访客也能在博客的调色板面板里自己切换</span></h2>
       <div class="theme-modes">
         ${MODES.map((m) => `
-        <div class="theme-mode ${picked === m.id ? 'sel' : ''}" data-mode="${m.id}">
+        <div class="theme-mode ${st.mode === m.id ? 'sel' : ''}" data-mode="${m.id}">
           <div class="tm-icon">${m.icon}</div>
-          <div class="tm-name">${m.name}${m.id === current ? ' <span class="tag">当前默认</span>' : ''}</div>
+          <div class="tm-name">${m.name}${pBgw.mode === m.id ? ' <span class="tag">当前默认</span>' : ''}</div>
           <div class="tm-desc">${m.desc}</div>
           ${m.id !== 'none' ? `<button class="btn btn-small" data-img="${m.id}">🖼 图片设置</button>` : '<span class="hint">纯色模式没有壁纸图</span>'}
         </div>`).join('')}
       </div>
+      <div class="field" style="margin-top:14px"><label>壁纸设置</label><div class="pills">${pill('homeTitle', '首页壁纸标题')}${pill('carousel', '壁纸轮播')}${pill('waves', '水波纹动画')}${pill('gradient', '渐变过渡')}</div>
+      <p class="hint">水波纹 / 渐变过渡这两个开关同时管桌面端和移动端的默认值；各模式用哪些图、单独轮不轮播，去「图片设置」里管。</p></div>
+    </div>
+    <div class="card">
+      <h2>🔗 横幅联系方式 <span class="sub">显示在首页横幅大标题下方的一排小图标；侧边栏资料卡里的联系方式是另一处，不受这里影响</span></h2>
+      <div class="pills">${pill('bannerEnable', '在横幅显示联系方式')}</div>
+      <div style="margin-top:10px">${st.bannerLinks.map((l, i) => blRow(l, i)).join('')}</div>
+      <button type="button" class="btn btn-small btn-ghost" id="bl-add">＋ 添加一个</button>
+      <p class="hint">两个开关：上面的是总开关（整排显不显示），每条前面的是单条开关（先加着、暂时不想露面就关掉，不用删）。名称填 GitHub、Telegram、Discord、Bilibili 这类常见平台时，图标代码会根据名称自动带出来（带错了直接改，改过就不再覆盖）；其它图标填 Iconify 代码，如 fa7-solid:envelope；链接 http 开头是外部站、mailto: 是邮箱、/ 开头是站内页。名称在鼠标悬停时显示。</p>
+    </div>
+    <div class="card">
+      <h2>🌸 特效默认值</h2>
+      <div class="pills">${pill('sakura', '樱花特效')}${pill('snow', '雪花特效')}${pill('firefly', '萤火虫特效')}${pill('notes', '音符特效')}${pill('rain', '雨滴特效')}${pill('meteor', '流星特效')}${pill('bubbles', '泡泡特效')}${pill('hearts', '爱心特效')}${pill('leaves', '落叶特效')}${pill('click', '点击特效')}</div>
+    </div>
+    <div class="card">
       <div class="toolbar">
-        <button class="btn" id="theme-save" ${picked === current ? 'disabled' : ''}>💾 保存到仓库</button>
-        <span class="hint">这里只切默认模式；每个模式用哪些图、轮不轮播，点卡片上的「图片设置」去图片页管 👉</span>
+        <button class="btn" id="theme-save" ${dirty() ? '' : 'disabled'}>💾 保存到仓库</button>
+        <span class="hint">一次保存 = 一次提交（最多动 siteConfig / backgroundWallpaper / effectsConfig 三个文件，没改的不动）；重新构建后生效。</span>
       </div>
     </div>`;
+    view.querySelectorAll('[data-k]').forEach((cb) => {
+      cb.onchange = () => { st[cb.dataset.k] = cb.checked; render(); };
+    });
+    view.querySelectorAll('[data-seg]').forEach((b) => {
+      b.onclick = () => { const [k, v] = b.dataset.seg.split(':'); st[k] = v; render(); };
+    });
+    view.querySelectorAll('[data-bl]').forEach((inp) => {
+      const upd = () => {
+        const parts = inp.dataset.bl.split(':');
+        const item = st.bannerLinks[Number(parts[0])];
+        if (!item) return;
+        if (inp.type === 'checkbox') {
+          item[parts[1]] = inp.checked;
+          const lab = inp.closest('label');
+          if (lab) lab.classList.toggle('on', inp.checked);
+        } else {
+          item[parts[1]] = inp.tagName === 'SELECT' ? inp.value === '1' : inp.value;
+        }
+        if (parts[1] === 'icon') delete blAutoIcon[parts[0]];
+        if (parts[1] === 'name') {
+          const guess = guessIcon(inp.value);
+          const iconInp = view.querySelector(`[data-bl="${parts[0]}:icon"]`);
+          if (guess && iconInp) {
+            const cur = item.icon || '';
+            if (cur === '' || cur === 'fa7-solid:link' || cur === blAutoIcon[parts[0]]) {
+              item.icon = guess;
+              blAutoIcon[parts[0]] = guess;
+              iconInp.value = guess;
+            }
+          }
+        }
+        const sb = $('#theme-save');
+        if (sb) sb.disabled = !dirty();
+      };
+      inp.oninput = upd;
+      inp.onchange = upd;
+    });
+    view.querySelectorAll('[data-bl-del]').forEach((b) => {
+      b.onclick = () => {
+        const i = Number(b.dataset.blDel);
+        const nm = (st.bannerLinks[i] && st.bannerLinks[i].name) || '未命名';
+        if (!confirm(`删除联系方式「${nm}」？`)) return;
+        st.bannerLinks.splice(i, 1);
+        render();
+      };
+    });
+    const blAdd = $('#bl-add');
+    if (blAdd) blAdd.onclick = () => { st.bannerLinks.push({ name: '', icon: 'fa7-solid:link', url: '', showName: false, enable: true }); render(); };
     view.querySelectorAll('.theme-mode').forEach((card) => {
       card.onclick = (e) => {
         if (e.target.closest('[data-img]')) return;
-        picked = card.dataset.mode;
+        st.mode = card.dataset.mode;
         render();
       };
     });
     view.querySelectorAll('[data-img]').forEach((b) => {
       b.onclick = () => { location.hash = '#/images/wp-' + b.dataset.img; };
     });
+    const hueR = $('#th-hue'), hueN = $('#th-hue-num');
+    const syncHue = (v) => {
+      st.hue = Math.max(0, Math.min(360, Number(v) || 0));
+      if (hueR) hueR.value = st.hue;
+      if (hueN) hueN.value = st.hue;
+      const sb = $('#theme-save');
+      if (sb) sb.disabled = !dirty();
+      const lbl = view.querySelector('.field label');
+      if (lbl) lbl.textContent = `主题色相（0–360，现在 ${st.hue}）`;
+    };
+    if (hueR) hueR.oninput = () => syncHue(hueR.value);
+    if (hueN) hueN.onchange = () => syncHue(hueN.value);
     const saveBtn = $('#theme-save');
     if (saveBtn) saveBtn.onclick = async () => {
       saveBtn.disabled = true;
       saveBtn.textContent = '保存中…';
       try {
-        const data = await ghGetFile(PATH);
-        const fresh = data.text;
-        if (!/^\tmode\s*:\s*"\w+"/m.test(fresh)) throw new Error('没找到 mode 字段，已中止');
-        const next = fresh.replace(/^\tmode\s*:\s*"\w+"/m, `\tmode: "${picked}"`);
-        await saveWithLog(PATH, next, data.sha, `主题：默认壁纸模式改为 ${picked} [管理台]`, { type: '配置', action: '更新', target: `主题模式 → ${picked}` });
-        current = picked;
-        toast('默认模式已保存 ✅ 重新构建后生效');
+        const [fSite, fBgw, fFx] = await Promise.all([ghGetFile(P_SITE), ghGetFile(P_BGW), ghGetFile(P_FX)]);
+        const nSite = applySite(fSite.text, st);
+        const nBgw = applyBgw(fBgw.text, st);
+        const nFx = applyFx(fFx.text, st);
+        if (nSite === null || nBgw === null || nFx === null) throw new Error('配置文件格式对不上，已中止，没有改动任何文件');
+        const files = [];
+        if (nSite !== fSite.text) files.push({ path: P_SITE, content: nSite, encoding: 'utf-8' });
+        if (nBgw !== fBgw.text) files.push({ path: P_BGW, content: nBgw, encoding: 'utf-8' });
+        if (nFx !== fFx.text) files.push({ path: P_FX, content: nFx, encoding: 'utf-8' });
+        if (!files.length) throw new Error('没有实际改动');
+        /* 操作日志与配置文件同 1 个 commit（同 saveWithLog 的做法） */
+        try {
+          const curText = await oplogCurrentText();
+          let entries = [];
+          try { entries = JSON.parse(curText); } catch (e) { entries = []; }
+          if (!Array.isArray(entries)) entries = [];
+          const entry = { ts: new Date().toISOString(), type: '配置', action: '更新', target: '主题默认值（外观/壁纸/特效/横幅联系方式）', detail: '' };
+          const merged = oplogDedup([...entries, ...oplogLoadPending(), entry]).slice(-OPLOG_MAX_ENTRIES);
+          const oplogText = JSON.stringify(merged, null, 2) + '\n';
+          files.push({ path: OPLOG_PATH, content: oplogText, encoding: 'utf-8' });
+          await ghCommitMulti(files, '主题：显示设置默认值更新（外观/壁纸/特效/横幅联系方式）[管理台]');
+          window._oplogText = oplogText;
+          window._oplogEntries = merged;
+          oplogSavePending([]);
+        } catch (e2) {
+          await ghCommitMulti(files, '主题：显示设置默认值更新（外观/壁纸/特效/横幅联系方式）[管理台]');
+        }
+        orig = JSON.stringify(st);
+        pBgw.mode = st.mode;
+        toast('主题默认值已保存 ✅ 重新构建后生效');
         render();
       } catch (e) {
         toast(e.message, true);

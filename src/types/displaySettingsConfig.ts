@@ -57,4 +57,31 @@ export type DisplaySettingsConfig = {
 
 	// 樱花特效开关
 	sakuraSwitchable: boolean;
+
+	// 雪花特效开关
+	snowSwitchable: boolean;
+
+	// 萤火虫特效开关
+	fireflySwitchable: boolean;
+
+	// 音符特效开关
+	notesSwitchable: boolean;
+
+	// 雨滴特效开关
+	rainSwitchable: boolean;
+
+	// 流星特效开关
+	meteorSwitchable: boolean;
+
+	// 泡泡特效开关
+	bubblesSwitchable: boolean;
+
+	// 爱心特效开关
+	heartsSwitchable: boolean;
+
+	// 落叶特效开关
+	leavesSwitchable: boolean;
+
+	// 点击特效开关
+	clickSwitchable: boolean;
 };

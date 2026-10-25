@@ -1,0 +1,592 @@
+---
+// 轻量粒子特效：雪花 / 萤火虫 / 音符 / 雨滴 / 流星 / 泡泡 / 爱心 / 落叶（环境粒子）
+// + 点击特效（指针点击迸发），共用一个主线程 Canvas 2D 引擎（不走 Worker，保持简单）
+// 配置见 src/config/effectsConfig.ts；开关协议与樱花一致：
+// localStorage 的 <name>Enabled 优先、缺省回退配置 enable；面板通过 <name>Toggle 事件实时切换
+---
+
+<script>
+	import {
+		bubblesConfig,
+		clickConfig,
+		fireflyConfig,
+		heartsConfig,
+		leavesConfig,
+		meteorConfig,
+		notesConfig,
+		rainConfig,
+		snowConfig,
+	} from "@/config";
+	import type { ParticleEffectConfig } from "@/types/effectsConfig";
+
+	type Kind =
+		| "snow"
+		| "firefly"
+		| "notes"
+		| "rain"
+		| "meteor"
+		| "bubbles"
+		| "hearts"
+		| "leaves";
+
+	interface Particle {
+		x: number;
+		y: number;
+		vx: number;
+		vy: number;
+		r: number;
+		phase: number;
+		phaseSpeed: number;
+		alpha: number;
+		glyph?: string;
+		color?: string;
+		rot?: number;
+		rotSpeed?: number;
+		len?: number;
+		age?: number;
+		life?: number;
+		delay?: number;
+	}
+
+	const rand = (min: number, max: number) => min + Math.random() * (max - min);
+	const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+	const NOTE_GLYPHS = ["♪", "♫", "♩", "♬"];
+	// 波奇酱蔷薇红系（对齐管理台登录页飘浮音符的配色）
+	const NOTE_COLORS = ["#e11d48", "#fb7185", "#f472b6", "#fda4af"];
+	const HEART_GLYPHS = ["♥", "♡"];
+	const HEART_COLORS = ["#f43f5e", "#fb7185", "#e11d48", "#f9a8d4"];
+	const LEAF_GLYPHS = ["🍁", "🍂"];
+	const BURST_COLORS = ["#fb7185", "#e11d48", "#2dd4bf", "#fbbf24", "#a78bfa"];
+	const BURST_GLYPHS = ["♪", "♥", "✦"];
+
+	// 萤火虫的光晕贴图（预渲染一次，每帧 drawImage，比 shadowBlur 省得多）
+	function makeGlowSprite(): HTMLCanvasElement {
+		const c = document.createElement("canvas");
+		c.width = 64;
+		c.height = 64;
+		const g = c.getContext("2d");
+		if (g) {
+			const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+			grad.addColorStop(0, "rgba(254, 249, 195, 1)");
+			grad.addColorStop(0.25, "rgba(217, 249, 157, 0.55)");
+			grad.addColorStop(1, "rgba(217, 249, 157, 0)");
+			g.fillStyle = grad;
+			g.fillRect(0, 0, 64, 64);
+		}
+		return c;
+	}
+
+	class ParticleLayer {
+		kind: Kind;
+		cfg: ParticleEffectConfig;
+		canvas: HTMLCanvasElement | null = null;
+		ctx: CanvasRenderingContext2D | null = null;
+		particles: Particle[] = [];
+		rafId: number | null = null;
+		running = false;
+		sprite: HTMLCanvasElement | null = null;
+		private boundResize: (() => void) | null = null;
+		private resizeRaf: number | null = null;
+
+		constructor(kind: Kind, cfg: ParticleEffectConfig) {
+			this.kind = kind;
+			this.cfg = cfg;
+		}
+
+		private spawn(anywhere: boolean): Particle {
+			const w = window.innerWidth;
+			const h = window.innerHeight;
+			switch (this.kind) {
+				case "snow": {
+					const r = rand(1, 3.2);
+					return {
+						x: rand(0, w),
+						y: anywhere ? rand(0, h) : rand(-20, -4),
+						vx: 0,
+						vy: rand(0.4, 1.3) * (0.6 + r / 4),
+						r,
+						phase: rand(0, Math.PI * 2),
+						phaseSpeed: rand(0.005, 0.02),
+						alpha: rand(0.45, 0.95),
+					};
+				}
+				case "notes":
+					return {
+						x: rand(0, w),
+						y: anywhere ? rand(0, h) : h + rand(10, 40),
+						vx: 0,
+						vy: rand(-0.85, -0.35),
+						r: rand(15, 30),
+						phase: rand(0, Math.PI * 2),
+						phaseSpeed: rand(0.008, 0.02),
+						alpha: rand(0.5, 0.95),
+						glyph: pick(NOTE_GLYPHS),
+						color: pick(NOTE_COLORS),
+						rot: rand(-0.35, 0.35),
+						rotSpeed: rand(-0.004, 0.004),
+					};
+				case "hearts":
+					return {
+						x: rand(0, w),
+						y: anywhere ? rand(0, h) : h + rand(10, 40),
+						vx: 0,
+						vy: rand(-0.7, -0.3),
+						r: rand(13, 24),
+						phase: rand(0, Math.PI * 2),
+						phaseSpeed: rand(0.01, 0.025),
+						alpha: rand(0.45, 0.9),
+						glyph: pick(HEART_GLYPHS),
+						color: pick(HEART_COLORS),
+						rot: rand(-0.25, 0.25),
+						rotSpeed: rand(-0.003, 0.003),
+					};
+				case "leaves":
+					return {
+						x: rand(0, w),
+						y: anywhere ? rand(0, h) : rand(-30, -10),
+						vx: 0,
+						vy: rand(0.5, 1.15),
+						r: rand(15, 27),
+						phase: rand(0, Math.PI * 2),
+						phaseSpeed: rand(0.008, 0.02),
+						alpha: rand(0.75, 1),
+						glyph: pick(LEAF_GLYPHS),
+						rot: rand(0, Math.PI * 2),
+						rotSpeed: rand(-0.01, 0.01),
+					};
+				case "rain":
+					return {
+						x: rand(-40, w),
+						y: anywhere ? rand(0, h) : rand(-30, -10),
+						vx: rand(1.2, 2.2),
+						vy: rand(13, 20),
+						r: 1,
+						phase: 0,
+						phaseSpeed: 0,
+						alpha: rand(0.12, 0.35),
+						len: rand(11, 22),
+					};
+				case "meteor":
+					return {
+						x: rand(w * 0.35, w + 80),
+						y: rand(-40, h * 0.35),
+						vx: rand(-10.5, -7.5),
+						vy: rand(5, 7),
+						r: rand(1.4, 2.4),
+						phase: 0,
+						phaseSpeed: 0,
+						alpha: rand(0.7, 1),
+						age: 0,
+						life: rand(55, 85),
+						delay: anywhere ? rand(0, 500) : rand(120, 700),
+					};
+				case "bubbles":
+					return {
+						x: rand(0, w),
+						y: anywhere ? rand(0, h) : h + rand(8, 30),
+						vx: 0,
+						vy: rand(-0.85, -0.3),
+						r: rand(4, 14),
+						phase: rand(0, Math.PI * 2),
+						phaseSpeed: rand(0.01, 0.03),
+						alpha: rand(0.25, 0.5),
+					};
+				default: // firefly
+					return {
+						x: rand(0, w),
+						y: rand(0, h),
+						vx: rand(-0.25, 0.25),
+						vy: rand(-0.18, 0.18),
+						r: rand(7, 15),
+						phase: rand(0, Math.PI * 2),
+						phaseSpeed: rand(0.008, 0.025),
+						alpha: rand(0.4, 1),
+					};
+			}
+		}
+
+		start() {
+			if (this.running) return;
+			this.running = true;
+			if (this.kind === "firefly" && !this.sprite) {
+				this.sprite = makeGlowSprite();
+			}
+			this.canvas = document.createElement("canvas");
+			this.canvas.width = window.innerWidth;
+			this.canvas.height = window.innerHeight;
+			this.canvas.setAttribute(
+				"style",
+				`position: fixed; left: 0; top: 0; pointer-events: none; z-index: ${this.cfg.zIndex};`,
+			);
+			this.canvas.setAttribute("id", `canvas_${this.kind}`);
+			document.body.appendChild(this.canvas);
+			this.ctx = this.canvas.getContext("2d");
+			this.particles = Array.from({ length: this.cfg.count }, () =>
+				this.spawn(true),
+			);
+			this.boundResize = () => {
+				if (this.resizeRaf !== null) return;
+				this.resizeRaf = requestAnimationFrame(() => {
+					this.resizeRaf = null;
+					if (this.canvas) {
+						this.canvas.width = window.innerWidth;
+						this.canvas.height = window.innerHeight;
+					}
+				});
+			};
+			window.addEventListener("resize", this.boundResize);
+			const tick = () => {
+				if (!this.running) return;
+				this.rafId = requestAnimationFrame(tick);
+				if (document.hidden || !this.ctx || !this.canvas) return;
+				this.step();
+			};
+			this.rafId = requestAnimationFrame(tick);
+		}
+
+		private drawGlyph(p: Particle, alpha: number) {
+			const ctx = this.ctx;
+			if (!ctx) return;
+			ctx.save();
+			ctx.translate(p.x, p.y);
+			ctx.rotate(p.rot || 0);
+			ctx.globalAlpha = alpha;
+			ctx.font = `${p.r}px serif`;
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			if (p.color) ctx.fillStyle = p.color;
+			ctx.fillText(p.glyph || "♪", 0, 0);
+			ctx.restore();
+		}
+
+		private step() {
+			const ctx = this.ctx;
+			const canvas = this.canvas;
+			if (!ctx || !canvas) return;
+			const w = canvas.width;
+			const h = canvas.height;
+			ctx.clearRect(0, 0, w, h);
+			for (const p of this.particles) {
+				p.phase += p.phaseSpeed;
+				switch (this.kind) {
+					case "snow": {
+						p.x += Math.sin(p.phase) * 0.5;
+						p.y += p.vy;
+						if (p.y > h + 6 || p.x < -10 || p.x > w + 10) {
+							Object.assign(p, this.spawn(false));
+						}
+						ctx.globalAlpha = p.alpha;
+						ctx.beginPath();
+						ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+						ctx.fillStyle = "#ffffff";
+						ctx.fill();
+						break;
+					}
+					case "notes":
+					case "hearts": {
+						p.x += Math.sin(p.phase) * 0.6;
+						p.y += p.vy;
+						p.rot = (p.rot || 0) + (p.rotSpeed || 0);
+						if (p.y < -50 || p.x < -50 || p.x > w + 50) {
+							Object.assign(p, this.spawn(false));
+						}
+						this.drawGlyph(p, p.alpha * (0.6 + 0.4 * Math.sin(p.phase * 0.7)));
+						break;
+					}
+					case "leaves": {
+						p.x += Math.sin(p.phase) * 0.9;
+						p.y += p.vy;
+						p.rot = (p.rot || 0) + (p.rotSpeed || 0);
+						if (p.y > h + 40 || p.x < -50 || p.x > w + 50) {
+							Object.assign(p, this.spawn(false));
+						}
+						this.drawGlyph(p, p.alpha);
+						break;
+					}
+					case "rain": {
+						p.x += p.vx;
+						p.y += p.vy;
+						if (p.y > h + 30 || p.x > w + 30) {
+							Object.assign(p, this.spawn(false));
+						}
+						ctx.globalAlpha = p.alpha;
+						ctx.strokeStyle = "#dbeafe";
+						ctx.lineWidth = 1;
+						ctx.beginPath();
+						ctx.moveTo(p.x, p.y);
+						ctx.lineTo(p.x - p.vx * 0.09 * (p.len || 14), p.y - (p.len || 14));
+						ctx.stroke();
+						break;
+					}
+					case "meteor": {
+						if ((p.delay || 0) > 0) {
+							p.delay = (p.delay || 0) - 1;
+							break;
+						}
+						p.age = (p.age || 0) + 1;
+						p.x += p.vx;
+						p.y += p.vy;
+						if ((p.age || 0) > (p.life || 70) || p.x < -120 || p.y > h + 120) {
+							Object.assign(p, this.spawn(false));
+							break;
+						}
+						const fade =
+							Math.min(1, (p.age || 0) / 8) *
+							Math.min(1, ((p.life || 70) - (p.age || 0)) / 12);
+						const tail = 11;
+						const grad = ctx.createLinearGradient(
+							p.x,
+							p.y,
+							p.x - p.vx * tail,
+							p.y - p.vy * tail,
+						);
+						grad.addColorStop(0, `rgba(255,255,255,${0.9 * p.alpha * fade})`);
+						grad.addColorStop(1, "rgba(255,255,255,0)");
+						ctx.globalAlpha = 1;
+						ctx.strokeStyle = grad;
+						ctx.lineWidth = p.r;
+						ctx.lineCap = "round";
+						ctx.beginPath();
+						ctx.moveTo(p.x, p.y);
+						ctx.lineTo(p.x - p.vx * tail, p.y - p.vy * tail);
+						ctx.stroke();
+						break;
+					}
+					case "bubbles": {
+						p.x += Math.sin(p.phase) * 0.5;
+						p.y += p.vy;
+						if (p.y < -30 || p.x < -30 || p.x > w + 30) {
+							Object.assign(p, this.spawn(false));
+						}
+						ctx.globalAlpha = p.alpha;
+						ctx.strokeStyle = "#ffffff";
+						ctx.lineWidth = 1.2;
+						ctx.beginPath();
+						ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+						ctx.stroke();
+						ctx.globalAlpha = p.alpha * 0.9;
+						ctx.fillStyle = "#ffffff";
+						ctx.beginPath();
+						ctx.arc(p.x - p.r * 0.35, p.y - p.r * 0.35, Math.max(1, p.r * 0.16), 0, Math.PI * 2);
+						ctx.fill();
+						break;
+					}
+					default: {
+						// firefly
+						p.vx += rand(-0.012, 0.012);
+						p.vy += rand(-0.012, 0.012);
+						p.vx = Math.max(-0.35, Math.min(0.35, p.vx));
+						p.vy = Math.max(-0.3, Math.min(0.3, p.vy));
+						p.x += p.vx;
+						p.y += p.vy;
+						if (p.x < -20) p.x = w + 20;
+						if (p.x > w + 20) p.x = -20;
+						if (p.y < -20) p.y = h + 20;
+						if (p.y > h + 20) p.y = -20;
+						const pulse = 0.25 + 0.75 * Math.abs(Math.sin(p.phase));
+						ctx.globalAlpha = p.alpha * pulse;
+						if (this.sprite) {
+							const s = p.r * 4;
+							ctx.drawImage(this.sprite, p.x - s / 2, p.y - s / 2, s, s);
+						}
+						break;
+					}
+				}
+			}
+			ctx.globalAlpha = 1;
+		}
+
+		stop() {
+			this.running = false;
+			if (this.rafId !== null) {
+				cancelAnimationFrame(this.rafId);
+				this.rafId = null;
+			}
+			if (this.resizeRaf !== null) {
+				cancelAnimationFrame(this.resizeRaf);
+				this.resizeRaf = null;
+			}
+			if (this.boundResize) {
+				window.removeEventListener("resize", this.boundResize);
+				this.boundResize = null;
+			}
+			if (this.canvas) {
+				this.canvas.remove();
+				this.canvas = null;
+			}
+			this.ctx = null;
+			this.particles = [];
+		}
+	}
+
+	// 点击特效：点击时在光标处迸发一小簇粒子（圆点 + 小字形），无环境粒子
+	class ClickLayer {
+		cfg: ParticleEffectConfig;
+		canvas: HTMLCanvasElement | null = null;
+		ctx: CanvasRenderingContext2D | null = null;
+		parts: (Particle & { life: number; maxLife: number })[] = [];
+		rafId: number | null = null;
+		enabled = false;
+		private boundDown: ((e: PointerEvent) => void) | null = null;
+
+		constructor(cfg: ParticleEffectConfig) {
+			this.cfg = cfg;
+		}
+
+		enable() {
+			if (this.enabled) return;
+			this.enabled = true;
+			this.canvas = document.createElement("canvas");
+			this.canvas.width = window.innerWidth;
+			this.canvas.height = window.innerHeight;
+			this.canvas.setAttribute(
+				"style",
+				`position: fixed; left: 0; top: 0; pointer-events: none; z-index: ${this.cfg.zIndex + 1};`,
+			);
+			this.canvas.setAttribute("id", "canvas_click");
+			document.body.appendChild(this.canvas);
+			this.ctx = this.canvas.getContext("2d");
+			this.boundDown = (e: PointerEvent) => this.burst(e.clientX, e.clientY);
+			window.addEventListener("pointerdown", this.boundDown, { passive: true });
+		}
+
+		disable() {
+			this.enabled = false;
+			if (this.boundDown) {
+				window.removeEventListener("pointerdown", this.boundDown);
+				this.boundDown = null;
+			}
+			if (this.rafId !== null) {
+				cancelAnimationFrame(this.rafId);
+				this.rafId = null;
+			}
+			this.parts = [];
+			if (this.canvas) {
+				this.canvas.remove();
+				this.canvas = null;
+			}
+			this.ctx = null;
+		}
+
+		private burst(x: number, y: number) {
+			const n = Math.max(6, this.cfg.count || 12);
+			for (let i = 0; i < n; i++) {
+				const ang = rand(0, Math.PI * 2);
+				const sp = rand(0.6, 3.4);
+				const life = rand(42, 68);
+				const isGlyph = Math.random() < 0.3;
+				this.parts.push({
+					x,
+					y,
+					vx: Math.cos(ang) * sp,
+					vy: Math.sin(ang) * sp - 0.7,
+					r: isGlyph ? rand(10, 16) : rand(1.5, 3.5),
+					phase: 0,
+					phaseSpeed: 0,
+					alpha: 1,
+					glyph: isGlyph ? pick(BURST_GLYPHS) : undefined,
+					color: pick(BURST_COLORS),
+					rot: rand(-0.4, 0.4),
+					rotSpeed: rand(-0.05, 0.05),
+					life,
+					maxLife: life,
+				});
+			}
+			if (this.rafId === null) {
+				const tick = () => {
+					this.rafId = requestAnimationFrame(tick);
+					if (!this.ctx || !this.canvas) return;
+					if (document.hidden) return;
+					this.step();
+					if (this.parts.length === 0 && this.rafId !== null) {
+						cancelAnimationFrame(this.rafId);
+						this.rafId = null;
+						this.ctx?.clearRect(0, 0, this.canvas.width, this.canvas.height);
+					}
+				};
+				this.rafId = requestAnimationFrame(tick);
+			}
+		}
+
+		private step() {
+			const ctx = this.ctx;
+			const canvas = this.canvas;
+			if (!ctx || !canvas) return;
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			this.parts = this.parts.filter((p) => p.life > 0);
+			for (const p of this.parts) {
+				p.life -= 1;
+				p.vy += 0.035;
+				p.vx *= 0.965;
+				p.vy *= 0.985;
+				p.x += p.vx;
+				p.y += p.vy;
+				p.rot = (p.rot || 0) + (p.rotSpeed || 0);
+				const a = Math.max(0, p.life / p.maxLife);
+				if (p.glyph) {
+					ctx.save();
+					ctx.translate(p.x, p.y);
+					ctx.rotate(p.rot || 0);
+					ctx.globalAlpha = a;
+					ctx.font = `${p.r}px serif`;
+					ctx.textAlign = "center";
+					ctx.textBaseline = "middle";
+					ctx.fillStyle = p.color || "#fb7185";
+					ctx.fillText(p.glyph, 0, 0);
+					ctx.restore();
+				} else {
+					ctx.globalAlpha = a;
+					ctx.fillStyle = p.color || "#fb7185";
+					ctx.beginPath();
+					ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+					ctx.fill();
+				}
+			}
+			ctx.globalAlpha = 1;
+		}
+	}
+
+	(function setupParticleEffects() {
+		const w = window as unknown as Record<string, unknown>;
+		if (w.__particleFxInitialized) return;
+		w.__particleFxInitialized = true;
+		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+		const cfgs: Record<Kind, ParticleEffectConfig> = {
+			snow: snowConfig,
+			firefly: fireflyConfig,
+			notes: notesConfig,
+			rain: rainConfig,
+			meteor: meteorConfig,
+			bubbles: bubblesConfig,
+			hearts: heartsConfig,
+			leaves: leavesConfig,
+		};
+		const layers = {} as Record<Kind, ParticleLayer>;
+		(Object.keys(cfgs) as Kind[]).forEach((kind) => {
+			layers[kind] = new ParticleLayer(kind, cfgs[kind]);
+			const stored = localStorage.getItem(`${kind}Enabled`);
+			const enabled = stored !== null ? stored === "true" : cfgs[kind].enable;
+			if (enabled) layers[kind].start();
+			window.addEventListener(`${kind}Toggle`, (e: Event) => {
+				const detail = (e as CustomEvent<{ enabled: boolean }>).detail;
+				if (!detail) return;
+				if (detail.enabled) layers[kind].start();
+				else layers[kind].stop();
+			});
+		});
+
+		const clickLayer = new ClickLayer(clickConfig);
+		const storedClick = localStorage.getItem("clickEnabled");
+		if (storedClick !== null ? storedClick === "true" : clickConfig.enable) {
+			clickLayer.enable();
+		}
+		window.addEventListener("clickToggle", (e: Event) => {
+			const detail = (e as CustomEvent<{ enabled: boolean }>).detail;
+			if (!detail) return;
+			if (detail.enabled) clickLayer.enable();
+			else clickLayer.disable();
+		});
+	})();
+</script>

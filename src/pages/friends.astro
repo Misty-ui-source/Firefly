@@ -344,12 +344,25 @@ const description =
           lines.push("站点链接：" + url);
           if (avatar) lines.push("头像链接：" + avatar);
           if (rss) lines.push("订阅链接：" + rss);
-          lines.push("联系邮箱：" + email);
+          /* 邮箱不进评论文本（公开可见）：只填进 Waline 自带的邮箱栏，博主后台可见、审核通知也发到那里 */
           var text = lines.join("\n");
           if (navigator.clipboard && navigator.clipboard.writeText)
             navigator.clipboard.writeText(text).catch(function () {});
           status.textContent = "正在填入下方评论区…";
           fillComment(text, 10, function (ok) {
+            var mailInput = document.querySelector(".wl-mail");
+            if (mailInput) {
+              try {
+                var mSetter = Object.getOwnPropertyDescriptor(
+                  window.HTMLInputElement.prototype,
+                  "value",
+                ).set;
+                mSetter.call(mailInput, email);
+              } catch (e) {
+                mailInput.value = email;
+              }
+              mailInput.dispatchEvent(new Event("input", { bubbles: true }));
+            }
             status.textContent = ok
               ? "已填入下方评论区（同时复制到剪切板了），核对无误后点评论区的提交即可。"
               : "已复制到剪切板，评论区还没加载出来，手动粘贴到下方评论区提交即可。";

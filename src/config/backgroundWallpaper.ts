@@ -134,26 +134,41 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 				// 完全显示后的暂停时间（毫秒）
 				pauseTime: 2000,
 			},
-			// 是否显示标题下方的链接图标
+			// 是否显示标题下方的链接图标（默认不使用，管理台主题页里打开总开关才显示）
 			linksEnable: false,
 			// 首页横幅标题下方的链接图标（可选，支持 showName 显示文字）
 			// 图标支持 Iconify 格式：fa7-brands:github、fa7-solid:envelope、mdi:rss 等
+			// 由管理台「主题」页的横幅联系方式卡维护，与个人资料保持一致
 			links: [
 				{
 					name: "GitHub",
 					icon: "fa7-brands:github",
-					url: "https://github.com/CuteLeaf/Firefly",
-					showName: true,
+					url: "https://github.com/Misty-ui-source",
 				},
 				{
 					name: "Email",
 					icon: "fa7-solid:envelope",
-					url: "mailto:xiaye@msn.com",
+					url: "mailto:xz011@qq.com",
 				},
 				{
 					name: "RSS",
 					icon: "fa7-solid:rss",
 					url: "/rss/",
+				},
+				{
+					name: "Atom",
+					icon: "fa7-solid:atom",
+					url: "/atom/",
+				},
+				{
+					name: "Discord",
+					icon: "fa7-brands:discord",
+					url: "https://discord.com/users/1550493367920627732",
+				},
+				{
+					name: "Telegram",
+					icon: "fa7-brands:telegram",
+					url: "https://t.me/zhzhk27",
 				},
 			],
 		},

@@ -70,4 +70,31 @@ export const displaySettingsConfig: DisplaySettingsConfig =
 
 		// 樱花特效开关
 		sakuraSwitchable: true,
+
+		// 雪花特效开关
+		snowSwitchable: true,
+
+		// 萤火虫特效开关
+		fireflySwitchable: true,
+
+		// 音符特效开关
+		notesSwitchable: true,
+
+		// 雨滴特效开关
+		rainSwitchable: true,
+
+		// 流星特效开关
+		meteorSwitchable: true,
+
+		// 泡泡特效开关
+		bubblesSwitchable: true,
+
+		// 爱心特效开关
+		heartsSwitchable: true,
+
+		// 落叶特效开关
+		leavesSwitchable: true,
+
+		// 点击特效开关
+		clickSwitchable: true,
 	});

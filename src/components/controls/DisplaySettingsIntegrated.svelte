@@ -12,6 +12,7 @@ import {
 	getDefaultBannerTitleEnabled,
 	getDefaultCardBorderEnabled,
 	getDefaultCardFollowThemeEnabled,
+	getDefaultFireflyEnabled,
 	getDefaultFullscreenLayout,
 	getDefaultGradientEnabled,
 	getDefaultHue,
@@ -19,24 +20,42 @@ import {
 	getDefaultOverlayCardOpacity,
 	getDefaultOverlayOpacity,
 	getDefaultSakuraEnabled,
+	getDefaultSnowEnabled,
+	getDefaultNotesEnabled,
+	getDefaultRainEnabled,
+	getDefaultMeteorEnabled,
+	getDefaultBubblesEnabled,
+	getDefaultHeartsEnabled,
+	getDefaultLeavesEnabled,
+	getDefaultClickEnabled,
 	getDefaultWavesEnabled,
 	getHue,
 	getStoredBannerCarouselEnabled,
 	getStoredBannerTitleEnabled,
 	getStoredCardBorderEnabled,
 	getStoredCardFollowThemeEnabled,
+	getStoredFireflyEnabled,
 	getStoredFullscreenLayout,
 	getStoredGradientEnabled,
 	getStoredOverlayBlur,
 	getStoredOverlayCardOpacity,
 	getStoredOverlayOpacity,
 	getStoredSakuraEnabled,
+	getStoredSnowEnabled,
+	getStoredNotesEnabled,
+	getStoredRainEnabled,
+	getStoredMeteorEnabled,
+	getStoredBubblesEnabled,
+	getStoredHeartsEnabled,
+	getStoredLeavesEnabled,
+	getStoredClickEnabled,
 	getStoredWallpaperMode,
 	getStoredWavesEnabled,
 	setBannerCarouselEnabled,
 	setBannerTitleEnabled,
 	setCardBorderEnabled,
 	setCardFollowThemeEnabled,
+	setFireflyEnabled,
 	setFullscreenLayout,
 	setGradientEnabled,
 	setHue,
@@ -44,9 +63,18 @@ import {
 	setOverlayCardOpacity,
 	setOverlayOpacity,
 	setSakuraEnabled,
+	setSnowEnabled,
+	setNotesEnabled,
+	setRainEnabled,
+	setMeteorEnabled,
+	setBubblesEnabled,
+	setHeartsEnabled,
+	setLeavesEnabled,
+	setClickEnabled,
 	setWallpaperMode,
 	setWavesEnabled,
 } from "@utils/setting-utils";
+import { isArticleDetailPage } from "@utils/url-utils";
 import { onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import {
@@ -104,6 +132,24 @@ let bannerCarouselEnabled = $state(true);
 const defaultBannerCarouselEnabled = getDefaultBannerCarouselEnabled();
 let sakuraEnabled = $state(true);
 const defaultSakuraEnabled = getDefaultSakuraEnabled();
+let snowEnabled = $state(true);
+const defaultSnowEnabled = getDefaultSnowEnabled();
+let fireflyEnabled = $state(true);
+const defaultFireflyEnabled = getDefaultFireflyEnabled();
+let notesEnabled = $state(true);
+const defaultNotesEnabled = getDefaultNotesEnabled();
+let rainEnabled = $state(true);
+const defaultRainEnabled = getDefaultRainEnabled();
+let meteorEnabled = $state(true);
+const defaultMeteorEnabled = getDefaultMeteorEnabled();
+let bubblesEnabled = $state(true);
+const defaultBubblesEnabled = getDefaultBubblesEnabled();
+let heartsEnabled = $state(true);
+const defaultHeartsEnabled = getDefaultHeartsEnabled();
+let leavesEnabled = $state(true);
+const defaultLeavesEnabled = getDefaultLeavesEnabled();
+let clickEnabled = $state(true);
+const defaultClickEnabled = getDefaultClickEnabled();
 let overlayOpacity = $state(getDefaultOverlayOpacity());
 const defaultOverlayOpacity = getDefaultOverlayOpacity();
 let overlayBlur = $state(getDefaultOverlayBlur());
@@ -121,6 +167,12 @@ const isFullscreenLayoutSwitchable = $derived(
 		wallpaperMode === WALLPAPER_FULLSCREEN,
 );
 const allowLayoutSwitch = displaySettingsConfig.layoutSwitchable;
+// 2026-10-25 站长定：文章布局（列表/网格）开关只在文章/项目详情页出现，
+// 主页、归档、分类等列表页和其它页面都不显示（那些页面切了也没用、徒增干扰）
+let isDetailPage = $state(false);
+const refreshIsDetailPage = () => {
+	isDetailPage = isArticleDetailPage(window.location.pathname);
+};
 let effectiveDefaultLayout = $derived(
 	isMobileWidth ? mobileDefaultLayout : defaultLayout,
 );
@@ -135,6 +187,15 @@ const isBannerTitleSwitchable =
 const isBannerCarouselSwitchable =
 	displaySettingsConfig.bannerCarouselSwitchable;
 const isSakuraSwitchable = displaySettingsConfig.sakuraSwitchable;
+const isSnowSwitchable = displaySettingsConfig.snowSwitchable;
+const isFireflySwitchable = displaySettingsConfig.fireflySwitchable;
+const isNotesSwitchable = displaySettingsConfig.notesSwitchable;
+const isRainSwitchable = displaySettingsConfig.rainSwitchable;
+const isMeteorSwitchable = displaySettingsConfig.meteorSwitchable;
+const isBubblesSwitchable = displaySettingsConfig.bubblesSwitchable;
+const isHeartsSwitchable = displaySettingsConfig.heartsSwitchable;
+const isLeavesSwitchable = displaySettingsConfig.leavesSwitchable;
+const isClickSwitchable = displaySettingsConfig.clickSwitchable;
 const isCardBorderSwitchable = displaySettingsConfig.cardBorderSwitchable;
 const isCardFollowThemeSwitchable =
 	displaySettingsConfig.cardFollowThemeSwitchable;
@@ -219,7 +280,30 @@ const hasWallpaperTab = $derived(
 			wallpaperMode === WALLPAPER_FULLSCREEN) &&
 			hasBannerSettings),
 );
-const hasEffectsTab = $derived(isSakuraSwitchable);
+const hasEffectsTab = $derived(
+	isSakuraSwitchable ||
+		isSnowSwitchable ||
+		isFireflySwitchable ||
+		isNotesSwitchable ||
+		isRainSwitchable ||
+		isMeteorSwitchable ||
+		isBubblesSwitchable ||
+		isHeartsSwitchable ||
+		isLeavesSwitchable ||
+		isClickSwitchable,
+);
+const effectsIsDefault = $derived(
+	sakuraEnabled === defaultSakuraEnabled &&
+		snowEnabled === defaultSnowEnabled &&
+		fireflyEnabled === defaultFireflyEnabled &&
+		notesEnabled === defaultNotesEnabled &&
+		rainEnabled === defaultRainEnabled &&
+		meteorEnabled === defaultMeteorEnabled &&
+		bubblesEnabled === defaultBubblesEnabled &&
+		heartsEnabled === defaultHeartsEnabled &&
+		leavesEnabled === defaultLeavesEnabled &&
+		clickEnabled === defaultClickEnabled,
+);
 
 let visibleTabs = $derived.by(() => {
 	const tabs: { key: TabKey; icon: string; label: string }[] = [];
@@ -431,6 +515,75 @@ function toggleSakuraEnabled() {
 	setSakuraEnabled(sakuraEnabled);
 }
 
+function toggleSnowEnabled() {
+	snowEnabled = !snowEnabled;
+	setSnowEnabled(snowEnabled);
+}
+
+function toggleFireflyEnabled() {
+	fireflyEnabled = !fireflyEnabled;
+	setFireflyEnabled(fireflyEnabled);
+}
+
+function toggleNotesEnabled() {
+	notesEnabled = !notesEnabled;
+	setNotesEnabled(notesEnabled);
+}
+
+function toggleRainEnabled() {
+	rainEnabled = !rainEnabled;
+	setRainEnabled(rainEnabled);
+}
+
+function toggleMeteorEnabled() {
+	meteorEnabled = !meteorEnabled;
+	setMeteorEnabled(meteorEnabled);
+}
+
+function toggleBubblesEnabled() {
+	bubblesEnabled = !bubblesEnabled;
+	setBubblesEnabled(bubblesEnabled);
+}
+
+function toggleHeartsEnabled() {
+	heartsEnabled = !heartsEnabled;
+	setHeartsEnabled(heartsEnabled);
+}
+
+function toggleLeavesEnabled() {
+	leavesEnabled = !leavesEnabled;
+	setLeavesEnabled(leavesEnabled);
+}
+
+function toggleClickEnabled() {
+	clickEnabled = !clickEnabled;
+	setClickEnabled(clickEnabled);
+}
+
+
+function resetEffects() {
+	sakuraEnabled = defaultSakuraEnabled;
+	setSakuraEnabled(defaultSakuraEnabled);
+	snowEnabled = defaultSnowEnabled;
+	setSnowEnabled(defaultSnowEnabled);
+	fireflyEnabled = defaultFireflyEnabled;
+	setFireflyEnabled(defaultFireflyEnabled);
+	notesEnabled = defaultNotesEnabled;
+	setNotesEnabled(defaultNotesEnabled);
+	rainEnabled = defaultRainEnabled;
+	setRainEnabled(defaultRainEnabled);
+	meteorEnabled = defaultMeteorEnabled;
+	setMeteorEnabled(defaultMeteorEnabled);
+	bubblesEnabled = defaultBubblesEnabled;
+	setBubblesEnabled(defaultBubblesEnabled);
+	heartsEnabled = defaultHeartsEnabled;
+	setHeartsEnabled(defaultHeartsEnabled);
+	leavesEnabled = defaultLeavesEnabled;
+	setLeavesEnabled(defaultLeavesEnabled);
+	clickEnabled = defaultClickEnabled;
+	setClickEnabled(defaultClickEnabled);
+}
+
 function toggleCardBorderEnabled() {
 	cardBorderEnabled = !cardBorderEnabled;
 	setCardBorderEnabled(cardBorderEnabled);
@@ -527,6 +680,8 @@ function switchLayout() {
 
 onMount(() => {
 	mounted = true;
+	refreshIsDetailPage();
+	document.addEventListener("swup:content:replace", refreshIsDetailPage);
 	checkScreenSize();
 
 	// 从localStorage读取保存的壁纸模式
@@ -549,6 +704,17 @@ onMount(() => {
 
 	// 从localStorage读取樱花特效状态
 	sakuraEnabled = getStoredSakuraEnabled();
+
+	// 从localStorage读取雪花 / 萤火虫特效状态
+	snowEnabled = getStoredSnowEnabled();
+	fireflyEnabled = getStoredFireflyEnabled();
+	notesEnabled = getStoredNotesEnabled();
+	rainEnabled = getStoredRainEnabled();
+	meteorEnabled = getStoredMeteorEnabled();
+	bubblesEnabled = getStoredBubblesEnabled();
+	heartsEnabled = getStoredHeartsEnabled();
+	leavesEnabled = getStoredLeavesEnabled();
+	clickEnabled = getStoredClickEnabled();
 
 	// 从localStorage读取卡片样式状态
 	cardBorderEnabled = getStoredCardBorderEnabled();
@@ -707,8 +873,8 @@ $effect(() => {
 		</div>
 		{/if}
 
-		<!-- Layout Switch Section -->
-		{#if allowLayoutSwitch}
+		<!-- Layout Switch Section（只在文章/项目详情页显示，规则见 allowLayoutSwitch 旁注释） -->
+		{#if allowLayoutSwitch && isDetailPage}
 		<div class="">
 			<div class="section-title">
 				{i18n(I18nKey.postListLayout)}
@@ -1027,36 +1193,193 @@ $effect(() => {
 		{/if}
 	{/if}
 
-	<!-- Effects Tab: Sakura -->
+	<!-- Effects Tab: Sakura / Snow / Firefly -->
 	{#if activeTab === "effects"}
-		{#if isSakuraSwitchable}
+		{#if isSakuraSwitchable || isSnowSwitchable || isFireflySwitchable}
 		<div class="">
 			<div class="section-title">
 				{i18n(I18nKey.effectsSettings)}
 				<button aria-label="Reset to Default" class="btn-regular rounded-md active:scale-90"
-						class:opacity-0={sakuraEnabled === defaultSakuraEnabled} class:pointer-events-none={sakuraEnabled === defaultSakuraEnabled}
-						disabled={sakuraEnabled === defaultSakuraEnabled} aria-hidden={sakuraEnabled === defaultSakuraEnabled ? "true" : undefined}
-						onclick={() => { sakuraEnabled = defaultSakuraEnabled; setSakuraEnabled(defaultSakuraEnabled); }}>
+						class:opacity-0={effectsIsDefault} class:pointer-events-none={effectsIsDefault}
+						disabled={effectsIsDefault} aria-hidden={effectsIsDefault ? "true" : undefined}
+						onclick={resetEffects}>
 					<div class="text-(--btn-content)">
 						<Icon icon="fa7-solid:arrow-rotate-left" class="text-[0.75rem]"></Icon>
 					</div>
 				</button>
 			</div>
-			<button
-				class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
-				class:bg-(--btn-regular-bg-hover)={sakuraEnabled}
-				onclick={toggleSakuraEnabled}
-			>
-				<Icon icon="mdi:flower-poppy" class="text-[1.25rem] shrink-0"></Icon>
-				<span class="text-sm flex-1">{i18n(I18nKey.sakuraEffect)}</span>
-				<div class="w-10 h-5 rounded-full transition-all duration-200 relative"
-					 class:bg-(--primary)={sakuraEnabled}
-					 class:bg-(--btn-regular-bg-active)={!sakuraEnabled}>
-					<div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
-						 class:left-0.5={!sakuraEnabled}
-						 class:left-5={sakuraEnabled}></div>
-				</div>
-			</button>
+			<div class="space-y-1">
+				{#if isSakuraSwitchable}
+				<button
+					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
+					class:bg-(--btn-regular-bg-hover)={sakuraEnabled}
+					onclick={toggleSakuraEnabled}
+				>
+					<Icon icon="mdi:flower-poppy" class="text-[1.25rem] shrink-0"></Icon>
+					<span class="text-sm flex-1">{i18n(I18nKey.sakuraEffect)}</span>
+					<div class="w-10 h-5 rounded-full transition-all duration-200 relative"
+						 class:bg-(--primary)={sakuraEnabled}
+						 class:bg-(--btn-regular-bg-active)={!sakuraEnabled}>
+						<div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+							 class:left-0.5={!sakuraEnabled}
+							 class:left-5={sakuraEnabled}></div>
+					</div>
+				</button>
+				{/if}
+				{#if isSnowSwitchable}
+				<button
+					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
+					class:bg-(--btn-regular-bg-hover)={snowEnabled}
+					onclick={toggleSnowEnabled}
+				>
+					<Icon icon="mdi:snowflake" class="text-[1.25rem] shrink-0"></Icon>
+					<span class="text-sm flex-1">{i18n(I18nKey.snowEffect)}</span>
+					<div class="w-10 h-5 rounded-full transition-all duration-200 relative"
+						 class:bg-(--primary)={snowEnabled}
+						 class:bg-(--btn-regular-bg-active)={!snowEnabled}>
+						<div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+							 class:left-0.5={!snowEnabled}
+							 class:left-5={snowEnabled}></div>
+					</div>
+				</button>
+				{/if}
+				{#if isFireflySwitchable}
+				<button
+					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
+					class:bg-(--btn-regular-bg-hover)={fireflyEnabled}
+					onclick={toggleFireflyEnabled}
+				>
+					<Icon icon="mdi:sparkles" class="text-[1.25rem] shrink-0"></Icon>
+					<span class="text-sm flex-1">{i18n(I18nKey.fireflyEffect)}</span>
+					<div class="w-10 h-5 rounded-full transition-all duration-200 relative"
+						 class:bg-(--primary)={fireflyEnabled}
+						 class:bg-(--btn-regular-bg-active)={!fireflyEnabled}>
+						<div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+							 class:left-0.5={!fireflyEnabled}
+							 class:left-5={fireflyEnabled}></div>
+					</div>
+				</button>
+				{/if}
+				{#if isNotesSwitchable}
+				<button
+					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
+					class:bg-(--btn-regular-bg-hover)={notesEnabled}
+					onclick={toggleNotesEnabled}
+				>
+					<Icon icon="mdi:music-note" class="text-[1.25rem] shrink-0"></Icon>
+					<span class="text-sm flex-1">{i18n(I18nKey.notesEffect)}</span>
+					<div class="w-10 h-5 rounded-full transition-all duration-200 relative"
+						 class:bg-(--primary)={notesEnabled}
+						 class:bg-(--btn-regular-bg-active)={!notesEnabled}>
+						<div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+							 class:left-0.5={!notesEnabled}
+							 class:left-5={notesEnabled}></div>
+					</div>
+				</button>
+				{/if}
+				{#if isRainSwitchable}
+				<button
+					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
+					class:bg-(--btn-regular-bg-hover)={rainEnabled}
+					onclick={toggleRainEnabled}
+				>
+					<Icon icon="mdi:weather-rainy" class="text-[1.25rem] shrink-0"></Icon>
+					<span class="text-sm flex-1">{i18n(I18nKey.rainEffect)}</span>
+					<div class="w-10 h-5 rounded-full transition-all duration-200 relative"
+						 class:bg-(--primary)={rainEnabled}
+						 class:bg-(--btn-regular-bg-active)={!rainEnabled}>
+						<div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+							 class:left-0.5={!rainEnabled}
+							 class:left-5={rainEnabled}></div>
+					</div>
+				</button>
+				{/if}
+				{#if isMeteorSwitchable}
+				<button
+					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
+					class:bg-(--btn-regular-bg-hover)={meteorEnabled}
+					onclick={toggleMeteorEnabled}
+				>
+					<Icon icon="mdi:meteor" class="text-[1.25rem] shrink-0"></Icon>
+					<span class="text-sm flex-1">{i18n(I18nKey.meteorEffect)}</span>
+					<div class="w-10 h-5 rounded-full transition-all duration-200 relative"
+						 class:bg-(--primary)={meteorEnabled}
+						 class:bg-(--btn-regular-bg-active)={!meteorEnabled}>
+						<div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+							 class:left-0.5={!meteorEnabled}
+							 class:left-5={meteorEnabled}></div>
+					</div>
+				</button>
+				{/if}
+				{#if isBubblesSwitchable}
+				<button
+					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
+					class:bg-(--btn-regular-bg-hover)={bubblesEnabled}
+					onclick={toggleBubblesEnabled}
+				>
+					<Icon icon="mdi:chart-bubble" class="text-[1.25rem] shrink-0"></Icon>
+					<span class="text-sm flex-1">{i18n(I18nKey.bubblesEffect)}</span>
+					<div class="w-10 h-5 rounded-full transition-all duration-200 relative"
+						 class:bg-(--primary)={bubblesEnabled}
+						 class:bg-(--btn-regular-bg-active)={!bubblesEnabled}>
+						<div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+							 class:left-0.5={!bubblesEnabled}
+							 class:left-5={bubblesEnabled}></div>
+					</div>
+				</button>
+				{/if}
+				{#if isHeartsSwitchable}
+				<button
+					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
+					class:bg-(--btn-regular-bg-hover)={heartsEnabled}
+					onclick={toggleHeartsEnabled}
+				>
+					<Icon icon="mdi:heart" class="text-[1.25rem] shrink-0"></Icon>
+					<span class="text-sm flex-1">{i18n(I18nKey.heartsEffect)}</span>
+					<div class="w-10 h-5 rounded-full transition-all duration-200 relative"
+						 class:bg-(--primary)={heartsEnabled}
+						 class:bg-(--btn-regular-bg-active)={!heartsEnabled}>
+						<div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+							 class:left-0.5={!heartsEnabled}
+							 class:left-5={heartsEnabled}></div>
+					</div>
+				</button>
+				{/if}
+				{#if isLeavesSwitchable}
+				<button
+					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
+					class:bg-(--btn-regular-bg-hover)={leavesEnabled}
+					onclick={toggleLeavesEnabled}
+				>
+					<Icon icon="mdi:leaf" class="text-[1.25rem] shrink-0"></Icon>
+					<span class="text-sm flex-1">{i18n(I18nKey.leavesEffect)}</span>
+					<div class="w-10 h-5 rounded-full transition-all duration-200 relative"
+						 class:bg-(--primary)={leavesEnabled}
+						 class:bg-(--btn-regular-bg-active)={!leavesEnabled}>
+						<div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+							 class:left-0.5={!leavesEnabled}
+							 class:left-5={leavesEnabled}></div>
+					</div>
+				</button>
+				{/if}
+				{#if isClickSwitchable}
+				<button
+					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
+					class:bg-(--btn-regular-bg-hover)={clickEnabled}
+					onclick={toggleClickEnabled}
+				>
+					<Icon icon="mdi:cursor-default-click" class="text-[1.25rem] shrink-0"></Icon>
+					<span class="text-sm flex-1">{i18n(I18nKey.clickEffect)}</span>
+					<div class="w-10 h-5 rounded-full transition-all duration-200 relative"
+						 class:bg-(--primary)={clickEnabled}
+						 class:bg-(--btn-regular-bg-active)={!clickEnabled}>
+						<div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+							 class:left-0.5={!clickEnabled}
+							 class:left-5={clickEnabled}></div>
+					</div>
+				</button>
+				{/if}
+			</div>
 		</div>
 		{/if}
 	{/if}

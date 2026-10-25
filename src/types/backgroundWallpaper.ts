@@ -47,6 +47,7 @@ export type BackgroundWallpaperConfig = {
 				url: string; // 链接地址
 				icon: string; // Iconify 图标，如 "fa7-brands:github"
 				showName?: boolean; // 是否显示文字（默认 false）
+				enable?: boolean; // 这一条单独的开关（默认 true；管理台横幅联系方式卡维护）
 			}[];
 		};
 		// 壁纸轮播配置，横幅壁纸和全屏壁纸共享

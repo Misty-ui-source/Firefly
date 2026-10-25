@@ -1,4 +1,4 @@
-import type { SakuraConfig } from "../types/effectsConfig";
+import type { ParticleEffectConfig, SakuraConfig } from "../types/effectsConfig";
 
 // 特效配置 - 集中管理所有动画特效
 
@@ -51,5 +51,113 @@ export const sakuraConfig: SakuraConfig = {
 	},
 
 	// 层级，确保樱花在合适的层级显示
+	zIndex: 100,
+};
+
+// 雪花特效（轻量粒子引擎，与萤火虫共用 ParticleEffects.astro）
+export const snowConfig: ParticleEffectConfig = {
+	// 是否启用雪花特效
+	enable: false,
+
+	// 雪花数量
+	count: 70,
+
+	// 层级
+	zIndex: 100,
+};
+
+// 音符特效（波奇酱蔷薇红音符，轻量粒子引擎，共用 ParticleEffects.astro）
+export const notesConfig: ParticleEffectConfig = {
+	// 是否启用音符特效
+	enable: false,
+
+	// 音符数量
+	count: 18,
+
+	// 层级
+	zIndex: 100,
+};
+
+// 萤火虫特效（轻量粒子引擎，与雪花共用 ParticleEffects.astro）
+export const fireflyConfig: ParticleEffectConfig = {
+	// 是否启用萤火虫特效
+	enable: false,
+
+	// 萤火虫数量
+	count: 26,
+
+	// 层级
+	zIndex: 100,
+};
+
+// 雨滴特效（轻量粒子引擎，共用 ParticleEffects.astro）
+export const rainConfig: ParticleEffectConfig = {
+	// 是否启用雨滴特效
+	enable: false,
+
+	// 粒子数量
+	count: 90,
+
+	// 层级
+	zIndex: 100,
+};
+
+// 流星特效（轻量粒子引擎，共用 ParticleEffects.astro）
+export const meteorConfig: ParticleEffectConfig = {
+	// 是否启用流星特效
+	enable: false,
+
+	// 粒子数量
+	count: 3,
+
+	// 层级
+	zIndex: 100,
+};
+
+// 泡泡特效（轻量粒子引擎，共用 ParticleEffects.astro）
+export const bubblesConfig: ParticleEffectConfig = {
+	// 是否启用泡泡特效
+	enable: false,
+
+	// 粒子数量
+	count: 24,
+
+	// 层级
+	zIndex: 100,
+};
+
+// 爱心特效（轻量粒子引擎，共用 ParticleEffects.astro）
+export const heartsConfig: ParticleEffectConfig = {
+	// 是否启用爱心特效
+	enable: false,
+
+	// 粒子数量
+	count: 16,
+
+	// 层级
+	zIndex: 100,
+};
+
+// 落叶特效（轻量粒子引擎，共用 ParticleEffects.astro）
+export const leavesConfig: ParticleEffectConfig = {
+	// 是否启用落叶特效
+	enable: false,
+
+	// 粒子数量
+	count: 16,
+
+	// 层级
+	zIndex: 100,
+};
+
+// 点击特效（轻量粒子引擎，共用 ParticleEffects.astro）
+export const clickConfig: ParticleEffectConfig = {
+	// 是否启用点击特效
+	enable: false,
+
+	// 粒子数量（点击特效为每次点击迸发的粒子数）
+	count: 12,
+
+	// 层级
 	zIndex: 100,
 };

@@ -11,7 +11,8 @@ interface Props {
 
 const { showHomeText, initialRandomSubtitle } = Astro.props;
 const homeText = backgroundWallpaper.common?.homeText;
-const homeTextLinks = homeText?.links;
+// 单条开关关掉的（enable: false）不渲染，其余显示
+const homeTextLinks = homeText?.links?.filter((link) => link.enable !== false);
 const homeTextLinksEnable = homeText?.linksEnable !== false;
 ---
 {homeText?.enable && (
