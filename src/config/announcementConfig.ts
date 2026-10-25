@@ -8,7 +8,7 @@ export const announcementConfig: AnnouncementConfig = {
 	content: "欢迎来到Alexander，国内访问可能较慢，正在寻找优化方案。评论后台被主包小猪手搞崩了，但评论功能正常。",
 
 	// 显示模式：static=静态公告 / geo=访客检测公告（控制台公告页可切换）
-	mode: "static",
+	mode: "geo",
 
 	// 检测版文案模板，占位符：{country} {region} {city} {distance} {greeting}
 	geoTemplate: "欢迎来自 {country} 的小伙伴，{greeting}。你距离 Alexander 约有 {distance} 公里，欢迎来串门。",
@@ -21,6 +21,7 @@ export const announcementConfig: AnnouncementConfig = {
 	// 是否允许用户关闭公告
 	closable: true,
 
+	// 静态公告的「了解更多」链接
 	link: {
 		// 启用链接
 		enable: true,
@@ -40,6 +41,6 @@ export const announcementConfig: AnnouncementConfig = {
 		external: false,
 	},
 
-	// 历史公告存档（控制台自动维护，手改无效）
+	// 历史公告存档（控制台自动维护）
 	history: [],
 };
