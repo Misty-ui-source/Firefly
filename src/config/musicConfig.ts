@@ -75,6 +75,13 @@ export const musicPlayerConfig: MusicPlayerConfig = {
 				cover: "/assets/music/cover/109951169585655912.webp",
 				lrc: "",
 			},
+			{
+				name: "样子",
+				artist: "孙燕姿",
+				url: "https://img.lanerc.me/admin/music/mvnddtm9-____-___.mp3",
+				cover: "https://img.lanerc.me/admin/music-cover/mvnddikk-c7544097c35eac28cd73d5e85fd0e7f9.webp",
+				lrc: "",
+			},
 		],
 	},
 };
