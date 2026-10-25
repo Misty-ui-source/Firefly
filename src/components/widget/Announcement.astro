@@ -16,6 +16,8 @@ interface Props {
 const { class: className, style, widgetConfig } = Astro.props;
 
 const showTitle = widgetConfig?.showTitle !== false;
+// 「了解更多」链接按当前模式取：检测版用 geoLink，静态用 link（geoLink 缺失时回落 link）
+const activeLink = config.mode === "geo" ? (config.geoLink ?? config.link) : config.link;
 ---
 
 <!-- 组件显示现在由sidebarLayoutConfig统一控制，无需检查config.enable -->
@@ -28,7 +30,7 @@ const showTitle = widgetConfig?.showTitle !== false;
 >
   <div>
     <!-- 公告栏内容 -->
-    <div class="text-neutral-600 dark:text-neutral-300 leading-relaxed mb-3">
+    <div id="announcement-content" class="text-neutral-600 dark:text-neutral-300 leading-relaxed mb-3">
       {config.content}
     </div>
 
@@ -36,14 +38,14 @@ const showTitle = widgetConfig?.showTitle !== false;
     <div class="flex items-center justify-between gap-3">
       <div>
         {
-          config.link && config.link.enable !== false && (
+          activeLink && activeLink.enable !== false && (
             <a
-              href={config.link.url}
-              target={config.link.external ? "_blank" : "_self"}
-              rel={config.link.external ? "noopener noreferrer" : undefined}
+              href={activeLink.url}
+              target={activeLink.external ? "_blank" : "_self"}
+              rel={activeLink.external ? "noopener noreferrer" : undefined}
               class="btn-regular rounded-lg px-3 py-1.5 text-sm font-medium active:scale-95 transition-transform"
             >
-              {config.link.text}
+              {activeLink.text}
             </a>
           )
         }
@@ -62,4 +64,45 @@ const showTitle = widgetConfig?.showTitle !== false;
       }
     </div>
   </div>
+  {
+    config.mode === "geo" && (
+      <script
+        define:vars={{
+          geoTemplate: config.geoTemplate || "",
+          ownerLat: config.ownerLat ?? 0,
+          ownerLon: config.ownerLon ?? 0,
+          staticContent: config.content || "",
+        }}
+      >
+        (() => {
+          const el = document.getElementById('announcement-content');
+          if (!el) return;
+          const COUNTRY = { CN: '中国', HK: '中国香港', TW: '中国台湾', MO: '中国澳门', US: '美国', JP: '日本', KR: '韩国', GB: '英国', FR: '法国', DE: '德国', CA: '加拿大', AU: '澳大利亚', SG: '新加坡', RU: '俄罗斯', IN: '印度', NL: '荷兰', IT: '意大利', ES: '西班牙', BR: '巴西', TH: '泰国', VN: '越南', MY: '马来西亚', ID: '印度尼西亚', PH: '菲律宾', NZ: '新西兰', SE: '瑞典', CH: '瑞士' };
+          const GREET = [[0, '夜深了，还在熬夜冲浪呀'], [5, '早上好，新的一天开始啦'], [8, '上午好，精神不错'], [11, '中午好，吃饱了再来逛'], [13, '下午好，懒懒地睡个午觉吧'], [17, '傍晚好，夕阳无限好'], [19, '晚上好，今晚月色不错'], [23, '夜深了，早点休息吧']];
+          const greeting = () => { const h = new Date().getHours(); let g = GREET[0][1]; for (const pair of GREET) if (h >= pair[0]) g = pair[1]; return g; };
+          const render = (vals) => {
+            el.textContent = geoTemplate
+              .replaceAll('{country}', vals.country || '远方')
+              .replaceAll('{region}', vals.region || '')
+              .replaceAll('{city}', vals.city || '')
+              .replaceAll('{distance}', vals.distance != null ? String(vals.distance) : '好几千')
+              .replaceAll('{greeting}', greeting());
+          };
+          render({});
+          fetch('/api/visitor').then((r) => r.json()).then((v) => {
+            if (!v || !v.country) { el.textContent = staticContent; return; }
+            let distance = null;
+            if (typeof v.latitude === 'number' && typeof v.longitude === 'number') {
+              const rad = (d) => (d * Math.PI) / 180;
+              const s1 = Math.sin(rad(v.latitude - ownerLat) / 2);
+              const s2 = Math.sin(rad(v.longitude - ownerLon) / 2);
+              const a = s1 * s1 + Math.cos(rad(ownerLat)) * Math.cos(rad(v.latitude)) * s2 * s2;
+              distance = Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+            }
+            render({ country: COUNTRY[v.country] || v.country, region: v.region || '', city: v.city || '', distance });
+          }).catch(() => { el.textContent = staticContent; });
+        })();
+      </script>
+    )
+  }
 </WidgetLayout>

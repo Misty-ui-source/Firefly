@@ -413,10 +413,13 @@ async function uploadImages(files, dir) {
   if (!dir) throw new Error('请先填写 R2 目录名');
   const fd = new FormData();
   fd.append('dir', dir);
+  /* 原图直传开关（编辑器工具栏切换，全局生效）：开了就完全不压缩不转码 */
+  let rawMode = false;
+  try { rawMode = localStorage.getItem('admin-upload-raw') === '1'; } catch (e) {}
   let savedBytes = 0, origBytes = 0, converted = 0;
   for (const f of files) {
     let blob = f, name = f.name;
-    const skipConvert = !f.type.startsWith('image/') || f.type === 'image/gif' || f.type === 'image/svg+xml' || f.type === 'image/avif' || /\.webp$/i.test(f.name);
+    const skipConvert = rawMode || !f.type.startsWith('image/') || f.type === 'image/gif' || f.type === 'image/svg+xml' || f.type === 'image/avif' || /\.webp$/i.test(f.name);
     if (!skipConvert) {
       try {
         const webp = await fileToWebp(f);
@@ -448,7 +451,7 @@ const routes = {};
 /* 控制台导航定义：key → 默认名称 */
 function navDefs() {
   const defs = {
-    dashboard: '🏠 首页', stats: '📊 写作', search: '🔍 搜索', medialib: '🗂 媒体库', tags: '🏷 标签',
+    dashboard: '🏠 首页', stats: '📊 写作', search: '🔍 搜索', medialib: '🗂 媒体库', tags: '🏷 标签', fonts: '🔤 字体',
     images: '🖼 图片', music: '🎵 音乐', gallery: '📷 相册',
     announce: '📢 公告', friends: '🔗 友链', booknav: '🔖 书签', navmgr: '🧭 导航', videos: '🎬 视频', profile: '👤 简介', banner: '🖼️ 横幅',
     timeline: '🕘 时间线', thoughts: '💭 碎碎念',
@@ -1485,6 +1488,7 @@ routes.edit = async (arg) => {
       <button class="btn btn-small" id="btn-import" type="button" title="也可以直接把文件拖到页面上">📥 导入文件</button>
       <input type="file" id="f-import" accept=".md,.markdown,.txt,.png,.jpg,.jpeg,.gif,.webp,.avif" multiple class="hidden">
       <input type="text" id="f-r2dir" value="${r2dirDefault}" placeholder="R2 目录，如 posts/2026-10-24">
+      <button class="btn btn-small btn-ghost" id="btn-raw" type="button" title="开启后所有图片上传都不压缩、不转 WebP（文字多的截图建议开）；全局生效，含封面与背景">🖼 原图直传：关</button>
     </div>
     <div class="field"><textarea id="md-body" class="code" rows="20">${esc(body)}</textarea></div>
     <div id="preview" class="preview hidden"></div>
@@ -1498,6 +1502,23 @@ routes.edit = async (arg) => {
     };
   });
   const ta = $('#md-body');
+  /* 🖼 原图直传开关：状态存 localStorage，uploadImages 全局读取（封面/背景等上传同样生效） */
+  const btnRaw = $('#btn-raw');
+  if (btnRaw) {
+    const paintRaw = () => {
+      let on = false;
+      try { on = localStorage.getItem('admin-upload-raw') === '1'; } catch (e) {}
+      btnRaw.textContent = on ? '🖼 原图直传：开' : '🖼 原图直传：关';
+      btnRaw.classList.toggle('btn-ghost', !on);
+    };
+    paintRaw();
+    btnRaw.onclick = () => {
+      let on = false;
+      try { on = localStorage.getItem('admin-upload-raw') === '1'; localStorage.setItem('admin-upload-raw', on ? '0' : '1'); } catch (e) {}
+      paintRaw();
+      toast(on ? '原图直传已关，图片恢复压缩上传' : '原图直传已开：所有图片不压缩直传（全局生效）');
+    };
+  }
   const updCount = () => { $('#char-count').textContent = ta.value.replace(/\s/g, '').length; };
   ta.addEventListener('input', updCount); updCount();
   /* ---------- 本地草稿（自动保存）：写作中途退出/手机后台被杀也不丢 ----------
@@ -2066,19 +2087,45 @@ function tsGetBool(src, key, def) {
 function tsEsc(s) {
   return String(s ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r?\n/g, '\\n');
 }
-function buildAnnouncementTs({ content, closable, linkEnable, linkText, linkUrl, external }) {
+function tsGetNum(src, key, def) {
+  const m = src.match(new RegExp(key + '\\s*:\\s*(-?[\\d.]+)'));
+  return m ? parseFloat(m[1]) : def;
+}
+/* 解析公告 history 存档：[{ date, content }, ...] */
+function parseAnnHistory(src) {
+  const out = [];
+  const re = /\{\s*date:\s*"((?:[^"\\]|\\.)*)",\s*content:\s*"((?:[^"\\]|\\.)*)"\s*\}/g;
+  const un = (s) => s.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+  let m;
+  while ((m = re.exec(src))) out.push({ date: un(m[1]), content: un(m[2]) });
+  return out;
+}
+function buildAnnouncementTs({ content, closable, linkEnable, linkText, linkUrl, external, mode, geoTemplate, ownerCity, ownerLat, ownerLon, geoLinkEnable, geoLinkText, geoLinkUrl, geoExternal, history }) {
+  const histLines = (history || []).map((h) => `\t\t{ date: "${tsEsc(h.date)}", content: "${tsEsc(h.content)}" },`).join('\n');
   return `import type { AnnouncementConfig } from "../types/announcementConfig";
 
 export const announcementConfig: AnnouncementConfig = {
 \t// 公告标题，留空则走i18n默认标题
 \ttitle: "",
 
-\t// 公告内容
+\t// 公告内容（静态模式用）
 \tcontent: "${tsEsc(content)}",
+
+\t// 显示模式：static=静态公告 / geo=访客检测公告（控制台公告页可切换）
+\tmode: "${mode === 'geo' ? 'geo' : 'static'}",
+
+\t// 检测版文案模板，占位符：{country} {region} {city} {distance} {greeting}
+\tgeoTemplate: "${tsEsc(geoTemplate)}",
+
+\t// 博主位置（检测版算距离用）
+\townerCity: "${tsEsc(ownerCity)}",
+\townerLat: ${Number.isFinite(ownerLat) ? ownerLat : 0},
+\townerLon: ${Number.isFinite(ownerLon) ? ownerLon : 0},
 
 \t// 是否允许用户关闭公告
 \tclosable: ${closable},
 
+\t// 静态公告的「了解更多」链接
 \tlink: {
 \t\t// 启用链接
 \t\tenable: ${linkEnable},
@@ -2089,13 +2136,27 @@ export const announcementConfig: AnnouncementConfig = {
 \t\t// 内部链接
 \t\texternal: ${external},
 \t},
+
+\t// 检测版公告的「了解更多」链接
+\tgeoLink: {
+\t\tenable: ${geoLinkEnable},
+\t\ttext: "${tsEsc(geoLinkText)}",
+\t\turl: "${tsEsc(geoLinkUrl)}",
+\t\texternal: ${geoExternal},
+\t},
+
+\t// 历史公告存档（控制台自动维护）
+\thistory: [${histLines ? `\n${histLines}\n\t` : ''}],
 };
 `;
 }
 routes.announce = async () => {
   view.innerHTML = '<div class="card"><h2>加载中…</h2></div>';
-  let sha = null, external = false;
+  let sha = null, external = false, geoExternal = false;
   let content = '', closable = true, linkEnable = true, linkText = '', linkUrl = '';
+  let mode = 'static', geoTemplate = '', ownerCity = '南京', ownerLat = 32.0603, ownerLon = 118.7969;
+  let geoLinkEnable = true, geoLinkText = '', geoLinkUrl = '';
+  let annHistory = [];
   try {
     const data = await ghGetFile(ANN_PATH);
     sha = data.sha;
@@ -2107,6 +2168,17 @@ routes.announce = async () => {
     linkText = tsGetStr(linkBlock, 'text');
     linkUrl = tsGetStr(linkBlock, 'url');
     external = tsGetBool(linkBlock, 'external', false);
+    mode = tsGetStr(src, 'mode') === 'geo' ? 'geo' : 'static';
+    geoTemplate = tsGetStr(src, 'geoTemplate');
+    ownerCity = tsGetStr(src, 'ownerCity') || '南京';
+    ownerLat = tsGetNum(src, 'ownerLat', 32.0603);
+    ownerLon = tsGetNum(src, 'ownerLon', 118.7969);
+    const geoLinkBlock = (src.match(/geoLink\s*:\s*\{([\s\S]*?)\}/) || [])[1] || '';
+    geoLinkEnable = tsGetBool(geoLinkBlock, 'enable', true);
+    geoLinkText = tsGetStr(geoLinkBlock, 'text');
+    geoLinkUrl = tsGetStr(geoLinkBlock, 'url');
+    geoExternal = tsGetBool(geoLinkBlock, 'external', false);
+    annHistory = parseAnnHistory(src);
   } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
 
   view.innerHTML = `
@@ -2118,17 +2190,44 @@ routes.announce = async () => {
     <button class="btn" id="btn-save-ann">💾 保存公告</button>
   </div>
   <div class="card"><h2>📢 网站公告 <span class="sub">${ANN_PATH}</span></h2>
-    <p class="hint">网站顶部的公告栏，一句话即可。保存后重新构建网站生效。</p>
-    <div class="field"><label>公告内容</label>
-      <input type="text" id="ann-content" class="big" value="${esc(content)}" placeholder="一句话公告"></div>
-    <div class="field"><label>选项</label><div class="pills">
+    <p class="hint">两种公告二选一启用，保存后重新构建网站生效。</p>
+    <div class="field"><label>显示模式</label><div class="pills">
+      <label class="pill${mode === 'static' ? ' on' : ''}"><input type="checkbox" id="ann-mode-static"${mode === 'static' ? ' checked' : ''}>📌 静态公告</label>
+      <label class="pill${mode === 'geo' ? ' on' : ''}"><input type="checkbox" id="ann-mode-geo"${mode === 'geo' ? ' checked' : ''}>📍 访客检测公告</label>
       <label class="pill${closable ? ' on' : ''}"><input type="checkbox" id="ann-closable"${closable ? ' checked' : ''}>❌ 允许用户关闭</label>
-      <label class="pill${linkEnable ? ' on' : ''}"><input type="checkbox" id="ann-link-enable"${linkEnable ? ' checked' : ''}>🔗 显示链接</label>
     </div></div>
-    <div id="ann-link-zone" class="${linkEnable ? '' : 'hidden'}">
+    <div id="ann-static-zone" class="${mode === 'static' ? '' : 'hidden'}">
+      <div class="field"><label>公告内容</label>
+        <input type="text" id="ann-content" class="big" value="${esc(content)}" placeholder="一句话公告"></div>
+      <div class="field"><label>「了解更多」链接</label><div class="pills">
+        <label class="pill${linkEnable ? ' on' : ''}"><input type="checkbox" id="ann-link-enable"${linkEnable ? ' checked' : ''}>🔗 显示链接</label>
+      </div></div>
+      <div id="ann-link-zone" class="${linkEnable ? '' : 'hidden'}">
+        <div class="grid2">
+          <div class="field"><label>链接文本</label><input type="text" id="ann-link-text" value="${esc(linkText)}" placeholder="了解更多"></div>
+          <div class="field"><label>链接 URL</label><input type="text" id="ann-link-url" value="${esc(linkUrl)}" placeholder="/about/"></div>
+        </div>
+      </div>
+      <div class="field"><label>🕘 历史公告</label>
+        <div id="ann-history-list"></div>
+        <p class="hint">保存新公告时，当前这条会自动归档到这里（最多 20 条）；「恢复」是把旧文案填回内容框，检查后点保存才生效。</p></div>
+    </div>
+    <div id="ann-geo-zone" class="${mode === 'geo' ? '' : 'hidden'}">
+      <div class="field"><label>文案模板</label>
+        <textarea id="ann-geo-template" rows="3">${esc(geoTemplate)}</textarea>
+        <p class="hint">占位符：{country} 国家 · {region} 地区 · {city} 城市 · {distance} 距博主公里数 · {greeting} 时段问候（按访客当地时间）。位置拿不到时自动回落静态公告。</p></div>
       <div class="grid2">
-        <div class="field"><label>链接文本</label><input type="text" id="ann-link-text" value="${esc(linkText)}" placeholder="了解更多"></div>
-        <div class="field"><label>链接 URL</label><input type="text" id="ann-link-url" value="${esc(linkUrl)}" placeholder="/about/"></div>
+        <div class="field"><label>博主所在城市</label><input type="text" id="ann-owner-city" value="${esc(ownerCity)}" placeholder="南京"></div>
+        <div class="field"><label>城市坐标（纬度, 经度）</label><input type="text" id="ann-owner-coords" value="${ownerLat}, ${ownerLon}" placeholder="32.0603, 118.7969"></div>
+      </div>
+      <div class="field"><label>「了解更多」链接</label><div class="pills">
+        <label class="pill${geoLinkEnable ? ' on' : ''}"><input type="checkbox" id="ann-geolink-enable"${geoLinkEnable ? ' checked' : ''}>🔗 显示链接</label>
+      </div></div>
+      <div id="ann-geolink-zone" class="${geoLinkEnable ? '' : 'hidden'}">
+        <div class="grid2">
+          <div class="field"><label>链接文本</label><input type="text" id="ann-geolink-text" value="${esc(geoLinkText)}" placeholder="了解更多"></div>
+          <div class="field"><label>链接 URL</label><input type="text" id="ann-geolink-url" value="${esc(geoLinkUrl)}" placeholder="/about/"></div>
+        </div>
       </div>
     </div>
   </div>`;
@@ -2138,15 +2237,78 @@ routes.announce = async () => {
     el.onchange = () => {
       el.closest('.pill').classList.toggle('on', el.checked);
       if (el.id === 'ann-link-enable') $('#ann-link-zone').classList.toggle('hidden', !el.checked);
+      if (el.id === 'ann-geolink-enable') $('#ann-geolink-zone').classList.toggle('hidden', !el.checked);
     };
   });
+  /* 模式二选一（当单选钮用）：点哪个启哪个，对应的设置区展开 */
+  const annSetMode = (m) => {
+    const s = $('#ann-mode-static'), g = $('#ann-mode-geo');
+    if (s) { s.checked = m === 'static'; s.closest('.pill').classList.toggle('on', m === 'static'); }
+    if (g) { g.checked = m === 'geo'; g.closest('.pill').classList.toggle('on', m === 'geo'); }
+    $('#ann-static-zone').classList.toggle('hidden', m !== 'static');
+    $('#ann-geo-zone').classList.toggle('hidden', m !== 'geo');
+  };
+  const annMs = $('#ann-mode-static'), annMg = $('#ann-mode-geo');
+  if (annMs) annMs.onchange = () => annSetMode('static');
+  if (annMg) annMg.onchange = () => annSetMode('geo');
   /* 本地草稿（自动保存）：与正文编辑器同款机制，改到一半退出也不丢；保存成功即清 */
   const annDraftKey = 'admin-edit-draft:announce';
-  const annCollect = () => ({
-    content: $('#ann-content').value, closable: $('#ann-closable').checked,
-    linkEnable: $('#ann-link-enable').checked,
-    linkText: $('#ann-link-text').value, linkUrl: $('#ann-link-url').value,
+  const annCollect = () => {
+    const coords = ($('#ann-owner-coords') ? $('#ann-owner-coords').value : '').split(',').map((x) => parseFloat(x));
+    return {
+      content: $('#ann-content').value, closable: $('#ann-closable').checked,
+      linkEnable: $('#ann-link-enable').checked,
+      linkText: $('#ann-link-text').value, linkUrl: $('#ann-link-url').value,
+      mode: ($('#ann-mode-geo') && $('#ann-mode-geo').checked) ? 'geo' : 'static',
+      geoTemplate: $('#ann-geo-template') ? $('#ann-geo-template').value : '',
+      ownerCity: $('#ann-owner-city') ? $('#ann-owner-city').value : '',
+      ownerLat: Number.isFinite(coords[0]) ? coords[0] : 0,
+      ownerLon: Number.isFinite(coords[1]) ? coords[1] : 0,
+      geoLinkEnable: $('#ann-geolink-enable') ? $('#ann-geolink-enable').checked : true,
+      geoLinkText: $('#ann-geolink-text') ? $('#ann-geolink-text').value : '',
+      geoLinkUrl: $('#ann-geolink-url') ? $('#ann-geolink-url').value : '',
+    };
+  };
+  /* 用一组字段值 + 指定历史存档生成完整配置文件文本（vals 形状同 annCollect） */
+  const buildAnnText = (vals, hist) => buildAnnouncementTs({
+    content: vals.content.trim(), closable: vals.closable,
+    linkEnable: vals.linkEnable, linkText: vals.linkText.trim(), linkUrl: vals.linkUrl.trim(), external,
+    mode: vals.mode, geoTemplate: vals.geoTemplate.trim(), ownerCity: vals.ownerCity.trim() || '南京',
+    ownerLat: vals.ownerLat, ownerLon: vals.ownerLon,
+    geoLinkEnable: vals.geoLinkEnable, geoLinkText: vals.geoLinkText.trim(), geoLinkUrl: vals.geoLinkUrl.trim(), geoExternal,
+    history: hist,
   });
+  /* 文件里已保存的值（删历史存档时用它生成文本，不带上表单里没保存的改动） */
+  const loadedVals = () => ({ content, closable, linkEnable, linkText, linkUrl, mode, geoTemplate, ownerCity, ownerLat, ownerLon, geoLinkEnable, geoLinkText, geoLinkUrl });
+  const renderAnnHistory = () => {
+    const box = $('#ann-history-list');
+    if (!box) return;
+    if (!annHistory.length) { box.innerHTML = '<p class="hint">暂无存档。</p>'; return; }
+    box.innerHTML = annHistory.map((h, i) => `
+      <div class="list-item"><span class="title">${esc((h.content || '').slice(0, 60))}${(h.content || '').length > 60 ? '…' : ''}</span>
+        <span class="meta">${esc(new Date(h.date).toLocaleString())}</span><span class="spacer"></span>
+        <button class="mini-btn" data-hact="restore" data-i="${i}">恢复</button>
+        <button class="mini-btn danger" data-hact="del" data-i="${i}">删除</button></div>`).join('');
+    box.querySelectorAll('[data-hact]').forEach((b) => { b.onclick = () => annHistoryAct(b.dataset.hact, parseInt(b.dataset.i, 10)); });
+  };
+  const annHistoryAct = async (act, i) => {
+    const h = annHistory[i];
+    if (!h) return;
+    if (act === 'restore') {
+      $('#ann-content').value = h.content || '';
+      $('#ann-content').scrollIntoView({ block: 'center' });
+      toast('已填入内容框，检查后点「保存公告」生效');
+      return;
+    }
+    if (!confirm(`删除这条历史公告？\n${(h.content || '').slice(0, 80)}`)) return;
+    annHistory.splice(i, 1);
+    try {
+      await saveWithLog(ANN_PATH, buildAnnText(loadedVals(), annHistory), sha, '删除一条历史公告 [管理台]', { type: '公告', action: '删除历史', target: '历史公告' });
+      toast('历史公告已删除');
+    } catch (e) { toast(e.message, true); }
+    routes.announce();
+  };
+  renderAnnHistory();
   const annBaseline = JSON.stringify(annCollect());
   const annSession = {}; window._annDraftSession = annSession;
   const annWrite = () => {
@@ -2178,6 +2340,19 @@ routes.announce = async () => {
           el.closest('.pill').classList.toggle('on', el.checked);
         });
         $('#ann-link-zone').classList.toggle('hidden', !$('#ann-link-enable').checked);
+        /* 检测版字段（老草稿没这些字段时跳过，保留文件里的值） */
+        if (d.geoTemplate !== undefined) $('#ann-geo-template').value = d.geoTemplate;
+        if (d.ownerCity !== undefined) $('#ann-owner-city').value = d.ownerCity;
+        if (d.ownerLat !== undefined && d.ownerLon !== undefined) $('#ann-owner-coords').value = `${d.ownerLat}, ${d.ownerLon}`;
+        if (d.geoLinkText !== undefined) $('#ann-geolink-text').value = d.geoLinkText;
+        if (d.geoLinkUrl !== undefined) $('#ann-geolink-url').value = d.geoLinkUrl;
+        if (d.geoLinkEnable !== undefined) {
+          const gel = $('#ann-geolink-enable');
+          gel.checked = !!d.geoLinkEnable;
+          gel.closest('.pill').classList.toggle('on', gel.checked);
+          $('#ann-geolink-zone').classList.toggle('hidden', !gel.checked);
+        }
+        if (d.mode) annSetMode(d.mode);
         };
         const showAnnDiscard = () => {
           const b = $('#btn-ann-discard');
@@ -2198,20 +2373,22 @@ routes.announce = async () => {
     }
   } catch (e) {}
   $('#btn-save-ann').onclick = async () => {
-    const text = buildAnnouncementTs({
-      content: $('#ann-content').value.trim(),
-      closable: $('#ann-closable').checked,
-      linkEnable: $('#ann-link-enable').checked,
-      linkText: $('#ann-link-text').value.trim(),
-      linkUrl: $('#ann-link-url').value.trim(),
-      external,
-    });
+    const ac = annCollect();
+    /* 静态内容变了就把当前这条归档（去重相邻重复，最多 20 条） */
+    let newHistory = annHistory.slice();
+    if (ac.content.trim() !== content && content) {
+      newHistory.unshift({ date: new Date().toISOString(), content });
+      newHistory = newHistory.filter((h, i) => i === 0 || h.content !== newHistory[i - 1].content).slice(0, 20);
+    }
+    const text = buildAnnText(ac, newHistory);
     const btn = $('#btn-save-ann');
     btn.disabled = true;
     try {
       await saveWithLog(ANN_PATH, text, sha, '更新网站公告 [管理台]', { type: '公告', action: '更新', target: '网站公告' });
+      annHistory = newHistory;
       try { localStorage.removeItem('admin-edit-draft:announce'); } catch (e) {} /* 已正式保存：清草稿 */
       toast('公告已保存，重新构建网站后生效');
+      routes.announce();
     } catch (e) { toast(e.message, true); }
     btn.disabled = false;
   };
@@ -4292,10 +4469,10 @@ routes.tags = async () => {
       <button class="mini-btn" data-f="${field}" data-a="merge" data-n="${esc(name)}">合并到…</button>
       <button class="mini-btn danger" data-f="${field}" data-a="del" data-n="${esc(name)}">删除</button></div>`;
   view.innerHTML = `
+    <div class="card"><h2>🗂 分类 <span class="sub">共 ${catMap.size} 个 · 改名/合并/删除会把所有用到它的文章一次改好（1 个 commit）</span></h2>
+      ${sortEntries(catMap).map(([n, s]) => rowHtml('category', n, s)).join('') || '<p class="hint">还没有分类</p>'}</div>
     <div class="card"><h2>🏷 标签 <span class="sub">共 ${tagMap.size} 个 · 改名/合并/删除会把所有用到它的文章一次改好（1 个 commit）</span></h2>
-      ${sortEntries(tagMap).map(([n, s]) => rowHtml('tags', n, s)).join('') || '<p class="hint">还没有标签</p>'}</div>
-    <div class="card"><h2>🗂 分类 <span class="sub">共 ${catMap.size} 个</span></h2>
-      ${sortEntries(catMap).map(([n, s]) => rowHtml('category', n, s)).join('') || '<p class="hint">还没有分类</p>'}</div>`;
+      ${sortEntries(tagMap).map(([n, s]) => rowHtml('tags', n, s)).join('') || '<p class="hint">还没有标签</p>'}</div>`;
   view.querySelectorAll('[data-a]').forEach((b) => {
     b.onclick = () => {
       const field = b.dataset.f, name = b.dataset.n, act = b.dataset.a;
@@ -4305,6 +4482,95 @@ routes.tags = async () => {
       applyChange(field, name, to);
     };
   });
+};
+
+/* ---------- 字体设置：src/config/fontConfig.ts ---------- */
+const FONT_PATH = 'src/config/fontConfig.ts';
+/* 解析 fontsList 里注册过的字体（name 与 cssVariable 成对出现） */
+function parseFontsList(src) {
+  const out = [];
+  const re = /name:\s*"([^"]+)",\s*\n\s*cssVariable:\s*"([^"]+)"/g;
+  let m;
+  while ((m = re.exec(src))) out.push({ name: m[1], var: m[2] });
+  return out;
+}
+routes.fonts = async () => {
+  view.innerHTML = '<div class="card"><h2>加载中…</h2></div>';
+  let sha = null, fonts = [], cfg = null, src = '';
+  try {
+    const data = await ghGetFile(FONT_PATH);
+    sha = data.sha; src = data.text;
+    fonts = parseFontsList(src);
+    const idx = src.indexOf('export const fontConfig');
+    const tail = idx >= 0 ? src.slice(idx) : '';
+    const selM = tail.match(/selected:\s*\[([^\]]*)\]/);
+    const selArr = selM ? [...selM[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]) : ['system'];
+    cfg = {
+      enable: tsGetBool(tail, 'enable', true),
+      selected: selArr[0] || 'system',
+      bannerTitleFont: tsGetStr(tail, 'bannerTitleFont'),
+      bannerSubtitleFont: tsGetStr(tail, 'bannerSubtitleFont'),
+      navbarTitleFont: tsGetStr(tail, 'navbarTitleFont'),
+      codeFont: tsGetStr(tail, 'codeFont'),
+    };
+  } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+
+  const fontOpts = (cur) => `<option value="system"${cur === 'system' ? ' selected' : ''}>系统字体（不加载网络字体）</option>` +
+    fonts.map((f) => `<option value="${esc(f.var)}"${cur === f.var ? ' selected' : ''}>${esc(f.name)}</option>`).join('');
+  const regionOpts = (cur) => `<option value=""${!cur ? ' selected' : ''}>（跟随全局）</option>` +
+    fonts.map((f) => `<option value="${esc(f.var)}"${cur === f.var ? ' selected' : ''}>${esc(f.name)}</option>`).join('');
+  const slotField = (id, label, opts) => `<div class="field"><label>${label}</label><select id="${id}">${opts}</select></div>`;
+
+  view.innerHTML = `
+  <div class="toolbar">
+    <button class="btn btn-ghost" id="btn-back">← 返回</button>
+    <span class="spacer"></span>
+    <button class="btn" id="btn-save-fonts">💾 保存字体设置</button>
+  </div>
+  <div class="card"><h2>🔤 字体 <span class="sub">${FONT_PATH}</span></h2>
+    <p class="hint">保存后重新构建网站生效。英文字体（Inter 等）只影响英文与数字；中文想变样选思源宋体 / 霞鹜文楷 / 朱雀仿宋。本地中文字体构建时自动子集化，不会拖慢网页。</p>
+    <div class="field"><label>选项</label><div class="pills">
+      <label class="pill${cfg.enable ? ' on' : ''}"><input type="checkbox" id="font-enable"${cfg.enable ? ' checked' : ''}>🔤 启用自定义字体</label>
+    </div></div>
+    ${slotField('font-selected', '全局字体（正文与界面）', fontOpts(cfg.selected))}
+    <div class="grid2">
+      ${slotField('font-banner-title', '横幅主标题', regionOpts(cfg.bannerTitleFont))}
+      ${slotField('font-banner-sub', '横幅副标题', regionOpts(cfg.bannerSubtitleFont))}
+      ${slotField('font-navbar', '导航栏标题', regionOpts(cfg.navbarTitleFont))}
+      ${slotField('font-code', '代码字体', regionOpts(cfg.codeFont))}
+    </div>
+    <p class="hint">已注册字体 ${fonts.length} 款：${fonts.map((f) => esc(f.name)).join('、')}。想再加新字体，先在 fontConfig.ts 的 fontsList 里注册，之后这里就能选。</p>
+  </div>`;
+
+  $('#btn-back').onclick = () => { location.hash = '#/dashboard'; };
+  view.querySelectorAll('.pill input[type=checkbox]').forEach((el) => {
+    el.onchange = () => el.closest('.pill').classList.toggle('on', el.checked);
+  });
+  $('#btn-save-fonts').onclick = async () => {
+    const enable = $('#font-enable').checked;
+    const vals = {
+      selected: $('#font-selected').value,
+      bannerTitleFont: $('#font-banner-title').value,
+      bannerSubtitleFont: $('#font-banner-sub').value,
+      navbarTitleFont: $('#font-navbar').value,
+      codeFont: $('#font-code').value,
+    };
+    const idx = src.indexOf('export const fontConfig');
+    if (idx < 0) { toast('没找到 fontConfig 段，文件结构可能变了'); return; }
+    let tail = src.slice(idx);
+    tail = tail.replace(/enable:\s*(true|false)/, 'enable: ' + enable);
+    tail = tail.replace(/selected:\s*\[[^\]]*\]/, `selected: [${JSON.stringify(vals.selected)}]`);
+    for (const k of ['bannerTitleFont', 'bannerSubtitleFont', 'navbarTitleFont', 'codeFont']) {
+      tail = tail.replace(new RegExp(k + ':\\s*"[^"]*"'), `${k}: ${JSON.stringify(vals[k])}`);
+    }
+    const newSrc = src.slice(0, idx) + tail;
+    if (newSrc === src) { toast('没有改动'); return; }
+    try {
+      await saveWithLog(FONT_PATH, newSrc, sha, '修改字体设置 [管理台]', { type: '字体', action: '更新', target: '字体设置' });
+      toast('字体设置已保存，重新构建后生效');
+      routes.fonts();
+    } catch (e) { toast('保存失败：' + e.message); }
+  };
 };
 
 /* ---------- 启动 ---------- */

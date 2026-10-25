@@ -139,13 +139,12 @@ const dataJson = JSON.stringify(
 		};
 	});
 
-	let t = 0, rot = 0;
+	let rot = 0;
 	const relDepth = (z) => (((z - cam) % 1) + 1) % 1; /* 相对深度：0=贴脸，1=最远 */
 	const persp = (d) => 1 / (0.22 + d * 1.9); /* 透视系数：近大远小 */
 	function frame() {
-		t++;
-		rot += 0.00035;
-		cam += 0.0006 + camVel; /* 基础慢速前进 + 滚轮冲量（冲量逐帧衰减） */
+		/* 接近静止：不自动前进、不公转、不上下浮、不闪烁；只有滚轮冲量时才穿行，冲量衰减完就停 */
+		cam += camVel;
 		camVel *= 0.94;
 		// 背景用 CSS 渐变，这里只清屏
 		ctx.fillStyle = '#050510';
@@ -161,7 +160,7 @@ const dataJson = JSON.stringify(
 			const x = cx + Math.cos(s.angle + rot * 0.6) * s.rad * W * p * 0.5;
 			const y = cy + Math.sin(s.angle + rot * 0.6) * s.rad * H * 0.65 * p * 0.5;
 			const near = Math.min(1, d / 0.08);
-			ctx.globalAlpha = (0.25 + 0.55 * Math.abs(Math.sin(t * 0.02 + s.ph))) * (0.35 + 0.65 * (1 - d)) * near;
+			ctx.globalAlpha = (0.3 + 0.5 * (0.5 + 0.5 * Math.sin(s.ph))) * (0.35 + 0.65 * (1 - d)) * near; /* 亮度按相位固定，不闪烁 */
 			const rr = Math.max(0.5, s.r * p * 0.8);
 			ctx.fillRect(x, y, rr, rr);
 		}
@@ -178,14 +177,21 @@ const dataJson = JSON.stringify(
 			const p = persp(d);
 			const a = n.angle + rot;
 			const x = cx + Math.cos(a) * n.rad * W * p * 0.5;
-			const y = cy + Math.sin(a) * n.rad * H * 0.65 * p * 0.5 + Math.sin(t * 0.01 + n.bobP) * Math.min(9, 3.5 * p);
-			const fs = Math.max(8, Math.min(34, Math.round((11 + n.sz * 7) * p)));
+			const y = cy + Math.sin(a) * n.rad * H * 0.65 * p * 0.5;
+			let fs = Math.max(8, Math.min(34, Math.round((11 + n.sz * 7) * p)));
 			ctx.font = `500 ${fs}px sans-serif`;
+			/* 长标题在窄屏上按宽度收字号：整行最多占画布宽 86%，不许顶出两边 */
+			let tw = ctx.measureText(n.it.title).width;
+			if (tw > W * 0.86 && tw > 0) {
+				fs = Math.max(8, Math.floor(fs * (W * 0.86) / tw));
+				ctx.font = `500 ${fs}px sans-serif`;
+				tw = ctx.measureText(n.it.title).width;
+			}
 			n.x = x; n.y = y;
-			n.w = ctx.measureText(n.it.title).width + 20;
+			n.w = tw + 20;
 			n.h = fs + 14;
-			const near = Math.min(1, d / 0.09);
-			ctx.globalAlpha = (0.55 + n.sz * 0.4) * (0.3 + 0.7 * (1 - d)) * near;
+			const near = Math.min(1, d / 0.16); /* 贴近时提前淡出，不糊脸 */
+			ctx.globalAlpha = (0.9 + n.sz * 0.1) * (0.78 + 0.22 * (1 - d)) * near; /* 整体提亮，对齐参考站的亮白 */
 			ctx.fillStyle = '#fff';
 			ctx.fillText(n.it.title, x, y);
 		}

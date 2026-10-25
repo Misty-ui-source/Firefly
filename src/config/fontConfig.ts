@@ -63,6 +63,15 @@ export const fontsList: FontDefinition[] = [
 			"monospace",
 		],
 	},
+	{
+		name: "Noto Serif SC",
+		cssVariable: "--font-noto-serif-sc",
+		provider: "fontsource",
+		weights: ["400", "600", "700", "900"],
+		styles: ["normal"],
+		subsets: ["chinese-simplified", "latin"],
+		fallbacks: ["serif"],
+	},
 	// ─── 本地字体示例 ───
 	// 使用步骤：
 	// 1. 将 TTF/OTF/WOFF2 字体文件放在 public/assets/fonts/ 目录下
@@ -80,6 +89,32 @@ export const fontsList: FontDefinition[] = [
 			],
 		},
 		fallbacks: ["sans-serif"],
+	},
+	{
+		name: "LXGW WenKai GB Lite",
+		cssVariable: "--font-lxgw-wenkai",
+		provider: "local",
+		options: {
+			variants: [
+				{
+					src: ["./public/assets/fonts/LXGWWenKaiGBLite-Regular.ttf"],
+				},
+			],
+		},
+		fallbacks: ["serif"],
+	},
+	{
+		name: "Zhuque Fangsong",
+		cssVariable: "--font-zhuque-fangsong",
+		provider: "local",
+		options: {
+			variants: [
+				{
+					src: ["./public/assets/fonts/ZhuqueFangsong-Regular.ttf"],
+				},
+			],
+		},
+		fallbacks: ["serif"],
 	},
 ];
 
@@ -107,6 +142,12 @@ export const fontConfig: FontSelectionConfig = {
 	subsetFonts: {
 		"--font-greatvibes": {
 			// 额外包含的字符
+			extraChars: "",
+		},
+		"--font-lxgw-wenkai": {
+			extraChars: "",
+		},
+		"--font-zhuque-fangsong": {
 			extraChars: "",
 		},
 	},
