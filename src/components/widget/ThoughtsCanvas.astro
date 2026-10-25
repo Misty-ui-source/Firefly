@@ -104,54 +104,66 @@ const dataJson = JSON.stringify(
 	resize();
 	window.addEventListener('resize', resize);
 
-	// 滚轮纵深：下滚向前飞（放大），上滚后退；目标值在 frame 里平滑趋近
-	let zoom = 1, zoomTarget = 1;
+	// 纵深穿行：cam 是相机深度（无限前进，节点深度取模循环）；滚轮给速度冲量，下滚向前、上滚后退
+	let cam = 0, camVel = 0;
 	canvas.addEventListener('wheel', (e) => {
 		e.preventDefault();
 		const d = Math.max(-120, Math.min(120, e.deltaY));
-		zoomTarget = Math.max(0.55, Math.min(2.4, zoomTarget * Math.exp(-d * 0.0016)));
+		camVel = Math.max(-0.012, Math.min(0.012, camVel + d * 0.000045));
 	}, { passive: false });
 
-	// 220 颗星，闪烁用查表减少计算
+	// 220 颗星：各自带深度，跟文字同一套投影，穿行时从身边掠过
 	const stars = [];
 	for (let i = 0; i < 220; i++) {
 		stars.push({
-			x: Math.random(), y: Math.random(),
+			angle: Math.random() * 6.283,
+			rad: 0.08 + Math.random() * 0.55,
+			z: Math.random(),
 			r: Math.random() * 1.2 + 0.3,
 			ph: Math.random() * 6.28,
 		});
 	}
 
-	// 文字节点
+	// 文字节点：角度/半径决定在深度截面上的位置，z 是深度（按序号均分+抖动，保证任意数量都铺满纵深）
 	const nodes = items.map((it, i) => {
 		const n = Math.max(items.length, 1);
 		return {
 			it,
 			angle: (i / n) * 6.283 + Math.random() * 0.4,
 			rad: 0.2 + Math.random() * 0.25,
+			z: ((i + 0.15 + Math.random() * 0.7) / n) % 1,
 			sz: 0.6 + Math.random() * 0.4,
-			spd: 0.00015 + Math.random() * 0.0002,
 			bobP: Math.random() * 6.28,
+			pd: 1,
 			x: 0, y: 0, w: 0, h: 0,
 		};
 	});
 
-	let t = 0;
+	let t = 0, rot = 0;
+	const relDepth = (z) => (((z - cam) % 1) + 1) % 1; /* 相对深度：0=贴脸，1=最远 */
+	const persp = (d) => 1 / (0.22 + d * 1.9); /* 透视系数：近大远小 */
 	function frame() {
 		t++;
-		zoom += (zoomTarget - zoom) * 0.07;
+		rot += 0.00035;
+		cam += 0.0006 + camVel; /* 基础慢速前进 + 滚轮冲量（冲量逐帧衰减） */
+		camVel *= 0.94;
 		// 背景用 CSS 渐变，这里只清屏
 		ctx.fillStyle = '#050510';
 		ctx.fillRect(0, 0, W, H);
 
 		const cx = W / 2, cy = H / 2;
 
-		// 星星（带轻微视差，跟随纵深缩放）
-		const sf = 0.75 + zoom * 0.25;
+		// 星星
 		ctx.fillStyle = '#fff';
 		for (const s of stars) {
-			ctx.globalAlpha = 0.3 + 0.5 * Math.abs(Math.sin(t * 0.02 + s.ph));
-			ctx.fillRect(cx + (s.x * W - cx) * sf, cy + (s.y * H - cy) * sf, s.r, s.r);
+			const d = relDepth(s.z);
+			const p = persp(d);
+			const x = cx + Math.cos(s.angle + rot * 0.6) * s.rad * W * p * 0.5;
+			const y = cy + Math.sin(s.angle + rot * 0.6) * s.rad * H * 0.65 * p * 0.5;
+			const near = Math.min(1, d / 0.08);
+			ctx.globalAlpha = (0.25 + 0.55 * Math.abs(Math.sin(t * 0.02 + s.ph))) * (0.35 + 0.65 * (1 - d)) * near;
+			const rr = Math.max(0.5, s.r * p * 0.8);
+			ctx.fillRect(x, y, rr, rr);
 		}
 		ctx.globalAlpha = 1;
 
@@ -159,15 +171,21 @@ const dataJson = JSON.stringify(
 		ctx.textBaseline = 'middle';
 
 		for (const n of nodes) {
-			const a = n.angle + t * n.spd;
-			const x = cx + Math.cos(a) * n.rad * W * zoom;
-			const y = cy + Math.sin(a) * n.rad * H * 0.65 * zoom + Math.sin(t * 0.01 + n.bobP) * 10;
-			const fs = Math.round((11 + n.sz * 7) * Math.min(zoom, 1.7));
+			const d = relDepth(n.z);
+			/* 刚从身边掠过、绕回最远处时换个位置，避免穿行路线一成不变 */
+			if (n.pd < 0.15 && d > 0.85) { n.angle = Math.random() * 6.283; n.rad = 0.2 + Math.random() * 0.25; }
+			n.pd = d;
+			const p = persp(d);
+			const a = n.angle + rot;
+			const x = cx + Math.cos(a) * n.rad * W * p * 0.5;
+			const y = cy + Math.sin(a) * n.rad * H * 0.65 * p * 0.5 + Math.sin(t * 0.01 + n.bobP) * Math.min(9, 3.5 * p);
+			const fs = Math.max(8, Math.min(34, Math.round((11 + n.sz * 7) * p)));
 			ctx.font = `500 ${fs}px sans-serif`;
 			n.x = x; n.y = y;
 			n.w = ctx.measureText(n.it.title).width + 20;
 			n.h = fs + 14;
-			ctx.globalAlpha = 0.55 + n.sz * 0.4;
+			const near = Math.min(1, d / 0.09);
+			ctx.globalAlpha = (0.55 + n.sz * 0.4) * (0.3 + 0.7 * (1 - d)) * near;
 			ctx.fillStyle = '#fff';
 			ctx.fillText(n.it.title, x, y);
 		}
