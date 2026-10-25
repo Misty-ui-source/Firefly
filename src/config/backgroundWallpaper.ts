@@ -75,8 +75,7 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 		playerUrl: "https://bed.twoleaf.cn/file/1785658612716_firefly.mp4",
 	},
 	// 已禁用的壁纸（不参与轮换，保留在上面列表中可随时恢复）。由管理台维护，手动编辑请保持 URL 与上面一致
-	disabled: [
-	],
+	disabled: [],
 	// 横幅壁纸和全屏壁纸共享配置
 	common: {
 		// 壁纸遮罩暗度，让横幅文字显示更清晰，0-1之间，值越大越暗
