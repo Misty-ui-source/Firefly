@@ -100,7 +100,7 @@ export const friendsConfig: FriendLink[] = [
 		tags: ["Blog"],
 		weight: 7,
 		enabled: true,
-		rss: "",
+		rss: "https://blog.nekro.top/rss.xml",
 	},
 	{
 		title: "Ariasakaの小窝",
