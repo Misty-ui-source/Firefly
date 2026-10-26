@@ -584,6 +584,7 @@ function router() {
     if (routes[page]) routes[page](decodeURIComponent(arg || ''));
     else routes.dashboard();
     syncLvSegs();
+    mountRail();
   };
   const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (page === 'login' || reduced) { render(); queueReportPopup(page); return; }
@@ -1431,6 +1432,84 @@ function heatmapSVG(byDay, label, palette) {
   return s + '</svg>';
 }
 
+/* 🛰 卫星星空页设置：读写 src/config/gnssConfig.ts（标题/简介/默认观察点/默认截止角/使用说明）。 */
+async function mountGnssSection() {
+  if ($('#gnss-sec')) return;
+  const diaryCard = document.querySelector('#diary-list')?.closest('.card');
+  const anchor = diaryCard || $('#list');
+  if (!anchor) return;
+  const sec = document.createElement('div');
+  sec.className = 'card';
+  sec.id = 'gnss-sec';
+  sec.innerHTML = `<h2>🛰 卫星星空</h2>
+    <p class="hint">博客 /gnss/ 页的标题、简介、默认观察点和「使用说明」都在这里改，保存后重新构建生效。<span class="meta copyable" data-copy="/gnss/" title="点击复制页面地址">/gnss/ 📋</span></p>
+    <div id="gnss-form"><p class="hint">读取中…</p></div>`;
+  anchor.after(sec);
+  const box = sec.querySelector('#gnss-form');
+  const PATH = 'src/config/gnssConfig.ts';
+  try {
+    const cf = await ghGetFile(PATH);
+    let cSha = cf.sha;
+    const t = cf.text;
+    const pickS = (key, dft) => { const m = t.match(new RegExp(key + '\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"')); try { return m ? JSON.parse('"' + m[1] + '"') : dft; } catch (e) { return dft; } };
+    const pickN = (key, dft) => { const m = t.match(new RegExp(key + '\\s*:\\s*(-?[\\d.]+)')); return m ? parseFloat(m[1]) : dft; };
+    let notes = [];
+    const nm = t.match(/notes\s*:\s*(\[[\s\S]*?\])\s*,?\s*\};/);
+    if (nm) { try { notes = JSON.parse(nm[1].replace(/,\s*\]/, ']')); } catch (e) { notes = []; } }
+    const cfg = {
+      title: pickS('title', '卫星星空'), description: pickS('description', ''),
+      defaultLat: pickN('defaultLat', 32.0603), defaultLon: pickN('defaultLon', 118.7969),
+      defaultAlt: pickN('defaultAlt', 20), defaultCutoff: pickN('defaultCutoff', 10),
+      notesTitle: pickS('notesTitle', '使用说明'), notes,
+    };
+    box.innerHTML = `
+      <div class="field"><label>页面标题</label><input type="text" id="gn-title" value="${esc(cfg.title)}"></div>
+      <div class="field"><label>页面简介</label><input type="text" id="gn-desc" value="${esc(cfg.description)}"></div>
+      <div class="grid2">
+        <div class="field"><label>默认纬度</label><input type="text" id="gn-lat" value="${cfg.defaultLat}"></div>
+        <div class="field"><label>默认经度</label><input type="text" id="gn-lon" value="${cfg.defaultLon}"></div>
+        <div class="field"><label>默认高度（米）</label><input type="text" id="gn-alt" value="${cfg.defaultAlt}"></div>
+        <div class="field"><label>默认高度角截止</label><select id="gn-cut">${[0, 10, 15, 30].map((v) => `<option value="${v}" ${v === cfg.defaultCutoff ? 'selected' : ''}>${v}°</option>`).join('')}</select></div>
+      </div>
+      <div class="field"><label>说明卡标题</label><input type="text" id="gn-ntitle" value="${esc(cfg.notesTitle)}"></div>
+      <div class="field"><label>使用说明（每行一条，可用 &lt;strong&gt;加粗&lt;/strong&gt;）</label><textarea id="gn-notes" rows="7">${esc(cfg.notes.join('\n'))}</textarea></div>
+      <button class="btn" id="gn-save">💾 保存卫星星空设置</button>`;
+    box.querySelector('#gn-save').onclick = async () => {
+      const num = (id) => parseFloat(box.querySelector(id).value);
+      const lat = num('#gn-lat'), lon = num('#gn-lon'), alt = num('#gn-alt');
+      if (!isFinite(lat) || lat < -90 || lat > 90) { toast('纬度要在 -90 ~ 90 之间', true); return; }
+      if (!isFinite(lon) || lon < -180 || lon > 180) { toast('经度要在 -180 ~ 180 之间', true); return; }
+      if (!isFinite(alt)) { toast('高度要填数字', true); return; }
+      const out = {
+        title: box.querySelector('#gn-title').value.trim() || '卫星星空',
+        description: box.querySelector('#gn-desc').value.trim(),
+        defaultLat: lat, defaultLon: lon, defaultAlt: alt,
+        defaultCutoff: parseInt(box.querySelector('#gn-cut').value, 10),
+        notesTitle: box.querySelector('#gn-ntitle').value.trim() || '使用说明',
+        notes: box.querySelector('#gn-notes').value.split('\n').map((x) => x.trim()).filter(Boolean),
+      };
+      const text = '// GNSS 卫星星空页配置：标题、默认观察点与使用说明。\n'
+        + '// 也可以在管理台「单页 → 🛰 卫星星空」里改。\n'
+        + 'export const gnssConfig = {\n'
+        + `\ttitle: ${JSON.stringify(out.title)},\n`
+        + `\tdescription: ${JSON.stringify(out.description)},\n`
+        + `\tdefaultLat: ${out.defaultLat},\n`
+        + `\tdefaultLon: ${out.defaultLon},\n`
+        + `\tdefaultAlt: ${out.defaultAlt},\n`
+        + `\tdefaultCutoff: ${out.defaultCutoff},\n`
+        + `\tnotesTitle: ${JSON.stringify(out.notesTitle)},\n`
+        + '\tnotes: [\n'
+        + out.notes.map((n) => '\t\t' + JSON.stringify(n) + ',').join('\n') + '\n'
+        + '\t],\n};\n';
+      try {
+        const res = await saveWithLog(PATH, text, cSha, '卫星星空页设置更新 [管理台]', { type: '单页', action: '改卫星星空设置', target: out.title });
+        cSha = res.content.sha;
+        toast('卫星星空设置已保存，重新构建后生效');
+      } catch (e) { toast(e.message, true); }
+    };
+  } catch (e) { box.innerHTML = '<p class="hint">读不到 src/config/gnssConfig.ts（可能还没上线这个文件）。</p>'; }
+}
+
 /* 单页评论区开关：写各页专属配置里的 showComment（友链/打赏/动态）。
  * 留言板跟全局评论走、一直开着；关于页模板里没评论组件，开不了——都不在此列。 */
 const SPEC_COMMENT_TARGETS = [
@@ -1647,6 +1726,66 @@ async function mountLinkCardButton() {
   }
 }
 
+/* 右侧栏快捷入口默认表（config.js 的 quickLinks 优先；「🧭 导航」页可改） */
+const QUICK_LINK_DEFAULTS = [
+  { icon: '🌐', label: '博客首页', url: 'https://lanerc.me/' },
+  { icon: '🐙', label: 'GitHub 仓库', url: 'https://github.com/Misty-ui-source/Firefly' },
+  { icon: '☁️', label: 'Cloudflare', url: 'https://dash.cloudflare.com' },
+  { icon: '▲', label: 'Vercel', url: 'https://vercel.com/dashboard' },
+  { icon: '💬', label: 'Waline 后台', url: 'https://waline.lanerc.me/ui' },
+  { icon: '✨', label: 'Muse', url: 'https://muse.ai' },
+  { icon: '🐧', label: 'Linux.do', url: 'https://linux.do/' },
+  { icon: '🕰️', label: '旧站', url: 'https://www.lanerc.me' },
+  { icon: '📝', label: '写作报告', url: '#/stats' },
+];
+function railQuickLinks() {
+  const cfg = (CFG && Array.isArray(CFG.quickLinks) && CFG.quickLinks.length) ? CFG.quickLinks : null;
+  if (cfg) return cfg;
+  const list = QUICK_LINK_DEFAULTS.slice();
+  const umami = CFG && CFG.navExternal && CFG.navExternal.umami;
+  if (umami) list.splice(5, 0, { icon: '📊', label: 'Umami 统计', url: umami });
+  return list;
+}
+function renderRailLinks() {
+  const box = $('#rail-links');
+  if (!box) return;
+  box.innerHTML = railQuickLinks().map((l) => {
+    const ext = /^https?:/i.test(l.url || '');
+    return `<a href="${esc(l.url || '#')}" ${ext ? 'target="_blank" rel="noopener"' : ''}>${esc(l.icon || '🔗')} ${esc(l.label || '')}</a>`;
+  }).join('');
+}
+
+/* 右侧信息栏（仅 PC 宽屏 side/mix 显示，CSS 控制）：快捷入口 + 最近操作 + GNSS 星历状态。 */
+async function refreshRailOps() {
+  const box = $('#rail-ops');
+  if (!box) return;
+  try {
+    await oplogCurrentText();
+    const list = (Array.isArray(window._oplogEntries) ? window._oplogEntries : []).slice(-5).reverse();
+    box.innerHTML = list.length ? list.map((e) => `<div class="rail-op"><span class="t">${esc(e.type || '')} · ${esc(e.action || '')}</span><span class="g">${esc(e.target || '')}</span><time>${esc(String(e.ts || '').slice(5, 10))}</time></div>`).join('') : '<p class="hint">暂无操作记录</p>';
+  } catch (e) { box.innerHTML = '<p class="hint">读取失败</p>'; }
+}
+async function mountRail() {
+  const rail = $('#rail');
+  if (!rail) return;
+  if (rail.dataset.done) { renderRailLinks(); refreshRailOps(); return; }
+  rail.dataset.done = '1';
+  rail.innerHTML = `
+    <div class="card rail-card"><h3>🧭 快捷入口</h3><div class="rail-links" id="rail-links"></div></div>
+    <div class="card rail-card"><h3>🕘 最近操作</h3><div id="rail-ops"><p class="hint">读取中…</p></div></div>
+    <div class="card rail-card" id="rail-gnss-card" hidden><h3>🛰 星历数据</h3><p class="hint" id="rail-gnss"></p></div>`;
+  renderRailLinks();
+  refreshRailOps();
+  try {
+    const m = await (await fetch('https://raw.githubusercontent.com/Misty-ui-source/Firefly/main/gnss-data/meta.json', { cache: 'no-store' })).json();
+    const card = $('#rail-gnss-card'), line = $('#rail-gnss');
+    if (card && line && m && m.updatedAtBj) {
+      line.textContent = `数据日期 ${(m.brdcDates || []).join(' ~ ') || '-'} · 更新于 ${m.updatedAtBj}（北京时间）`;
+      card.hidden = false;
+    }
+  } catch (e) { /* 拿不到星历状态就整卡不显示 */ }
+}
+
 /* 列表页 */
 function listRoute(key) {
   return async () => {
@@ -1660,7 +1799,7 @@ function listRoute(key) {
       </div><div id="list"></div>`;
     $('#btn-new').onclick = () => { location.hash = `#/edit/${key}/__new__`; };
     if (key === 'posts') mountLinkCardButton();
-    if (key === 'spec') { mountSpecCommentCard(); mountDiarySection(); }
+    if (key === 'spec') { mountSpecCommentCard(); mountDiarySection(); mountGnssSection(); }
     const listEl = $('#list');
     /* 文章列表排序：默认文件名倒序，点按钮切到发布时间倒序（日期回填完会自动按当前模式重排） */
     let rowsRef = null;
@@ -3632,7 +3771,7 @@ routes.navmgr = async () => {
   view.innerHTML = `<div class="toolbar"><span class="spacer"></span>
       <button class="btn" id="btn-navmsave" disabled>💾 保存到仓库</button></div>
     <p class="hint">调整控制台导航栏：↑↓ 排序，→··· / ←主栏 切换分组，改名自定义显示名称。下方还能定首页显示哪些卡片。保存后所有设备生效。</p>
-    <div id="navm-list"></div><div id="navm-home"></div>`;
+    <div id="navm-list"></div><div id="navm-home"></div><div id="navm-quick"></div>`;
   render();
   $('#btn-navmsave').onclick = async () => {
     const btn = $('#btn-navmsave'); btn.disabled = true;
@@ -3649,6 +3788,65 @@ routes.navmgr = async () => {
       toast('已保存，刷新页面生效');
     } catch (e) { toast(e.message, true); btn.disabled = false; }
   };
+  /* ---------- 右侧栏快捷入口（config.js 的 quickLinks；仅 side/mix 宽屏右栏可见） ---------- */
+  const qUnesc = (v) => v.replace(/\\'/g, "'").replace(/\\\\/g, '\\');
+  const qEsc = (v) => String(v || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const parseQuick = (t) => {
+    const m = t.match(/quickLinks\s*:\s*\[([\s\S]*?)\],\n/);
+    if (!m) return null;
+    const out = [];
+    const re = /\{\s*icon:\s*'((?:[^'\\]|\\.)*)',\s*label:\s*'((?:[^'\\]|\\.)*)',\s*url:\s*'((?:[^'\\]|\\.)*)'\s*\}/g;
+    let mm;
+    while ((mm = re.exec(m[1]))) out.push({ icon: qUnesc(mm[1]), label: qUnesc(mm[2]), url: qUnesc(mm[3]) });
+    return out.length ? out : null;
+  };
+  let quick = parseQuick(cfgText) || QUICK_LINK_DEFAULTS.map((x) => ({ ...x }));
+  const qbox = $('#navm-quick');
+  const readQuickRows = () => [...qbox.querySelectorAll('.q-row')].map((r) => ({
+    icon: r.querySelector('.q-icon').value.trim(),
+    label: r.querySelector('.q-label').value.trim(),
+    url: r.querySelector('.q-url').value.trim(),
+  })).filter((x) => x.label && x.url);
+  function renderQuick() {
+    qbox.innerHTML = `<div class="card"><h3>🧭 右侧栏快捷入口</h3>
+      <p class="hint">仅在「左侧边栏 / 混合」布局、PC 宽屏（≥1680）时显示在右侧栏，平板和手机上看不到。链接以 http 开头会在新标签打开；站内页用 #/ 开头（如 #/stats）。</p>
+      ${quick.map((l) => `<div class="list-item q-row">
+        <input class="q-icon" type="text" value="${esc(l.icon)}" maxlength="4" title="图标 emoji">
+        <input class="q-label" type="text" value="${esc(l.label)}" placeholder="名称">
+        <input class="q-url" type="text" value="${esc(l.url)}" placeholder="https:// 或 #/">
+        <button class="btn btn-small" data-qa="up">↑</button><button class="btn btn-small" data-qa="down">↓</button>
+        <button class="btn btn-small btn-danger" data-qa="del">✕</button>
+      </div>`).join('')}
+      <div class="toolbar"><button class="btn btn-small" id="btn-qadd">＋ 添加入口</button><span class="spacer"></span><button class="btn" id="btn-qsave">💾 保存快捷入口</button></div>
+    </div>`;
+    qbox.querySelectorAll('.q-row').forEach((r, i) => {
+      r.querySelector('[data-qa=up]').onclick = () => { quick = readQuickRows(); if (i > 0) { [quick[i - 1], quick[i]] = [quick[i], quick[i - 1]]; renderQuick(); } };
+      r.querySelector('[data-qa=down]').onclick = () => { quick = readQuickRows(); if (i < quick.length - 1) { [quick[i + 1], quick[i]] = [quick[i], quick[i + 1]]; renderQuick(); } };
+      r.querySelector('[data-qa=del]').onclick = () => { quick = readQuickRows(); quick.splice(i, 1); renderQuick(); };
+    });
+    qbox.querySelector('#btn-qadd').onclick = () => { quick = readQuickRows(); quick.push({ icon: '🔗', label: '', url: 'https://' }); renderQuick(); };
+    qbox.querySelector('#btn-qsave').onclick = async () => {
+      quick = readQuickRows();
+      if (!quick.length) { toast('至少留一个入口', true); return; }
+      const block = '  quickLinks: [\n' + quick.map((l) => `    { icon: '${qEsc(l.icon)}', label: '${qEsc(l.label)}', url: '${qEsc(l.url)}' },`).join('\n') + '\n  ],\n';
+      let text;
+      if (/quickLinks\s*:\s*\[[\s\S]*?\],\n/.test(cfgText)) {
+        text = cfgText.replace(/quickLinks\s*:\s*\[[\s\S]*?\],\n/, block);
+      } else {
+        const m2 = cfgText.match(/navLayout\s*:\s*\{[\s\S]*?\n  \},\n/);
+        if (!m2) { toast('配置格式对不上，没改动', true); return; }
+        text = cfgText.replace(m2[0], m2[0] + '\n' + block);
+      }
+      try {
+        const r = await saveWithLog(NAVMGR_PATH, text, sha, '更新右侧栏快捷入口 [管理台]', { type: '导航', action: '改快捷入口', target: `${quick.length} 个入口` });
+        sha = r.content.sha; cfgText = text;
+        CFG.quickLinks = quick.map((x) => ({ ...x }));
+        renderRailLinks();
+        toast('快捷入口已保存（仅左侧边栏/混合布局的宽屏右栏可见）');
+      } catch (e) { toast(e.message, true); }
+    };
+  }
+  renderQuick();
 };
 
 /* ---------- 站点导航管理：src/config/navBarConfig.ts（博客顶栏，非控制台自己的导航） ---------- */
