@@ -2262,8 +2262,19 @@ function parseAnnHistory(src) {
   while ((m = re.exec(src))) out.push({ date: un(m[1]), content: un(m[2]) });
   return out;
 }
-function buildAnnouncementTs({ content, closable, linkEnable, linkText, linkUrl, external, mode, geoTemplate, ownerCity, ownerLat, ownerLon, geoLinkEnable, geoLinkText, geoLinkUrl, geoExternal, history }) {
+/* 解析常用地址预设：[{ label, city, lat, lon }, ...] */
+function parseAnnPlaces(src) {
+  const out = [];
+  const block = (src.match(/ownerPlaces\s*:\s*\[([\s\S]*?)\]/) || [])[1] || '';
+  const re = /\{\s*label:\s*"((?:[^"\\]|\\.)*)",\s*city:\s*"((?:[^"\\]|\\.)*)",\s*lat:\s*(-?[\d.]+),\s*lon:\s*(-?[\d.]+)\s*\}/g;
+  const un = (x) => x.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+  let m;
+  while ((m = re.exec(block))) out.push({ label: un(m[1]), city: un(m[2]), lat: parseFloat(m[3]), lon: parseFloat(m[4]) });
+  return out;
+}
+function buildAnnouncementTs({ content, closable, linkEnable, linkText, linkUrl, external, mode, geoTemplate, ownerCity, ownerLat, ownerLon, ownerPlaces, geoLinkEnable, geoLinkText, geoLinkUrl, geoExternal, history }) {
   const histLines = (history || []).map((h) => `\t\t{ date: "${tsEsc(h.date)}", content: "${tsEsc(h.content)}" },`).join('\n');
+  const placeLines = (ownerPlaces || []).map((pl) => `\t\t{ label: "${tsEsc(pl.label)}", city: "${tsEsc(pl.city)}", lat: ${Number.isFinite(pl.lat) ? pl.lat : 0}, lon: ${Number.isFinite(pl.lon) ? pl.lon : 0} },`).join('\n');
   return `import type { AnnouncementConfig } from "../types/announcementConfig";
 
 export const announcementConfig: AnnouncementConfig = {
@@ -2283,6 +2294,9 @@ export const announcementConfig: AnnouncementConfig = {
 \townerCity: "${tsEsc(ownerCity)}",
 \townerLat: ${Number.isFinite(ownerLat) ? ownerLat : 0},
 \townerLon: ${Number.isFinite(ownerLon) ? ownerLon : 0},
+
+\t// 常用地址预设（控制台公告页维护，点预设切换到上面的 ownerCity/ownerLat/ownerLon）
+\townerPlaces: [${placeLines ? `\n${placeLines}\n\t` : ''}],
 
 \t// 是否允许用户关闭公告
 \tclosable: ${closable},
@@ -2319,6 +2333,7 @@ routes.announce = async () => {
   let mode = 'static', geoTemplate = '', ownerCity = '南京', ownerLat = 32.0603, ownerLon = 118.7969;
   let geoLinkEnable = true, geoLinkText = '', geoLinkUrl = '';
   let annHistory = [];
+  let annPlaces = [], loadedPlaces = [];
   try {
     const data = await ghGetFile(ANN_PATH);
     sha = data.sha;
@@ -2341,6 +2356,9 @@ routes.announce = async () => {
     geoLinkUrl = tsGetStr(geoLinkBlock, 'url');
     geoExternal = tsGetBool(geoLinkBlock, 'external', false);
     annHistory = parseAnnHistory(src);
+    annPlaces = parseAnnPlaces(src);
+    if (!annPlaces.length) annPlaces = [{ label: ownerCity, city: ownerCity, lat: ownerLat, lon: ownerLon }];
+    loadedPlaces = annPlaces.slice();
   } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
 
   view.innerHTML = `
@@ -2381,6 +2399,11 @@ routes.announce = async () => {
       <div class="grid2">
         <div class="field"><label>博主所在城市</label><input type="text" id="ann-owner-city" value="${esc(ownerCity)}" placeholder="南京"></div>
         <div class="field"><label>城市坐标（纬度, 经度）</label><input type="text" id="ann-owner-coords" value="${ownerLat}, ${ownerLon}" placeholder="32.0603, 118.7969"></div>
+      </div>
+      <div class="field"><label>📍 常用地址</label>
+        <div id="ann-places-list"></div>
+        <p class="hint">出差、回家不用再查坐标：点预设的「使用」填进上面的城市和坐标，再点「保存公告」生效；增删会跟公告草稿一起自动暂存。</p>
+        <button class="btn btn-ghost" id="btn-ann-place-add" type="button">＋ 把当前城市存为常用地址</button>
       </div>
       <div class="field"><label>「了解更多」链接</label><div class="pills">
         <label class="pill${geoLinkEnable ? ' on' : ''}"><input type="checkbox" id="ann-geolink-enable"${geoLinkEnable ? ' checked' : ''}>🔗 显示链接</label>
@@ -2426,6 +2449,7 @@ routes.announce = async () => {
       ownerCity: $('#ann-owner-city') ? $('#ann-owner-city').value : '',
       ownerLat: Number.isFinite(coords[0]) ? coords[0] : 0,
       ownerLon: Number.isFinite(coords[1]) ? coords[1] : 0,
+      places: annPlaces,
       geoLinkEnable: $('#ann-geolink-enable') ? $('#ann-geolink-enable').checked : true,
       geoLinkText: $('#ann-geolink-text') ? $('#ann-geolink-text').value : '',
       geoLinkUrl: $('#ann-geolink-url') ? $('#ann-geolink-url').value : '',
@@ -2436,12 +2460,12 @@ routes.announce = async () => {
     content: vals.content.trim(), closable: vals.closable,
     linkEnable: vals.linkEnable, linkText: vals.linkText.trim(), linkUrl: vals.linkUrl.trim(), external,
     mode: vals.mode, geoTemplate: vals.geoTemplate.trim(), ownerCity: vals.ownerCity.trim() || '南京',
-    ownerLat: vals.ownerLat, ownerLon: vals.ownerLon,
+    ownerLat: vals.ownerLat, ownerLon: vals.ownerLon, ownerPlaces: vals.places || [],
     geoLinkEnable: vals.geoLinkEnable, geoLinkText: vals.geoLinkText.trim(), geoLinkUrl: vals.geoLinkUrl.trim(), geoExternal,
     history: hist,
   });
   /* 文件里已保存的值（删历史存档时用它生成文本，不带上表单里没保存的改动） */
-  const loadedVals = () => ({ content, closable, linkEnable, linkText, linkUrl, mode, geoTemplate, ownerCity, ownerLat, ownerLon, geoLinkEnable, geoLinkText, geoLinkUrl });
+  const loadedVals = () => ({ content, closable, linkEnable, linkText, linkUrl, mode, geoTemplate, ownerCity, ownerLat, ownerLon, places: loadedPlaces, geoLinkEnable, geoLinkText, geoLinkUrl });
   const renderAnnHistory = () => {
     const box = $('#ann-history-list');
     if (!box) return;
@@ -2469,6 +2493,53 @@ routes.announce = async () => {
       toast('历史公告已删除');
     } catch (e) { toast(e.message, true); }
     routes.announce();
+  };
+  const renderAnnPlaces = () => {
+    const box = $('#ann-places-list');
+    if (!box) return;
+    const curCity = ($('#ann-owner-city') ? $('#ann-owner-city').value : '').trim();
+    const cc = ($('#ann-owner-coords') ? $('#ann-owner-coords').value : '').split(',').map((x) => parseFloat(x));
+    if (!annPlaces.length) { box.innerHTML = '<p class="hint">暂无预设。</p>'; return; }
+    box.innerHTML = annPlaces.map((pl, i) => {
+      const on = pl.city === curCity && Math.abs(pl.lat - cc[0]) < 1e-9 && Math.abs(pl.lon - cc[1]) < 1e-9;
+      return `<div class="list-item"><span class="title">${on ? '✅ ' : ''}${esc(pl.label)} · ${esc(pl.city)}</span>
+        <span class="meta">${pl.lat}, ${pl.lon}</span><span class="spacer"></span>
+        <button class="mini-btn" data-pact="apply" data-i="${i}">使用</button>
+        <button class="mini-btn danger" data-pact="del" data-i="${i}">删除</button></div>`;
+    }).join('');
+    box.querySelectorAll('[data-pact]').forEach((b) => { b.onclick = () => annPlacesAct(b.dataset.pact, parseInt(b.dataset.i, 10)); });
+  };
+  const annPlacesAct = (act, i) => {
+    const pl = annPlaces[i];
+    if (!pl) return;
+    if (act === 'apply') {
+      $('#ann-owner-city').value = pl.city;
+      $('#ann-owner-coords').value = `${pl.lat}, ${pl.lon}`;
+      ['#ann-owner-city', '#ann-owner-coords'].forEach((sel) => { const el = $(sel); if (el) el.dispatchEvent(new Event('input', { bubbles: true })); });
+      renderAnnPlaces();
+      toast(`已填入「${pl.label}」，点「保存公告」后生效`);
+      return;
+    }
+    if (!confirm(`删除常用地址「${pl.label}」？`)) return;
+    annPlaces.splice(i, 1);
+    renderAnnPlaces();
+    annSchedule();
+  };
+  ['#ann-owner-city', '#ann-owner-coords'].forEach((sel) => { const el = $(sel); if (el) el.addEventListener('input', renderAnnPlaces); });
+  const annPlaceAddBtn = $('#btn-ann-place-add');
+  if (annPlaceAddBtn) annPlaceAddBtn.onclick = () => {
+    const city = ($('#ann-owner-city').value || '').trim();
+    const cc = $('#ann-owner-coords').value.split(',').map((x) => parseFloat(x));
+    if (!city) { toast('先填博主所在城市', true); return; }
+    if (!Number.isFinite(cc[0]) || !Number.isFinite(cc[1])) { toast('坐标格式不对，应为 纬度, 经度', true); return; }
+    const label = (prompt('给这个地址起个备注名（如：学校、家、出差）', city) || '').trim();
+    if (!label) return;
+    const ex = annPlaces.findIndex((x) => x.label === label);
+    if (ex >= 0) annPlaces[ex] = { label, city, lat: cc[0], lon: cc[1] };
+    else annPlaces.push({ label, city, lat: cc[0], lon: cc[1] });
+    renderAnnPlaces();
+    annSchedule();
+    toast(`常用地址「${label}」已加入，点「保存公告」后写入`);
   };
   renderAnnHistory();
   const annBaseline = JSON.stringify(annCollect());
@@ -2506,6 +2577,7 @@ routes.announce = async () => {
         if (d.geoTemplate !== undefined) $('#ann-geo-template').value = d.geoTemplate;
         if (d.ownerCity !== undefined) $('#ann-owner-city').value = d.ownerCity;
         if (d.ownerLat !== undefined && d.ownerLon !== undefined) $('#ann-owner-coords').value = `${d.ownerLat}, ${d.ownerLon}`;
+        if (Array.isArray(d.places)) { annPlaces = d.places; renderAnnPlaces(); }
         if (d.geoLinkText !== undefined) $('#ann-geolink-text').value = d.geoLinkText;
         if (d.geoLinkUrl !== undefined) $('#ann-geolink-url').value = d.geoLinkUrl;
         if (d.geoLinkEnable !== undefined) {

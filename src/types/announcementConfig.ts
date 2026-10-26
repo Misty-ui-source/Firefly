@@ -12,6 +12,8 @@ export type AnnouncementConfig = {
 	ownerCity?: string; // 博主所在城市（展示用）
 	ownerLat?: number; // 博主纬度（算距离用）
 	ownerLon?: number; // 博主经度（算距离用）
+	// 常用地址预设（控制台公告页维护；切换预设时写入上面的 ownerCity/ownerLat/ownerLon）
+	ownerPlaces?: { label: string; city: string; lat: number; lon: number }[];
 	link?: {
 		enable: boolean; // 是否启用链接
 		text: string; // 链接文字
