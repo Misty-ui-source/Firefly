@@ -76,7 +76,9 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	// 分模式专属图片（Alexander Console「图片」页维护）：某模式某端有图用专属图，空着回退上面的共享 src
 	modeSrc: {
 		banner: {
-			desktop: [],
+			desktop: [
+				"assets/images/DesktopWallpaper/anime-underwater.jpg",
+			],
 			mobile: [],
 		},
 		fullscreen: {
