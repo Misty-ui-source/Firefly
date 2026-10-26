@@ -425,7 +425,7 @@ routes.images = async (arg) => {
 
     <div class="card">
       <h2>🎠 分模式壁纸 <span class="sub">给每个壁纸模式配专属图和轮播开关（在「🎨 主题」页切换默认模式）</span></h2>
-      <p class="hint">规则：某模式某端<b>有专属图就只用专属图</b>，空着就回退用上面的共享图库。每次改动即时保存 = 一次 commit，构建后生效。</p>
+      <p class="hint">规则：某模式某端<b>有专属图就只用专属图</b>，空着就回退用上面的共享图库。开启轮播就轮播；关掉轮播时，列表<b>第一张</b>就是固定显示的那张——点任意一张的「固定这张」会把它置顶（还开着轮播的话会顺手把该模式轮播关掉）。每次改动即时保存 = 一次 commit，构建后生效。</p>
       ${[['banner', '横幅模式'], ['fullscreen', '全屏模式'], ['overlay', '透明覆盖']].map(([mode, label]) => `
       <div class="wp-mode-sec" id="wp-sec-${mode}">
         <h3>${label}专属图
@@ -602,14 +602,21 @@ routes.images = async (arg) => {
       </div>
     </div>`;
 
-  function modeImgCell(url, list, idx) {
+  function modeImgCell(url, list, idx, mode) {
     const d = document.createElement('div');
     d.className = 'img-cell';
+    // 固定语义（站长定）：某模式开轮播就轮播；关轮播时列表第一张就是固定显示的那张。
+    // 「固定这张」= 把这张置顶；若该模式还开着轮播，顺手关掉（一次保存同时写列表顺序和轮播开关）。
+    const carouselOn = !!wpModeCarousel[mode];
+    const isFixed = !carouselOn && idx === 0;
     d.innerHTML = `<img loading="lazy" src="${esc(cfgImgPreview(url))}" alt="">
-      <div class="url" title="${esc(url)}">${esc(url)}</div>
+      <div class="url" title="${esc(url)}">${esc(url)}${isFixed ? ' · 📌 固定中' : ''}</div>
       <div class="ops">
         <button class="mini-btn" data-a="up">↑</button>
         <button class="mini-btn" data-a="down">↓</button>
+        ${isFixed
+          ? '<button class="mini-btn" data-a="fix" disabled>📌 固定中</button>'
+          : '<button class="mini-btn" data-a="fix">固定这张</button>'}
         <button class="mini-btn danger" data-a="del">删除</button>
       </div>`;
     d.querySelector('[data-a=up]').onclick = async () => {
@@ -621,6 +628,17 @@ routes.images = async (arg) => {
       if (idx === list.length - 1) return;
       [list[idx + 1], list[idx]] = [list[idx], list[idx - 1]];
       try { await saveModeWallpapers(); renderModeWallpapers(); } catch (e) { toast(e.message, true); }
+    };
+    const fixBtn = d.querySelector('[data-a=fix]');
+    if (fixBtn && !isFixed) fixBtn.onclick = async () => {
+      const wasCarousel = !!wpModeCarousel[mode];
+      list.splice(idx, 1);
+      list.unshift(url);
+      if (wasCarousel) wpModeCarousel[mode] = false;
+      try {
+        await saveModeWallpapers(); renderModeWallpapers();
+        toast(wasCarousel ? '已固定这张，该模式轮播已关' : '已固定这张');
+      } catch (e) { toast(e.message, true); }
     };
     d.querySelector('[data-a=del]').onclick = async () => {
       if (!confirm('确定移除这张专属图？')) return;
@@ -636,7 +654,7 @@ routes.images = async (arg) => {
         if (!g) return;
         const list = wpModeSrc[mode][dev];
         g.innerHTML = '';
-        list.forEach((u, i) => g.appendChild(modeImgCell(u, list, i)));
+        list.forEach((u, i) => g.appendChild(modeImgCell(u, list, i, mode)));
         if (!list.length) g.innerHTML = '<p class="hint">暂无专属图，用共享图库 👆</p>';
         const cnt = $(`#wp-cnt-${mode}-${dev}`);
         if (cnt) cnt.textContent = list.length;

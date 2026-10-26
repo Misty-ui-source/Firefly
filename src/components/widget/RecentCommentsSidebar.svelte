@@ -60,6 +60,16 @@ function stripHtml(html: string): string {
 	return div.textContent || div.innerText || "";
 }
 
+// 评论跳转地址：动态没有独立页面（评论的 url 是 /dynamic/<id>/ 这种伪路径），
+// 直接拼会 404，必须转成动态索引页的锚点 /dynamic/#dynamic-<id>（与侧边栏动态组件的链接一致）。
+// 其余页面都是独立页，沿用 页面路径 + #评论ID。
+function commentHref(c: WalineComment): string {
+	const raw = (c.url || "").trim();
+	const m = raw.match(/^\/dynamic\/([^/]+)\/?$/);
+	if (m) return url(`/dynamic/#dynamic-${m[1]}`);
+	return url(raw) + "#" + c.objectId;
+}
+
 async function load() {
 	loading = true;
 	error = false;
@@ -103,7 +113,7 @@ onMount(() => {
 		<ul class="rc-list">
 			{#each comments as c (c.objectId)}
 				<li class="rc-item">
-					<a class="rc-link" href={url(c.url) + '#' + c.objectId} title="跳转到评论">
+					<a class="rc-link" href={commentHref(c)} title="跳转到评论">
 						{#if c.avatar}
 							<img class="rc-avatar" src={c.avatar} alt={c.nick} loading="lazy" />
 						{/if}

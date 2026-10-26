@@ -47,7 +47,7 @@ def main():
         print("需要 STEAM_API_KEY 和 STEAM_ID 环境变量", file=sys.stderr)
         sys.exit(1)
 
-    result = {"updatedAt": time.strftime("%Y-%m-%dT%H:%M:%S+08:00", time.localtime())}
+    result = {"updatedAt": datetime.now(BJ).strftime("%Y-%m-%dT%H:%M:%S+08:00")}
 
     # 1. 玩家信息
     player = api_get("/ISteamUser/GetPlayerSummaries/v0002/", {"steamids": STEAM_ID})
