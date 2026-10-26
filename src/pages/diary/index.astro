@@ -1,7 +1,7 @@
 ---
 import { getCollection, render } from "astro:content";
-import Comment from "@components/comment/index.astro";
 import EncryptedBlock from "@components/features/EncryptedBlock.astro";
+import DynamicInlineComments from "@components/pages/dynamic/DynamicInlineComments.astro";
 import ImageWrapper from "@components/common/ImageWrapper.astro";
 import Markdown from "@components/common/Markdown.astro";
 import { Icon } from "astro-icon/components";
@@ -75,7 +75,10 @@ const profileUrl = url("/about/");
 				</div>
 			) : (
 				rendered.map(({ entry, Content }) => (
-					<div class="page-entry card-base">
+					<div
+						class="page-entry card-base"
+						id={`diary-${entry.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`}
+					>
 						<article>
 							<header class="page-entry-header">
 								<a href={profileUrl} class="page-avatar" aria-label={profileConfig.name}>
@@ -137,18 +140,20 @@ const profileUrl = url("/about/");
 									</Markdown>
 								)}
 							</div>
+							{showComments && !entry.data.password && (
+								<DynamicInlineComments
+									src={`/diary/comments/?path=${encodeURIComponent(`/diary/${entry.id}/`)}`}
+								/>
+							)}
 						</article>
 					</div>
 				))
 			)
 		}
-
-		{
-			showComments && (
-				<div class="mt-4">
-					<Comment customPath="/diary/" />
-				</div>
-			)
-		}
 	</section>
 </MainGridLayout>
+
+<script>
+	import { registerDynamicInlineComments } from "@/components/pages/dynamic/dynamic-inline-comments";
+	registerDynamicInlineComments();
+</script>

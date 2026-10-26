@@ -1,0 +1,33 @@
+---
+import { getCollection } from "astro:content";
+import { dynamicAnchor } from "@/utils/dynamic-utils";
+import { url } from "@/utils/url-utils";
+
+// 每篇动态的评论路径 /dynamic/<id>/ 本身只是 Waline 的存储键、不是真实页面，
+// 但评论通知邮件会把它拼成链接发出来。这里为每篇动态生成一个真实落点页，
+// 打开即跳回动态列表页对应条目的锚点，避免邮件链接 404。
+export async function getStaticPaths() {
+	const entries = await getCollection("dynamic");
+	return entries.map((entry) => ({ params: { id: entry.id } }));
+}
+
+const target = url(`/dynamic/#${dynamicAnchor(Astro.params.id ?? "")}`);
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex" />
+		<meta http-equiv="refresh" content={`0; url=${target}`} />
+		<link rel="canonical" href={target} />
+		<title>跳转到这篇动态…</title>
+		<script is:inline define:vars={{ target }}>
+			window.location.replace(target);
+		</script>
+	</head>
+	<body>
+		<p>正在跳转到这篇动态，若没有自动跳转请 <a href={target}>点这里</a>。</p>
+	</body>
+</html>

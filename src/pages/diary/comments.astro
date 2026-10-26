@@ -1,0 +1,48 @@
+---
+import Comment from "@/components/comment/index.astro";
+import { commentConfig, diaryConfig, siteConfig } from "@/config";
+import Layout from "@/layouts/Layout.astro";
+import "@/styles/pages/dynamic-comments.css";
+
+// 日记每篇独立评论的嵌入页（与动态同机制）：iframe 里挂 Comment，
+// 各评论服务会读 ?path= 参数覆盖默认路径，实际评论按 /diary/<条目id>/ 分开存。
+if (
+	!siteConfig.pages.diary ||
+	diaryConfig.showComment === false ||
+	!commentConfig.type ||
+	commentConfig.type === "none"
+) {
+	return Astro.redirect("/404/");
+}
+---
+
+<Layout title="">
+	<main class="page-comment-embed">
+		<Comment customPath="/diary/" />
+	</main>
+</Layout>
+
+<script>
+	window.addEventListener("message", (event) => {
+		if (
+			event.origin !== window.location.origin ||
+			event.data?.type !== "dynamic-comment-theme"
+		) {
+			return;
+		}
+		document.documentElement.classList.toggle("dark", Boolean(event.data.dark));
+		document.documentElement.dataset.theme = event.data.dark ? "dark" : "light";
+	});
+
+	const reportHeight = () => {
+		window.parent.postMessage(
+			{
+				type: "dynamic-comment-height",
+				height: document.documentElement.scrollHeight,
+			},
+			window.location.origin,
+		);
+	};
+	new ResizeObserver(reportHeight).observe(document.body);
+	window.addEventListener("load", reportHeight);
+</script>

@@ -1,0 +1,33 @@
+---
+import { getCollection } from "astro:content";
+import { url } from "@/utils/url-utils";
+
+// 每篇日记的评论路径 /diary/<id>/ 本身只是 Waline 的存储键、不是真实页面，
+// 但评论通知邮件会把它拼成链接发出来。这里为每篇日记生成一个真实落点页，
+// 打开即跳回日记页对应条目的锚点，避免邮件链接 404（与动态同机制）。
+export async function getStaticPaths() {
+	const entries = await getCollection("diary", ({ data }) => !data.draft);
+	return entries.map((entry) => ({ params: { id: entry.id } }));
+}
+
+const anchor = `diary-${(Astro.params.id ?? "").replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+const target = url(`/diary/#${anchor}`);
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex" />
+		<meta http-equiv="refresh" content={`0; url=${target}`} />
+		<link rel="canonical" href={target} />
+		<title>跳转到这篇日记…</title>
+		<script is:inline define:vars={{ target }}>
+			window.location.replace(target);
+		</script>
+	</head>
+	<body>
+		<p>正在跳转到这篇日记，若没有自动跳转请 <a href={target}>点这里</a>。</p>
+	</body>
+</html>

@@ -1934,7 +1934,11 @@ routes.edit = async (arg) => {
   try {
     if (isNew) {
       fm = { published: nowISO().slice(0, 10), draft: 'false' };
-      if (key === 'dynamic') { filePath = `${col.path}/${col.newFileName()}`; fm = { published: nowISO(), pinned: 'false' }; }
+      if (col.mode === 'file' && col.newFileName) {
+        filePath = `${col.path}/${col.newFileName()}`;
+        if (key === 'dynamic') fm = { published: nowISO(), pinned: 'false' };
+        else if (key === 'diary') fm = { published: nowISO(), pinned: 'false', draft: 'false' };
+      }
     } else if (col.mode === 'dir') {
       dirName = name;
       const files = await ghGetFile(`${col.path}/${name}`);
@@ -1953,6 +1957,7 @@ routes.edit = async (arg) => {
   /* ============ 表单：doulor 式分区编辑器 ============ */
   const isPost = key === 'posts';
   const isDynamic = key === 'dynamic';
+  const isDiary = key === 'diary';
   const isTrue = (v) => String(v).toLowerCase() === 'true';
   const dtLocal = (v) => {
     const m = String(v || '').match(/(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
@@ -2014,6 +2019,25 @@ routes.edit = async (arg) => {
       <button class="btn btn-small" id="btn-ai-tag" type="button">📰 插入【Muse AI 发布】</button>
     </div></div>
     <p class="hint">💡 动态支持 Markdown；配图点下方「🖼 插入图片」上传，R2 目录已自动填好今天的日期。</p>`;
+  } else if (isDiary) {
+    const hasPw = !!(fm.password || fm.passwordHint);
+    infoHtml = `
+    <div class="field"><label>标题</label>
+      <input type="text" data-f="title" class="big" value="${esc(fm.title ?? '')}" placeholder="日记标题"></div>
+    <div class="grid2">
+      <div class="field"><label>发布时间</label><input type="datetime-local" id="f-published" value="${dtLocal(fm.published)}"></div>
+      <div class="field"><label>地点（可选）</label><input type="text" data-f="location" value="${esc(fm.location ?? '')}" placeholder="如：南京"></div>
+    </div>
+    <div class="field"><label>选项</label><div class="pills">
+      ${pill('draft', '📝 草稿', isTrue(fm.draft))}
+      ${pill('pinned', '📌 置顶', isTrue(fm.pinned))}
+      ${pill('_pw', '🔒 密码保护', hasPw)}
+    </div></div>
+    <div id="pw-zone" class="${hasPw ? '' : 'hidden'}"><div class="grid2">
+      <div class="field"><label>访问密码</label><input type="text" data-f="password" value="${esc(fm.password ?? '')}" placeholder="留空则不设"></div>
+      <div class="field"><label>密码提示</label><input type="text" data-f="passwordHint" value="${esc(fm.passwordHint ?? '')}" placeholder="给读者的提示"></div>
+    </div></div>
+    <p class="hint">💡 日记支持 Markdown；配图点下方「🖼 插入图片」上传，R2 目录已自动填好今天的日期。</p>`;
   } else {
     /* 项目 / 单页：通用表单 */
     const fieldDefs = {
@@ -2041,7 +2065,7 @@ routes.edit = async (arg) => {
     ? `dynamic/${new Date().toISOString().slice(0, 10)}`
     : col.mode === 'dir'
       ? `${key}/${filePath ? filePath.split('/').slice(-2, -1)[0] : new Date().toISOString().slice(0, 10)}`
-      : '';
+      : `${key}/${new Date().toISOString().slice(0, 10)}`;
   view.innerHTML = `
   <div class="toolbar">
     <button class="btn btn-ghost" id="btn-back">← 返回</button>
