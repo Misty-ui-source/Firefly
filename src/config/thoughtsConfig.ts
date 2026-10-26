@@ -10,6 +10,11 @@ export const thoughtsConfig: ThoughtsConfig = {
 	title: "碎碎念",
 	items: [
 		{
+			title: '突然觉得muse的额度也很少了',
+			content: '上周额度居然都用光了，还用超了不少，但是好在有170亿的底子在，依旧是用不完的节奏（只要配合codex使用）',
+			createdAt: '2026-10-26T08:10:07.478Z'
+		},
+		{
 			title: '微机系统你##',
 			content: '这老师在问什么问题啊，居然都不怎么会',
 			createdAt: '2026-10-26T08:08:27.892Z'
