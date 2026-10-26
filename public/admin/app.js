@@ -154,7 +154,10 @@ async function ghCommitMulti(files, message) {
     method: 'POST',
     body: JSON.stringify({ message, tree: tree.sha, parents: [baseCommitSha] }),
   });
-  await gh(`${base}/git/ref/heads/${CFG.branch}`, {
+  /* 注意：GitHub 更新引用端点是复数 /git/refs/（读取单个引用才是单数 /git/ref/），
+     写错会 404 Not Found——主题页保存报 Not Found、其余保存静默回落单文件 PUT、
+     操作日志文件永远建不出来，都是这个坑（2026-10-26 修复） */
+  await gh(`${base}/git/refs/heads/${CFG.branch}`, {
     method: 'PATCH',
     body: JSON.stringify({ sha: commit.sha }),
   });
@@ -3152,28 +3155,28 @@ function parseFriendClipboard(text) {
   }
   return out;
 }
+/* 按常用路径逐个实测站点的 RSS，测通哪个返回哪个（剪切板填充、网址自动探测共用同一套） */
+async function probeRss(siteurl) {
+  let u0;
+  try { u0 = new URL(siteurl); } catch (e) { return ''; }
+  const cands = [];
+  if (u0.pathname && u0.pathname !== '/') {
+    const base = siteurl.replace(/\/+$/, '');
+    cands.push(base + '/rss.xml', base + '/atom.xml', base + '/feed');
+  }
+  for (const p of ['/rss.xml', '/atom.xml', '/feed', '/feed.xml', '/rss', '/index.xml']) cands.push(u0.origin + p);
+  for (const u of [...new Set(cands)]) {
+    try {
+      const r = await fetch('/api/rss-test?url=' + encodeURIComponent(u), { headers: { Authorization: `Bearer ${token()}` } });
+      const j = await r.json();
+      if (j && j.ok) return u;
+    } catch (e) { /* 测不通换下一个 */ }
+  }
+  return '';
+}
 function wireClipFill(formEl) {
   const btn = formEl.querySelector('[data-a=clipfill]');
   if (!btn) return;
-  /* 对方没给 RSS 时，按常用路径逐个实测，测通哪个填哪个 */
-  const probeRss = async (siteurl) => {
-    let u0;
-    try { u0 = new URL(siteurl); } catch (e) { return ''; }
-    const cands = [];
-    if (u0.pathname && u0.pathname !== '/') {
-      const base = siteurl.replace(/\/+$/, '');
-      cands.push(base + '/rss.xml', base + '/atom.xml', base + '/feed');
-    }
-    for (const p of ['/rss.xml', '/atom.xml', '/feed', '/feed.xml', '/rss', '/index.xml']) cands.push(u0.origin + p);
-    for (const u of [...new Set(cands)]) {
-      try {
-        const r = await fetch('/api/rss-test?url=' + encodeURIComponent(u), { headers: { Authorization: `Bearer ${token()}` } });
-        const j = await r.json();
-        if (j && j.ok) return u;
-      } catch (e) { /* 测不通换下一个 */ }
-    }
-    return '';
-  };
   const apply = async (text) => {
     const p = parseFriendClipboard(text);
     const filled = [];
@@ -3335,23 +3338,60 @@ async function friendsMgr(body, invalidateCache) {
       <button class="btn btn-small" data-a="clipgo" type="button">按粘贴内容填充</button>
     </div></div>`;
   }
+  async function runRssTest(formEl) {
+    const btn = formEl.querySelector('[data-a=rsstest]');
+    const url = formEl.querySelector('[data-k=rss]').value.trim();
+    const tip = formEl.querySelector('.rss-test-tip');
+    if (!url) { tip.textContent = '先填 RSS 地址'; return; }
+    if (btn) btn.disabled = true;
+    tip.textContent = '测试中…';
+    try {
+      const r = await fetch('/api/rss-test?url=' + encodeURIComponent(url), { headers: { Authorization: `Bearer ${token()}` } });
+      const j = await r.json();
+      tip.innerHTML = j.ok
+        ? `<span style="color:#16a34a">✓ 有效，约 ${j.count} 篇</span>`
+        : `<span style="color:#dc2626">✗ ${esc(j.error || '无效')}（构建时会自动跳过）</span>`;
+    } catch (e) { tip.textContent = '测试失败：' + e.message; }
+    if (btn) btn.disabled = false;
+  }
   function wireRssTest(formEl) {
     const btn = formEl.querySelector('[data-a=rsstest]');
     if (!btn) return;
-    btn.onclick = async () => {
-      const url = formEl.querySelector('[data-k=rss]').value.trim();
-      const tip = formEl.querySelector('.rss-test-tip');
-      if (!url) { tip.textContent = '先填 RSS 地址'; return; }
-      btn.disabled = true; tip.textContent = '测试中…';
-      try {
-        const r = await fetch('/api/rss-test?url=' + encodeURIComponent(url), { headers: { Authorization: `Bearer ${token()}` } });
-        const j = await r.json();
-        tip.innerHTML = j.ok
-          ? `<span style="color:#16a34a">✓ 有效，约 ${j.count} 篇</span>`
-          : `<span style="color:#dc2626">✗ ${esc(j.error || '无效')}（构建时会自动跳过）</span>`;
-      } catch (e) { tip.textContent = '测试失败：' + e.message; }
-      btn.disabled = false;
+    btn.onclick = () => runRssTest(formEl);
+  }
+  /* 手动添加/编辑：网址填完（失焦）后自动探测 RSS，与剪切板填充同一套探测；
+     测通自动填入并直接跑测试出「✓ 有效，约 N 篇」；手填过的 RSS 不覆盖 */
+  function wireRssAuto(formEl) {
+    const urlEl = formEl.querySelector('[data-k=siteurl]');
+    const rssEl = formEl.querySelector('[data-k=rss]');
+    const tip = formEl.querySelector('.rss-test-tip');
+    if (!urlEl || !rssEl || !tip) return;
+    rssEl.addEventListener('input', () => { delete rssEl.dataset.auto; });
+    let probing = false;
+    const tryProbe = async () => {
+      const site = urlEl.value.trim();
+      if (!site || probing) return;
+      let u0; try { u0 = new URL(site); } catch (e) { return; }
+      if (!/^https?:$/.test(u0.protocol)) return;
+      const cur = rssEl.value.trim();
+      if (cur && !rssEl.dataset.auto) return;
+      if (rssEl.dataset.probedFor === site) return;
+      if (cur && rssEl.dataset.autoFor === site) return;
+      probing = true;
+      rssEl.dataset.probedFor = site;
+      tip.textContent = '🔍 正在自动探测这个站点的 RSS…';
+      const found = await probeRss(site);
+      probing = false;
+      if (urlEl.value.trim() !== site) return;
+      if (found) {
+        rssEl.value = found;
+        rssEl.dataset.auto = '1'; rssEl.dataset.autoFor = site;
+        runRssTest(formEl);
+      } else {
+        tip.innerHTML = '<span style="color:#dc2626">✗ 没探测到 RSS（常用路径都试过了），可以手动填</span>';
+      }
     };
+    urlEl.addEventListener('change', tryProbe);
   }
   function render() {
     const box = $('#friend-list');
@@ -3367,6 +3407,7 @@ async function friendsMgr(body, invalidateCache) {
         fe.innerHTML = formHtml(list[i]);
         fe.classList.remove('hidden');
         wireRssTest(fe);
+        wireRssAuto(fe);
         wireClipFill(fe);
         fe.querySelector('[data-a=cancel]').onclick = () => { fe.classList.add('hidden'); fe.innerHTML = ''; };
         fe.querySelector('[data-a=oksave]').onclick = () => {
@@ -3409,6 +3450,7 @@ async function friendsMgr(body, invalidateCache) {
     if (box.innerHTML) { box.innerHTML = ''; return; }
     box.innerHTML = formHtml({ title: '', siteurl: '', imgurl: '', desc: '', tags: ['Blog'], rss: '', enabled: true });
     wireRssTest(box);
+    wireRssAuto(box);
     wireClipFill(box);
     box.querySelector('[data-a=cancel]').onclick = () => { box.innerHTML = ''; };
     box.querySelector('[data-a=oksave]').onclick = () => {
