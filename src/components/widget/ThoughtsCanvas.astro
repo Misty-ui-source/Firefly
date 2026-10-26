@@ -26,8 +26,9 @@ const dataJson = JSON.stringify(
 );
 ---
 
-<div class="thoughts-starry">
+<div class="thoughts-starry" id="thoughts-starry">
 	<canvas id="thoughts-canvas"></canvas>
+	<div id="thoughts-texts" class="thoughts-texts"></div>
 	<div id="thoughts-tip" class="thoughts-tip">滚轮前后移动 · 点击星空中的文字查看详情</div>
 	<div id="thoughts-modal" class="thoughts-modal hidden">
 		<div class="thoughts-card">
@@ -56,7 +57,17 @@ const dataJson = JSON.stringify(
 		border: 2px solid #000;
 	}
 	:global(.dark) .thoughts-starry { border-color: #fff; }
-	#thoughts-canvas { width: 100%; height: 100%; display: block; cursor: pointer; }
+	#thoughts-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+	/* 文字层学 doulor 的逻辑：文字是真 DOM，字体/字重天然继承站点主题（控制台全局字体设置自动生效），canvas 只画星 */
+	.thoughts-texts { position: absolute; inset: 0; pointer-events: none; }
+	/* :global 必需：文字元素是脚本运行时创建的，不带 Astro 作用域属性，普通作用域样式打不到它们 */
+	:global(.thoughts-text) {
+		position: absolute; left: 0; top: 0;
+		transform: translate(-50%, -50%);
+		white-space: nowrap; color: #fff; font-weight: 500; line-height: 1.25;
+		pointer-events: auto; cursor: pointer; user-select: none;
+		will-change: transform, opacity, font-size;
+	}
 	.thoughts-tip {
 		position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
 		color: rgba(255,255,255,.5); font-size: 12px; pointer-events: none;
@@ -88,14 +99,16 @@ const dataJson = JSON.stringify(
 
 <script define:vars={{ dataJson }}>
 	const items = JSON.parse(dataJson);
+	const wrap = document.getElementById('thoughts-starry');
 	const canvas = document.getElementById('thoughts-canvas');
 	const ctx = canvas.getContext('2d', { alpha: false });
+	const textsLayer = document.getElementById('thoughts-texts');
 	const modal = document.getElementById('thoughts-modal');
 
 	let W = 0, H = 0;
 	function resize() {
 		const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-		const r = canvas.getBoundingClientRect();
+		const r = wrap.getBoundingClientRect();
 		W = r.width; H = r.height;
 		canvas.width = Math.round(W * dpr);
 		canvas.height = Math.round(H * dpr);
@@ -106,7 +119,8 @@ const dataJson = JSON.stringify(
 
 	// 纵深穿行：cam 是相机深度（无限前进，节点深度取模循环）；滚轮给速度冲量，下滚向前、上滚后退
 	let cam = 0, camVel = 0;
-	canvas.addEventListener('wheel', (e) => {
+	wrap.addEventListener('wheel', (e) => {
+		if (!modal.classList.contains('hidden')) return; /* 弹窗开着时不许穿行 */
 		e.preventDefault();
 		const d = Math.max(-120, Math.min(120, e.deltaY));
 		camVel = Math.max(-0.012, Math.min(0.012, camVel + d * 0.000045));
@@ -124,97 +138,113 @@ const dataJson = JSON.stringify(
 		});
 	}
 
-	// 文字节点：角度/半径决定在深度截面上的位置，z 是深度（按序号均分+抖动，保证任意数量都铺满纵深）
+	const openModal = (it) => {
+		document.getElementById('thoughts-mtitle').textContent = it.title;
+		document.getElementById('thoughts-mdate').textContent = it.dateLabel;
+		document.getElementById('thoughts-mcontent').textContent = it.content;
+		document.getElementById('thoughts-mupdated').textContent =
+			it.updatedLabel ? `（更新于 ${it.updatedLabel}）` : '';
+		modal.classList.remove('hidden');
+	};
+
+	// 文字节点 = DOM 元素：角度/半径决定在深度截面上的位置，z 是深度（按序号均分+抖动，保证任意数量都铺满纵深）
 	const nodes = items.map((it, i) => {
+		const el = document.createElement('span');
+		el.className = 'thoughts-text';
+		el.textContent = it.title;
+		el.addEventListener('click', () => openModal(it));
+		textsLayer.appendChild(el);
 		const n = Math.max(items.length, 1);
 		return {
-			it,
-			angle: (i / n) * 6.283 + Math.random() * 0.4,
-			rad: 0.2 + Math.random() * 0.25,
+			it, el,
+			angle: i * 2.39996 + (Math.random() - 0.5) * 0.3,
+			rad: 0.14 + ((i * 0.61803) % 1) * 0.44 + Math.random() * 0.04,
 			z: ((i + 0.15 + Math.random() * 0.7) / n) % 1,
 			sz: 0.6 + Math.random() * 0.4,
-			bobP: Math.random() * 6.28,
 			pd: 1,
-			x: 0, y: 0, w: 0, h: 0,
+			w100: 0, /* 标题在 100px 字号下的宽度（离屏量一次，逐帧按比例算真实宽） */
+			clickable: true,
+			lastFs: -1,
 		};
 	});
+
+	/* 量宽用的离屏 canvas：字体串取元素实际计算出的字体（= 站点主题字体），量出来的宽才和渲染一致 */
+	const measureCtx = document.createElement('canvas').getContext('2d');
+	function measureAll() {
+		if (!nodes.length) return;
+		const family = getComputedStyle(nodes[0].el).fontFamily;
+		measureCtx.font = `500 100px ${family}`;
+		for (const n of nodes) n.w100 = measureCtx.measureText(n.it.title).width;
+	}
+	measureAll();
+	if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureAll); /* 网络字体加载完再量一次，宽度才准 */
 
 	let rot = 0;
 	const relDepth = (z) => (((z - cam) % 1) + 1) % 1; /* 相对深度：0=贴脸，1=最远 */
 	const persp = (d) => 1 / (0.22 + d * 1.9); /* 透视系数：近大远小 */
-	function frame() {
-		/* 接近静止：不自动前进、不公转、不上下浮、不闪烁；只有滚轮冲量时才穿行，冲量衰减完就停 */
-		cam += camVel;
-		camVel *= 0.94;
+	const CRUISE = 0.00045; /* 星际巡航：恒定前进（深度/帧@60fps，全纵深约 37 秒）；滚轮冲量叠加其上，衰减后回到巡航 */
+	let lastT = 0;
+	function frame(t) {
+		const scale = lastT ? Math.min(2.5, Math.max(0.2, (t - lastT) / 16.7)) : 1;
+		lastT = t;
+		const advance = (CRUISE + camVel) * scale; /* 本帧前进量，星轨按它反推上一帧位置 */
+		cam += advance;
+		camVel *= Math.pow(0.94, scale);
 		// 背景用 CSS 渐变，这里只清屏
 		ctx.fillStyle = '#050510';
 		ctx.fillRect(0, 0, W, H);
 
 		const cx = W / 2, cy = H / 2;
 
-		// 星星
-		ctx.fillStyle = '#fff';
+		// 星星：用上一帧投影点连线成星轨——线天然沿径向从中心射出，越近拉得越长，就是星际穿越那味
+		ctx.strokeStyle = '#fff';
+		ctx.lineCap = 'round';
 		for (const s of stars) {
 			const d = relDepth(s.z);
 			const p = persp(d);
-			const x = cx + Math.cos(s.angle + rot * 0.6) * s.rad * W * p * 0.5;
-			const y = cy + Math.sin(s.angle + rot * 0.6) * s.rad * H * 0.65 * p * 0.5;
+			const a = s.angle + rot * 0.6;
+			const x = cx + Math.cos(a) * s.rad * W * p * 0.5;
+			const y = cy + Math.sin(a) * s.rad * H * 0.76 * p * 0.5;
+			const dp = Math.min(1, d + advance);
+			const pp = persp(dp);
+			const px = cx + Math.cos(a) * s.rad * W * pp * 0.5;
+			const py = cy + Math.sin(a) * s.rad * H * 0.76 * pp * 0.5;
 			const near = Math.min(1, d / 0.08);
 			ctx.globalAlpha = (0.3 + 0.5 * (0.5 + 0.5 * Math.sin(s.ph))) * (0.35 + 0.65 * (1 - d)) * near; /* 亮度按相位固定，不闪烁 */
-			const rr = Math.max(0.5, s.r * p * 0.8);
-			ctx.fillRect(x, y, rr, rr);
+			ctx.lineWidth = Math.max(0.5, s.r * p * 0.8);
+			ctx.beginPath();
+			ctx.moveTo(px, py);
+			ctx.lineTo(x, y);
+			ctx.stroke();
 		}
 		ctx.globalAlpha = 1;
 
-		ctx.textAlign = 'center';
-		ctx.textBaseline = 'middle';
-
+		// 文字：投影结果写到 DOM 元素的 transform/字号/透明度上
 		for (const n of nodes) {
 			const d = relDepth(n.z);
 			/* 刚从身边掠过、绕回最远处时换个位置，避免穿行路线一成不变 */
-			if (n.pd < 0.15 && d > 0.85) { n.angle = Math.random() * 6.283; n.rad = 0.2 + Math.random() * 0.25; }
+			if (n.pd < 0.15 && d > 0.85) { n.angle = Math.random() * 6.283; n.rad = 0.14 + Math.random() * 0.44; }
 			n.pd = d;
 			const p = persp(d);
 			const a = n.angle + rot;
 			const x = cx + Math.cos(a) * n.rad * W * p * 0.5;
-			const y = cy + Math.sin(a) * n.rad * H * 0.65 * p * 0.5;
+			const y = cy + Math.sin(a) * n.rad * H * 0.76 * p * 0.5;
 			let fs = Math.max(8, Math.min(34, Math.round((11 + n.sz * 7) * p)));
-			ctx.font = `500 ${fs}px sans-serif`;
 			/* 长标题在窄屏上按宽度收字号：整行最多占画布宽 86%，不许顶出两边 */
-			let tw = ctx.measureText(n.it.title).width;
-			if (tw > W * 0.86 && tw > 0) {
-				fs = Math.max(8, Math.floor(fs * (W * 0.86) / tw));
-				ctx.font = `500 ${fs}px sans-serif`;
-				tw = ctx.measureText(n.it.title).width;
-			}
-			n.x = x; n.y = y;
-			n.w = tw + 20;
-			n.h = fs + 14;
+			const tw = n.w100 * fs / 100;
+			if (tw > W * 0.86 && tw > 0) fs = Math.max(8, Math.floor(fs * (W * 0.86) / tw));
 			const near = Math.min(1, d / 0.16); /* 贴近时提前淡出，不糊脸 */
-			ctx.globalAlpha = (0.9 + n.sz * 0.1) * (0.78 + 0.22 * (1 - d)) * near; /* 整体提亮，对齐参考站的亮白 */
-			ctx.fillStyle = '#fff';
-			ctx.fillText(n.it.title, x, y);
+			const alpha = (0.9 + n.sz * 0.1) * (0.18 + 0.82 * Math.pow(1 - d, 1.35)) * near; /* 近亮远暗：远处小字压成背景质感，不再在中心挤成一团 */
+			n.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)`;
+			if (fs !== n.lastFs) { n.el.style.fontSize = fs + 'px'; n.lastFs = fs; }
+			n.el.style.opacity = alpha.toFixed(3);
+			const click = alpha > 0.05; /* 几乎看不见的别挡点击 */
+			if (click !== n.clickable) { n.el.style.pointerEvents = click ? 'auto' : 'none'; n.clickable = click; }
 		}
-		ctx.globalAlpha = 1;
 		requestAnimationFrame(frame);
 	}
 	frame();
 
-	canvas.addEventListener('click', (e) => {
-		const r = canvas.getBoundingClientRect();
-		const mx = e.clientX - r.left, my = e.clientY - r.top;
-		for (const n of nodes) {
-			if (Math.abs(mx - n.x) < n.w / 2 && Math.abs(my - n.y) < n.h / 2) {
-				document.getElementById('thoughts-mtitle').textContent = n.it.title;
-				document.getElementById('thoughts-mdate').textContent = n.it.dateLabel;
-				document.getElementById('thoughts-mcontent').textContent = n.it.content;
-				document.getElementById('thoughts-mupdated').textContent =
-					n.it.updatedLabel ? `（更新于 ${n.it.updatedLabel}）` : '';
-				modal.classList.remove('hidden');
-				return;
-			}
-		}
-	});
 	document.getElementById('thoughts-close').onclick = () => modal.classList.add('hidden');
 	modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
 </script>

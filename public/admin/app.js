@@ -1162,6 +1162,21 @@ routes.dashboard = async () => {
     waline: { label: '评论', fn: walineCardStats },
     blog: { label: '博客', ext: 'blog', details: [['🌐', 'lanerc.me', '']] },
     umami: { label: '数据统计', ext: 'umami', details: [['📈', 'Umami 访问统计', '']] },
+    /* 纯入口卡（无统计数字）：点开进对应管理页；在「🧭 导航」页可加入/移除 */
+    stats: { label: '写作', nav: true, details: [['📊', '写作统计与总结报告', '']] },
+    search: { label: '搜索', nav: true, details: [['🔍', '全文搜文章与动态', '']] },
+    medialib: { label: '媒体库', nav: true, details: [['🗂', '图片与音乐文件管理', '']] },
+    tags: { label: '标签', nav: true, details: [['🏷', '标签的增删改', '']] },
+    fonts: { label: '字体', nav: true, details: [['🔤', '全局与各区域字体', '']] },
+    theme: { label: '主题', nav: true, details: [['🎨', '色相、布局与特效', '']] },
+    images: { label: '图片', nav: true, details: [['🖼', '头像、背景等图片位', '']] },
+    announce: { label: '公告', nav: true, details: [['📢', '静态与访客检测公告', '']] },
+    booknav: { label: '书签', nav: true, details: [['🔖', '书签导航管理', '']] },
+    navmgr: { label: '导航', nav: true, details: [['🧭', '导航栏与首页卡片布局', '']] },
+    videos: { label: '视频', nav: true, details: [['🎬', '视频页管理', '']] },
+    profile: { label: '简介', nav: true, details: [['👤', '关于页资料', '']] },
+    banner: { label: '横幅', nav: true, details: [['🖼️', '横幅标题与文案', '']] },
+    sitenav: { label: '站点导航', nav: true, details: [['🌐', '博客顶栏导航', '']] },
   };
   const homeOrder = (() => {
     const cfgList = (CFG.navLayout && Array.isArray(CFG.navLayout.homeCards)) ? CFG.navLayout.homeCards : [];
@@ -1172,7 +1187,7 @@ routes.dashboard = async () => {
     const def = CARD_DEFS[key];
     const d = document.createElement('div');
     d.className = 'stat';
-    d.innerHTML = `<div class="stat-head"><span class="lbl">${def.label}</span><span class="num">${def.ext ? '↗' : '…'}</span></div><div class="stat-rows"></div>`;
+    d.innerHTML = `<div class="stat-head"><span class="lbl">${def.label}</span><span class="num">${def.ext ? '↗' : def.nav ? '→' : '…'}</span></div><div class="stat-rows"></div>`;
     d.onclick = () => {
       if (def.ext) { const u = CFG.navExternal && CFG.navExternal[def.ext]; if (u) window.open(u, '_blank', 'noopener'); }
       else location.hash = '#/' + key;
@@ -1180,7 +1195,7 @@ routes.dashboard = async () => {
     grid.appendChild(d);
     const rowsHtml = (details) => (details || []).map(([icon, sub, val]) =>
       `<div class="stat-row"><span class="dot"></span>${icon} ${sub} <b>${esc(String(val))}</b></div>`).join('');
-    if (def.ext) {
+    if (def.ext || def.nav) {
       d.querySelector('.stat-rows').innerHTML = rowsHtml(def.details);
     } else {
       (async () => {
@@ -3269,7 +3284,7 @@ routes.navmgr = async () => {
   layout.primary = layout.primary.filter((k) => allKeys.includes(k));
   layout.secondary = layout.secondary.filter((k) => allKeys.includes(k));
   /* 首页卡片可选项（与首页 CARD_DEFS 对齐）；配置里没写过 homeCards 时用默认全套 */
-  const HOME_CARD_KEYS = ['posts', 'dynamic', 'projects', 'spec', 'friends', 'gallery', 'timeline', 'thoughts', 'music', 'waline', 'blog', 'umami'];
+  const HOME_CARD_KEYS = ['posts', 'dynamic', 'projects', 'spec', 'friends', 'gallery', 'timeline', 'thoughts', 'music', 'waline', 'blog', 'umami', 'stats', 'search', 'medialib', 'tags', 'fonts', 'theme', 'images', 'announce', 'booknav', 'navmgr', 'videos', 'profile', 'banner', 'sitenav'];
   layout.homeCards = (layout.homeCards || []).filter((k) => HOME_CARD_KEYS.includes(k));
   if (!/homeCards\s*:/.test(cfgText)) layout.homeCards = HOME_CARD_KEYS.slice();
   const markDirty = () => { $('#btn-navmsave').disabled = false; };
