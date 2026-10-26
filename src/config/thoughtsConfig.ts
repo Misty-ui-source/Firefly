@@ -10,6 +10,11 @@ export const thoughtsConfig: ThoughtsConfig = {
 	title: "碎碎念",
 	items: [
 		{
+			title: '久违的睡了一个1点开始的午觉',
+			content: '感觉下午精神了许多，还是午觉舒服啊，但是自己好拖延，每次都两点开始',
+			createdAt: '2026-10-26T06:01:05.804Z'
+		},
+		{
 			title: '不想去开组会，不想考试',
 			content: '但是也就想想',
 			createdAt: '2026-10-25T15:58:54.139Z'
