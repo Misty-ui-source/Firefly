@@ -36,6 +36,16 @@ type DynamicData = {
 	location: string;
 };
 
+type DiaryData = {
+	title: string;
+	published: Date;
+	pinned: boolean;
+	location: string;
+	draft: boolean;
+	password: string;
+	passwordHint: string;
+};
+
 type ProjectLink = {
 	label: string;
 	icon: string;
@@ -114,6 +124,19 @@ const dynamicCollection: ContentCollection<DynamicData> = defineCollection({
 	}),
 });
 
+const diaryCollection: ContentCollection<DiaryData> = defineCollection({
+	loader: glob({ pattern: "**/*.md", base: "./src/content/diary" }),
+	schema: z.object({
+		title: z.string().optional().default(""),
+		published: z.date(),
+		pinned: z.boolean().optional().default(false),
+		location: z.string().optional().default(""),
+		draft: z.boolean().optional().default(false),
+		password: z.string().optional().default(""),
+		passwordHint: z.string().optional().default(""),
+	}),
+});
+
 const projectsCollection: ContentCollection<ProjectData> = defineCollection({
 	loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/projects" }),
 	schema: z.object({
@@ -140,11 +163,13 @@ const projectsCollection: ContentCollection<ProjectData> = defineCollection({
 });
 
 export const collections: {
+	diary: typeof diaryCollection;
 	dynamic: typeof dynamicCollection;
 	posts: typeof postsCollection;
 	spec: typeof specCollection;
 	projects: typeof projectsCollection;
 } = {
+	diary: diaryCollection,
 	dynamic: dynamicCollection,
 	posts: postsCollection,
 	spec: specCollection,

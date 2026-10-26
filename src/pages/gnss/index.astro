@@ -1,0 +1,372 @@
+---
+import { Icon } from "astro-icon/components";
+import { siteConfig } from "@/config";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import "@/styles/pages/common.css";
+
+// GNSS 卫星星空页：用广播星历/历书在浏览器本地解算 GPS 星座位置，
+// 站在观察点看头顶星空。引擎改编自 SEU-WJY 的卫星坐标计算程序。
+if (!(siteConfig.pages as Record<string, boolean>).gnss) {
+	return Astro.redirect("/404/");
+}
+const title = "卫星星空";
+const description = "用真实广播星历算一算：此刻头顶有哪些 GPS 卫星";
+---
+
+<MainGridLayout title={title} description={description}>
+	<section class="page-shell" aria-labelledby="gnss-page-title">
+		<header class="page-header card-base">
+			<div class="page-heading">
+				<div class="page-icon" aria-hidden="true">
+					<Icon name="material-symbols:satellite-alt-rounded" />
+				</div>
+				<div>
+					<h2 id="gnss-page-title">{title}</h2>
+					<p>{description}</p>
+				</div>
+			</div>
+			<div class="page-count" aria-label="卫星数量">
+				<Icon name="material-symbols:satellite-alt-rounded" />
+				<strong>GPS</strong>
+				<span>星座</span>
+			</div>
+		</header>
+
+		<div class="card-base gnss-card">
+			<div class="gnss-modes" role="tablist" aria-label="模式">
+				<button class="gnss-mode is-active" data-mode="live" type="button">📡 实时星空</button>
+				<button class="gnss-mode" data-mode="history" type="button">🗓 历史回放</button>
+				<button class="gnss-mode" data-mode="future" type="button">🔮 远期预报</button>
+			</div>
+
+			<div class="gnss-controls">
+				<label>纬度 <input id="g-lat" type="number" step="0.0001" min="-90" max="90" value="32.0603" /></label>
+				<label>经度 <input id="g-lon" type="number" step="0.0001" min="-180" max="180" value="118.7969" /></label>
+				<label>高度(米) <input id="g-h" type="number" step="1" value="20" /></label>
+				<button id="g-geo" class="gnss-btn" type="button">📍 用我的定位</button>
+			</div>
+			<div class="gnss-controls">
+				<label class="gnss-grow">时刻 (UTC) <input id="g-time" type="datetime-local" step="60" /></label>
+				<button id="g-now" class="gnss-btn" type="button">现在</button>
+				<label>高度角截止
+					<select id="g-mask">
+						<option value="0">0°</option>
+						<option value="10" selected>10°</option>
+						<option value="15">15°</option>
+						<option value="30">30°</option>
+					</select>
+				</label>
+			</div>
+			<div class="gnss-controls">
+				<button id="g-play" class="gnss-btn" type="button">▶ 播放这一天</button>
+				<input id="g-slider" type="range" min="0" max="1439" step="1" value="720" aria-label="当日时间轴" />
+				<span id="g-clock" class="gnss-clock">--:-- UTC</span>
+			</div>
+
+			<p id="g-status" class="gnss-status">正在加载星历数据…</p>
+
+			<div class="gnss-main">
+				<div class="gnss-skywrap">
+					<canvas id="g-sky" width="520" height="520" aria-label="卫星星空图"></canvas>
+				</div>
+				<div class="gnss-side">
+					<div id="g-detail" class="gnss-detail">点一颗星（图上或列表里）看它的坐标。</div>
+					<ul id="g-list" class="gnss-list"></ul>
+				</div>
+			</div>
+		</div>
+
+		<div class="card-base gnss-card gnss-help">
+			<h3>使用说明</h3>
+			<ul>
+				<li><strong>实时星空</strong>：用 IGS 当天广播星历解算，位置精度米级。数据每天自动更新一次，页面底部有数据日期与更新时间；想看今晚、明天凌晨的星空，直接改时刻就行。</li>
+				<li><strong>历史回放</strong>：内置 2024 年 1 月 1 日的广播星历，可以回看那一天任意时刻的星空。</li>
+				<li><strong>远期预报</strong>：用 GPS 历书（Almanac）推算未来几周的可见性，适合挑日子。历书精度是公里级——画星空、估升起落下时间够用，但坐标只能当粗略参考。</li>
+				<li><strong>观察点</strong>：默认南京，可以手填经纬度，也可以点「用我的定位」（定位只在你的浏览器里用，不会上传）。</li>
+				<li><strong>高度角截止</strong>：低于这个角度的卫星会被楼和山挡住，接收机一般也用不上，默认按 10° 过滤；PDOP 是可见卫星的几何精度因子，越小构型越好。</li>
+				<li><strong>回放</strong>：点「播放这一天」，时间轴会走完所选日期的 24 小时，星星们怎么过境一目了然。</li>
+				<li>所有解算都在你的浏览器本地完成；坐标为 WGS-84，时刻为 UTC（北京时间 = UTC + 8）。</li>
+			</ul>
+		</div>
+
+		<p id="g-datainfo" class="gnss-datainfo">星历数据加载中…</p>
+	</section>
+</MainGridLayout>
+
+<style>
+	.gnss-card { padding: 1.25rem; margin-top: 1rem; }
+	.gnss-modes { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+	.gnss-mode {
+		border: 2px solid var(--line-divider, rgba(0,0,0,.15)); background: transparent; color: var(--content);
+		border-radius: 999px; padding: .4rem 1rem; font-weight: 600; cursor: pointer;
+	}
+	.gnss-mode.is-active { background: var(--primary); color: #fff; border-color: var(--primary); }
+	.gnss-controls { display: flex; gap: .75rem; flex-wrap: wrap; align-items: end; margin-bottom: .75rem; }
+	.gnss-controls label { display: flex; flex-direction: column; gap: .25rem; font-size: .82rem; color: var(--content-meta); }
+	.gnss-controls input, .gnss-controls select {
+		border: 2px solid var(--line-divider, rgba(0,0,0,.15)); border-radius: .6rem; padding: .35rem .55rem;
+		background: var(--card-bg, transparent); color: var(--content); font-size: .92rem;
+	}
+	.gnss-controls input[type="number"] { width: 7.2rem; }
+	.gnss-grow { flex: 1 1 12rem; }
+	.gnss-grow input { width: 100%; }
+	#g-slider { flex: 1 1 10rem; accent-color: var(--primary); }
+	.gnss-btn {
+		border: 2px solid var(--line-divider, rgba(0,0,0,.15)); background: transparent; color: var(--content);
+		border-radius: .6rem; padding: .42rem .8rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+	}
+	.gnss-btn:hover, .gnss-mode:hover { border-color: var(--primary); }
+	.gnss-clock { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--content); }
+	.gnss-status { color: var(--content-meta); font-size: .9rem; margin: .25rem 0 .75rem; }
+	.gnss-main { display: grid; grid-template-columns: minmax(0, 520px) 1fr; gap: 1rem; align-items: start; }
+	@media (max-width: 900px) { .gnss-main { grid-template-columns: 1fr; } }
+	.gnss-skywrap {
+		background: radial-gradient(circle at 50% 42%, #16294d 0%, #0b132b 62%, #070d1f 100%);
+		border-radius: 1rem; padding: .75rem;
+	}
+	#g-sky { width: 100%; height: auto; display: block; }
+	.gnss-detail {
+		background: rgba(127, 160, 255, .08); border: 1.5px dashed var(--line-divider, rgba(0,0,0,.2));
+		border-radius: .75rem; padding: .7rem .85rem; font-size: .9rem; color: var(--content); margin-bottom: .75rem;
+		font-variant-numeric: tabular-nums; line-height: 1.55; word-break: break-all;
+	}
+	.gnss-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; max-height: 430px; overflow: auto; }
+	.gnss-list li {
+		display: flex; gap: .6rem; align-items: baseline; padding: .45rem .7rem; border-radius: .6rem; cursor: pointer;
+		border: 1.5px solid var(--line-divider, rgba(0,0,0,.12)); font-variant-numeric: tabular-nums; font-size: .92rem;
+	}
+	.gnss-list li:hover, .gnss-list li.is-sel { border-color: var(--primary); background: rgba(127, 160, 255, .08); }
+	.gnss-list .prn { font-weight: 800; color: var(--primary); }
+	.gnss-list .dim { color: var(--content-meta); font-size: .82rem; margin-left: auto; }
+	.gnss-help h3 { margin: 0 0 .6rem; font-size: 1.05rem; }
+	.gnss-help ul { margin: 0; padding-left: 1.15rem; color: var(--content); line-height: 1.75; font-size: .94rem; }
+	.gnss-datainfo { color: var(--content-meta); font-size: .82rem; margin-top: .8rem; text-align: center; }
+</style>
+
+<script is:inline src="/gnss/engine.js"></script>
+<script is:inline>
+(function () {
+	var RAW = 'https://raw.githubusercontent.com/Misty-ui-source/Firefly/main/gnss-data/';
+	var CDN = 'https://cdn.jsdelivr.net/gh/Misty-ui-source/Firefly@main/gnss-data/';
+	var state = { mode: 'live', nav: null, navHist: null, alm: null, meta: null, sats: [], sel: null, playing: false, timer: null };
+	var $ = function (id) { return document.getElementById(id); };
+	var els = { lat: $('g-lat'), lon: $('g-lon'), h: $('g-h'), time: $('g-time'), mask: $('g-mask'), status: $('g-status'), list: $('g-list'), detail: $('g-detail'), sky: $('g-sky'), slider: $('g-slider'), clock: $('g-clock'), play: $('g-play'), datainfo: $('g-datainfo') };
+
+	function fetchAny(base, name) {
+		return fetch(base + name).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+	}
+	function loadRemote() {
+		return fetchAny(RAW, 'latest.json').catch(function () { return fetchAny(CDN, 'latest.json'); })
+			.then(function (j) { state.nav = GNSS.inflateNav(j); return true; })
+			.catch(function () { return false; });
+	}
+	function loadMeta() {
+		return fetchAny(RAW, 'meta.json').catch(function () { return fetchAny(CDN, 'meta.json'); })
+			.then(function (j) { state.meta = j; }).catch(function () {});
+	}
+	function loadAlm() {
+		return fetchAny(RAW, 'almanac.json').catch(function () { return fetchAny(CDN, 'almanac.json'); })
+			.then(function (j) { state.alm = GNSS.inflateAlm(j); return true; }).catch(function () { return false; });
+	}
+	function loadHist() {
+		return fetch('/gnss/history-2024.json').then(function (r) { return r.json(); })
+			.then(function (j) { state.navHist = GNSS.inflateNav(j); return true; }).catch(function () { return false; });
+	}
+
+	function fmtInput(d) {
+		function p(n) { return (n < 10 ? '0' : '') + n; }
+		return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate()) + 'T' + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes());
+	}
+	function currentMs() {
+		var v = els.time.value ? Date.parse(els.time.value + ':00Z') : NaN;
+		if (isNaN(v)) v = Date.now();
+		return v;
+	}
+	function obs() {
+		var lat = parseFloat(els.lat.value) || 0, lon = parseFloat(els.lon.value) || 0, h = parseFloat(els.h.value) || 0;
+		return { lat: lat, lon: lon, h: h, ecef: GNSS.llhToEcef(lat, lon, h) };
+	}
+	function compute() {
+		var o = obs(), ms = currentMs(), mask = parseFloat(els.mask.value) || 0;
+		var rows = [];
+		if (state.mode === 'future') {
+			if (!state.alm) { els.status.textContent = '历书数据没加载上，请检查网络后刷新。'; render(rows, o, mask); return; }
+			var tA = GNSS.utcToGpsSeconds(ms, 18);
+			Object.keys(state.alm).forEach(function (prn) {
+				var p = GNSS.calcAlmanac(state.alm[prn], tA);
+				rows.push(finish(prn, p, o));
+			});
+		} else {
+			var nav = state.mode === 'history' ? state.navHist : state.nav;
+			if (!nav) { els.status.textContent = state.mode === 'history' ? '历史数据没加载上。' : '星历数据没加载上，请检查网络后刷新（或切到历史回放模式）。'; render(rows, o, mask); return; }
+			var tB = GNSS.utcToGpsSeconds(ms, nav.leap);
+			Object.keys(nav.sats).forEach(function (prn) {
+				var rec = GNSS.nearest(nav.sats[prn], tB);
+				var p = GNSS.calcBroadcast(rec, tB);
+				var row = finish(prn, p, o);
+				row.clockUs = p.clock * 1e6;
+				row.recAgeH = Math.abs(tB - rec.toeGps) / 3600;
+				rows.push(row);
+			});
+		}
+		render(rows, o, mask);
+	}
+	function finish(prn, p, o) {
+		var ae = GNSS.azElRange(o.lat, o.lon, o.ecef, p);
+		return { prn: prn, x: p.x, y: p.y, z: p.z, az: ae.az, el: ae.el, range: ae.range, enu: ae.enu };
+	}
+	function pdopOf(vis) {
+		if (vis.length < 4) return null;
+		var A = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+		vis.forEach(function (s) {
+			var r = s.range, u = [s.enu.e / r, s.enu.n / r, s.enu.u / r, 1];
+			for (var i = 0; i < 4; i++) for (var j = 0; j < 4; j++) A[i][j] += u[i] * u[j];
+		});
+		// 4x4 求逆（高斯-约当）
+		var M = A.map(function (row, i) { return row.concat([0,0,0,0].map(function (_, j) { return i === j ? 1 : 0; })); });
+		for (var c = 0; c < 4; c++) {
+			var piv = M[c][c];
+			if (Math.abs(piv) < 1e-12) return null;
+			for (var j = 0; j < 8; j++) M[c][j] /= piv;
+			for (var r2 = 0; r2 < 4; r2++) {
+				if (r2 === c) continue;
+				var f = M[r2][c];
+				for (var k = 0; k < 8; k++) M[r2][k] -= f * M[c][k];
+			}
+		}
+		return Math.sqrt(Math.max(0, M[0][4] + M[1][5] + M[2][6]));
+	}
+	function render(rows, o, mask) {
+		var vis = rows.filter(function (s) { return s.el >= mask; }).sort(function (a, b) { return b.el - a.el; });
+		state.sats = rows;
+		var pd = pdopOf(vis);
+		var modeName = state.mode === 'live' ? '实时星空' : state.mode === 'history' ? '历史回放（2024-01-01）' : '远期预报（历书，粗略）';
+		var extra = '';
+		if (state.mode === 'live' && rows.length) {
+			var worst = Math.max.apply(null, rows.map(function (s) { return s.recAgeH || 0; }));
+			if (worst > 3) extra = '；提示：部分卫星所用星历距该时刻 ' + worst.toFixed(1) + ' 小时，位置会有偏差';
+		}
+		els.status.textContent = modeName + ' · ' + new Date(currentMs()).toISOString().slice(0, 16).replace('T', ' ') + ' UTC · 可见 ' + vis.length + ' / ' + rows.length + ' 颗' + (pd ? ' · PDOP ' + pd.toFixed(1) : '') + extra;
+		drawSky(vis);
+		els.list.innerHTML = vis.map(function (s) {
+			return '<li data-prn="' + s.prn + '"' + (state.sel === s.prn ? ' class="is-sel"' : '') + '><span class="prn">' + s.prn + '</span><span>方位 ' + s.az.toFixed(0) + '° · 高度 ' + s.el.toFixed(0) + '°</span><span class="dim">' + (s.range / 1000).toFixed(0) + ' km</span></li>';
+		}).join('') || '<li>这个时刻没有卫星在截止角之上。</li>';
+		Array.prototype.forEach.call(els.list.querySelectorAll('li[data-prn]'), function (li) {
+			li.addEventListener('click', function () { select(li.dataset.prn); });
+		});
+		updateClock();
+	}
+	function drawSky(vis) {
+		var cv = els.sky, ctx = cv.getContext('2d');
+		var W = cv.width, C = W / 2, R = W / 2 - 34;
+		ctx.clearRect(0, 0, W, W);
+		ctx.strokeStyle = 'rgba(150,180,255,.35)'; ctx.fillStyle = 'rgba(190,210,255,.85)';
+		ctx.lineWidth = 1.2; ctx.font = '600 13px system-ui'; ctx.textAlign = 'center';
+		[90, 60, 30, 0].forEach(function (el) {
+			var r = R * (90 - el) / 90;
+			ctx.beginPath(); ctx.arc(C, C, r, 0, Math.PI * 2); ctx.stroke();
+			if (el > 0) ctx.fillText(el + '°', C + 4, C - r + 13);
+		});
+		ctx.beginPath(); ctx.moveTo(C - R, C); ctx.lineTo(C + R, C); ctx.moveTo(C, C - R); ctx.lineTo(C, C + R); ctx.stroke();
+		ctx.font = '700 15px system-ui';
+		ctx.fillText('北', C, C - R - 10); ctx.fillText('南', C, C + R + 22);
+		ctx.fillText('东', C + R + 14, C + 5); ctx.fillText('西', C - R - 14, C + 5);
+		state.skyPts = [];
+		vis.forEach(function (s) {
+			var r = R * (90 - s.el) / 90, a = s.az * Math.PI / 180;
+			var x = C + r * Math.sin(a), y = C - r * Math.cos(a);
+			var col = s.el >= 45 ? '#3ddc97' : s.el >= 20 ? '#ffd166' : '#ff9f6e';
+			ctx.beginPath(); ctx.arc(x, y, state.sel === s.prn ? 8 : 6, 0, Math.PI * 2);
+			ctx.fillStyle = col; ctx.fill();
+			if (state.sel === s.prn) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
+			ctx.fillStyle = 'rgba(230,238,255,.95)'; ctx.font = '600 11px system-ui';
+			ctx.fillText(s.prn, x, y - 11);
+			state.skyPts.push({ prn: s.prn, x: x, y: y });
+		});
+	}
+	function select(prn) {
+		state.sel = prn;
+		var s = null;
+		state.sats.forEach(function (r) { if (r.prn === prn) s = r; });
+		if (!s) return;
+		var f1 = function (v) { return v.toLocaleString('zh-CN', { maximumFractionDigits: 1, minimumFractionDigits: 1 }); };
+		var html = '<strong>' + prn + '</strong> · 方位角 ' + s.az.toFixed(1) + '° · 高度角 ' + s.el.toFixed(1) + '° · 距离 ' + (s.range / 1000).toFixed(0) + ' km<br>';
+		if (state.mode === 'future') {
+			html += 'ECEF（粗略，历书）：X ' + (s.x / 1000).toFixed(1) + ' km · Y ' + (s.y / 1000).toFixed(1) + ' km · Z ' + (s.z / 1000).toFixed(1) + ' km';
+		} else {
+			html += 'ECEF：X ' + f1(s.x) + ' m<br>Y ' + f1(s.y) + ' m · Z ' + f1(s.z) + ' m';
+			if (typeof s.clockUs === 'number') html += '<br>卫星钟差约 ' + s.clockUs.toFixed(1) + ' µs';
+		}
+		els.detail.innerHTML = html;
+		compute();
+	}
+	function updateClock() {
+		var d = new Date(currentMs());
+		function p(n) { return (n < 10 ? '0' : '') + n; }
+		els.clock.textContent = p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ' UTC';
+		els.slider.value = d.getUTCHours() * 60 + d.getUTCMinutes();
+	}
+	function setMode(mode) {
+		state.mode = mode; state.sel = null;
+		Array.prototype.forEach.call(document.querySelectorAll('.gnss-mode'), function (b) { b.classList.toggle('is-active', b.dataset.mode === mode); });
+		var now = new Date();
+		if (mode === 'history') els.time.value = '2024-01-01T12:00';
+		else if (mode === 'future') els.time.value = fmtInput(new Date(now.getTime() + 7 * 86400000));
+		else els.time.value = fmtInput(now);
+		els.detail.textContent = '点一颗星（图上或列表里）看它的坐标。';
+		compute();
+		updateFooter();
+	}
+	function updateFooter() {
+		if (state.mode === 'history') {
+			els.datainfo.textContent = '历史数据：IGS 广播星历 brdc0010.24n（2024-01-01）· 解算核心根据 SEU-WJY 改编';
+		} else if (state.meta) {
+			els.datainfo.textContent = '星历数据：' + state.meta.source + ' · 数据日期 ' + (state.meta.brdcDates || []).join(' ~ ') + ' · 更新于 ' + state.meta.updatedAtBj + '（北京时间）· 历书 GPS 周 ' + (state.meta.almanacGpsWeek || '-') + ' · 解算核心根据 SEU-WJY 改编';
+		} else {
+			els.datainfo.textContent = '星历数据：IGS BRDC（每日自动更新）· 解算核心根据 SEU-WJY 改编';
+		}
+	}
+	Array.prototype.forEach.call(document.querySelectorAll('.gnss-mode'), function (b) {
+		b.addEventListener('click', function () { setMode(b.dataset.mode); });
+	});
+	['g-lat', 'g-lon', 'g-h', 'g-mask'].forEach(function (id) { $(id).addEventListener('change', compute); });
+	els.time.addEventListener('change', compute);
+	$('g-now').addEventListener('click', function () { els.time.value = fmtInput(new Date()); compute(); });
+	$('g-geo').addEventListener('click', function () {
+		if (!navigator.geolocation) { els.status.textContent = '这个浏览器不支持定位。'; return; }
+		navigator.geolocation.getCurrentPosition(function (pos) {
+			els.lat.value = pos.coords.latitude.toFixed(4);
+			els.lon.value = pos.coords.longitude.toFixed(4);
+			els.h.value = Math.round(pos.coords.altitude || 20);
+			compute();
+		}, function () { els.status.textContent = '没拿到定位（可能被拒绝了），可以手填经纬度。'; });
+	});
+	els.slider.addEventListener('input', function () {
+		var ms = currentMs(), d = new Date(ms);
+		d.setUTCHours(0, 0, 0, 0);
+		els.time.value = fmtInput(new Date(d.getTime() + (+els.slider.value) * 60000));
+		compute();
+	});
+	els.play.addEventListener('click', function () {
+		if (state.playing) { stopPlay(); return; }
+		state.playing = true; els.play.textContent = '⏸ 暂停';
+		state.timer = setInterval(function () {
+			var v = (+els.slider.value + 5) % 1440;
+			els.slider.value = v;
+			els.slider.dispatchEvent(new Event('input'));
+			if (v === 0) { /* 继续循环 */ }
+		}, 120);
+	});
+	function stopPlay() { state.playing = false; els.play.textContent = '▶ 播放这一天'; if (state.timer) clearInterval(state.timer); }
+	els.sky.addEventListener('click', function (ev) {
+		var rect = els.sky.getBoundingClientRect();
+		var x = (ev.clientX - rect.left) * els.sky.width / rect.width;
+		var y = (ev.clientY - rect.top) * els.sky.height / rect.height;
+		var best = null, bd = 26;
+		(state.skyPts || []).forEach(function (p) { var d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; best = p.prn; } });
+		if (best) select(best);
+	});
+	els.time.value = fmtInput(new Date());
+	Promise.all([loadRemote(), loadMeta(), loadAlm(), loadHist()]).then(function () { compute(); updateFooter(); });
+})();
+</script>

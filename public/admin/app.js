@@ -583,6 +583,7 @@ function router() {
   const render = () => {
     if (routes[page]) routes[page](decodeURIComponent(arg || ''));
     else routes.dashboard();
+    syncLvSegs();
   };
   const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (page === 'login' || reduced) { render(); queueReportPopup(page); return; }
@@ -624,6 +625,98 @@ function toggleTheme() {
   document.documentElement.dataset.theme = next;
   try { localStorage.setItem('admin-theme', next); } catch (e) {}
   syncThemeBtn();
+}
+
+/* ---------- 界面版本（经典 / 博客风）：同一套架构与功能，只换外观（皮肤走 style.css 的 [data-ui="blog"] 变量与覆盖） ---------- */
+const UI_MODES = ['classic', 'blog', 'shirone', 'abyss'];
+function uiMode() { const m = document.documentElement.dataset.ui; return UI_MODES.indexOf(m) >= 0 ? m : 'classic'; }
+const UI_HUE_VAR = { classic: '--chue', blog: '--bhue', shirone: '--shue', abyss: '--ahue' };
+const UI_HUE_DEFAULT = { classic: 0, blog: 174, shirone: 0, abyss: 199 };
+const UI_MODE_NAME = { classic: '经典', blog: '博客风', shirone: 'Shirone', abyss: '深海' };
+function uiHueOf(mode) {
+  const v = parseInt(document.documentElement.style.getPropertyValue(UI_HUE_VAR[mode]), 10);
+  return Number.isNaN(v) ? UI_HUE_DEFAULT[mode] : v;
+}
+const LAYOUTS = ['top', 'side', 'narrow', 'mix'];
+function layoutMode() { const l = document.documentElement.dataset.layout; return LAYOUTS.indexOf(l) >= 0 ? l : 'top'; }
+function setLayout(l) {
+  document.documentElement.dataset.layout = LAYOUTS.indexOf(l) >= 0 ? l : 'top';
+  try { localStorage.setItem('admin-layout', document.documentElement.dataset.layout); } catch (e) {}
+  syncUiPanel();
+}
+/* ===== 列表样式（细条/博客卡片）：同一套列表 DOM，只换排版，作用于内容列表页 ===== */
+let LIST_VIEW = (localStorage.getItem('admin-list-view') === 'cards') ? 'cards' : 'list';
+function setListView(mode) {
+  LIST_VIEW = (mode === 'cards') ? 'cards' : 'list';
+  document.documentElement.dataset.listview = LIST_VIEW;
+  try { localStorage.setItem('admin-list-view', LIST_VIEW); } catch (e) {}
+  syncLvSegs();
+}
+function syncLvSegs() {
+  document.querySelectorAll('[data-lv]').forEach((b) => b.classList.toggle('on', b.dataset.lv === LIST_VIEW));
+  document.querySelectorAll('[data-lv-set]').forEach((b) => b.classList.toggle('on', b.dataset.lvSet === LIST_VIEW));
+}
+const LV_SEG = '<span class="seg" role="group" aria-label="列表样式"><button data-lv="list" type="button">☰ 列表</button><button data-lv="cards" type="button">▦ 卡片</button></span>';
+
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); return true; }
+  catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = t; ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (err) {}
+    ta.remove(); return ok;
+  }
+}
+document.addEventListener('click', (e) => {
+  const c = e.target.closest('[data-copy]');
+  if (!c) return;
+  copyText(c.dataset.copy).then((ok) => toast(ok ? `已复制 ${c.dataset.copy}` : '复制失败，长按手动复制吧', !ok));
+});
+document.addEventListener('click', (e) => {
+  const lvb = e.target.closest('[data-lv]');
+  if (lvb) setListView(lvb.dataset.lv);
+});
+
+function syncUiPanel() {
+  const mode = uiMode();
+  const lay = layoutMode();
+  document.querySelectorAll('[data-layout-set]').forEach((b) => b.classList.toggle('on', b.dataset.layoutSet === lay));
+  document.querySelectorAll('[data-ui-set]').forEach((b) => b.classList.toggle('on', b.dataset.uiSet === mode));
+  const slider = $('#ui-hue');
+  if (slider) slider.value = String(uiHueOf(mode));
+  const val = $('#ui-hue-val');
+  if (val) val.textContent = UI_MODE_NAME[mode] + ' · ' + uiHueOf(mode) + '°';
+  syncLvSegs();
+}
+function setUiMode(mode) {
+  document.documentElement.dataset.ui = UI_MODES.indexOf(mode) >= 0 ? mode : 'classic';
+  try { localStorage.setItem('admin-ui', document.documentElement.dataset.ui); } catch (e) {}
+  syncUiPanel();
+}
+function setUiHue(h) {
+  const mode = uiMode();
+  const hue = Math.max(0, Math.min(360, Math.round(Number(h) || 0)));
+  document.documentElement.style.setProperty(UI_HUE_VAR[mode], String(hue));
+  if (mode === 'shirone') { /* Shirone 选彩色 = 给黑白加一点染色，饱和度固定 38% */
+    document.documentElement.style.setProperty('--shue-s', '38%');
+    try { localStorage.setItem('admin-ui-hue-shirone-s', '38%'); } catch (e) {}
+  }
+  try { localStorage.setItem('admin-ui-hue-' + mode, String(hue)); } catch (e) {}
+  syncUiPanel();
+}
+function setUiMono() { /* Shirone 的「纯黑」位：饱和度归零，回到纯黑白 */
+  if (uiMode() !== 'shirone') return;
+  document.documentElement.style.setProperty('--shue-s', '0%');
+  try { localStorage.setItem('admin-ui-hue-shirone-s', '0%'); } catch (e) {}
+}
+function toggleUiPanel(force) {
+  const p = $('#ui-panel');
+  if (!p) return;
+  const show = typeof force === 'boolean' ? force : p.classList.contains('hidden');
+  p.classList.toggle('hidden', !show);
+  if (show) syncUiPanel();
 }
 /* ---------- 控制台内部背景：默认多张轮换（30s 淡入淡出） ---------- */
 const INNER_BG_POOL = ['login-art.jpg', 'login-art-alt.jpg', 'login-art-sketch.png'];
@@ -1021,6 +1114,33 @@ routes.stats = async (arg) => {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 };
+/* 首页卡片小工具：数字滚动（尊重减动效偏好）+ 近 6 个月迷你柱 */
+function countUp(el, to) {
+  const n = Number(to);
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!Number.isFinite(n) || n < 0 || reduce) { el.textContent = to; return; }
+  const t0 = performance.now(), dur = 650;
+  const step = (t) => {
+    const k = Math.min(1, (t - t0) / dur);
+    el.textContent = Math.round(n * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+function sparkHtml(dates) {
+  if (!dates || !dates.length) return '';
+  const now = new Date();
+  const buckets = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const p = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    buckets.push({ label: p, n: dates.filter((x) => String(x || '').slice(0, 7) === p).length });
+  }
+  if (!buckets.some((b) => b.n > 0)) return '';
+  const max = Math.max(...buckets.map((b) => b.n), 1);
+  return buckets.map((b, i) =>
+    `<span class="spark-bar${i === 5 ? ' cur' : ''}" style="height:${Math.max(12, Math.round(b.n / max * 100))}%" title="${b.label} · ${b.n} 条"></span>`).join('');
+}
 routes.dashboard = async () => {
   view.innerHTML = '<div class="card"><h2>加载中…</h2></div>';
   const grid = document.createElement('div');
@@ -1053,6 +1173,7 @@ routes.dashboard = async () => {
     } catch (e) { /* 忽略 */ }
     return {
       total: rows.length,
+      dates: rows.map((fm) => fm.published).filter(Boolean),
       details: [
         ['📝', '草稿', rows.filter(isDraft).length],
         ['📌', '置顶', rows.filter(isPinned).length],
@@ -1070,6 +1191,7 @@ routes.dashboard = async () => {
     const dates = files.map((f) => f.name.slice(0, 10)).sort().reverse();
     return {
       total: files.length,
+      dates,
       details: [
         ['🆕', '本月新增', dates.filter((d) => d.slice(0, 7) === monthPrefix).length],
         ['🕘', '最新', dates[0] || '—'],
@@ -1123,6 +1245,7 @@ routes.dashboard = async () => {
     const dates = items.map((it) => normDate(dateOf(it))).filter(Boolean).sort().reverse();
     return {
       total: items.length,
+      dates,
       details: [
         ['🆕', '本月新增', dates.filter((d) => d.slice(0, 7) === monthPrefix).length],
         ['🕘', '最新', dates[0] || '—'],
@@ -1150,33 +1273,33 @@ routes.dashboard = async () => {
   };
   /* key 集合要与「🧭 导航」页的 HOME_CARD_KEYS 保持一致 */
   const CARD_DEFS = {
-    posts: { label: '文章', fn: () => postStats(CFG.collections.posts) },
-    dynamic: { label: '动态', fn: () => dynStats(CFG.collections.dynamic) },
-    projects: { label: '项目', fn: () => simpleStats(CFG.collections.projects) },
-    spec: { label: '单页', fn: () => simpleStats(CFG.collections.spec) },
-    friends: { label: '友链', fn: friendsCardStats },
-    gallery: { label: '相册', fn: galleryCardStats },
-    timeline: { label: '时间线', fn: () => cfgCardStats(TIMELINE_PATH, (it) => it.date) },
-    thoughts: { label: '碎碎念', fn: () => cfgCardStats(THOUGHTS_PATH, (it) => it.createdAt) },
-    music: { label: '音乐', fn: musicCardStats },
-    waline: { label: '评论', fn: walineCardStats },
-    blog: { label: '博客', ext: 'blog', details: [['🌐', 'lanerc.me', '']] },
-    umami: { label: '数据统计', ext: 'umami', details: [['📈', 'Umami 访问统计', '']] },
+    posts: { label: '文章', icon: '📝', fn: () => postStats(CFG.collections.posts) },
+    dynamic: { label: '动态', icon: '💬', fn: () => dynStats(CFG.collections.dynamic) },
+    projects: { label: '项目', icon: '🧩', fn: () => simpleStats(CFG.collections.projects) },
+    spec: { label: '单页', icon: '📄', fn: () => simpleStats(CFG.collections.spec) },
+    friends: { label: '友链', icon: '🔗', fn: friendsCardStats },
+    gallery: { label: '相册', icon: '📸', fn: galleryCardStats },
+    timeline: { label: '时间线', icon: '🕰️', fn: () => cfgCardStats(TIMELINE_PATH, (it) => it.date) },
+    thoughts: { label: '碎碎念', icon: '💭', fn: () => cfgCardStats(THOUGHTS_PATH, (it) => it.createdAt) },
+    music: { label: '音乐', icon: '🎵', fn: musicCardStats },
+    waline: { label: '评论', icon: '💌', fn: walineCardStats },
+    blog: { label: '博客', icon: '🌐', ext: 'blog', details: [['🌐', 'lanerc.me', '']] },
+    umami: { label: '数据统计', icon: '📈', ext: 'umami', details: [['📈', 'Umami 访问统计', '']] },
     /* 纯入口卡（无统计数字）：点开进对应管理页；在「🧭 导航」页可加入/移除 */
-    stats: { label: '写作', nav: true, details: [['📊', '写作统计与总结报告', '']] },
-    search: { label: '搜索', nav: true, details: [['🔍', '全文搜文章与动态', '']] },
-    medialib: { label: '媒体库', nav: true, details: [['🗂', '图片与音乐文件管理', '']] },
-    tags: { label: '标签', nav: true, details: [['🏷', '标签的增删改', '']] },
-    fonts: { label: '字体', nav: true, details: [['🔤', '全局与各区域字体', '']] },
-    theme: { label: '主题', nav: true, details: [['🎨', '色相、布局与特效', '']] },
-    images: { label: '图片', nav: true, details: [['🖼', '头像、背景等图片位', '']] },
-    announce: { label: '公告', nav: true, details: [['📢', '静态与访客检测公告', '']] },
-    booknav: { label: '书签', nav: true, details: [['🔖', '书签导航管理', '']] },
-    navmgr: { label: '导航', nav: true, details: [['🧭', '导航栏与首页卡片布局', '']] },
-    videos: { label: '视频', nav: true, details: [['🎬', '视频页管理', '']] },
-    profile: { label: '简介', nav: true, details: [['👤', '关于页资料', '']] },
-    banner: { label: '横幅', nav: true, details: [['🖼️', '横幅标题与文案', '']] },
-    sitenav: { label: '站点导航', nav: true, details: [['🌐', '博客顶栏导航', '']] },
+    stats: { label: '写作', icon: '📊', nav: true, details: [['📊', '写作统计与总结报告', '']] },
+    search: { label: '搜索', icon: '🔍', nav: true, details: [['🔍', '全文搜文章与动态', '']] },
+    medialib: { label: '媒体库', icon: '🗂️', nav: true, details: [['🗂', '图片与音乐文件管理', '']] },
+    tags: { label: '标签', icon: '🏷️', nav: true, details: [['🏷', '标签的增删改', '']] },
+    fonts: { label: '字体', icon: '🔤', nav: true, details: [['🔤', '全局与各区域字体', '']] },
+    theme: { label: '主题', icon: '🎨', nav: true, details: [['🎨', '色相、布局与特效', '']] },
+    images: { label: '图片', icon: '🌄', nav: true, details: [['🖼', '头像、背景等图片位', '']] },
+    announce: { label: '公告', icon: '📢', nav: true, details: [['📢', '静态与访客检测公告', '']] },
+    booknav: { label: '书签', icon: '🔖', nav: true, details: [['🔖', '书签导航管理', '']] },
+    navmgr: { label: '导航', icon: '🧭', nav: true, details: [['🧭', '导航栏与首页卡片布局', '']] },
+    videos: { label: '视频', icon: '🎬', nav: true, details: [['🎬', '视频页管理', '']] },
+    profile: { label: '简介', icon: '👤', nav: true, details: [['👤', '关于页资料', '']] },
+    banner: { label: '横幅', icon: '🏞️', nav: true, details: [['🖼️', '横幅标题与文案', '']] },
+    sitenav: { label: '站点导航', icon: '🗺️', nav: true, details: [['🌐', '博客顶栏导航', '']] },
   };
   const homeOrder = (() => {
     const cfgList = (CFG.navLayout && Array.isArray(CFG.navLayout.homeCards)) ? CFG.navLayout.homeCards : [];
@@ -1187,7 +1310,7 @@ routes.dashboard = async () => {
     const def = CARD_DEFS[key];
     const d = document.createElement('div');
     d.className = 'stat';
-    d.innerHTML = `<div class="stat-head"><span class="lbl">${def.label}</span><span class="num">${def.ext ? '↗' : def.nav ? '→' : '…'}</span></div><div class="stat-rows"></div>`;
+    d.innerHTML = `<div class="stat-head"><span class="stat-ic">${def.icon || '✨'}</span><span class="lbl">${def.label}</span><span class="num">${def.ext ? '↗' : def.nav ? '→' : '…'}</span></div><div class="stat-rows"></div><div class="stat-spark"></div>`;
     d.onclick = () => {
       if (def.ext) { const u = CFG.navExternal && CFG.navExternal[def.ext]; if (u) window.open(u, '_blank', 'noopener'); }
       else location.hash = '#/' + key;
@@ -1203,9 +1326,11 @@ routes.dashboard = async () => {
         try { r = await def.fn(); } catch (e) { /* 单卡失败留「…」占位 */ }
         if (!r) return;
         const numEl = d.querySelector('.num');
-        if (numEl) numEl.textContent = r.total;
+        if (numEl) countUp(numEl, r.total);
         const rowsEl = d.querySelector('.stat-rows');
         if (rowsEl) rowsEl.innerHTML = rowsHtml(r.details);
+        const sparkEl = d.querySelector('.stat-spark');
+        if (sparkEl && r.dates) sparkEl.innerHTML = sparkHtml(r.dates);
       })();
     }
   }
@@ -1312,7 +1437,102 @@ const SPEC_COMMENT_TARGETS = [
   { label: '友链页', path: 'src/config/friendsConfig.ts' },
   { label: '打赏页', path: 'src/config/sponsorConfig.ts' },
   { label: '动态页', path: 'src/config/dynamicConfig.ts' },
+  { label: '日记页', path: 'src/config/diaryConfig.ts' },
 ];
+/* 单页里的「📔 日记」管理板块：条目 = src/content/diary/*.md，跟动态一样按条目增删改；
+ * 博客展示页 /diary/ 模仿动态页版式；列表样式跟随全局（细条/卡片）。 */
+async function mountDiarySection() {
+  const anchor = $('#list');
+  if (!anchor) return;
+  const sec = document.createElement('div');
+  sec.className = 'card';
+  sec.innerHTML = `<h2>📔 日记</h2>
+    <p class="hint">日记显示在博客 /diary/ 页（挂不挂导航栏去「🧭 站点导航」里配）。评论区开关在下面那张「💬 评论区开关」卡里，跟友链页/动态页并排。</p>
+    <div class="toolbar"><button class="btn" id="btn-diary-new">＋ 新建日记</button>${LV_SEG}<span class="meta copyable" data-copy="/diary/" title="点击复制日记页地址（拿去站点导航里加）">/diary/ 📋</span><span class="spacer"></span><span class="hint copyable" data-copy="src/content/diary" title="点击复制路径">src/content/diary 📋</span></div>
+    <div id="diary-list"><div class="card">加载中…</div></div>`;
+  anchor.after(sec);
+  sec.querySelector('#btn-diary-new').onclick = () => { location.hash = '#/edit/diary/__new__'; };
+  syncLvSegs();
+  const box = sec.querySelector('#diary-list');
+  /* 密码锁皮肤切换（存 diaryConfig.ts 的 lockStyle，重新构建生效） */
+  (async () => {
+    try {
+      const dc = await ghGetFile('src/config/diaryConfig.ts');
+      let dSha = dc.sha, dText = dc.text;
+      const NAMES = { notebook: '📕 日记本', classic: '🏛 经典', envelope: '✉️ 密封' };
+      const cur = () => { const m = dText.match(/lockStyle\s*:\s*"(notebook|classic|envelope)"/); return m ? m[1] : 'notebook'; };
+      const row = document.createElement('p');
+      row.className = 'hint';
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 2px';
+      const draw = () => {
+        row.innerHTML = `密码锁皮肤：${Object.keys(NAMES).map((k) => `<button class="btn btn-small" data-ls="${k}" ${k === cur() ? 'disabled' : ''}>${NAMES[k]}</button>`).join('')}<span class="meta">当前：${NAMES[cur()]}</span>`;
+        row.querySelectorAll('[data-ls]').forEach((b) => { b.onclick = async () => {
+          const want = b.dataset.ls;
+          try {
+            const text = /lockStyle\s*:/.test(dText)
+              ? dText.replace(/lockStyle\s*:\s*"(notebook|classic|envelope)"/, `lockStyle: "${want}"`)
+              : dText.replace(/(showComment\s*:\s*(?:true|false),)/, `$1\n\tlockStyle: "${want}",`);
+            if (text === dText) throw new Error('配置格式对不上，没改动');
+            const res = await saveWithLog('src/config/diaryConfig.ts', text, dSha, `日记密码锁皮肤改为${NAMES[want]} [管理台]`, { type: '日记', action: '切换锁皮肤', target: NAMES[want] });
+            dSha = res.content.sha; dText = text;
+            toast(`锁皮肤已换成${NAMES[want]}，重新构建后生效`);
+          } catch (e) { toast(e.message, true); }
+          draw();
+        }; });
+      };
+      draw();
+      sec.insertBefore(row, box);
+    } catch (e) { /* 读不到配置就只显示列表 */ }
+  })();
+  try {
+    const items = await ghGetFile('src/content/diary');
+    const files = (Array.isArray(items) ? items : []).filter((x) => x.type === 'file' && x.name.endsWith('.md')).sort((a, b) => b.name.localeCompare(a.name));
+    if (!files.length) { box.innerHTML = '<div class="card">还没有日记，点「＋ 新建日记」写第一篇。</div>'; return; }
+    box.innerHTML = '';
+    const rows = [];
+    for (const f of files) {
+      const div = document.createElement('div');
+      div.className = 'list-item';
+      const m = f.name.match(/(\d{4}-\d{2}-\d{2})/);
+      div.innerHTML = `<span class="title">${esc(f.name.replace(/\.md$/, ''))}</span><span class="date">${m ? '📅 ' + m[1] : ''}</span><span class="meta">日记</span>
+        <button class="btn btn-small">编辑</button>
+        <button class="btn btn-small btn-danger">删除</button>`;
+      const [btnEdit, btnDel] = div.querySelectorAll('button');
+      btnEdit.onclick = () => { location.hash = `#/edit/diary/${encodeURIComponent(f.name)}`; };
+      btnDel.onclick = async () => {
+        if (!confirm(`确定删除日记 ${f.name}？`)) return;
+        try {
+          await delWithLog(`src/content/diary/${f.name}`, f.sha, `删除日记 ${f.name} [管理台]`, { type: '日记', action: '删除', target: f.name });
+          toast('已删除');
+          router();
+        } catch (err) { toast(err.message, true); }
+      };
+      box.appendChild(div);
+      rows.push({ f, div });
+    }
+    /* 回填真标题/发布日期/正文摘要（与文章列表同款，每批 4 个并发） */
+    const fill = async ({ f, div }) => {
+      try {
+        const data = await ghGetFile(`src/content/diary/${f.name}`);
+        const { fm, body } = parseFrontmatter(data.text);
+        const tEl = div.querySelector('.title');
+        if (tEl && fm.title) tEl.textContent = fm.title;
+        const dEl = div.querySelector('.date');
+        if (dEl && fm.published) dEl.textContent = '📅 ' + String(fm.published).slice(0, 10);
+        const snippet = (body || '').split('\n').map((x) => x.trim()).find((x) => x && !x.startsWith('#')) || '';
+        if (snippet && !div.querySelector('.excerpt')) {
+          const p = document.createElement('p');
+          p.className = 'excerpt'; p.textContent = snippet.slice(0, 120);
+          div.insertBefore(p, div.querySelector('.meta'));
+        }
+        const mEl2 = div.querySelector('.meta');
+        if (mEl2 && (fm.draft || fm.password)) mEl2.textContent = [fm.draft ? '草稿' : '', fm.password ? '🔒 密码保护' : ''].filter(Boolean).join(' · ');
+      } catch (e) { /* 单篇失败不影响其他 */ }
+    };
+    for (let i = 0; i < rows.length; i += 4) await Promise.all(rows.slice(i, i + 4).map(fill));
+  } catch (e) { box.innerHTML = `<div class="card">日记读取失败：${esc(e.message)}</div>`; }
+}
+
 async function mountSpecCommentCard() {
   const anchor = $('#list');
   if (!anchor) return;
@@ -1354,10 +1574,10 @@ async function mountSpecCommentCard() {
     card.innerHTML = `<h2>💬 评论区开关</h2>
       <p class="hint">切换后保存、重新构建才生效。留言板一直开着（跟全局评论走），不在这里管。</p>
       <p class="hint" style="margin-top:2px">展示单页（有专属版式，开关存在各自的配置文件里）：</p>
-      ${rows.map((r, i) => `<div class="list-item"><span class="title">${esc(r.label)}</span><span class="meta">${esc(r.path)}</span><span class="spacer"></span>
+      ${rows.map((r, i) => `<div class="list-item"><span class="title">${esc(r.label)}</span><span class="meta copyable" data-copy="${esc(r.path)}" title="点击复制配置路径">${esc(r.path)} 📋</span><span class="spacer"></span>
         ${r.ok ? `<label class="pill${r.on ? ' on' : ''}" data-sct="${i}"><input type="checkbox" ${r.on ? 'checked' : ''}>评论区${r.on ? '开' : '关'}</label>` : '<span class="meta">读取失败</span>'}</div>`).join('')}
       <p class="hint" style="margin-top:14px">通用单页（通用模板生成，评论默认开）：</p>
-      ${gOk ? (gSlugs.map((s) => `<div class="list-item"><span class="title">${esc(s)}</span><span class="meta">/${esc(s)}/</span><span class="spacer"></span>
+      ${gOk ? (gSlugs.map((s) => `<div class="list-item"><span class="title">${esc(s)}</span><span class="meta copyable" data-copy="/${esc(s)}/" title="点击复制页面地址">/${esc(s)}/ 📋</span><span class="spacer"></span>
         <label class="pill${gMap[s] !== false ? ' on' : ''}" data-gct="${esc(s)}"><input type="checkbox" ${gMap[s] !== false ? 'checked' : ''}>评论区${gMap[s] !== false ? '开' : '关'}</label></div>`).join('') || '<p class="hint">还没有通用单页。在下面新建一个单页文件（别用关于/友链/留言这些已有名字），构建后开关会出现在这里。</p>') : '<p class="hint">通用单页开关读取失败</p>'}`;
     card.querySelectorAll('[data-sct]').forEach((el) => {
       el.querySelector('input').onchange = async (ev) => {
@@ -1392,6 +1612,41 @@ async function mountSpecCommentCard() {
   render();
 }
 
+
+/* 文章页工具栏里的「链接卡片」开关按钮：写 src/config/linkCardConfig.ts 的 enabled，重新构建生效。 */
+async function mountLinkCardButton() {
+  const btn = $('#btn-linkcard');
+  if (!btn) return;
+  const PATH = 'src/config/linkCardConfig.ts';
+  try {
+    const cf = await ghGetFile(PATH);
+    let cSha = cf.sha, cText = cf.text;
+    const cur = () => { const m = cText.match(/enabled\s*:\s*(true|false)/); return m ? m[1] === 'true' : true; };
+    const draw = () => {
+      const on = cur();
+      btn.disabled = false;
+      btn.textContent = `🔗 链接卡片：${on ? '开' : '关'}`;
+      btn.title = on ? '已开启，点击关闭' : '已关闭，点击开启';
+    };
+    draw();
+    btn.onclick = async () => {
+      const want = !cur();
+      btn.disabled = true;
+      try {
+        const text = cText.replace(/enabled\s*:\s*(true|false)/, `enabled: ${want}`);
+        if (text === cText) throw new Error('配置格式对不上，没改动');
+        const res = await saveWithLog(PATH, text, cSha, `文章链接卡片${want ? '开启' : '关闭'} [管理台]`, { type: '文章', action: '链接卡片开关', target: want ? '开' : '关' });
+        cSha = res.content.sha; cText = text;
+        toast(`文章链接卡片已${want ? '开启' : '关闭'}，重新构建后生效`);
+      } catch (e) { toast(e.message, true); }
+      draw();
+    };
+  } catch (e) {
+    btn.textContent = '🔗 链接卡片：不可用';
+    btn.title = '读不到 src/config/linkCardConfig.ts';
+  }
+}
+
 /* 列表页 */
 function listRoute(key) {
   return async () => {
@@ -1399,10 +1654,13 @@ function listRoute(key) {
     view.innerHTML = `<div class="toolbar">
         <button class="btn" id="btn-new">＋ 新建${col.label}</button>
         ${key === 'posts' ? '<button class="btn" id="btn-sort">🕒 按时间排</button>' : ''}
-        <span class="spacer"></span><span class="hint">${col.path}</span>
+        ${key === 'posts' ? '<button class="btn" id="btn-linkcard" disabled>🔗 链接卡片…</button>' : ''}
+        ${LV_SEG}
+        <span class="spacer"></span><span class="hint copyable" data-copy="${col.path}" title="点击复制路径">${col.path} 📋</span>
       </div><div id="list"></div>`;
     $('#btn-new').onclick = () => { location.hash = `#/edit/${key}/__new__`; };
-    if (key === 'spec') mountSpecCommentCard();
+    if (key === 'posts') mountLinkCardButton();
+    if (key === 'spec') { mountSpecCommentCard(); mountDiarySection(); }
     const listEl = $('#list');
     /* 文章列表排序：默认文件名倒序，点按钮切到发布时间倒序（日期回填完会自动按当前模式重排） */
     let rowsRef = null;
@@ -1476,6 +1734,13 @@ function listRoute(key) {
           }
           const metaEl = div.querySelector('.meta');
           if (metaEl) metaEl.textContent = `${e.type} · ${isShow ? '专属模板' : '通用模板'}`;
+          const slug = e.name.replace(/\.(md|mdx)$/, '');
+          const urlChip = document.createElement('span');
+          urlChip.className = 'meta copyable';
+          urlChip.dataset.copy = `/${slug}/`;
+          urlChip.title = '点击复制页面地址（拿去站点导航里加）';
+          urlChip.textContent = `/${slug}/ 📋`;
+          metaEl.after(urlChip);
         }
         listEl.appendChild(div);
         rows.push({ e, div });
@@ -1495,6 +1760,13 @@ function listRoute(key) {
             if (dEl && fm.published) { dEl.textContent = '📅 ' + String(fm.published).slice(0, 10); row.date = String(fm.published); }
             const tEl = div.querySelector('.title');
             if (tEl && fm.title) tEl.textContent = fm.title;
+            if (fm.description && !div.querySelector('.excerpt')) {
+              const p = document.createElement('p');
+              p.className = 'excerpt'; p.textContent = fm.description;
+              div.insertBefore(p, div.querySelector('.meta'));
+            }
+            const mEl = div.querySelector('.meta');
+            if (mEl && (fm.category || fm.draft)) mEl.textContent = (fm.draft ? '草稿 · ' : '') + (fm.category || '未分类');
           } catch (err) { /* 单篇失败不影响其他 */ }
         };
         for (let i = 0; i < rows.length; i += 4) {
@@ -3847,6 +4119,7 @@ routes.thoughts = async () => {
     box.innerHTML = items.map((it, i) => `
       <div class="list-item" data-i="${i}">
         <span class="title">${esc(it.title)}</span>
+        <p class="excerpt">${esc(it.content || '')}</p>
         <span class="meta">发布 ${esc(fmtDT(it.createdAt))}${it.updatedAt && it.updatedAt !== it.createdAt ? ' · 更新 ' + esc(fmtDT(it.updatedAt)) : ''}${it.enabled === false ? ' · 已隐藏' : ''}</span>
         <button class="btn btn-small" data-a="up">↑</button>
         <button class="btn btn-small" data-a="down">↓</button>
@@ -3913,6 +4186,7 @@ routes.thoughts = async () => {
   }
   view.innerHTML = `<div class="toolbar">
       <button class="btn" id="btn-thadd">＋ 新增碎碎念</button>
+      ${LV_SEG}
       <span class="spacer"></span>
       <button class="btn btn-ghost hidden" id="btn-thdiscard" type="button">🗑 丢弃草稿</button>
       <button class="btn btn-ghost hidden" id="btn-threstore" type="button">↩ 仍用旧草稿</button>
@@ -3920,6 +4194,7 @@ routes.thoughts = async () => {
     <p class="hint">碎碎念显示在 /gallery/thoughts/ 星空页面。新增自动记录发布时间，编辑自动记录更新时间。保存后重新构建生效。</p>
     <div id="th-list"></div>`;
   render();
+  syncLvSegs();
   if (thSaved && !thSaved.stale) {
     markDirty();
     const tdb = $('#btn-thdiscard');
@@ -5611,6 +5886,19 @@ async function init() {
   const bt = $('#btn-theme');
   if (bt) bt.onclick = toggleTheme;
   syncThemeBtn();
+  const bu = $('#btn-ui');
+  if (bu) bu.onclick = (e) => { e.stopPropagation(); toggleUiPanel(); };
+  document.querySelectorAll('[data-ui-set]').forEach((b) => { b.onclick = () => setUiMode(b.dataset.uiSet); });
+  document.querySelectorAll('[data-layout-set]').forEach((b) => { b.onclick = () => setLayout(b.dataset.layoutSet); });
+  document.querySelectorAll('[data-lv-set]').forEach((b) => { b.onclick = () => setListView(b.dataset.lvSet); });
+  const uh = $('#ui-hue');
+  if (uh) uh.oninput = () => setUiHue(parseInt(uh.value, 10));
+  document.querySelectorAll('[data-hue-set]').forEach((b) => { b.onclick = () => setUiHue(parseInt(b.dataset.hueSet, 10)); });
+  document.querySelectorAll('[data-hue-mono]').forEach((b) => { b.onclick = () => setUiMono(); });
+  document.addEventListener('click', (e) => {
+    const p = $('#ui-panel');
+    if (p && !p.classList.contains('hidden') && !p.contains(e.target)) toggleUiPanel(false);
+  });
   // OAuth 回调
   if (new URLSearchParams(location.search).has('code')) {
     view.innerHTML = '<div class="card"><h2>登录中…</h2></div>';

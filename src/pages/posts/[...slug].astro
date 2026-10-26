@@ -1,5 +1,6 @@
 ---
 import { render } from "astro:content";
+import { linkCardConfig } from "@/config/linkCardConfig";
 import Comment from "@components/comment/index.astro";
 import Markdown from "@components/common/Markdown.astro";
 import EncryptedPost from "@components/features/EncryptedPost.astro";
@@ -731,4 +732,102 @@ const seriesData = await getSeriesPosts(entry);
 
   <!-- 评论 -->
   {entry.data.comment && !entry.data.password && <Comment post={entry} />}
+
+  {linkCardConfig.enabled && (
+    <>
+  <!-- 站内链接卡片 v2：单独成段的本站文章链接转杂志风卡片（封面取目标文章 data-cover-img，兜底 og:image） -->
+  <style is:inline>
+    .post-link-card { display: flex; padding: 0 !important; overflow: hidden; margin: 1.6rem 0; text-decoration: none !important; color: inherit !important; transition: transform .2s ease, box-shadow .2s ease; }
+    .post-link-card:hover { transform: translateY(-3px); }
+    .post-link-card .plc-body { flex: 1 1 auto; min-width: 0; padding: 1.1rem 1.25rem; display: flex; flex-direction: column; gap: .45rem; }
+    .post-link-card .plc-kicker { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; font-size: .72rem; font-weight: 800; letter-spacing: .16em; color: var(--primary); }
+    .post-link-card .plc-date { color: var(--content-meta); font-weight: 600; letter-spacing: 0; font-size: .78rem; white-space: nowrap; }
+    .post-link-card .plc-title { font-size: 1.22rem; font-weight: 800; line-height: 1.45; color: var(--content); }
+    .post-link-card .plc-desc { color: var(--content-meta); font-size: .92rem; line-height: 1.65; margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .post-link-card .plc-foot { margin-top: auto; padding-top: .55rem; display: flex; align-items: center; gap: .45rem; font-size: .8rem; color: var(--content-meta); }
+    .post-link-card .plc-ava { width: 20px; height: 20px; margin: 0 !important; border-radius: 50%; object-fit: cover; }
+    .post-link-card .plc-tags { opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .post-link-card .plc-go { margin-left: auto; flex: 0 0 auto; border: 1.5px solid var(--primary); color: var(--primary); padding: .2rem .75rem; border-radius: 999px; font-weight: 700; transition: all .18s ease; }
+    .post-link-card:hover .plc-go { background: var(--primary); color: #fff; }
+    .post-link-card .plc-media { position: relative; flex: 0 0 42%; min-height: 205px; overflow: hidden; background: var(--primary); background: linear-gradient(140deg, color-mix(in srgb, var(--primary) 68%, #083f3c), var(--primary)); }
+    .post-link-card .plc-fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 5.4rem; font-weight: 900; color: rgba(255,255,255,.30); user-select: none; }
+    .post-link-card .plc-cover { position: absolute; inset: 0; margin: 0 !important; width: 100%; height: 100%; max-width: none; object-fit: cover; opacity: 0; transition: opacity .4s ease, transform .6s ease; }
+    .post-link-card .plc-cover.on { opacity: 1; }
+    .post-link-card:hover .plc-cover { transform: scale(1.07); }
+    .post-link-card .plc-cat { position: absolute; left: .7rem; top: .7rem; z-index: 2; background: rgba(8, 22, 22, .55); color: #fff; backdrop-filter: blur(6px); padding: .18rem .65rem; border-radius: 999px; font-size: .75rem; font-weight: 700; }
+    @media (max-width: 640px) {
+      .post-link-card { flex-direction: column; }
+      .post-link-card .plc-media { order: -1; flex: none; min-height: 168px; }
+      .post-link-card .plc-title { font-size: 1.1rem; }
+    }
+  </style>
+  <script is:inline>
+    (function () {
+      function sameOriginPath(src) {
+        try { var ou = new URL(src, location.origin); if (ou.hostname === 'lanerc.me' || ou.hostname === 'www.lanerc.me' || ou.hostname === location.hostname) return ou.pathname + ou.search; } catch (e) {}
+        return src;
+      }
+      function run() {
+        fetch('/api/post-meta.json').then(function (r) { return r.json(); }).then(function (idx) {
+          document.querySelectorAll('.markdown-content a[href]').forEach(function (a) {
+            var u;
+            try { u = new URL(a.getAttribute('href'), location.origin); } catch (e) { return; }
+            var ownHosts = [location.hostname, 'lanerc.me', 'www.lanerc.me'];
+            if (ownHosts.indexOf(u.hostname) < 0) return;
+            var path = u.pathname.endsWith('/') ? u.pathname : u.pathname + '/';
+            var meta = idx[path];
+            if (!meta) {
+              var cand = Object.keys(idx).filter(function (k) { return k.indexOf(path) === 0; });
+              if (cand.length === 1) { path = cand[0]; meta = idx[path]; }
+            }
+            if (!meta) return;
+            var p = a.parentElement;
+            if (!p || p.tagName !== 'P' || p.children.length !== 1) return;
+            if (p.textContent.trim() !== a.textContent.trim()) return;
+            var card = document.createElement('a');
+            card.className = 'post-link-card card-base';
+            card.href = path;
+            var body = document.createElement('div'); body.className = 'plc-body';
+            var kick = document.createElement('div'); kick.className = 'plc-kicker';
+            var k1 = document.createElement('span'); k1.textContent = '站内推荐 · RECOMMENDED';
+            var k2 = document.createElement('span'); k2.className = 'plc-date'; k2.textContent = meta.published || '';
+            kick.appendChild(k1); kick.appendChild(k2);
+            var t = document.createElement('div'); t.className = 'plc-title'; t.textContent = meta.title || a.textContent;
+            body.appendChild(kick); body.appendChild(t);
+            if (meta.description) { var d = document.createElement('p'); d.className = 'plc-desc'; d.textContent = meta.description; body.appendChild(d); }
+            var foot = document.createElement('div'); foot.className = 'plc-foot';
+            var ava = document.createElement('img'); ava.className = 'plc-ava'; ava.src = '/avatar.png'; ava.alt = '';
+            var who = document.createElement('span'); who.textContent = 'zhz';
+            foot.appendChild(ava); foot.appendChild(who);
+            if (meta.tags && meta.tags.length) { var tg = document.createElement('span'); tg.className = 'plc-tags'; tg.textContent = meta.tags.map(function (x) { return '#' + x; }).join(' '); foot.appendChild(tg); }
+            var go = document.createElement('span'); go.className = 'plc-go'; go.textContent = '阅读 →';
+            foot.appendChild(go);
+            body.appendChild(foot);
+            var media = document.createElement('div'); media.className = 'plc-media';
+            var fb = document.createElement('div'); fb.className = 'plc-fallback'; fb.textContent = (meta.title || '文').trim().charAt(0);
+            media.appendChild(fb);
+            if (meta.category) { var cat = document.createElement('span'); cat.className = 'plc-cat'; cat.textContent = meta.category; media.appendChild(cat); }
+            var img = document.createElement('img'); img.className = 'plc-cover'; img.alt = ''; img.loading = 'lazy';
+            media.appendChild(img);
+            card.appendChild(body); card.appendChild(media);
+            p.replaceWith(card);
+            fetch(path).then(function (r) { return r.text(); }).then(function (html) {
+              var doc = new DOMParser().parseFromString(html, 'text/html');
+              var cover = doc.querySelector('img[data-cover-img]');
+              var og = doc.querySelector('meta[property="og:image"]');
+              var src = cover ? (cover.getAttribute('src') || '') : (og ? og.content : '');
+              if (src) {
+                img.onerror = function () { img.classList.remove('on'); };
+                img.src = sameOriginPath(src);
+                img.classList.add('on');
+              }
+            }).catch(function () {});
+          });
+        }).catch(function () {});
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+    })();
+  </script>
+    </>
+  )}
 </MainGridLayout>

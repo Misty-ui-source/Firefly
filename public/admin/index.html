@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Console">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<script>/* 主题初始化：必须在 CSS 前跑，避免闪烁 */try{var _t=localStorage.getItem('admin-theme');if(_t!=='dark'&&_t!=='light'){_t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.dataset.theme=_t;}catch(e){document.documentElement.dataset.theme='light';}</script>
+<script>/* 主题初始化：必须在 CSS 前跑，避免闪烁 */try{var _t=localStorage.getItem('admin-theme');if(_t!=='dark'&&_t!=='light'){_t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.dataset.theme=_t;var _u=localStorage.getItem('admin-ui');document.documentElement.dataset.ui=(['blog','shirone','abyss'].indexOf(_u)>=0)?_u:'classic';var _l=localStorage.getItem('admin-layout');document.documentElement.dataset.layout=(['side','narrow','mix'].indexOf(_l)>=0)?_l:'top';document.documentElement.dataset.listview=(localStorage.getItem('admin-list-view')==='cards')?'cards':'list';var _hm={classic:'--chue',blog:'--bhue',shirone:'--shue',abyss:'--ahue'};for(var _k in _hm){var _v=localStorage.getItem('admin-ui-hue-'+_k);if(_k==='blog'&&!_v)_v=localStorage.getItem('admin-ui-hue');if(_v!==null&&_v!==''&&!isNaN(parseInt(_v,10)))document.documentElement.style.setProperty(_hm[_k],String(parseInt(_v,10)));}var _ss=localStorage.getItem('admin-ui-hue-shirone-s');if(_ss)document.documentElement.style.setProperty('--shue-s',_ss);}catch(e){document.documentElement.dataset.theme='light';document.documentElement.dataset.ui='classic';}</script>
 <link rel="stylesheet" href="./style.css">
 <style>
 /* 全屏加载页（仿 nekro.top）：三环 spinner + 站名，加载完左右面板滑开 */
@@ -53,12 +53,50 @@
       <div class="page-title" id="page-title"></div>
       <div class="topbar-right">
         <button id="btn-install" class="btn btn-small hidden" title="把控制台安装到主屏幕，像 App 一样打开">📲 安装 App</button>
+        <button id="btn-ui" class="icon-btn" title="界面版本：经典 / 博客风">🎨</button>
         <button id="btn-theme" class="icon-btn" title="切换日间 / 夜间">🌙</button>
         <span id="user-badge" class="user-badge hidden"></span>
         <button id="btn-logout" class="btn btn-small hidden">退出</button>
       </div>
     </div>
   </header>
+  <div id="ui-panel" class="ui-panel hidden">
+    <div class="ui-panel-h">界面版本 <span class="sub">功能完全一致，只换外观</span></div>
+    <div class="ui-seg ui-seg-list">
+      <button data-ui-set="classic">🏛 经典<span class="sub">毛玻璃 · 暗红</span></button>
+      <button data-ui-set="blog">🌐 博客风<span class="sub">实心卡 · 3px 粗边 · 可调色</span></button>
+      <button data-ui-set="shirone">🤍 Shirone<span class="sub">极简白 · 细线 · 留白</span></button>
+      <button data-ui-set="abyss">🌊 深海<span class="sub">深蓝玻璃 · 青色辉光</span></button>
+    </div>
+    <div class="ui-panel-h">布局 <span class="sub">与皮肤分开记</span></div>
+    <div class="ui-seg ui-seg-list">
+      <button data-layout-set="top">↔ 横排导航<span class="sub">现状 · 导航在顶部</span></button>
+      <button data-layout-set="side">⬅ 左侧边栏<span class="sub">主流控制台式 · 导航竖排在左</span></button>
+      <button data-layout-set="narrow">🎯 窄栏专注<span class="sub">内容收窄居中 · 适合写作</span></button>
+      <button data-layout-set="mix">🪟 混合布局<span class="sub">顶栏保留 + 左侧竖排导航</span></button>
+    </div>
+    <div class="ui-panel-h">列表样式 <span class="sub">内容列表页的排版</span></div>
+    <div class="ui-seg ui-seg-list">
+      <button data-lv-set="list">☰ 细条列表<span class="sub">一行一条 · 信息密度高</span></button>
+      <button data-lv-set="cards">▦ 博客卡片<span class="sub">大标题 + 摘要 · 跟博客一个味</span></button>
+    </div>
+    <div id="ui-palette-wrap">
+    <div class="ui-panel-h">调色板 <span class="sub" id="ui-hue-val"></span></div>
+    <div class="hue-bar"></div>
+    <input type="range" id="ui-hue" min="0" max="360" step="1" value="174">
+    <div class="ui-swatches">
+      <button data-hue-set="174" style="background:hsl(174,70%,40%)" title="青绿 174"></button>
+      <button data-hue-set="210" style="background:hsl(210,70%,45%)" title="蓝 210"></button>
+      <button data-hue-set="262" style="background:hsl(262,65%,55%)" title="紫 262"></button>
+      <button data-hue-set="330" style="background:hsl(330,70%,50%)" title="粉 330"></button>
+      <button data-hue-set="18" style="background:hsl(18,85%,50%)" title="橙 18"></button>
+      <button data-hue-set="140" style="background:hsl(140,55%,38%)" title="绿 140"></button>
+      <button data-hue-set="0" style="background:hsl(0,65%,45%)" title="红 0"></button>
+      <button data-hue-mono="1" style="background:conic-gradient(#111 0 50%, #f5f5f5 50% 100%)" title="纯黑（仅 Shirone：回到纯黑白）"></button>
+    </div>
+    <p class="hint">四套皮肤各记各的色；◐ 纯黑位只对 Shirone 生效。选择保存在本机浏览器，换设备要重选。</p>
+    </div>
+  </div>
   <main id="view" class="view"></main>
   <div id="toast" class="toast hidden"></div>
 </div>

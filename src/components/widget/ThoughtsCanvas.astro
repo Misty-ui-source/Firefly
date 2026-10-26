@@ -157,8 +157,8 @@ const dataJson = JSON.stringify(
 		const n = Math.max(items.length, 1);
 		return {
 			it, el,
-			angle: i * 2.39996 + (Math.random() - 0.5) * 0.3,
-			rad: 0.14 + ((i * 0.61803) % 1) * 0.44 + Math.random() * 0.04,
+			angle: Math.random() * 6.283,
+			rad: 0.14 + Math.random() * 0.44,
 			z: ((i + 0.15 + Math.random() * 0.7) / n) % 1,
 			sz: 0.6 + Math.random() * 0.4,
 			pd: 1,
@@ -182,7 +182,7 @@ const dataJson = JSON.stringify(
 	let rot = 0;
 	const relDepth = (z) => (((z - cam) % 1) + 1) % 1; /* 相对深度：0=贴脸，1=最远 */
 	const persp = (d) => 1 / (0.22 + d * 1.9); /* 透视系数：近大远小 */
-	const CRUISE = 0.00045; /* 星际巡航：恒定前进（深度/帧@60fps，全纵深约 37 秒）；滚轮冲量叠加其上，衰减后回到巡航 */
+	const CRUISE = 0; /* 静止版（站长定）：无自动巡航，画面自己不动；advance 只来自滚轮冲量，衰减完即完全静止 */
 	let lastT = 0;
 	function frame(t) {
 		const scale = lastT ? Math.min(2.5, Math.max(0.2, (t - lastT) / 16.7)) : 1;

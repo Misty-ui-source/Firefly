@@ -1,122 +1,331 @@
 {
-  "/posts/animeko-and-lanerc/": {
+  "/posts/animeko-and-lanerc/animeko-and-lanerc/": {
     "title": "免费动漫软件推荐--Animeko和Lanrec",
-    "description": "在如今的二次元世界里，一款好用的动漫观看软件是每位追番党的刚需。面对市面上琳琅满目的选择，今天要为大家推荐两款风格不同但都备受好评的免费动漫应用——Animeko与Lanerc，如果喜欢轻松追番的休闲观众，那么这两款总有一款适合你。"
+    "description": "在如今的二次元世界里，一款好用的动漫观看软件是每位追番党的刚需。面对市面上琳琅满目的选择，今天要为大家推荐两款风格不同但都备受好评的免费动漫应用——Animeko与Lanerc，如果喜欢轻松追番的休闲观众，那么这两款总有一款适合你。",
+    "published": "2025-11-13",
+    "category": "动漫",
+    "tags": [
+      "软件推荐",
+      "动漫",
+      "追番"
+    ]
   },
-  "/posts/digital-electronics/": {
+  "/posts/digital-electronics/combinational-logic-circuit-lab-report/": {
     "title": "数电实验-组合逻辑电路实验报告",
-    "description": "好几天没有更新内容了，学业压力太大了，没有时间书写其他方面的内容，以后会慢慢更新。今天带来的是数电实验第一章：组合逻辑电路"
+    "description": "好几天没有更新内容了，学业压力太大了，没有时间书写其他方面的内容，以后会慢慢更新。今天带来的是数电实验第一章：组合逻辑电路",
+    "published": "2025-11-07",
+    "category": "实验报告",
+    "tags": [
+      "实验报告",
+      "数字电路",
+      "课程实验"
+    ]
   },
-  "/posts/experiment-of-circuit/": {
+  "/posts/experiment-of-circuit/circuit/": {
     "title": "电路实验-应用Multisim软件工具设计电路验证网络定理",
-    "description": "今天给大家带来最近的电路实验，因为此次电路实验是全部自己在电脑仿真软件Multisim上做的，而且是按照老师给的模板填写的实验报告，所以很少有地方能体现自己的实验过程，给大家一个参考，同时我也记录一下自己的报告。"
+    "description": "今天给大家带来最近的电路实验，因为此次电路实验是全部自己在电脑仿真软件Multisim上做的，而且是按照老师给的模板填写的实验报告，所以很少有地方能体现自己的实验过程，给大家一个参考，同时我也记录一下自己的报告。",
+    "published": "2025-11-16",
+    "category": "实验报告",
+    "tags": [
+      "实验报告",
+      "电路实验",
+      "Multisim"
+    ]
   },
-  "/posts/hall-effect/": {
+  "/posts/hall-effect/hall-effect-report/": {
     "title": "霍尔效应实验报告",
-    "description": "好几天没有更新内容了，真的不是我不想更新，实际上脑袋中有好几个很好的项目想法，但是学业压力太大了，没有时间书写，以后会慢慢更新。最近大物实验要求提交电子报告，今天晚上写完了来分享给大家，同时把他记录在我的个人网站中。"
+    "description": "好几天没有更新内容了，真的不是我不想更新，实际上脑袋中有好几个很好的项目想法，但是学业压力太大了，没有时间书写，以后会慢慢更新。最近大物实验要求提交电子报告，今天晚上写完了来分享给大家，同时把他记录在我的个人网站中。",
+    "published": "2025-10-31",
+    "category": "实验报告",
+    "tags": [
+      "实验报告",
+      "大学物理",
+      "课程实验"
+    ]
   },
-  "/posts/linux_do/": {
+  "/posts/linux_do/sign-in-for-linux-do/": {
     "title": "GitHub 账号未满足Linux do入社资质，如何申请年轻版资质？——从失落 to 惊喜：GitHub 未满5年，我还是拿到了 LINUX DO 的门票",
-    "description": "文章描述"
+    "description": "文章描述",
+    "published": "2026-09-15",
+    "category": "随笔",
+    "tags": [
+      "折腾",
+      "Linux DO",
+      "随笔"
+    ]
   },
-  "/posts/music-appreciation/": {
+  "/posts/music-appreciation/idea/": {
     "title": "音乐鉴赏--在聆听中理解音乐的力量",
-    "description": "本文记录了我在音乐鉴赏课程中的学习体会，从单纯“听歌”到深入“理解”音乐的转变。通过分析爵士、古典、摇滚等不同风格，探讨音乐作为情感载体与文化桥梁的力量。真正的音乐欣赏需要理解其背后的文化与情感，这样才能帮助我们更好地认识自我与世界。"
+    "description": "本文记录了我在音乐鉴赏课程中的学习体会，从单纯“听歌”到深入“理解”音乐的转变。通过分析爵士、古典、摇滚等不同风格，探讨音乐作为情感载体与文化桥梁的力量。真正的音乐欣赏需要理解其背后的文化与情感，这样才能帮助我们更好地认识自我与世界。",
+    "published": "2025-11-20",
+    "category": "音乐",
+    "tags": [
+      "音乐鉴赏",
+      "课程论文",
+      "课程"
+    ]
   },
-  "/posts/novel/": {
+  "/posts/novel/type-of-classical-novel/": {
     "title": "《剪灯新话》------谈《牡丹灯记》里的爱情",
-    "description": "《剪灯新话》中的《牡丹灯记》讲述了一段人鬼相恋的悲剧。书生乔生与女鬼符丽卿相爱，但乔生因恐惧而退缩，最终导致悲剧结局。文章分析了符丽卿的真诚与乔生的懦弱，并以此反思现实爱情中的勇气与坚持。或许真爱应超越身份和世俗偏见，珍惜眼前人，避免因犹豫而留下遗憾。在感情中需要勇敢面对压力，守护真心。"
+    "description": "《剪灯新话》中的《牡丹灯记》讲述了一段人鬼相恋的悲剧。书生乔生与女鬼符丽卿相爱，但乔生因恐惧而退缩，最终导致悲剧结局。文章分析了符丽卿的真诚与乔生的懦弱，并以此反思现实爱情中的勇气与坚持。或许真爱应超越身份和世俗偏见，珍惜眼前人，避免因犹豫而留下遗憾。在感情中需要勇敢面对压力，守护真心。",
+    "published": "2025-11-24",
+    "category": "小说",
+    "tags": [
+      "小说读后感",
+      "随笔",
+      "文学"
+    ]
   },
-  "/posts/bilibilicard/": {
+  "/posts/bilibilicard/card/": {
     "title": "b站2233中银联名万事达卡和招行b站联名纯白花嫁卡拿下",
-    "description": "两周前拿了招行万事达借记卡，昨天又拿下这很美的一对卡啊"
+    "description": "两周前拿了招行万事达借记卡，昨天又拿下这很美的一对卡啊",
+    "published": "2026-10-14",
+    "category": "海外支付",
+    "tags": [
+      "银行卡",
+      "折腾",
+      "联名卡"
+    ]
   },
-  "/posts/bybit_card/": {
+  "/posts/bybit_card/yesjuses/": {
     "title": "申请了第一张海外借记卡（不过遗憾的是是张海外虚拟u卡）",
-    "description": "简单记录一下自己申请bybit卡的过程和成功绑定微信支付宝还有Google play商店的经历，不过我还没有买币，可能只能薅一些免费的羊毛。"
+    "description": "简单记录一下自己申请bybit卡的过程和成功绑定微信支付宝还有Google play商店的经历，不过我还没有买币，可能只能薅一些免费的羊毛。",
+    "published": "2026-09-14",
+    "category": "海外支付",
+    "tags": [
+      "借记卡",
+      "折腾",
+      "虚拟卡"
+    ]
   },
-  "/posts/cloudflare-workers/": {
+  "/posts/cloudflare-workers/cloudflare-workers/": {
     "title": "如何使用cloudflare workes 功能搭建代理节点",
-    "description": "内容来自YouTube大佬：seven科技生活。作为一名技术小白，一步步跟着他做也成功搭建出自己的节点，并且能解锁x，chatgpt和gemini，能秒开高帧视频，使用体验也是不错的。"
+    "description": "内容来自YouTube大佬：seven科技生活。作为一名技术小白，一步步跟着他做也成功搭建出自己的节点，并且能解锁x，chatgpt和gemini，能秒开高帧视频，使用体验也是不错的。",
+    "published": "2025-10-25",
+    "category": "教程",
+    "tags": [
+      "Cloudflare",
+      "教程",
+      "VPS"
+    ]
   },
   "/posts/esim.gg-easyeuicc/": {
     "title": "eSIM.gg 小白卡 + EasyEUICC 写卡与收短信排查全记录(成功下岸版)",
-    "description": "主包人胆大，不提前搜索攻略就买了这张号码，收不到短信了于是上网浏览了一下才发现很多人买的加0欧的收不到消息，也有很多人说买那种加0.几欧的可以收到，这个具体什么原理我也不清楚，主播买的号段是5704段0欧的，然后过了两天就可以收到验证码了，前前后后一共花费了44RMB，保号现在政策能保到6-7年，也是非常有性价比啊。"
+    "description": "主包人胆大，不提前搜索攻略就买了这张号码，收不到短信了于是上网浏览了一下才发现很多人买的加0欧的收不到消息，也有很多人说买那种加0.几欧的可以收到，这个具体什么原理我也不清楚，主播买的号段是5704段0欧的，然后过了两天就可以收到验证码了，前前后后一共花费了44RMB，保号现在政策能保到6-7年，也是非常有性价比啊。",
+    "published": "2026-09-14",
+    "category": "手机号攻略",
+    "tags": [
+      "eSIM",
+      "折腾",
+      "教程"
+    ]
   },
-  "/posts/blog-rebuild-diary/": {
+  "/posts/blog-rebuild-diary/blog-rebuild-diary/": {
     "title": "博客重建：从 Fuwari 到 Firefly，一天的折腾记录",
-    "description": "把博客从 Fuwari 搬到 Firefly，踩了一堆坑：Astro content 缓存、VPS 构建内存爆炸、Live2D 的 DOM 定位、下载站的反爬。记录一下。"
+    "description": "把博客从 Fuwari 搬到 Firefly，踩了一堆坑：Astro content 缓存、VPS 构建内存爆炸、Live2D 的 DOM 定位、下载站的反爬。记录一下。",
+    "published": "2026-10-15",
+    "category": "博客",
+    "tags": [
+      "博客",
+      "折腾",
+      "Astro"
+    ]
   },
-  "/posts/analytics-rebuild-diary/": {
+  "/posts/analytics-rebuild-diary/analytics-rebuild-diary/": {
     "title": "Waline 评论 + Umami 统计：从零部署到接入博客全教程",
-    "description": "香港 VPS 上 docker 部署 Waline（评论）和 Umami（统计），nginx 反代 + Cloudflare HTTPS，博客端接入配置。踩坑全记录，命令都验证过。"
+    "description": "香港 VPS 上 docker 部署 Waline（评论）和 Umami（统计），nginx 反代 + Cloudflare HTTPS，博客端接入配置。踩坑全记录，命令都验证过。",
+    "published": "2026-10-16",
+    "category": "教程",
+    "tags": [
+      "博客",
+      "教程",
+      "Docker"
+    ]
   },
-  "/posts/circuit-lab-1-3/": {
+  "/posts/circuit-lab-1-3/circuit-lab-1-3/": {
     "title": "电子元器件识别参数测试及常用仪器使用实验报告",
-    "description": "电路实验第1、3次：万用表测电阻电容、电流表内接 vs 外接的误差分析、二极管稳压管特性，顺手把常用仪器的脾气摸了一遍。"
+    "description": "电路实验第1、3次：万用表测电阻电容、电流表内接 vs 外接的误差分析、二极管稳压管特性，顺手把常用仪器的脾气摸了一遍。",
+    "published": "2025-11-29",
+    "category": "实验报告",
+    "tags": [
+      "实验报告",
+      "电路实验",
+      "元器件识别"
+    ]
   },
-  "/posts/circuit-lab-4/": {
+  "/posts/circuit-lab-4/circuit-lab-4/": {
     "title": "交流电路认识及参数测试实验报告",
-    "description": "电路实验第4次：三电压表法和三表法测交流阻抗，亲手把功率因数从0.70拉到0.964——并联电容补偿是真的香。"
+    "description": "电路实验第4次：三电压表法和三表法测交流阻抗，亲手把功率因数从0.70拉到0.964——并联电容补偿是真的香。",
+    "published": "2025-11-28",
+    "category": "实验报告",
+    "tags": [
+      "实验报告",
+      "电路实验",
+      "交流电路"
+    ]
   },
-  "/posts/circuit-lab-6/": {
+  "/posts/circuit-lab-6/circuit-lab-6/": {
     "title": "双端口网络频率特性测试及谐振电路分析实验报告",
-    "description": "电路实验第6次：Multisim 扫出一阶 RC 的幅频相频曲线，高低通串联拼出带通，RLC 实物谐振点 88.4kHz，理论 87.61kHz，误差不到 1%。"
+    "description": "电路实验第6次：Multisim 扫出一阶 RC 的幅频相频曲线，高低通串联拼出带通，RLC 实物谐振点 88.4kHz，理论 87.61kHz，误差不到 1%。",
+    "published": "2025-12-18",
+    "category": "实验报告",
+    "tags": [
+      "实验报告",
+      "电路实验",
+      "Multisim"
+    ]
   },
-  "/posts/circuit-lab-8/": {
+  "/posts/circuit-lab-8/circuit-lab-8/": {
     "title": "黑箱电路元件判别及参数测试实验报告",
-    "description": "电路实验第8次：一个不透明的黑箱子，三个端口，里面是 Y 还是 △？电阻电容电感各藏在哪？靠万用表初测+扫频相位+三电压表法，一步步把黑箱\"开膛\"。"
+    "description": "电路实验第8次：一个不透明的黑箱子，三个端口，里面是 Y 还是 △？电阻电容电感各藏在哪？靠万用表初测+扫频相位+三电压表法，一步步把黑箱\"开膛\"。",
+    "published": "2025-12-26",
+    "category": "实验报告",
+    "tags": [
+      "实验报告",
+      "电路实验",
+      "黑箱电路"
+    ]
   },
-  "/posts/physics-forced-vibration/": {
+  "/posts/physics-forced-vibration/forced-vibration/": {
     "title": "受迫振动的研究实验报告",
-    "description": "大物实验：波尔共振仪上扫出受迫振动的幅频/相频特性曲线，两种方法测阻尼系数只差4.57%，共振点相位差90°对上了理论。"
+    "description": "大物实验：波尔共振仪上扫出受迫振动的幅频/相频特性曲线，两种方法测阻尼系数只差4.57%，共振点相位差90°对上了理论。",
+    "published": "2025-11-24",
+    "category": "实验报告",
+    "tags": [
+      "实验报告",
+      "大学物理",
+      "物理实验"
+    ]
   },
-  "/posts/physics-led-thermal/": {
+  "/posts/physics-led-thermal/led-thermal/": {
     "title": "大功率LED热学特性研究实验报告",
-    "description": "大物实验：脉冲法标定结温-压降曲线，测得热阻22.097°C/W，结温每升10°C照度掉6.2%——散热真的是LED的命门。"
+    "description": "大物实验：脉冲法标定结温-压降曲线，测得热阻22.097°C/W，结温每升10°C照度掉6.2%——散热真的是LED的命门。",
+    "published": "2025-11-27",
+    "category": "实验报告",
+    "tags": [
+      "实验报告",
+      "大学物理",
+      "物理实验"
+    ]
   },
-  "/posts/electronic-craft-practice/": {
+  "/posts/electronic-craft-practice/electronic-craft-practice/": {
     "title": "4路广告流水灯电路设计与制作实验报告",
-    "description": "电子工艺实践：从555+74HC194流水灯原理分析，到嘉立创EDA画原理图打PCB，再到亲手焊接调试——虚焊排查实录。"
+    "description": "电子工艺实践：从555+74HC194流水灯原理分析，到嘉立创EDA画原理图打PCB，再到亲手焊接调试——虚焊排查实录。",
+    "published": "2026-03-25",
+    "category": "实验报告",
+    "tags": [
+      "实验报告",
+      "电子工艺",
+      "流水灯"
+    ]
   },
-  "/posts/physics-led-junction-temp/": {
+  "/posts/physics-led-junction-temp/led-junction-temp/": {
     "title": "大功率LED结温测量方法的扩展",
-    "description": "基于大物实验\"大功率LED热学特性研究\"的一篇拓展小论文：优化脉冲法参数、引入双指数瞬态热阻模型、建立结温—照度—电压耦合模型，把验证性实验做成了研究性课题。"
+    "description": "基于大物实验\"大功率LED热学特性研究\"的一篇拓展小论文：优化脉冲法参数、引入双指数瞬态热阻模型、建立结温—照度—电压耦合模型，把验证性实验做成了研究性课题。",
+    "published": "2026-01-02",
+    "category": "论文",
+    "tags": [
+      "论文",
+      "LED",
+      "结温测量"
+    ]
   },
-  "/posts/analog-waveform/": {
+  "/posts/analog-waveform/analog-waveform/": {
     "title": "波形的产生分解与合成电路的设计实验报告",
-    "description": "模电实验：500Hz方波发生器+基波/三次谐波提取+移相+加法合成，5个电路级联，用傅里叶的思想把方波拆了再拼回去。"
+    "description": "模电实验：500Hz方波发生器+基波/三次谐波提取+移相+加法合成，5个电路级联，用傅里叶的思想把方波拆了再拼回去。",
+    "published": "2026-05-21",
+    "category": "实验报告",
+    "tags": [
+      "实验报告",
+      "模拟电路",
+      "模电实验"
+    ]
   },
-  "/posts/analog-gain-control/": {
+  "/posts/analog-gain-control/analog-gain-control/": {
     "title": "可控增益放大电路设计实验报告",
-    "description": "模电实验：μA741做三档增益（0.1/1/10），CD4052模拟开关+电压比较器实现按输入幅值自动切换，输出稳在0.5V~5V。"
+    "description": "模电实验：μA741做三档增益（0.1/1/10），CD4052模拟开关+电压比较器实现按输入幅值自动切换，输出稳在0.5V~5V。",
+    "published": "2026-05-07",
+    "category": "实验报告",
+    "tags": [
+      "实验报告",
+      "模拟电路",
+      "模电实验"
+    ]
   },
-  "/posts/analog-power-amp/": {
+  "/posts/analog-power-amp/analog-power-amp/": {
     "title": "功率放大电路的设计实验报告",
-    "description": "模电实验：μA741前置+LM386功放级联，做个简单的话音放大装置，顺手搞懂OCL和OTL的区别。"
+    "description": "模电实验：μA741前置+LM386功放级联，做个简单的话音放大装置，顺手搞懂OCL和OTL的区别。",
+    "published": "2026-06-26",
+    "category": "实验报告",
+    "tags": [
+      "实验报告",
+      "模拟电路",
+      "模电实验"
+    ]
   },
-  "/posts/analog-basic-amplifier/": {
+  "/posts/analog-basic-amplifier/analog-basic-amplifier/": {
     "title": "基本比例放大电路实验报告",
-    "description": "模电实验：μA741搭反相比例放大，增益-10，输入电阻10kΩ起步，顺手测了运放的最大输出摆幅和交直流特性。"
+    "description": "模电实验：μA741搭反相比例放大，增益-10，输入电阻10kΩ起步，顺手测了运放的最大输出摆幅和交直流特性。",
+    "published": "2026-04-09",
+    "category": "实验报告",
+    "tags": [
+      "实验报告",
+      "模拟电路",
+      "模电实验"
+    ]
   },
-  "/posts/digital-sequential-logic/": {
+  "/posts/digital-sequential-logic/digital-sequential-logic/": {
     "title": "时序逻辑电路实验报告",
-    "description": "数电实验：7474搭模8计数器做广告流水灯，74161/74194两种方案实现1100100序列发生器，再加个曼切斯特编码器——时序电路三连。"
+    "description": "数电实验：7474搭模8计数器做广告流水灯，74161/74194两种方案实现1100100序列发生器，再加个曼切斯特编码器——时序电路三连。",
+    "published": "2025-12-15",
+    "category": "实验报告",
+    "tags": [
+      "实验报告",
+      "数字电路",
+      "数电实验"
+    ]
   },
-  "/posts/digital-fpga/": {
+  "/posts/digital-fpga/digital-fpga/": {
     "title": "FPGA小系统设计实验报告",
-    "description": "数电实验：Quartus里搭个简易计算器——键盘输入、BCD加减、串行乘法、数码管显示，状态机+数据通路一次搞定，还附赠加法器基础模块图。"
+    "description": "数电实验：Quartus里搭个简易计算器——键盘输入、BCD加减、串行乘法、数码管显示，状态机+数据通路一次搞定，还附赠加法器基础模块图。",
+    "published": "2025-12-31",
+    "category": "实验报告",
+    "tags": [
+      "实验报告",
+      "数字电路",
+      "数电实验"
+    ]
   },
-  "/posts/umami-static-json-cache/": {
+  "/posts/umami-static-json-cache/umami-static-json-cache/": {
     "title": "Umami 统计加速：VPS 定时任务 + 静态 JSON，让统计页毫秒级加载",
-    "description": "博客统计页直连 Umami API 太慢？用 VPS cron 每 5 分钟拉数据写成静态 JSON，前端优先读 JSON、失败降级走 API。Cloudflare CDN 缓存，毫秒级加载，附完整脚本和部署步骤。"
+    "description": "博客统计页直连 Umami API 太慢？用 VPS cron 每 5 分钟拉数据写成静态 JSON，前端优先读 JSON、失败降级走 API。Cloudflare CDN 缓存，毫秒级加载，附完整脚本和部署步骤。",
+    "published": "2026-10-17",
+    "category": "教程",
+    "tags": [
+      "博客",
+      "教程",
+      "Umami"
+    ]
   },
-  "/posts/zhz-ai-launch/": {
+  "/posts/zhz-ai-launch/zhz-ai-launch/": {
     "title": "给博客装了个 AI 评论员：zhz-ai 的折腾全记录",
-    "description": "博客评论区接入 AI 自动回复，从改名到修三个离谱 bug，再到评论区自动刷新，一天的折腾全记录。"
+    "description": "博客评论区接入 AI 自动回复，从改名到修三个离谱 bug，再到评论区自动刷新，一天的折腾全记录。",
+    "published": "2026-10-18",
+    "category": "博客",
+    "tags": [
+      "博客",
+      "Waline",
+      "AI"
+    ]
   },
-  "/posts/blog-rebuild-reflections/": {
+  "/posts/blog-rebuild-reflections/blog-rebuild-reflections/": {
     "title": "和AI“谈了”三天“恋爱”：来说说这三天重建个人网站的感受",
-    "description": "今天基本上bug也修改完了，这三天的重构过程真的是让我头昏脑胀啊"
+    "description": "今天基本上bug也修改完了，这三天的重构过程真的是让我头昏脑胀啊",
+    "published": "2026-10-18",
+    "category": "随笔",
+    "tags": [
+      "AI",
+      "折腾记录"
+    ]
   }
 }

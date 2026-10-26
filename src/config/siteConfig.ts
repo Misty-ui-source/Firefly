@@ -19,6 +19,10 @@ const pages = resolvePageToggles({
 
 	// 动态页面开关
 	dynamic: true,
+	// 日记页面开关
+	diary: true,
+	// GNSS 卫星星空页面开关
+	gnss: true,
 	// 项目展示页开关
 	projects: true,
 	// 相册页面开关

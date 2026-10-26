@@ -33,6 +33,17 @@ window.ADMIN_CONFIG = {
       mode: 'dir', // 每篇文章一个目录
       fields: ['title', 'published', 'updated', 'description', 'image', 'tags', 'category', 'draft', 'pinned', 'password', 'passwordHint'],
     },
+    diary: {
+      label: '日记',
+      path: 'src/content/diary',
+      mode: 'file', // 每篇日记一个 .md 文件，博客展示在 /diary/
+      fields: ['title', 'published', 'location', 'pinned', 'draft', 'password', 'passwordHint'],
+      newFileName: () => {
+        const d = new Date();
+        const p = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}.md`;
+      },
+    },
     dynamic: {
       label: '动态',
       path: 'src/content/dynamic',

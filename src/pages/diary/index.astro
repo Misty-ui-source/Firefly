@@ -1,0 +1,154 @@
+---
+import { getCollection, render } from "astro:content";
+import Comment from "@components/comment/index.astro";
+import EncryptedBlock from "@components/features/EncryptedBlock.astro";
+import ImageWrapper from "@components/common/ImageWrapper.astro";
+import Markdown from "@components/common/Markdown.astro";
+import { Icon } from "astro-icon/components";
+import { commentConfig, diaryConfig, profileConfig, siteConfig } from "@/config";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import "@/styles/pages/common.css";
+import "@/styles/pages/dynamic.css";
+import { url } from "@/utils/url-utils";
+
+// 日记页：条目来自 src/content/diary/（一篇一个 .md），版式模仿动态页。
+// 在 Alexander Console「单页 → 📔 日记」里增删改；是否挂导航由站点导航配置决定，这里不管。
+if (!siteConfig.pages.diary) {
+	return Astro.redirect("/404/");
+}
+
+const title = diaryConfig.title || "日记";
+const description = diaryConfig.description || "";
+
+const entries = (await getCollection("diary", ({ data }) => !data.draft)).sort(
+	(a, b) =>
+		Number(b.data.pinned) - Number(a.data.pinned) ||
+		b.data.published.getTime() - a.data.published.getTime(),
+);
+const rendered = await Promise.all(
+	entries.map(async (entry) => ({ entry, Content: (await render(entry)).Content })),
+);
+
+const showComments = Boolean(
+	diaryConfig.showComment !== false &&
+		commentConfig?.type &&
+		commentConfig.type !== "none",
+);
+
+const fmtTime = (d: Date) =>
+	new Intl.DateTimeFormat("zh-CN", {
+		timeZone: "Asia/Shanghai",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+		hour: "2-digit",
+		minute: "2-digit",
+		hour12: false,
+	}).format(d);
+
+const profileUrl = url("/about/");
+---
+
+<MainGridLayout title={title} description={description}>
+	<section class="page-shell" aria-labelledby="diary-page-title">
+		<header class="page-header card-base">
+			<div class="page-heading">
+				<div class="page-icon" aria-hidden="true">
+					<Icon name="material-symbols:book-2-rounded" />
+				</div>
+				<div>
+					<h2 id="diary-page-title">{title}</h2>
+					{description && <p>{description}</p>}
+				</div>
+			</div>
+			<div class="page-count" aria-label="日记数量">
+				<Icon name="material-symbols:book-2-rounded" />
+				<strong>{rendered.length}</strong>
+				<span>篇日记</span>
+			</div>
+		</header>
+
+		{
+			rendered.length === 0 ? (
+				<div class="page-entry card-base">
+					<p style="color: var(--content-meta)">还没有日记。</p>
+				</div>
+			) : (
+				rendered.map(({ entry, Content }) => (
+					<div class="page-entry card-base">
+						<article>
+							<header class="page-entry-header">
+								<a href={profileUrl} class="page-avatar" aria-label={profileConfig.name}>
+									<ImageWrapper
+										src={profileConfig.avatar || ""}
+										alt={profileConfig.name}
+										widths={[96]}
+										sizes="48px"
+										loading="lazy"
+										fadeIn={false}
+									/>
+								</a>
+								<div class="page-identity">
+									<a href={profileUrl} class="page-author">
+										<strong>{profileConfig.name}</strong>
+									</a>
+									<div class="page-meta">
+										<span class="page-time">
+											<time datetime={entry.data.published.toISOString()}>
+												{fmtTime(entry.data.published)}
+											</time>
+										</span>
+										{entry.data.location && (
+											<span class="page-location">
+												<Icon name="material-symbols:location-on-rounded" />
+												<span>{entry.data.location}</span>
+											</span>
+										)}
+									</div>
+								</div>
+								{entry.data.pinned && (
+									<span class="page-pinned-badge">
+										<Icon name="material-symbols:push-pin" class="size-3" />
+										置顶
+									</span>
+								)}
+							</header>
+							{entry.data.title && (
+								<h3 style="font-size: 1.15rem; font-weight: 700; margin: 0.4rem 0 0.2rem">
+									{entry.data.title}
+								</h3>
+							)}
+							<div class="page-content">
+								{entry.data.password ? (
+									<EncryptedBlock
+										password={entry.data.password}
+										slug={`diary-${entry.id}`}
+										hint={entry.data.passwordHint}
+										uid={entry.id.replace(/[^a-zA-Z0-9_-]/g, "-")}
+										skin={diaryConfig.lockStyle || "notebook"}
+									>
+										<Markdown>
+											<Content />
+										</Markdown>
+									</EncryptedBlock>
+								) : (
+									<Markdown>
+										<Content />
+									</Markdown>
+								)}
+							</div>
+						</article>
+					</div>
+				))
+			)
+		}
+
+		{
+			showComments && (
+				<div class="mt-4">
+					<Comment customPath="/diary/" />
+				</div>
+			)
+		}
+	</section>
+</MainGridLayout>

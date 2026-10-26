@@ -1,0 +1,261 @@
+---
+import I18nKey from "@i18n/i18nKey";
+import { i18n } from "@i18n/translation";
+import { encryptContent } from "@utils/crypto-utils";
+
+// 多实例版 EncryptedContent（原版用固定 id，一页只能放一个）：本组件用 uid 区分实例，
+// 供日记页在同一页放多篇密码日记。加密格式与文章密码完全一致（同一个 encryptContent）。
+import { Icon } from "astro-icon/components";
+
+interface Props {
+	password: string;
+	slug: string;
+	hint?: string;
+	uid: string;
+	skin?: string;
+}
+
+const { password, slug, hint = "", uid, skin = "notebook" } = Astro.props;
+
+const rawHtml = await Astro.slots.render("default");
+const encryptedData = encryptContent(rawHtml, password, slug);
+
+const labels = {
+	protected: i18n(I18nKey.passwordProtected),
+	desc: i18n(I18nKey.passwordProtectedDesc),
+	hint: i18n(I18nKey.passwordHint),
+	placeholder: i18n(I18nKey.passwordPlaceholder),
+	submit: i18n(I18nKey.passwordSubmit),
+	error: i18n(I18nKey.passwordError),
+};
+---
+
+<div data-enc-block={uid} data-skin={skin} data-encrypted={encryptedData} data-slug={slug}>
+  <!-- Lock UI -->
+  <div data-role="ui" class="flex justify-center py-16 px-4">
+    <div class="lock-card card-base flex flex-col items-center gap-3 max-w-100 w-full p-8" data-role="card">
+      <span data-role="icon" class="lock-icon"><Icon name="material-symbols:shield-lock" class="text-8xl text-(--primary)" /></span>
+
+      <h2 class="text-lg font-bold text-black/80 dark:text-white/80 m-0">这篇日记锁着呢</h2>
+      <p class="text-sm text-black/40 dark:text-white/40 text-center m-0">主人把这页上了锁，知道密码的才能看。</p>
+
+      {hint && (
+        <p class="text-xs text-black/30 dark:text-white/30 text-center m-0">{labels.hint}: {hint}</p>
+      )}
+
+      <form data-role="form" class="w-full mt-2 space-y-2">
+        <input
+          data-role="input"
+          name="password"
+          type="password"
+          placeholder={labels.placeholder}
+          autocomplete="off"
+          class="w-full px-3 py-2 rounded-lg text-sm bg-black/5 dark:bg-white/10
+                 border border-black/8 dark:border-white/8
+                 text-black/80 dark:text-white/80 placeholder-black/25 dark:placeholder-white/25
+                 outline-hidden focus:border-(--primary) transition"
+        />
+        <button
+          type="submit"
+          class="w-full py-2 rounded-lg text-sm font-medium bg-(--primary) text-white dark:text-black/70
+                 hover:opacity-85 active:scale-[0.98] transition-all"
+        >
+          {labels.submit}
+        </button>
+      </form>
+
+      <p data-role="error" class="text-xs text-red-500 dark:text-red-400 m-0 hidden">{labels.error}</p>
+    </div>
+  </div>
+
+  <!-- Decrypted content injected here -->
+  <div data-role="content" class="hidden"></div>
+</div>
+
+<script is:inline define:vars={{ uid }}>
+(function() {
+  var ITERATIONS = 100000;
+  var SALT_LEN = 16;
+  var IV_LEN = 12;
+  var TAG_LEN = 16;
+
+  var container = document.querySelector('[data-enc-block="' + uid + '"]');
+  if (!container) return;
+
+  var encryptedData = container.getAttribute('data-encrypted');
+  var slug = container.getAttribute('data-slug');
+  var cacheKey = 'pw:' + slug;
+
+  var ui = container.querySelector('[data-role="ui"]');
+  var card = container.querySelector('[data-role="card"]');
+  var iconEl = container.querySelector('[data-role="icon"]');
+  var attempts = 0;
+  var TAUNTS = ['不对哦，再想想 🤔', '又错了——这篇是主人的小秘密。', '第三次了，要不直接去问主人要密码？', '锁都要被你摇松了 😤'];
+  var form = container.querySelector('[data-role="form"]');
+  var input = container.querySelector('[data-role="input"]');
+  var errorEl = container.querySelector('[data-role="error"]');
+  var contentEl = container.querySelector('[data-role="content"]');
+
+  function showContent(html) {
+    contentEl.innerHTML = html;
+    contentEl.classList.remove('hidden');
+    ui.classList.add('hidden');
+    // Scripts injected via innerHTML are inert — re-create them so they execute
+    var scripts = contentEl.querySelectorAll('script');
+    for (var i = 0; i < scripts.length; i++) {
+      var old = scripts[i];
+      var ns = document.createElement('script');
+      for (var j = 0; j < old.attributes.length; j++) {
+        ns.setAttribute(old.attributes[j].name, old.attributes[j].value);
+      }
+      ns.textContent = old.textContent;
+      old.parentNode.replaceChild(ns, old);
+    }
+    // Re-init components after content is in DOM
+    setTimeout(function() {
+      document.dispatchEvent(new CustomEvent('password:decrypted'));
+    }, 100);
+
+    // 初始化解密内容中图片的 LQIP 淡入
+    var placeholders = contentEl.querySelectorAll('.lqip-placeholder');
+    for (var i = 0; i < placeholders.length; i++) {
+      (function(placeholder) {
+        var container = placeholder.parentElement;
+        if (!container) return;
+        var img = container.querySelector('img');
+        if (!img) return;
+        if (img.complete && img.naturalWidth > 0) {
+          img.style.opacity = '1';
+          placeholder.classList.add('loaded');
+        } else {
+          img.addEventListener('load', function() {
+            img.style.opacity = '1';
+            placeholder.classList.add('loaded');
+          }, { once: true });
+          img.addEventListener('error', function() {
+            placeholder.classList.add('loaded');
+          }, { once: true });
+        }
+      })(placeholders[i]);
+    }
+  }
+
+  function showError() {
+    attempts++;
+    errorEl.textContent = TAUNTS[Math.min(attempts - 1, TAUNTS.length - 1)];
+    errorEl.classList.remove('hidden');
+    if (card) { card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
+  }
+
+  function hideError() {
+    errorEl.classList.add('hidden');
+  }
+
+  function base64ToBytes(b64) {
+    var bin = atob(b64);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) {
+      bytes[i] = bin.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  async function decrypt(pwd) {
+    var raw = base64ToBytes(encryptedData);
+    var salt = raw.slice(0, SALT_LEN);
+    var iv = raw.slice(SALT_LEN, SALT_LEN + IV_LEN);
+    var authTag = raw.slice(SALT_LEN + IV_LEN, SALT_LEN + IV_LEN + TAG_LEN);
+    var ciphertext = raw.slice(SALT_LEN + IV_LEN + TAG_LEN);
+
+    var combined = new Uint8Array(ciphertext.length + TAG_LEN);
+    combined.set(ciphertext);
+    combined.set(authTag, ciphertext.length);
+
+    var enc = new TextEncoder();
+    var keyMaterial = await crypto.subtle.importKey(
+      'raw', enc.encode(pwd), 'PBKDF2', false, ['deriveBits', 'deriveKey']
+    );
+    var key = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt: salt, iterations: ITERATIONS, hash: 'SHA-256' },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['decrypt']
+    );
+    var decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, combined);
+    return new TextDecoder().decode(decrypted);
+  }
+
+  // Handle form submit
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var pwd = input.value.trim();
+    if (!pwd) return;
+    hideError();
+    decrypt(pwd).then(function(html) {
+      sessionStorage.setItem(cacheKey, pwd);
+      if (iconEl) { iconEl.textContent = '🔓'; iconEl.classList.add('pop'); }
+      setTimeout(function() { showContent(html); }, 480);
+    }).catch(function() {
+      showError();
+    });
+  });
+
+  // Try cached password
+  var cached = sessionStorage.getItem(cacheKey);
+  if (cached) {
+    decrypt(cached).then(function(html) {
+      showContent(html);
+    }).catch(function() {
+      sessionStorage.removeItem(cacheKey);
+    });
+  }
+})();
+</script>
+
+<style>
+  .lock-icon { display: inline-flex; font-size: 4.8rem; line-height: 1; }
+  .lock-icon.pop { animation: enc-pop .45s ease; }
+  .lock-card.shake { animation: enc-shake .4s ease; }
+  @keyframes enc-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
+  }
+  @keyframes enc-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.25) rotate(-8deg); }
+    100% { transform: scale(1); }
+  }
+  /* 📕 日记本：横线纸 + 左侧红线 + 顶部胶带 */
+  [data-skin="notebook"] .lock-card {
+    position: relative;
+    background-image:
+      linear-gradient(90deg, transparent 33px, rgba(224, 92, 92, .45) 33px, rgba(224, 92, 92, .45) 35px, transparent 35px),
+      repeating-linear-gradient(transparent, transparent 27px, rgba(110, 130, 160, .16) 27px, rgba(110, 130, 160, .16) 28px);
+  }
+  [data-skin="notebook"] .lock-card::before {
+    content: ''; position: absolute; top: -12px; left: 50%;
+    width: 110px; height: 26px; border-radius: 2px;
+    transform: translateX(-50%) rotate(-3deg);
+    background: rgba(250, 205, 90, .55);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+  }
+  /* ✉️ 密封：虚线封边 + 火漆印章 */
+  [data-skin="envelope"] .lock-card {
+    border: 2px dashed color-mix(in srgb, var(--primary) 45%, transparent);
+    background: linear-gradient(165deg, rgba(245, 201, 123, .14), transparent 55%);
+  }
+  [data-skin="envelope"] .lock-icon {
+    width: 88px; height: 88px; border-radius: 50%;
+    align-items: center; justify-content: center; color: #fff;
+    background: radial-gradient(circle at 35% 30%, #e0655f, #b3352f);
+    box-shadow: inset 0 0 0 4px rgba(255, 255, 255, .25), 0 4px 10px rgba(0, 0, 0, .2);
+  }
+  [data-skin="envelope"] .lock-icon svg { width: 42px; height: 42px; color: #fff; }
+  @media (prefers-reduced-motion: reduce) {
+    .lock-card.shake, .lock-icon.pop { animation: none; }
+  }
+</style>
