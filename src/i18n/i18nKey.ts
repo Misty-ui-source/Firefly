@@ -104,6 +104,8 @@ enum I18nKey {
 	siteMode = "siteMode",
 	siteModeFull = "siteModeFull",
 	siteModePure = "siteModePure",
+	settingsFont = "settingsFont",
+	settingsFontSystem = "settingsFontSystem",
 	displaySettings = "displaySettings",
 	lightDarkMode = "lightDarkMode",
 

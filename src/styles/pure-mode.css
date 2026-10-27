@@ -34,6 +34,18 @@ html[data-site-mode="pure"]:not(.dark) body {
 	background: #ffffff !important;
 }
 
+/* 素简字体切换：调色板「字体」里选，localStorage 存、html 上 data-pure-font 标记，
+   首帧前由 Layout 头部脚本挂好；不选（system）时不挂属性、走站点默认字体栈 */
+html[data-site-mode="pure"][data-pure-font="maru"] body {
+	font-family: var(--font-zen-maru-gothic), sans-serif !important;
+}
+html[data-site-mode="pure"][data-pure-font="lxgw"] body {
+	font-family: var(--font-lxgw-wenkai), serif !important;
+}
+html[data-site-mode="pure"][data-pure-font="zhuque"] body {
+	font-family: var(--font-zhuque-fangsong), serif !important;
+}
+
 /* 横幅 / 壁纸层（连带其内的波纹、渐变、标题叠加层）整体隐藏 */
 html[data-site-mode="pure"] #wallpaper-wrapper,
 html[data-site-mode="pure"] #header-waves,
@@ -129,6 +141,30 @@ html[data-site-mode="pure"] #navbar .dropdown-container > button {
 	font-size: 0.9375rem !important;
 	font-weight: 500 !important;
 	padding-inline: 0.75rem !important;
+}
+/* 下拉箭头贴紧文字：按钮原本给箭头留的 pr-8 被上面的 padding-inline 覆盖后，
+   绝对定位的箭头会压在文字上（实测重叠 17px）。改成行内排布：按钮变弹性盒、
+   箭头退出绝对定位回到文字右侧，悬停翻转用 rotate 属性补回（Tailwind v4 口径） */
+html[data-site-mode="pure"] #navbar .dropdown-trigger {
+	display: inline-flex !important;
+	align-items: center !important;
+}
+html[data-site-mode="pure"] #navbar .dropdown-arrow {
+	position: static !important;
+	transform: none !important;
+	translate: none !important;
+	rotate: none !important;
+	margin-left: 0.15rem !important;
+}
+html[data-site-mode="pure"] #navbar .dropdown-container:hover .dropdown-arrow,
+html[data-site-mode="pure"] #navbar .dropdown-container:focus-within .dropdown-arrow {
+	rotate: 180deg !important;
+}
+/* 下拉面板改右基准：右缘与触发项对齐、向左借空间展开，
+   面板比文字宽时往左长，不往右溢出 */
+html[data-site-mode="pure"] #navbar .dropdown-menu {
+	left: auto !important;
+	right: 0 !important;
 }
 html[data-site-mode="pure"] #navbar .navbar-seg-left a {
 	font-weight: 500 !important;
@@ -740,4 +776,16 @@ html[data-site-mode="pure"] .muse-butler-badge {
 html.dark[data-site-mode="pure"] .muse-butler-badge {
 	background: #2e2e33 !important;
 	color: #d4d4d8 !important;
+}
+
+/* —— 层外规则：内容区顶格 ——
+   全屏·经典布局的非首页，原主题在 layout-styles.css（层外）给 .content-panel 直接写了
+   top: calc(45vh - 3.5rem) !important（给横幅留位）。素简下壁纸已隐藏，这截预留变成
+   大片空白；而层内那条 --content-top: 5.25rem 只改变量、压不住层外 !important 的 top 本身。
+   同为层外、同口径把 top 与 min-height 一起压回导航栏下方，全站非首页一并生效 */
+html[data-site-mode="pure"][data-wallpaper-mode="fullscreen"][data-fullscreen-layout="classic"]
+	body:not(.is-home)
+	.content-panel {
+	top: 5.25rem !important;
+	min-height: calc(100vh - 5.25rem) !important;
 }

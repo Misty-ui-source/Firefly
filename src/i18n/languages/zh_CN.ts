@@ -126,6 +126,8 @@ export const zh_CN: Translation = {
 	[Key.siteMode]: "站点形态",
 	[Key.siteModeFull]: "华彩",
 	[Key.siteModePure]: "素简",
+	[Key.settingsFont]: "字体",
+	[Key.settingsFontSystem]: "系统默认",
 	[Key.displaySettings]: "显示设置",
 	[Key.lightDarkMode]: "亮暗模式",
 

@@ -459,6 +459,45 @@ export function setSiteMode(mode: SiteMode): void {
 	applySiteModeToDocument(safe);
 }
 
+// ─── 素简字体 ─────────────────────────────────────────────
+// 调色板在素简下提供的阅读字体切换；只存选择，字体栈由 pure-mode.css 按 data-pure-font 选
+export type PureFont = "system" | "maru" | "lxgw" | "zhuque";
+const PURE_FONTS: PureFont[] = ["system", "maru", "lxgw", "zhuque"];
+
+export function getStoredPureFont(): PureFont {
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.getItem !== "function"
+	) {
+		return "system";
+	}
+	const stored = localStorage.getItem("pureFont") as PureFont | null;
+	return stored && PURE_FONTS.includes(stored) ? stored : "system";
+}
+
+export function applyPureFontToDocument(font: PureFont): void {
+	if (typeof document === "undefined") {
+		return;
+	}
+	const safe: PureFont = PURE_FONTS.includes(font) ? font : "system";
+	if (safe === "system") {
+		document.documentElement.removeAttribute("data-pure-font");
+	} else {
+		document.documentElement.setAttribute("data-pure-font", safe);
+	}
+}
+
+export function setPureFont(font: PureFont): void {
+	const safe: PureFont = PURE_FONTS.includes(font) ? font : "system";
+	if (
+		typeof localStorage !== "undefined" &&
+		typeof localStorage.setItem === "function"
+	) {
+		localStorage.setItem("pureFont", safe);
+	}
+	applyPureFontToDocument(safe);
+}
+
 export function applyWallpaperModeToDocument(
 	mode: WALLPAPER_MODE,
 	animate = true,

@@ -128,6 +128,8 @@ export const ja: Translation = {
 	[Key.siteMode]: "サイトモード",
 	[Key.siteModeFull]: "華やか",
 	[Key.siteModePure]: "素朴",
+	[Key.settingsFont]: "フォント",
+	[Key.settingsFontSystem]: "システム既定",
 	[Key.displaySettings]: "表示設定",
 	[Key.lightDarkMode]: "ライト/ダーク",
 

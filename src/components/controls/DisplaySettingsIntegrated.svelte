@@ -39,6 +39,7 @@ import {
 	getStoredFireflyEnabled,
 	getStoredFullscreenLayout,
 	getStoredNavbarStyle,
+	getStoredPureFont,
 	getStoredSiteMode,
 	getStoredGradientEnabled,
 	getStoredOverlayBlur,
@@ -69,6 +70,7 @@ import {
 	setSakuraEnabled,
 	setSnowEnabled,
 	setNavbarStyle,
+	setPureFont,
 	setSiteMode,
 	setNotesEnabled,
 	setRainEnabled,
@@ -119,6 +121,15 @@ const defaultSiteMode = getDefaultSiteMode();
 const siteModeOptions = [
 	{ value: "full", labelKey: I18nKey.siteModeFull },
 	{ value: "pure", labelKey: I18nKey.siteModePure },
+] as const;
+// 素简下调色板精简：只留站点形态（华彩切换）、字体与列表布局，壁纸/特效整页签收起
+const isPure = $derived(siteMode === "pure");
+let pureFont = $state(getStoredPureFont());
+const pureFontOptions = [
+	{ value: "system", label: "" },
+	{ value: "maru", label: "Zen Maru Gothic 圆体" },
+	{ value: "lxgw", label: "LXGW WenKai 霞鹜文楷" },
+	{ value: "zhuque", label: "Zhuque Fangsong 朱雀仿宋" },
 ] as const;
 let wallpaperMode: WALLPAPER_MODE = $state(backgroundWallpaper.mode);
 const defaultWallpaperMode = backgroundWallpaper.mode;
@@ -283,6 +294,7 @@ const hasAnyContent = $derived(
 // --- Tab visibility ---
 const hasAppearanceTab = $derived(
 	showThemeColor ||
+		showSiteMode ||
 		allowLayoutSwitch ||
 		isCardBorderSwitchable ||
 		isCardFollowThemeSwitchable,
@@ -330,13 +342,13 @@ let visibleTabs = $derived.by(() => {
 			icon: "material-symbols:palette",
 			label: i18n(I18nKey.settingsTabAppearance),
 		});
-	if (hasWallpaperTab)
+	if (hasWallpaperTab && !isPure)
 		tabs.push({
 			key: "wallpaper",
 			icon: "material-symbols:wallpaper",
 			label: i18n(I18nKey.settingsTabWallpaper),
 		});
-	if (hasEffectsTab)
+	if (hasEffectsTab && !isPure)
 		tabs.push({
 			key: "effects",
 			icon: "mdi:flower-poppy",
@@ -829,6 +841,10 @@ $effect(() => {
 });
 
 $effect(() => {
+	setPureFont(pureFont);
+});
+
+$effect(() => {
 	if (wallpaperMode === WALLPAPER_OVERLAY) {
 		if (isOverlayOpacitySwitchable) {
 			setOverlayOpacity(overlayOpacity);
@@ -881,7 +897,7 @@ $effect(() => {
 	<!-- Appearance Tab: Theme Color + Layout -->
 	{#if activeTab === "appearance"}
 		<!-- Theme Color Section -->
-		{#if showThemeColor}
+		{#if showThemeColor && !isPure}
 		<div class="">
 			<div class="section-title">
 				{i18n(I18nKey.themeColor)}
@@ -905,7 +921,7 @@ $effect(() => {
 		{/if}
 
 		<!-- Navbar Style Section -->
-		{#if showNavbarStyle}
+		{#if showNavbarStyle && !isPure}
 		<div class="">
 			<div class="section-title">
 				{i18n(I18nKey.navbarStyle)}
@@ -964,6 +980,29 @@ $effect(() => {
 		</div>
 		{/if}
 
+		<!-- Pure Font Section（仅素简：阅读字体切换） -->
+		{#if isPure}
+		<div class="">
+			<div class="section-title">
+				{i18n(I18nKey.settingsFont)}
+			</div>
+			<div class="flex flex-wrap gap-2">
+				{#each pureFontOptions as opt}
+				<button
+					aria-label={opt.label || i18n(I18nKey.settingsFontSystem)}
+					class="flex-1 min-w-[45%] btn-regular rounded-md py-2 px-3 flex items-center justify-center gap-2 active:scale-95 transition-all relative overflow-hidden"
+					class:opacity-60={pureFont !== opt.value}
+					class:bg-(--btn-regular-bg-hover)={pureFont === opt.value}
+					onclick={() => { pureFont = opt.value; }}
+					title={opt.label || i18n(I18nKey.settingsFontSystem)}
+				>
+					<span class="text-xs font-medium">{opt.label || i18n(I18nKey.settingsFontSystem)}</span>
+				</button>
+				{/each}
+			</div>
+		</div>
+		{/if}
+
 		<!-- Layout Switch Section（所有页面显示） -->
 		{#if allowLayoutSwitch}
 		<div class="">
@@ -1011,7 +1050,7 @@ $effect(() => {
 		{/if}
 
 		<!-- Card Settings Section -->
-		{#if isCardBorderSwitchable || isCardFollowThemeSwitchable}
+		{#if (isCardBorderSwitchable || isCardFollowThemeSwitchable) && !isPure}
 		<div>
 			<div class="section-title">
 				{i18n(I18nKey.cardSettings)}

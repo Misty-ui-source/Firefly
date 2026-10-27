@@ -129,6 +129,8 @@ export const ru: Translation = {
 	[Key.siteMode]: "Режим сайта",
 	[Key.siteModeFull]: "Яркий",
 	[Key.siteModePure]: "Минимальный",
+	[Key.settingsFont]: "Шрифт",
+	[Key.settingsFontSystem]: "Системный",
 	[Key.displaySettings]: "Настройки отображения",
 	[Key.lightDarkMode]: "Светлая/тёмная тема",
 

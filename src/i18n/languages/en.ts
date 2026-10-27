@@ -129,6 +129,8 @@ export const en: Translation = {
 	[Key.siteMode]: "Site Mode",
 	[Key.siteModeFull]: "Splendid",
 	[Key.siteModePure]: "Minimal",
+	[Key.settingsFont]: "Font",
+	[Key.settingsFontSystem]: "System default",
 	[Key.displaySettings]: "Display Settings",
 	[Key.lightDarkMode]: "Light/Dark Mode",
 

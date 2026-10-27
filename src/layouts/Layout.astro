@@ -484,6 +484,12 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
         resolvedSiteMode
       );
 
+      // 初始化素简字体 - 调色板里选过的阅读字体，首帧前挂到 html 上（仅素简下生效）
+      const pureFontStored = localStorage.getItem("pureFont");
+      if (["maru", "lxgw", "zhuque"].includes(pureFontStored)) {
+        document.documentElement.setAttribute("data-pure-font", pureFontStored);
+      }
+
       // 初始化期间禁用 content-panel/wrapper 过渡，避免加载时布局/变量变化产生内容移动动画；
       // load 后移除（仅首次设置，swup 切页重跑脚本时不再重复）。布局已由 CSS 接管，无需 rAF 校正
       if (!window.__fireflyLayoutTransitionGuard) {

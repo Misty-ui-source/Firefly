@@ -35,6 +35,12 @@ export function collectUsedFontCssVars(
 	if (config.navbarTitleFont) used.add(config.navbarTitleFont);
 	if (config.codeFont) used.add(config.codeFont);
 
+	// 素简模式字体切换的候选（调色板「字体」里选，见 setting-utils 的 PureFont）：
+	// 不在配置字段里，但 FontSetup 会渲染它们的 <Font> 标签、astro.config 也要注册，
+	// 两边共用这份收集逻辑，一并算作已用
+	used.add("--font-lxgw-wenkai");
+	used.add("--font-zhuque-fangsong");
+
 	return used;
 }
 

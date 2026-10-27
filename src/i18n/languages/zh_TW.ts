@@ -126,6 +126,8 @@ export const zh_TW: Translation = {
 	[Key.siteMode]: "站點形態",
 	[Key.siteModeFull]: "華彩",
 	[Key.siteModePure]: "素簡",
+	[Key.settingsFont]: "字體",
+	[Key.settingsFontSystem]: "系統預設",
 	[Key.displaySettings]: "顯示設定",
 	[Key.lightDarkMode]: "亮暗模式",
 
