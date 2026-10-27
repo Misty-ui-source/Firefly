@@ -9,9 +9,10 @@ export const analyticsConfig: AnalyticsConfig = {
 	umamiAnalytics: {
 		// Umami Website ID
 		websiteId: "fd50ff34-e2c4-4110-888e-a40093cbe582",
-		// 公开分享 ID（统计页 azuma 版用；接口走站内 /api/umami 代理绕跨域）
+		// 公开分享 ID（统计页 azuma 版用；接口经 lanerc.me/api/umami 代理绕跨域）
 		shareId: "EG15WwHeRvz2lmd2",
-		shareApiBase: "/api/umami",
+		// 必须是绝对地址：统计组件用 new URL() 拼接口，相对地址会直接抛 Invalid URL、数据全挂
+		shareApiBase: "https://lanerc.me/api/umami",
 		// Umami 上线之前的历史量（本站统计一直走 Umami，无历史量可叠）
 		historicalStats: { visitors: 0, pageviews: 0 },
 		// Umami JS地址，支持使用自建

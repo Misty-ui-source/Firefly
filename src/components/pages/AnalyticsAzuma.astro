@@ -12,8 +12,15 @@ const historicalVisitors = umamiAnalytics?.historicalStats?.visitors ?? 0;
 const historicalPageviews = umamiAnalytics?.historicalStats?.pageviews ?? 0;
 const hasPublicStats = Boolean(umamiAnalytics?.websiteId && shareId && shareApiBase);
 const sourceLabel = shareApiBase.includes("cloud.umami.is") ? "Umami Cloud" : "Umami";
-// Umami 的公开分享页（不是实例首页，首页会跳登录）。由 shareApiBase + shareId 拼出，配置改了自动跟着变。
-const publicShareUrl = hasPublicStats ? `${shareApiBase}/share/${shareId}` : "";
+// Umami 的公开分享页（不是实例首页，首页会跳登录）。域名取 scriptUrl 的 origin——不能用 shareApiBase 拼，那是数据代理地址，点开只会落到 Umami 的网页外壳。
+const umamiOrigin = (() => {
+	try {
+		return new URL(umamiAnalytics?.scriptUrl ?? "").origin;
+	} catch {
+		return "";
+	}
+})();
+const publicShareUrl = hasPublicStats && umamiOrigin ? `${umamiOrigin}/share/${shareId}` : "";
 const walineServerUrl = commentConfig.waline?.serverURL ?? "";
 ---
 
