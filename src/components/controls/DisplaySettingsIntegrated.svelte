@@ -17,6 +17,7 @@ import {
 	getDefaultGradientEnabled,
 	getDefaultHue,
 	getDefaultNavbarStyle,
+	getDefaultSiteMode,
 	getDefaultOverlayBlur,
 	getDefaultOverlayCardOpacity,
 	getDefaultOverlayOpacity,
@@ -38,6 +39,7 @@ import {
 	getStoredFireflyEnabled,
 	getStoredFullscreenLayout,
 	getStoredNavbarStyle,
+	getStoredSiteMode,
 	getStoredGradientEnabled,
 	getStoredOverlayBlur,
 	getStoredOverlayCardOpacity,
@@ -67,6 +69,7 @@ import {
 	setSakuraEnabled,
 	setSnowEnabled,
 	setNavbarStyle,
+	setSiteMode,
 	setNotesEnabled,
 	setRainEnabled,
 	setMeteorEnabled,
@@ -110,6 +113,12 @@ const navbarStyleOptions = [
 	{ value: "float", labelKey: I18nKey.navbarStyleFloat },
 	{ value: "capsule", labelKey: I18nKey.navbarStyleCapsule },
 	{ value: "segment", labelKey: I18nKey.navbarStyleSegment },
+] as const;
+let siteMode = $state(getStoredSiteMode());
+const defaultSiteMode = getDefaultSiteMode();
+const siteModeOptions = [
+	{ value: "full", labelKey: I18nKey.siteModeFull },
+	{ value: "pure", labelKey: I18nKey.siteModePure },
 ] as const;
 let wallpaperMode: WALLPAPER_MODE = $state(backgroundWallpaper.mode);
 const defaultWallpaperMode = backgroundWallpaper.mode;
@@ -184,6 +193,7 @@ let effectiveDefaultLayout = $derived(
 );
 const showThemeColor = displaySettingsConfig.themeColorSwitchable;
 const showNavbarStyle = displaySettingsConfig.navbarStyleSwitchable;
+const showSiteMode = displaySettingsConfig.siteModeSwitchable;
 const isWavesSwitchable = displaySettingsConfig.wavesSwitchable;
 const isGradientSwitchable = displaySettingsConfig.gradientSwitchable;
 // 检查是否启用横幅标题配置（功能开关，非用户切换开关）
@@ -417,6 +427,10 @@ function resetHue() {
 
 function resetNavbarStyle() {
 	navbarStyle = defaultNavbarStyle;
+}
+
+function resetSiteMode() {
+	siteMode = defaultSiteMode;
 }
 
 function resetWallpaperMode() {
@@ -811,6 +825,10 @@ $effect(() => {
 });
 
 $effect(() => {
+	setSiteMode(siteMode);
+});
+
+$effect(() => {
 	if (wallpaperMode === WALLPAPER_OVERLAY) {
 		if (isOverlayOpacitySwitchable) {
 			setOverlayOpacity(overlayOpacity);
@@ -907,6 +925,36 @@ $effect(() => {
 					class:opacity-60={navbarStyle !== opt.value}
 					class:bg-(--btn-regular-bg-hover)={navbarStyle === opt.value}
 					onclick={() => { navbarStyle = opt.value; }}
+					title={i18n(opt.labelKey)}
+				>
+					<span class="text-xs font-medium">{i18n(opt.labelKey)}</span>
+				</button>
+				{/each}
+			</div>
+		</div>
+		{/if}
+
+		<!-- Site Mode Section -->
+		{#if showSiteMode}
+		<div class="">
+			<div class="section-title">
+				{i18n(I18nKey.siteMode)}
+				<button aria-label="Reset to Default" class="btn-regular rounded-md active:scale-90"
+						class:opacity-0={siteMode === defaultSiteMode} class:pointer-events-none={siteMode === defaultSiteMode}
+						disabled={siteMode === defaultSiteMode} aria-hidden={siteMode === defaultSiteMode ? "true" : undefined} onclick={resetSiteMode}>
+					<div class="text-(--btn-content)">
+						<Icon icon="fa7-solid:arrow-rotate-left" class="text-[0.75rem]"></Icon>
+					</div>
+				</button>
+			</div>
+			<div class="flex flex-wrap gap-2">
+				{#each siteModeOptions as opt}
+				<button
+					aria-label={i18n(opt.labelKey)}
+					class="flex-1 min-w-[45%] btn-regular rounded-md py-2 px-3 flex items-center justify-center gap-2 active:scale-95 transition-all relative overflow-hidden"
+					class:opacity-60={siteMode !== opt.value}
+					class:bg-(--btn-regular-bg-hover)={siteMode === opt.value}
+					onclick={() => { siteMode = opt.value; }}
 					title={i18n(opt.labelKey)}
 				>
 					<span class="text-xs font-medium">{i18n(opt.labelKey)}</span>

@@ -123,6 +123,9 @@ export const zh_TW: Translation = {
 	[Key.navbarStyleFloat]: "懸浮卡片",
 	[Key.navbarStyleCapsule]: "懸浮膠囊",
 	[Key.navbarStyleSegment]: "三段膠囊",
+	[Key.siteMode]: "站點形態",
+	[Key.siteModeFull]: "華彩",
+	[Key.siteModePure]: "素簡",
 	[Key.displaySettings]: "顯示設定",
 	[Key.lightDarkMode]: "亮暗模式",
 

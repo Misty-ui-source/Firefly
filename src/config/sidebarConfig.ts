@@ -133,6 +133,16 @@ export const sidebarLayoutConfig: SidebarLayoutConfig = {
 			},
 		},
 		{
+			// 组件类型：那年今日（组件内部按路径自检，只在 /calendar/ 渲染，其他页不占位）
+			type: "onThisDay",
+			// 是否启用该组件
+			enable: true,
+			// 组件位置（缺了会被 position 分组丢弃，踩过）
+			position: "top",
+			// 是否在文章详情页显示
+			showOnPostPage: false,
+		},
+		{
 			// 组件类型：站点统计组件
 			type: "stats",
 			// 是否启用该组件

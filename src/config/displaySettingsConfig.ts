@@ -32,6 +32,9 @@ export const displaySettingsConfig: DisplaySettingsConfig =
 		// 导航栏样式切换开关
 		navbarStyleSwitchable: true,
 
+		// 站点形态切换开关（华彩 / 素简）
+		siteModeSwitchable: true,
+
 		// 文章列表布局切换开关
 		layoutSwitchable: true,
 

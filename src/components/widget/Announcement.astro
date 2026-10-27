@@ -80,9 +80,9 @@ const activeLink = config.mode === "geo" ? (config.geoLink ?? config.link) : con
           const els = Array.from(document.querySelectorAll('.announcement-content'));
           if (!els.length) return;
           const setAll = (txt) => els.forEach((e) => { e.textContent = txt; });
-          const COUNTRY = { CN: '中国', HK: '中国香港', TW: '中国台湾', MO: '中国澳门', US: '美国', JP: '日本', KR: '韩国', GB: '英国', FR: '法国', DE: '德国', CA: '加拿大', AU: '澳大利亚', SG: '新加坡', RU: '俄罗斯', IN: '印度', NL: '荷兰', IT: '意大利', ES: '西班牙', BR: '巴西', TH: '泰国', VN: '越南', MY: '马来西亚', ID: '印度尼西亚', PH: '菲律宾', NZ: '新西兰', SE: '瑞典', CH: '瑞士', BE: '比利时', AT: '奥地利', PL: '波兰', TR: '土耳其', AE: '阿联酋', MX: '墨西哥', AR: '阿根廷', ZA: '南非', IE: '爱尔兰', PT: '葡萄牙', GR: '希腊', CZ: '捷克', UA: '乌克兰', NO: '挪威', DK: '丹麦', FI: '芬兰', IL: '以色列', CL: '智利', CO: '哥伦比亚', PE: '秘鲁', NG: '尼日利亚', KE: '肯尼亚', EG: '埃及', SA: '沙特阿拉伯', PK: '巴基斯坦', BD: '孟加拉国', MM: '缅甸', KH: '柬埔寨', NP: '尼泊尔', LK: '斯里兰卡', HU: '匈牙利', RO: '罗马尼亚' };
+          const COUNTRY = { CN: '中国', HK: '中国香港', TW: '中国台湾', MO: '中国澳门', US: '美国', JP: '日本', KR: '韩国', GB: '英国', FR: '法国', DE: '德国', CA: '加拿大', AU: '澳大利亚', SG: '新加坡', RU: '俄罗斯', IN: '印度', NL: '荷兰', IT: '意大利', ES: '西班牙', BR: '巴西', TH: '泰国', VN: '越南', MY: '马来西亚', ID: '印度尼西亚', PH: '菲律宾', NZ: '新西兰', SE: '瑞典', CH: '瑞士', BE: '比利时', AT: '奥地利', PL: '波兰', TR: '土耳其', AE: '阿联酋', MX: '墨西哥', AR: '阿根廷', ZA: '南非', IE: '爱尔兰', PT: '葡萄牙', GR: '希腊', CZ: '捷克', UA: '乌克兰', NO: '挪威', DK: '丹麦', FI: '芬兰', IL: '以色列', CL: '智利', CO: '哥伦比亚', PE: '秘鲁', NG: '尼日利亚', KE: '肯尼亚', EG: '埃及', SA: '沙特阿拉伯', PK: '巴基斯坦', BD: '孟加拉国', MM: '缅甸', KH: '柬埔寨', NP: '尼泊尔', LK: '斯里兰卡', HU: '匈牙利', RO: '罗马尼亚', IS: '冰岛', KZ: '哈萨克斯坦', QA: '卡塔尔', HR: '克罗地亚', UY: '乌拉圭' };
           /* 国外主要国家专属词条（国外只显示国家） */
-          const COUNTRY_LINE = { US: '横跨太平洋的访客，这距离感先拉满了', JP: '樱花之国的朋友远渡重洋，欢迎来坐', KR: '一衣带水的朋友，欢迎来逛', GB: '英伦来的朋友，茶先泡上', FR: '浪漫之都的访客，bonjour，欢迎来坐', DE: '严谨本谨的朋友，能逛到这儿也是缘分', RU: '远东以西的访客，这距离是真远，欢迎', CA: '枫叶之国的访客，欢迎来坐', AU: '南半球的朋友季节正好相反，神奇的缘分', SG: '花园城市来的朋友，狮城排面', IN: '南亚的朋友远道而来，namaste', NL: '风车与郁金香之国的朋友，欢迎', IT: '罗马同款浪漫的访客，ciao', ES: '阳光海岸的热情，hola，欢迎来坐', BR: '桑巴的热情跨越半个地球，热烈欢迎', TH: '萨瓦迪卡，冬阴功先香为敬', VN: '河粉之国的朋友，欢迎来坐', MY: '肉骨茶先安排，欢迎来逛', ID: '千岛之国的访客，欢迎来坐', PH: '海岛之国的朋友，欢迎来坐', NZ: '长白云之乡、地球另一端的访客，欢迎', SE: '北欧的朋友，极光同款缘分', CH: '阿尔卑斯的访客，精准抵达，欢迎' };
+          const COUNTRY_LINE = { US: '横跨太平洋的访客，这距离感先拉满了', JP: '樱花之国的朋友远渡重洋，欢迎来坐', KR: '一衣带水的朋友，欢迎来逛', GB: '英伦来的朋友，茶先泡上', FR: '浪漫之都的访客，bonjour，欢迎来坐', DE: '严谨本谨的朋友，能逛到这儿也是缘分', RU: '远东以西的访客，这距离是真远，欢迎', CA: '枫叶之国的访客，欢迎来坐', AU: '南半球的朋友季节正好相反，神奇的缘分', SG: '花园城市来的朋友，狮城排面', IN: '南亚的朋友远道而来，namaste', NL: '风车与郁金香之国的朋友，欢迎', IT: '罗马同款浪漫的访客，ciao', ES: '阳光海岸的热情，hola，欢迎来坐', BR: '桑巴的热情跨越半个地球，热烈欢迎', TH: '萨瓦迪卡，冬阴功先香为敬', VN: '河粉之国的朋友，欢迎来坐', MY: '肉骨茶先安排，欢迎来逛', ID: '千岛之国的访客，欢迎来坐', PH: '海岛之国的朋友，欢迎来坐', NZ: '长白云之乡、地球另一端的访客，欢迎', SE: '北欧的朋友，极光同款缘分', CH: '阿尔卑斯的访客，精准抵达，欢迎', BE: '巧克力和华夫饼之国的朋友，欢迎来坐', AT: '音乐之都的访客，莫扎特同款缘分', PL: '肖邦故乡的朋友，欢迎来坐', TR: '横跨欧亚的访客，热气球同款浪漫', AE: '沙漠里盖高楼的朋友，豪气冲天，欢迎', MX: '玉米卷之国的访客，hola，热情拉满', AR: '潘帕斯草原的访客，足球的热情先到', ZA: '彩虹之国的访客，欢迎远道而来', IE: '翡翠岛的朋友，欢迎来坐', PT: '蛋挞和大航海的故乡，欢迎来坐', GR: '爱琴海的访客，神话的故乡，欢迎', CZ: '布拉格的访客，波西米亚同款浪漫', UA: '第聂伯河畔的访客，欢迎来坐', NO: '峡湾之国的朋友，午夜太阳同款缘分', DK: '安徒生故乡的朋友，像从童话里走出来的', FI: '千湖之国、圣诞老人的故乡，欢迎', IL: '圣地的访客，欢迎远道而来', CL: '最细长国家的访客，这距离也是拉满了', CO: '咖啡之国的访客，欢迎来坐', PE: '马丘比丘的访客，欢迎远道而来', NG: '非洲巨人的访客，欢迎来坐', KE: '动物大迁徙的故乡，欢迎来坐', EG: '金字塔之国的访客，尼罗河的缘分', SA: '沙漠王国的访客，欢迎来坐', PK: '巴铁的朋友，欢迎欢迎', BD: '恒河三角洲的访客，欢迎来坐', MM: '万塔之国的访客，欢迎来坐', KH: '吴哥窟的访客，欢迎来坐', NP: '喜马拉雅脚下的访客，欢迎来坐', LK: '印度洋珍珠的访客，欢迎来坐', HU: '多瑙河畔的访客，布达佩斯同款浪漫', RO: '喀尔巴阡的访客，欢迎来坐', IS: '冰与火之国的访客，极光同款缘分', KZ: '草原之国的访客，欢迎来坐', QA: '海湾明珠的访客，欢迎来坐', HR: '亚得里亚海的访客，欢迎来坐', UY: '拉普拉塔河畔的访客，欢迎远道而来' };
           /* 国内各省专属词条：键为 ISO 省码（Cloudflare regionCode），另有英文名回落表 */
           const PROV = {
             BJ: ['北京', '豆汁儿就免了，帖子管够'], TJ: ['天津', '相声先停停，这儿的故事也挺逗'],
@@ -113,8 +113,20 @@ const activeLink = config.mode === "geo" ? (config.geoLink ?? config.link) : con
             Yancheng: ['盐城', '湿地丹顶鹤同款仙气，欢迎来'], Lianyungang: ['连云港', '花果山水帘洞，大圣老家的朋友'],
             Suqian: ['宿迁', '项王故里，酒香不怕巷子深'],
           };
+          /* 中原河南：各地级市各有词条（键为 Cloudflare 英文城市名） */
+          const HA_CITY = {
+            Zhengzhou: ['郑州', '省会排面，烩面和胡辣汤两掺儿先安排上'], Kaifeng: ['开封', '八朝古都，灌汤包和夜市先香为敬'],
+            Luoyang: ['洛阳', '十三朝古都，牡丹和水席都是真排面'], Pingdingshan: ['平顶山', '鹰城的朋友，饸饹面先安排上'],
+            Anyang: ['安阳', '甲骨文的故乡，文字的缘分从这儿开始'], Hebi: ['鹤壁', '诗经淇河边来的朋友，欢迎来坐'],
+            Xinxiang: ['新乡', '牧野故地，红焖羊肉先香为敬'], Jiaozuo: ['焦作', '云台山水甲中原，太极故里的朋友'],
+            Puyang: ['濮阳', '龙都的朋友，杂技之乡排面拉满'], Xuchang: ['许昌', '曹魏古都，三国故事从这儿开讲'],
+            Luohe: ['漯河', '食品名城，辣条的快乐老家'], Sanmenxia: ['三门峡', '天鹅之城，黄河金三角的朋友'],
+            Nanyang: ['南阳', '医圣故里，卧龙岗上出相才'], Shangqiu: ['商丘', '三商之源，火祖故里的朋友'],
+            Xinyang: ['信阳', '毛尖飘香，北国江南的朋友'], Zhoukou: ['周口', '老子和伏羲的故乡，底蕴拉满'],
+            Zhumadian: ['驻马店', '天中之城，梁祝故里的朋友'], Jiyuan: ['济源', '愚公老家，搬山的精神头十足'],
+          };
           /* 常见城市英文名 → 中文（能显示城市就显示城市） */
-          const CITY_ZH = { Beijing: '北京', Shanghai: '上海', Tianjin: '天津', Chongqing: '重庆', Guangzhou: '广州', Shenzhen: '深圳', Chengdu: '成都', Hangzhou: '杭州', Wuhan: '武汉', "Xi'an": '西安', Nanjing: '南京', Suzhou: '苏州', Zhengzhou: '郑州', Changsha: '长沙', Shenyang: '沈阳', Qingdao: '青岛', Dalian: '大连', Xiamen: '厦门', Kunming: '昆明', Hefei: '合肥', Fuzhou: '福州', Jinan: '济南', Changchun: '长春', Harbin: '哈尔滨', Shijiazhuang: '石家庄', Taiyuan: '太原', Nanning: '南宁', Guiyang: '贵阳', Nanchang: '南昌', Lanzhou: '兰州', Haikou: '海口', Hohhot: '呼和浩特', Yinchuan: '银川', Xining: '西宁', Urumqi: '乌鲁木齐', Lhasa: '拉萨', Ningbo: '宁波', Wuxi: '无锡', Dongguan: '东莞', Foshan: '佛山', Zhuhai: '珠海', Wenzhou: '温州', Xuzhou: '徐州', Nantong: '南通', Yangzhou: '扬州', Changzhou: '常州', Zhenjiang: '镇江', Yancheng: '盐城', Lianyungang: '连云港', Suqian: '宿迁', Luoyang: '洛阳', Tangshan: '唐山', Yantai: '烟台', Weifang: '潍坊', Baotou: '包头', Guilin: '桂林', Sanya: '三亚', Mianyang: '绵阳', Leshan: '乐山', Baoji: '宝鸡', Zhongshan: '中山', Huizhou: '惠州', Shantou: '汕头', Shaoxing: '绍兴', Jiaxing: '嘉兴', Jinhua: '金华' };
+          const CITY_ZH = { Beijing: '北京', Shanghai: '上海', Tianjin: '天津', Chongqing: '重庆', Guangzhou: '广州', Shenzhen: '深圳', Chengdu: '成都', Hangzhou: '杭州', Wuhan: '武汉', "Xi'an": '西安', Nanjing: '南京', Suzhou: '苏州', Zhengzhou: '郑州', Changsha: '长沙', Shenyang: '沈阳', Qingdao: '青岛', Dalian: '大连', Xiamen: '厦门', Kunming: '昆明', Hefei: '合肥', Fuzhou: '福州', Jinan: '济南', Changchun: '长春', Harbin: '哈尔滨', Shijiazhuang: '石家庄', Taiyuan: '太原', Nanning: '南宁', Guiyang: '贵阳', Nanchang: '南昌', Lanzhou: '兰州', Haikou: '海口', Hohhot: '呼和浩特', Yinchuan: '银川', Xining: '西宁', Urumqi: '乌鲁木齐', Lhasa: '拉萨', Ningbo: '宁波', Wuxi: '无锡', Dongguan: '东莞', Foshan: '佛山', Zhuhai: '珠海', Wenzhou: '温州', Xuzhou: '徐州', Nantong: '南通', Yangzhou: '扬州', Changzhou: '常州', Zhenjiang: '镇江', Yancheng: '盐城', Lianyungang: '连云港', Suqian: '宿迁', Luoyang: '洛阳', Tangshan: '唐山', Yantai: '烟台', Weifang: '潍坊', Baotou: '包头', Guilin: '桂林', Sanya: '三亚', Mianyang: '绵阳', Leshan: '乐山', Baoji: '宝鸡', Zhongshan: '中山', Huizhou: '惠州', Shantou: '汕头', Shaoxing: '绍兴', Jiaxing: '嘉兴', Jinhua: '金华', Kaifeng: '开封', Pingdingshan: '平顶山', Anyang: '安阳', Hebi: '鹤壁', Xinxiang: '新乡', Jiaozuo: '焦作', Puyang: '濮阳', Xuchang: '许昌', Luohe: '漯河', Sanmenxia: '三门峡', Nanyang: '南阳', Shangqiu: '商丘', Xinyang: '信阳', Zhoukou: '周口', Zhumadian: '驻马店', Jiyuan: '济源' };
           const GREET = [[0, '夜深了，还在熬夜冲浪呀'], [5, '早上好，新的一天开始啦'], [8, '上午好，精神不错'], [11, '中午好，吃饱了再来逛'], [13, '下午好，懒懒地睡个午觉吧'], [17, '傍晚好，夕阳无限好'], [19, '晚上好，今晚月色不错'], [23, '夜深了，早点休息吧']];
           const greeting = () => { const h = new Date().getHours(); let g = GREET[0][1]; for (const pair of GREET) if (h >= pair[0]) g = pair[1]; return g; };
           const render = (vals) => {
@@ -146,6 +158,7 @@ const activeLink = config.mode === "geo" ? (config.geoLink ?? config.link) : con
               if (prov) {
                 provZh = prov[0];
                 if (code === 'JS' && JS_CITY[v.city]) { place = JS_CITY[v.city][0]; local = JS_CITY[v.city][1]; }
+                else if (code === 'HA' && HA_CITY[v.city]) { place = HA_CITY[v.city][0]; local = HA_CITY[v.city][1]; }
                 else if (['BJ', 'TJ', 'SH', 'CQ'].includes(code)) { place = prov[0]; local = prov[1]; }
                 else { place = cityZh || prov[0]; local = prov[1]; }
               } else { place = cityZh || '中国'; local = '欢迎来自祖国各地的朋友'; }

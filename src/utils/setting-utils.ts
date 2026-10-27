@@ -12,6 +12,7 @@ import type {
 	FullscreenWallpaperLayout,
 	LIGHT_DARK_MODE,
 	NavbarStyle,
+	SiteMode,
 	WALLPAPER_MODE,
 } from "@/types/config";
 import {
@@ -413,6 +414,49 @@ export function setNavbarStyle(style: NavbarStyle): void {
 		localStorage.setItem("navbarStyle", safe);
 	}
 	applyNavbarStyleToDocument(safe);
+}
+
+const SITE_MODES: SiteMode[] = ["full", "pure"];
+
+export function getDefaultSiteMode(): SiteMode {
+	const v = siteConfig.siteMode ?? "full";
+	return SITE_MODES.includes(v) ? v : "full";
+}
+
+export function getStoredSiteMode(): SiteMode {
+	const defaultMode = getDefaultSiteMode();
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.getItem !== "function"
+	) {
+		return defaultMode;
+	}
+	if (!displaySettingsConfig.siteModeSwitchable) {
+		localStorage.removeItem("siteMode");
+		return defaultMode;
+	}
+	const stored = localStorage.getItem("siteMode") as SiteMode | null;
+	return stored && SITE_MODES.includes(stored) ? stored : defaultMode;
+}
+
+export function applySiteModeToDocument(mode: SiteMode): void {
+	if (typeof document === "undefined") return;
+	const safe: SiteMode = SITE_MODES.includes(mode) ? mode : "full";
+	document.documentElement.setAttribute("data-site-mode", safe);
+	window.dispatchEvent(
+		new CustomEvent("siteModeChange", { detail: { mode: safe } }),
+	);
+}
+
+export function setSiteMode(mode: SiteMode): void {
+	const safe: SiteMode = SITE_MODES.includes(mode) ? mode : "full";
+	if (
+		typeof localStorage !== "undefined" &&
+		typeof localStorage.setItem === "function"
+	) {
+		localStorage.setItem("siteMode", safe);
+	}
+	applySiteModeToDocument(safe);
 }
 
 export function applyWallpaperModeToDocument(

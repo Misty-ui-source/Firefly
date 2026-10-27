@@ -97,6 +97,11 @@ export const navBarConfig: NavBarConfig = {
 					icon: "material-symbols:timeline",
 				},
 				{
+					name: "日历",
+					url: "/calendar/",
+					icon: "material-symbols:calendar-month",
+				},
+				{
 					name: "书签导航",
 					url: "/booknav/",
 					icon: "material-symbols:bookmarks",

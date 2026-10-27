@@ -22,6 +22,7 @@ const DISABLED_SETTINGS: DisplaySettingsConfig = {
 	enable: false,
 	themeColorSwitchable: false,
 	navbarStyleSwitchable: false,
+	siteModeSwitchable: false,
 	layoutSwitchable: false,
 	cardBorderSwitchable: false,
 	cardFollowThemeSwitchable: false,

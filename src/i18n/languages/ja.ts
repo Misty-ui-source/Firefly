@@ -125,6 +125,9 @@ export const ja: Translation = {
 	[Key.navbarStyleFloat]: "フローティングカード",
 	[Key.navbarStyleCapsule]: "カプセル",
 	[Key.navbarStyleSegment]: "セグメント",
+	[Key.siteMode]: "サイトモード",
+	[Key.siteModeFull]: "華やか",
+	[Key.siteModePure]: "素朴",
 	[Key.displaySettings]: "表示設定",
 	[Key.lightDarkMode]: "ライト/ダーク",
 

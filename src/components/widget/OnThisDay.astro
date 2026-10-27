@@ -1,0 +1,129 @@
+---
+import WidgetLayout from "@/components/common/WidgetLayout.astro";
+import type { WidgetComponentConfig } from "@/types/config";
+import { getOnThisDayMap } from "@/utils/calendar-data";
+
+// 「那年今日」：只在日历页 /calendar/ 的侧栏出现（其他页直接不渲染），
+// 内容是同月同日、往年的文章/动态/日记/个人记录；在日历里点选日期时跟着切换。
+
+interface Props {
+	class?: string;
+	style?: string;
+	widgetConfig?: WidgetComponentConfig;
+}
+const { class: className, style } = Astro.props;
+
+const pathname = Astro.url.pathname.replace(/\/+$/, "") || "/";
+const isCalendarPage = pathname === "/calendar";
+
+const map = isCalendarPage ? await getOnThisDayMap() : {};
+const now = new Date();
+const todayMd = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+const initial = (map[todayMd] || []).filter((i) => i.year < now.getFullYear());
+const payload = JSON.stringify(map);
+
+const KIND_LABEL: Record<string, string> = {
+	post: "文章",
+	dynamic: "动态",
+	diary: "日记",
+	record: "记录",
+};
+---
+
+{isCalendarPage && (
+	<WidgetLayout name="那年今日" id="on-this-day" class={className} style={style}>
+		<div class="on-this-day" data-otd>
+			<p class="otd-anchor text-sm text-neutral-500 dark:text-neutral-400 mb-2" data-otd-anchor>
+				{now.getMonth() + 1}月{now.getDate()}日 · 往年的今天
+			</p>
+			<div data-otd-list>
+				{initial.length === 0 && (
+					<p class="text-sm text-neutral-500 dark:text-neutral-400">这一天还没有往年的记录。</p>
+				)}
+				{initial.map((item) => (
+					<a class="otd-item" href={item.url || "/calendar/"}>
+						<span class="otd-year">{item.year}</span>
+						<span class="otd-kind">{KIND_LABEL[item.kind] || ""}</span>
+						<span class="otd-title">{item.title}</span>
+					</a>
+				))}
+			</div>
+			<script type="application/json" id="on-this-day-data" set:html={payload}></script>
+		</div>
+	</WidgetLayout>
+)}
+
+<style>
+	.otd-item {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		padding: 0.45rem 0.5rem;
+		margin: 0 -0.5rem;
+		border-radius: 0.5rem;
+		color: inherit;
+		text-decoration: none;
+		transition: background 0.15s ease;
+	}
+	.otd-item:hover {
+		background: var(--btn-regular-bg);
+	}
+	.otd-year {
+		font-weight: 700;
+		font-size: 0.85rem;
+		white-space: nowrap;
+	}
+	.otd-kind {
+		font-size: 0.7rem;
+		color: var(--content-meta);
+		border: 1px solid var(--line-divider);
+		border-radius: 999px;
+		padding: 0.05rem 0.45rem;
+		white-space: nowrap;
+	}
+	.otd-title {
+		font-size: 0.88rem;
+		line-height: 1.45;
+		overflow: hidden;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+	}
+</style>
+
+<script>
+	(function () {
+		var root = document.querySelector("[data-otd]");
+		if (!root) return;
+		var dataEl = document.getElementById("on-this-day-data");
+		var listEl = root.querySelector("[data-otd-list]");
+		var anchorEl = root.querySelector("[data-otd-anchor]");
+		if (!dataEl || !listEl || !anchorEl) return;
+		var map;
+		try { map = JSON.parse(dataEl.textContent || "{}"); } catch (e) { return; }
+		var LABEL = { post: "文章", dynamic: "动态", diary: "日记", record: "记录" };
+		function esc(s) {
+			return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+				return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+			});
+		}
+		document.addEventListener("calendar:select", function (ev) {
+			var date = ev.detail && ev.detail.date;
+			if (!date) return;
+			var y = +date.slice(0, 4);
+			var md = date.slice(5);
+			var items = (map[md] || []).filter(function (i) { return i.year < y; });
+			anchorEl.textContent = (+md.slice(0, 2)) + "月" + (+md.slice(3, 5)) + "日 · 往年的这一天";
+			if (!items.length) {
+				listEl.innerHTML = '<p class="text-sm text-neutral-500 dark:text-neutral-400">这一天还没有往年的记录。</p>';
+				return;
+			}
+			listEl.innerHTML = items.map(function (i) {
+				return '<a class="otd-item" href="' + (i.url || "/calendar/") + '">'
+					+ '<span class="otd-year">' + i.year + "</span>"
+					+ '<span class="otd-kind">' + (LABEL[i.kind] || "") + "</span>"
+					+ '<span class="otd-title">' + esc(i.title) + "</span></a>";
+			}).join("");
+		});
+	})();
+</script>

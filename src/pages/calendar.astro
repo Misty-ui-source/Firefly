@@ -1,0 +1,381 @@
+---
+import { Icon } from "astro-icon/components";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import "@/styles/pages/common.css";
+import "@/styles/pages/calendar.css";
+import {
+	type CalEvent,
+	getBundledCalendarLayers,
+	getCalendarEvents,
+} from "@/utils/calendar-data";
+import { LUNAR_INFO } from "@/utils/lunar-data";
+import { SOLAR_TERMS } from "@/utils/solar-terms-data";
+
+const title = "日历";
+const description = "把文章、动态、日记和自己的记录都钉在日子上。";
+
+const events = await getCalendarEvents();
+const layers = getBundledCalendarLayers();
+const payload = JSON.stringify({
+	events,
+	...layers,
+	lunarInfo: LUNAR_INFO,
+	terms: SOLAR_TERMS,
+});
+---
+
+<MainGridLayout title={title} description={description}>
+	<div class="page-shell flex w-full flex-col gap-4">
+		<section class="card-base px-5 py-5 md:px-7">
+			<div class="calendar-head">
+				<div class="page-heading">
+					<div class="page-icon" aria-hidden="true">
+						<Icon name="material-symbols:calendar-month-rounded" />
+					</div>
+					<div>
+						<h2>{title}</h2>
+						<p>{description}</p>
+					</div>
+				</div>
+				<div class="calendar-nav">
+					<button type="button" data-cal-prev aria-label="上个月">‹ 上月</button>
+					<div class="calendar-month-label" data-cal-label>…</div>
+					<button type="button" data-cal-next aria-label="下个月">下月 ›</button>
+					<button type="button" data-cal-today>回到今天</button>
+				</div>
+			</div>
+
+			<div class="calendar-weekdays" aria-hidden="true">
+				<span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span class="is-weekend">六</span><span class="is-weekend">日</span>
+			</div>
+			<div class="calendar-grid" data-cal-grid></div>
+
+			<div class="calendar-legend" aria-hidden="true">
+				<span><span class="calendar-mark kind-post"></span>文章</span>
+				<span><span class="calendar-mark kind-dynamic"></span>动态</span>
+				<span><span class="calendar-mark kind-diary"></span>日记</span>
+				<span><span class="calendar-mark kind-record"></span>个人记录</span>
+				<span><span class="calendar-mark kind-seu"></span>东南大学校历</span>
+			</div>
+
+			<div class="calendar-detail" data-cal-detail></div>
+
+			<p class="calendar-footnote">
+				数据来自本站文章 / 动态 / 日记与仓库 calendar-data/：法定节假日（国务院办公厅安排）、东南大学
+				2026—2027 学年校历、个人记录（控制台「日历记录」维护）。页面打开后会再拉一次仓库最新版，记录改完不用等重新构建。
+				农历按 1900–2100 历表在本地换算，节气表覆盖 2024–2030 年。
+			</p>
+		</section>
+
+		<section class="card-base px-5 py-5 md:px-7">
+			<div class="calendar-count-head">
+				<h3>近在眼前</h3>
+				<p>接下来 60 天里最近的日子：节气、农历节日、假期、校历与个人记录，点一行跳到那天。</p>
+			</div>
+			<div class="calendar-countdown" data-cal-countdown></div>
+		</section>
+	</div>
+</MainGridLayout>
+
+<script type="application/json" id="calendar-data" set:html={payload}></script>
+
+<script>
+	(function () {
+		var RAW = "https://raw.githubusercontent.com/Misty-ui-source/Firefly/main/calendar-data/";
+		var el = document.getElementById("calendar-data");
+		if (!el) return;
+		var data;
+		try { data = JSON.parse(el.textContent || "{}"); } catch (e) { return; }
+		data.holidays = data.holidays || {};
+		data.seu = data.seu || [];
+		data.records = data.records || [];
+		data.events = data.events || [];
+
+		var KIND_GROUPS = [["holiday", "节假日"], ["workday", "调休"], ["seu", "校历"], ["post", "文章"], ["dynamic", "动态"], ["diary", "日记"], ["record", "个人记录"]];
+		function pad(n) { return (n < 10 ? "0" : "") + n; }
+		function key(y, m, d) { return y + "-" + pad(m + 1) + "-" + pad(d); }
+		function todayKey() {
+			var t = new Date();
+			return key(t.getFullYear(), t.getMonth(), t.getDate());
+		}
+		function parseKey(k) {
+			var p = k.split("-");
+			return { y: +p[0], m: +p[1] - 1, d: +p[2] };
+		}
+		function inRange(k, s, e) { return k >= s && k <= e; }
+
+		// 农历换算：位掩码表在 payload.lunarInfo；本段算法与 lunar-javascript / solarlunar
+		// 两个公开实现逐日对照验证过（2020–2035 共 5844 天零差异），改动后请重新对照。
+		var LUNAR_INFO = data.lunarInfo || [];
+		function lLeapMonth(y) { return LUNAR_INFO[y - 1900] & 0xf; }
+		function lLeapDays(y) { return lLeapMonth(y) ? ((LUNAR_INFO[y - 1900] & 0x10000) ? 30 : 29) : 0; }
+		function lMonthDays(y, m) { return (LUNAR_INFO[y - 1900] & (0x10000 >> m)) ? 30 : 29; }
+		function lYearDays(y) {
+			var s = 348, info = LUNAR_INFO[y - 1900];
+			for (var i = 0x8000; i > 0x8; i >>= 1) s += (info & i) ? 1 : 0;
+			return s + lLeapDays(y);
+		}
+		function solarToLunar(y, m, d) {
+			var offset = Math.round((Date.UTC(y, m - 1, d) - Date.UTC(1900, 0, 31)) / 86400000);
+			var i, temp = 0;
+			for (i = 1900; i < 2101 && offset > 0; i++) { temp = lYearDays(i); offset -= temp; }
+			if (offset < 0) { offset += temp; i--; }
+			var year = i, leapM = lLeapMonth(year), isLeap = false;
+			for (i = 1; i < 13 && offset > 0; i++) {
+				if (leapM > 0 && i === leapM + 1 && !isLeap) { --i; isLeap = true; temp = lLeapDays(year); }
+				else temp = lMonthDays(year, i);
+				if (isLeap && i === leapM + 1) isLeap = false;
+				offset -= temp;
+			}
+			if (offset === 0 && leapM > 0 && i === leapM + 1) { if (isLeap) isLeap = false; else { isLeap = true; --i; } }
+			if (offset < 0) { offset += temp; --i; }
+			return { year: year, month: i, day: offset + 1, leap: isLeap };
+		}
+		var LUNAR_MONTHS = ["正", "二", "三", "四", "五", "六", "七", "八", "九", "十", "冬", "腊"];
+		var LUNAR_DIGITS = ["日", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
+		function lunarDayName(d) {
+			if (d === 10) return "初十";
+			if (d === 20) return "二十";
+			if (d === 30) return "三十";
+			return ["初", "十", "廿", "卅"][Math.floor(d / 10)] + LUNAR_DIGITS[d % 10];
+		}
+		function lunarMonthName(l) { return (l.leap ? "闰" : "") + LUNAR_MONTHS[l.month - 1] + "月"; }
+		var LUNAR_FESTIVALS = { "1-1": "春节", "1-15": "元宵节", "5-5": "端午节", "7-7": "七夕节", "8-15": "中秋节", "9-9": "重阳节", "12-8": "腊八节", "12-23": "小年" };
+		function lunarFestival(l) {
+			if (l.leap) return "";
+			if (l.month === 12 && l.day === lMonthDays(l.year, 12)) return "除夕";
+			return LUNAR_FESTIVALS[l.month + "-" + l.day] || "";
+		}
+		function lunarOf(k) {
+			var p = parseKey(k);
+			return solarToLunar(p.y, p.m + 1, p.d);
+		}
+		function termOf(k) { return (data.terms || {})[k] || ""; }
+
+		function dayEvents(k) {
+			var out = [];
+			var year = k.slice(0, 4);
+			(data.holidays[year] || []).forEach(function (h) {
+				if (h.date === k) out.push({ kind: h.type === "workday" ? "workday" : "holiday", title: h.name + (h.type === "workday" ? " · 调休上班" : " · 放假") });
+			});
+			data.seu.forEach(function (s) {
+				// 校历条目只落在起始日（附区间说明），不然学期/假期这种长区间会把每天都刷满
+				if (k === s.start) {
+					var range = s.start === s.end ? "" : "（" + s.start + " 至 " + s.end + "）";
+					out.push({ kind: "seu", title: s.title + range });
+				}
+			});
+			data.events.forEach(function (e) { if (e.date === k) out.push(e); });
+			data.records.forEach(function (r) {
+				if (r.date === k) out.push({ kind: "record", title: r.title, note: r.note });
+			});
+			return out;
+		}
+
+		var grid = document.querySelector("[data-cal-grid]");
+		var label = document.querySelector("[data-cal-label]");
+		var detail = document.querySelector("[data-cal-detail]");
+		if (!grid || !label || !detail) return;
+
+		var now = new Date();
+		var cursor = { y: now.getFullYear(), m: now.getMonth() };
+		var selected = todayKey();
+
+		function renderDetail() {
+			var list = dayEvents(selected);
+			var p = parseKey(selected);
+			var html = "<h3>" + p.y + " 年 " + (p.m + 1) + " 月 " + p.d + " 日</h3>";
+			var ln = lunarOf(selected);
+			var meta = "农历" + lunarMonthName(ln) + lunarDayName(ln.day);
+			var tm = termOf(selected);
+			if (tm) meta += " · " + tm;
+			var fv = lunarFestival(ln);
+			if (fv && fv !== tm) meta += " · " + fv;
+			html += '<p class="calendar-lunar-meta">' + meta + "</p>";
+			if (!list.length) {
+				html += '<p class="calendar-empty">这一天还没有任何记录。</p>';
+			} else {
+				KIND_GROUPS.forEach(function (pair) {
+					var items = list.filter(function (e) { return e.kind === pair[0]; });
+					if (!items.length) return;
+					html += '<div class="calendar-detail-group"><div class="group-name">' + pair[1] + "</div>";
+					items.forEach(function (e) {
+						var inner = escapeHtml(e.title) + (e.note ? '<span class="item-note">' + escapeHtml(e.note) + "</span>" : "");
+						html += e.url
+							? '<a class="calendar-detail-item" href="' + e.url + '">' + inner + "</a>"
+							: '<div class="calendar-detail-item">' + inner + "</div>";
+					});
+					html += "</div>";
+				});
+			}
+			detail.innerHTML = html;
+			document.dispatchEvent(new CustomEvent("calendar:select", { detail: { date: selected } }));
+		}
+		function escapeHtml(s) {
+			return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+				return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+			});
+		}
+
+		function render() {
+			label.textContent = cursor.y + " 年 " + (cursor.m + 1) + " 月";
+			var first = new Date(cursor.y, cursor.m, 1);
+			var startOffset = (first.getDay() + 6) % 7; // 周一起始
+			var start = new Date(cursor.y, cursor.m, 1 - startOffset);
+			var html = "";
+			for (var i = 0; i < 42; i++) {
+				var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+				var k = key(d.getFullYear(), d.getMonth(), d.getDate());
+				var evs = dayEvents(k);
+				var isHoliday = evs.some(function (e) { return e.kind === "holiday"; });
+				var marks = "";
+				var seen = {};
+				evs.forEach(function (e) {
+					var mk = e.kind === "workday" ? "seu" : e.kind;
+					if (seen[mk]) return;
+					seen[mk] = 1;
+					if (mk === "holiday" || mk === "workday") return;
+					marks += '<span class="calendar-mark kind-' + mk + '"></span>';
+				});
+				var hol = evs.filter(function (e) { return e.kind === "holiday" || e.kind === "workday"; })[0];
+				var cellLunar = lunarOf(k);
+				var fest = termOf(k) || lunarFestival(cellLunar);
+				var lunarText = fest || (cellLunar.day === 1 ? lunarMonthName(cellLunar) : lunarDayName(cellLunar.day));
+				html += '<button type="button" class="calendar-cell'
+					+ (d.getMonth() !== cursor.m ? " is-out" : "")
+					+ (k === todayKey() ? " is-today" : "")
+					+ (k === selected ? " is-selected" : "")
+					+ (isHoliday ? " is-holiday" : "")
+					+ '" data-date="' + k + '">'
+					+ '<span class="calendar-day-num">' + d.getDate() + "</span>"
+					+ (hol ? '<span class="calendar-holiday-name' + (hol.kind === "workday" ? " is-workday" : "") + '">' + escapeHtml(hol.title) + "</span>" : "")
+					+ '<span class="calendar-lunar' + (fest ? " is-fest" : "") + '">' + lunarText + "</span>"
+					+ '<span class="calendar-marks">' + marks + "</span>"
+					+ "</button>";
+			}
+			grid.innerHTML = html;
+			renderDetail();
+		}
+
+		grid.addEventListener("click", function (ev) {
+			var btn = ev.target.closest("[data-date]");
+			if (!btn) return;
+			selected = btn.getAttribute("data-date");
+			var p = parseKey(selected);
+			if (p.y !== cursor.y || p.m !== cursor.m) cursor = { y: p.y, m: p.m };
+			render();
+		});
+		document.querySelector("[data-cal-prev]").addEventListener("click", function () {
+			cursor.m--; if (cursor.m < 0) { cursor.m = 11; cursor.y--; } render();
+		});
+		document.querySelector("[data-cal-next]").addEventListener("click", function () {
+			cursor.m++; if (cursor.m > 11) { cursor.m = 0; cursor.y++; } render();
+		});
+		document.querySelector("[data-cal-today]").addEventListener("click", function () {
+			var t = new Date();
+			cursor = { y: t.getFullYear(), m: t.getMonth() };
+			selected = todayKey();
+			render();
+		});
+
+		// 近期倒计时：往后 60 天扫节气 / 农历节日 / 假期首日 / 校历起始日 / 个人记录，取最近 6 条
+		var countdownEl = document.querySelector("[data-cal-countdown]");
+		function buildCountdown() {
+			if (!countdownEl) return;
+			var items = [];
+			var seenHoliday = {};
+			var base = new Date();
+			base.setHours(0, 0, 0, 0);
+			for (var off = 0; off <= 60; off++) {
+				var d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + off);
+				var k = key(d.getFullYear(), d.getMonth(), d.getDate());
+				var tm = termOf(k);
+				if (tm) items.push({ k: k, name: tm, tag: "节气" });
+				var fv = lunarFestival(lunarOf(k));
+				if (fv) items.push({ k: k, name: fv, tag: "农历" });
+				(data.holidays[String(d.getFullYear())] || []).forEach(function (h) {
+					if (h.date === k && h.type !== "workday" && !seenHoliday[h.name]) {
+						seenHoliday[h.name] = 1;
+						items.push({ k: k, name: h.name, tag: "假期" });
+					}
+				});
+				data.seu.forEach(function (s) { if (s.start === k) items.push({ k: k, name: s.title, tag: "校历" }); });
+				data.records.forEach(function (r) { if (r.date === k) items.push({ k: k, name: r.title, tag: "记录" }); });
+			}
+			items = items.slice(0, 6);
+			if (!items.length) {
+				countdownEl.innerHTML = '<p class="calendar-empty">接下来 60 天里还没有排上的日子。</p>';
+				return;
+			}
+			var week = ["日", "一", "二", "三", "四", "五", "六"];
+			countdownEl.innerHTML = items.map(function (it) {
+				var p = parseKey(it.k);
+				var wd = week[new Date(p.y, p.m, p.d).getDay()];
+				return '<button type="button" class="cd-row" data-goto="' + it.k + '">'
+					+ '<span class="cd-tag">' + it.tag + "</span>"
+					+ '<span class="cd-name">' + escapeHtml(it.name) + "</span>"
+					+ '<span class="cd-date">' + (p.m + 1) + " 月 " + p.d + " 日 · 周" + wd + "</span>"
+					+ '<span class="cd-left" data-cd-left="' + it.k + '"></span>'
+					+ "</button>";
+			}).join("");
+		}
+		function tickCountdown() {
+			if (!countdownEl) return;
+			var nodes = countdownEl.querySelectorAll("[data-cd-left]");
+			var nowMs = Date.now();
+			nodes.forEach(function (n) {
+				var p = parseKey(n.getAttribute("data-cd-left"));
+				var diff = new Date(p.y, p.m, p.d).getTime() - nowMs;
+				if (diff <= 0) { n.textContent = diff > -86400000 ? "就是今天" : ""; return; }
+				var days = Math.floor(diff / 86400000);
+				var rest = diff - days * 86400000;
+				var hh = Math.floor(rest / 3600000);
+				var mm = Math.floor((rest % 3600000) / 60000);
+				var ss = Math.floor((rest % 60000) / 1000);
+				n.textContent = "还有 " + (days > 0 ? days + " 天 " : "") + pad(hh) + ":" + pad(mm) + ":" + pad(ss);
+			});
+		}
+		if (countdownEl) {
+			countdownEl.addEventListener("click", function (ev) {
+				var btn = ev.target.closest("[data-goto]");
+				if (!btn) return;
+				selected = btn.getAttribute("data-goto");
+				var p = parseKey(selected);
+				cursor = { y: p.y, m: p.m };
+				render();
+				detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+			});
+			setInterval(tickCountdown, 1000);
+		}
+
+		render();
+		buildCountdown();
+		tickCountdown();
+
+		// 运行时拉仓库最新版：个人记录（控制台刚改的）、校历与节假日（年度任务推送的）不用等构建
+		function pull(name) {
+			return fetch(RAW + name, { cache: "no-store" }).then(function (r) {
+				if (!r.ok) throw new Error(name);
+				return r.json();
+			});
+		}
+		var years = {};
+		Object.keys(data.holidays).forEach(function (y) { years[y] = 1; });
+		years[String(now.getFullYear())] = 1;
+		years[String(cursor.y)] = 1;
+		var jobs = [
+			pull("personal-records.json").then(function (v) { if (Array.isArray(v)) data.records = v; }),
+			pull("seu-calendar.json").then(function (v) { if (Array.isArray(v)) data.seu = v; }),
+		];
+		Object.keys(years).forEach(function (y) {
+			jobs.push(pull("holidays-" + y + ".json").then(function (v) {
+				if (Array.isArray(v)) data.holidays[y] = v;
+			}).catch(function () {}));
+		});
+		Promise.all(jobs.map(function (j) { return j.catch(function () {}); })).then(function () {
+			render();
+			buildCountdown();
+			tickCountdown();
+		});
+	})();
+</script>

@@ -51,6 +51,7 @@ export type {
 	LIGHT_DARK_MODE,
 	NavbarStyle,
 	SiteConfig,
+	SiteMode,
 	WALLPAPER_MODE,
 } from "./siteConfig";
 export type {

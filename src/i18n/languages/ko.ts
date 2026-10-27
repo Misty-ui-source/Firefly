@@ -125,6 +125,9 @@ export const ko: Translation = {
 	[Key.navbarStyleFloat]: "플로팅 카드",
 	[Key.navbarStyleCapsule]: "캡슐",
 	[Key.navbarStyleSegment]: "세그먼트",
+	[Key.siteMode]: "사이트 모드",
+	[Key.siteModeFull]: "화려",
+	[Key.siteModePure]: "간결",
 	[Key.displaySettings]: "디스플레이 설정",
 	[Key.lightDarkMode]: "라이트/다크 모드",
 

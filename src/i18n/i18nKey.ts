@@ -101,6 +101,9 @@ enum I18nKey {
 	navbarStyleFloat = "navbarStyleFloat",
 	navbarStyleCapsule = "navbarStyleCapsule",
 	navbarStyleSegment = "navbarStyleSegment",
+	siteMode = "siteMode",
+	siteModeFull = "siteModeFull",
+	siteModePure = "siteModePure",
 	displaySettings = "displaySettings",
 	lightDarkMode = "lightDarkMode",
 

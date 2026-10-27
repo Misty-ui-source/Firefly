@@ -126,6 +126,9 @@ export const en: Translation = {
 	[Key.navbarStyleFloat]: "Floating Card",
 	[Key.navbarStyleCapsule]: "Capsule",
 	[Key.navbarStyleSegment]: "Segmented",
+	[Key.siteMode]: "Site Mode",
+	[Key.siteModeFull]: "Splendid",
+	[Key.siteModePure]: "Minimal",
 	[Key.displaySettings]: "Display Settings",
 	[Key.lightDarkMode]: "Light/Dark Mode",
 

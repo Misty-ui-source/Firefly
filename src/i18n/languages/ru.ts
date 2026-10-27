@@ -126,6 +126,9 @@ export const ru: Translation = {
 	[Key.navbarStyleFloat]: "Плавающая карточка",
 	[Key.navbarStyleCapsule]: "Капсула",
 	[Key.navbarStyleSegment]: "Сегментная",
+	[Key.siteMode]: "Режим сайта",
+	[Key.siteModeFull]: "Яркий",
+	[Key.siteModePure]: "Минимальный",
 	[Key.displaySettings]: "Настройки отображения",
 	[Key.lightDarkMode]: "Светлая/тёмная тема",
 

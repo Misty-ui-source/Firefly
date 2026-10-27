@@ -1597,6 +1597,155 @@ async function mountResumeSection() {
   } catch (e) { box.innerHTML = '<p class="hint">读不到 src/config/resumeConfig.ts（可能还没上线这个文件）。</p>'; }
 }
 
+/* 🗓 日历个人记录：读写仓库 calendar-data/personal-records.json（日期 + 标题 + 备注）。
+ * 博客 /calendar/ 页打开时会拉仓库最新版，所以这里保存完立刻生效、不用等构建。 */
+async function mountCalendarRecordsSection() {
+  if ($('#calrec-sec')) return;
+  const resumeSec = $('#resume-sec');
+  const gnssSec = $('#gnss-sec');
+  const diaryCard = document.querySelector('#diary-list')?.closest('.card');
+  const anchor = resumeSec || gnssSec || diaryCard || $('#list');
+  if (!anchor) return;
+  const sec = document.createElement('div');
+  sec.className = 'card';
+  sec.id = 'calrec-sec';
+  sec.innerHTML = `<h2>🗓 日历记录</h2>
+    <p class="hint">只属于你自己的日子记录，显示在博客日历页上（点日期看当天详情，也会进右栏「那年今日」）。保存在仓库 calendar-data/personal-records.json，保存后日历页刷新即生效、不用等构建。<span class="meta copyable" data-copy="/calendar/" title="点击复制页面地址">/calendar/ 📋</span></p>
+    <div id="calrec-form"><p class="hint">读取中…</p></div>`;
+  anchor.after(sec);
+  const box = sec.querySelector('#calrec-form');
+  const PATH = 'calendar-data/personal-records.json';
+  try {
+    const cf = await ghGetFile(PATH);
+    let cSha = cf.sha;
+    let records = [];
+    try { const v = JSON.parse(cf.text); if (Array.isArray(v)) records = v; } catch (e) { records = []; }
+    let editIdx = -1; // 正在编辑的行（按日期+标题定位后的下标），-1 = 新增模式
+    const sorted = () => [...records].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    const draw = () => {
+      const list = sorted().reverse();
+      box.innerHTML = `
+      <div class="grid2">
+        <div class="field"><label>日期</label><input type="date" id="cr-date" value="${editIdx >= 0 ? esc(records[editIdx].date) : ''}"></div>
+        <div class="field"><label>标题</label><input type="text" id="cr-title" placeholder="比如：拿到驾照 / 项目上线" value="${editIdx >= 0 ? esc(records[editIdx].title) : ''}"></div>
+      </div>
+      <div class="field"><label>备注（可选）</label><input type="text" id="cr-note" placeholder="补充一句，显示在标题下面" value="${editIdx >= 0 ? esc(records[editIdx].note || '') : ''}"></div>
+      <p style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px">
+        <button class="btn" id="cr-save">${editIdx >= 0 ? '💾 保存修改' : '➕ 添加记录'}</button>
+        ${editIdx >= 0 ? '<button class="btn btn-small" id="cr-cancel">取消编辑</button>' : ''}
+      </p>
+      ${list.length ? list.map((r) => {
+        const idx = records.indexOf(r);
+        return `<div class="list-item" style="display:flex;align-items:center;gap:10px">
+          <span class="meta" style="white-space:nowrap">${esc(r.date)}</span>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.title)}${r.note ? ` <span class="meta">${esc(r.note)}</span>` : ''}</span>
+          <button class="btn btn-small" data-cr-edit="${idx}">编辑</button>
+          <button class="btn btn-small" data-cr-del="${idx}">删除</button>
+        </div>`;
+      }).join('') : '<p class="hint">还没有记录，先加一条吧。</p>'}`;
+      box.querySelector('#cr-save').onclick = async () => {
+        const date = box.querySelector('#cr-date').value;
+        const title = box.querySelector('#cr-title').value.trim();
+        const note = box.querySelector('#cr-note').value.trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { toast('先选一个日期', true); return; }
+        if (!title) { toast('标题不能为空', true); return; }
+        const rec = { date, title, ...(note ? { note } : {}) };
+        const action = editIdx >= 0 ? '改记录' : '加记录';
+        if (editIdx >= 0) records[editIdx] = rec; else records.push(rec);
+        try {
+          const text = JSON.stringify(sorted(), null, '\t') + '\n';
+          const res = await saveWithLog(PATH, text, cSha, `日历记录${action}：${title} [管理台]`, { type: '日历', action, target: `${date} ${title}` });
+          cSha = res.content.sha;
+          editIdx = -1;
+          toast('日历记录已保存，日历页刷新即可看到');
+          draw();
+        } catch (e) { toast(e.message, true); }
+      };
+      const cancel = box.querySelector('#cr-cancel');
+      if (cancel) cancel.onclick = () => { editIdx = -1; draw(); };
+      box.querySelectorAll('[data-cr-edit]').forEach((b) => { b.onclick = () => { editIdx = parseInt(b.dataset.crEdit, 10); draw(); }; });
+      box.querySelectorAll('[data-cr-del]').forEach((b) => { b.onclick = async () => {
+        const idx = parseInt(b.dataset.crDel, 10);
+        const r = records[idx];
+        if (!confirm(`确定删除这条日历记录？\n${r.date} ${r.title}`)) return;
+        records.splice(idx, 1);
+        if (editIdx === idx) editIdx = -1;
+        try {
+          const text = JSON.stringify(sorted(), null, '\t') + '\n';
+          const res = await saveWithLog(PATH, text, cSha, `日历记录删记录：${r.title} [管理台]`, { type: '日历', action: '删记录', target: `${r.date} ${r.title}` });
+          cSha = res.content.sha;
+          toast('已删除');
+          draw();
+        } catch (e) { toast(e.message, true); }
+      }; });
+    };
+    draw();
+  } catch (e) { box.innerHTML = '<p class="hint">读不到 calendar-data/personal-records.json（日历页数据文件还没上线时会出现，推送后就好）。</p>'; }
+}
+
+/* 🖼 图床门面口令：维护 functions/api/_picbed-gate.js 里的口令哈希（SHA-256，明文不进仓库）。
+ * 哈希为空 = 图床关闭；/picbed/ 页靠这个口令列 R2 图库，图片本身仍是公开直链。 */
+async function mountPicbedSection() {
+  if ($('#picbed-sec')) return;
+  const calSec = $('#calrec-sec');
+  const resumeSec = $('#resume-sec');
+  const gnssSec = $('#gnss-sec');
+  const anchor = calSec || resumeSec || gnssSec || $('#list');
+  if (!anchor) return;
+  const sec = document.createElement('div');
+  sec.className = 'card';
+  sec.id = 'picbed-sec';
+  sec.innerHTML = `<h2>🖼 图床门面</h2>
+    <p class="hint">博客 /picbed/ 页是 R2 图库的一个只读门面：输口令后能按目录翻图、点图复制 Markdown / 链接 / HTML。口令只存哈希，明文不进仓库；清空口令 = 关门面。<span class="meta copyable" data-copy="/picbed/" title="点击复制页面地址">/picbed/ 📋</span></p>
+    <div id="picbed-form"><p class="hint">读取中…</p></div>`;
+  anchor.after(sec);
+  const box = sec.querySelector('#picbed-form');
+  const PATH = 'functions/api/_picbed-gate.js';
+  const renderFile = (hash) => '// 图床门面的访问口令（只存 SHA-256 哈希，明文不落仓库）。\n'
+    + '// 由 Alexander Console「单页 → 图床门面」维护；空字符串 = 图床关闭（谁都列不出来）。\n'
+    + `export const PICBED_HASH = ${JSON.stringify(hash)};\n`;
+  try {
+    const cf = await ghGetFile(PATH);
+    let cSha = cf.sha;
+    const pick = (t) => { const m = t.match(/PICBED_HASH\s*=\s*"([0-9a-f]*)"/); return m ? m[1] : ''; };
+    let hash = pick(cf.text);
+    const draw = () => {
+      box.innerHTML = `
+      <p class="hint">当前状态：${hash ? '已开启（口令已设置）' : '未开启（还没设口令，图床关着）'}</p>
+      <div class="field"><label>${hash ? '设置新口令（覆盖旧的）' : '设置访问口令'}</label><input type="password" id="pb-pw" placeholder="输入口令，明文不会存下来" autocomplete="new-password"></div>
+      <p style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 2px">
+        <button class="btn" id="pb-save">💾 保存口令</button>
+        ${hash ? '<button class="btn btn-small" id="pb-clear">关闭图床（清空口令）</button>' : ''}
+      </p>`;
+      box.querySelector('#pb-save').onclick = async () => {
+        const pw = box.querySelector('#pb-pw').value.trim();
+        if (!pw) { toast('先输入口令', true); return; }
+        try {
+          const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+          const hex = [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+          const res = await saveWithLog(PATH, renderFile(hex), cSha, '图床口令更新 [管理台]', { type: '单页', action: '改图床口令', target: '/picbed/' });
+          cSha = res.content.sha;
+          hash = hex;
+          toast('图床口令已保存，等 Pages 重新部署后生效');
+          draw();
+        } catch (e) { toast(e.message, true); }
+      };
+      const clear = box.querySelector('#pb-clear');
+      if (clear) clear.onclick = async () => {
+        if (!confirm('确定关闭图床门面？口令会清空，之后谁都列不出图库（图片直链不受影响）。')) return;
+        try {
+          const res = await saveWithLog(PATH, renderFile(''), cSha, '图床口令清空（关闭门面）[管理台]', { type: '单页', action: '关闭图床', target: '/picbed/' });
+          cSha = res.content.sha;
+          hash = '';
+          toast('图床已关闭，等 Pages 重新部署后生效');
+          draw();
+        } catch (e) { toast(e.message, true); }
+      };
+    };
+    draw();
+  } catch (e) { box.innerHTML = '<p class="hint">读不到 functions/api/_picbed-gate.js（图床门面还没上线时会出现，推送后就好）。</p>'; }
+}
+
 /* 单页评论区开关：写各页专属配置里的 showComment（友链/打赏/动态）。
  * 留言板跟全局评论走、一直开着；关于页模板里没评论组件，开不了——都不在此列。 */
 const SPEC_COMMENT_TARGETS = [
@@ -1873,6 +2022,85 @@ async function mountRail() {
   } catch (e) { /* 拿不到星历状态就整卡不显示 */ }
 }
 
+/* 列表封面缩略图：fm.image 解析成可显示的 URL（仓库内相对路径走 GitHub raw，站内绝对路径走主域） */
+function coverThumbUrl(image, baseDir) {
+  const s = String(image || '').trim();
+  if (!s) return '';
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.startsWith('/')) return 'https://lanerc.me' + s;
+  const rel = s.replace(/^\.\//, '');
+  const path = (baseDir ? baseDir.replace(/\/?$/, '/') : '') + rel;
+  return `https://raw.githubusercontent.com/${CFG.owner}/${CFG.repo}/${CFG.branch}/` + path.split('/').map(encodeURIComponent).join('/');
+}
+function makeListThumb(url) {
+  if (!url) return null;
+  const img = document.createElement('img');
+  img.className = 'list-thumb';
+  img.src = url;
+  img.alt = '';
+  img.loading = 'lazy';
+  img.style.cssText = 'width:64px;height:48px;object-fit:cover;border-radius:8px;flex:none;border:1px solid var(--card-border,#e5e5e5)';
+  img.onerror = () => img.remove();
+  return img;
+}
+
+/* 项目状态：与编辑页下拉、博客 projects-utils 同一套取值 */
+const PROJECT_STATUS_OPTS = [['planning', '🕐 计划中'], ['developing', '💻 开发中'], ['published', '🚀 已发布'], ['archived', '📦 已归档']];
+/* 只改 frontmatter 里的 status 一行：有就替换、没有就插到 title 行后面，其余字节一律不动；没有 fm 区返回 null */
+function setFmStatusLine(text, status) {
+  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!m) return null;
+  const fm = m[1];
+  let newFm;
+  if (/^status:[^\n]*$/m.test(fm)) newFm = fm.replace(/^status:[^\n]*$/m, `status: ${status}`);
+  else if (/^title:[^\n]*$/m.test(fm)) newFm = fm.replace(/^(title:[^\n]*)$/m, `$1\nstatus: ${status}`);
+  else newFm = `status: ${status}\n${fm}`;
+  return `---\n${newFm}\n---${text.slice(m.index + m[0].length)}`;
+}
+/* 项目列表状态小标的下拉：点选即存（重读原文只改 status 行，走 saveWithLog 记日志） */
+function openProjectStatusMenu(chip, e, getTitle, paint) {
+  const old = document.querySelector('.pstatus-menu');
+  if (old) { const same = old.dataset.for === e.name; old.remove(); if (same) return; }
+  const menu = document.createElement('div');
+  menu.className = 'pstatus-menu';
+  menu.dataset.for = e.name;
+  menu.style.cssText = 'position:fixed;z-index:9999;background:var(--card-bg,#fff);border:1px solid var(--card-border,#ddd);border-radius:12px;box-shadow:var(--shadow,0 8px 24px rgba(0,0,0,.18));padding:4px;min-width:136px;color:var(--text,inherit)';
+  const cur = chip.dataset.status || '';
+  for (const [val, label] of PROJECT_STATUS_OPTS) {
+    const it = document.createElement('button');
+    it.className = 'btn btn-small btn-ghost';
+    it.type = 'button';
+    it.style.cssText = 'display:flex;width:100%;justify-content:flex-start;margin:2px 0';
+    it.textContent = label + (val === cur ? ' ✓' : '');
+    it.onclick = async () => {
+      menu.remove();
+      if (val === cur) return;
+      const oldText = chip.textContent;
+      chip.disabled = true;
+      chip.textContent = '保存中…';
+      try {
+        const path = `${CFG.collections.projects.path}/${e.name}`;
+        const data = await ghGetFile(path);
+        const newText = setFmStatusLine(data.text, val);
+        if (newText === null) throw new Error('这个文件没有 frontmatter，未做修改');
+        if (newText !== data.text) {
+          await saveWithLog(path, newText, data.sha, `项目状态改为「${label.replace(/^\S+ /, '')}」[管理台]`, { type: '项目', action: '改状态', target: getTitle() });
+        }
+        paint(val);
+        toast(`状态已改为「${label}」`);
+      } catch (err) { toast(err.message, true); chip.textContent = oldText; }
+      chip.disabled = false;
+    };
+    menu.appendChild(it);
+  }
+  document.body.appendChild(menu);
+  const r = chip.getBoundingClientRect();
+  menu.style.left = Math.min(r.left, window.innerWidth - 152) + 'px';
+  menu.style.top = (r.bottom + 4) + 'px';
+  const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('click', close, true); } };
+  setTimeout(() => document.addEventListener('click', close, true), 0);
+}
+
 /* 列表页 */
 function listRoute(key) {
   return async () => {
@@ -1886,7 +2114,7 @@ function listRoute(key) {
       </div><div id="list"></div>`;
     $('#btn-new').onclick = () => { location.hash = `#/edit/${key}/__new__`; };
     if (key === 'posts') mountLinkCardButton();
-    if (key === 'spec') { mountSpecCommentCard(); mountDiarySection(); mountGnssSection(); mountResumeSection(); }
+    if (key === 'spec') { mountSpecCommentCard(); mountDiarySection(); mountGnssSection(); mountResumeSection(); mountCalendarRecordsSection(); mountPicbedSection(); }
     const listEl = $('#list');
     /* 文章列表排序：默认文件名倒序，点按钮切到发布时间倒序（日期回填完会自动按当前模式重排） */
     let rowsRef = null;
@@ -1972,6 +2200,36 @@ function listRoute(key) {
         rows.push({ e, div });
       }
       rowsRef = rows;
+      /* 项目列表：回填真实标题 + 状态小标（点小标弹菜单直接改状态，不用进编辑页） */
+      if (key === 'projects' && rows.length) {
+        const labelOf = (v) => (PROJECT_STATUS_OPTS.find(([val]) => val === v) || [])[1];
+        const fillP = async (row) => {
+          const { e, div } = row;
+          try {
+            const data = await ghGetFile(`${col.path}/${e.name}`);
+            const { fm } = parseFrontmatter(data.text);
+            const tEl = div.querySelector('.title');
+            if (tEl && fm.title) tEl.textContent = fm.title;
+            const th = makeListThumb(coverThumbUrl(fm.image, col.path));
+            if (th) div.prepend(th);
+            const chip = document.createElement('button');
+            chip.className = 'btn btn-small pstatus-chip';
+            chip.type = 'button';
+            chip.title = '点击修改项目状态（立即保存）';
+            chip.style.cssText = 'margin-left:8px';
+            const paint = (v) => {
+              const lab = labelOf(v);
+              chip.textContent = lab || (v ? `⚠ ${v}（旧值）` : '⚠ 未设置');
+              chip.dataset.status = v || '';
+            };
+            paint(String(fm.status || ''));
+            chip.onclick = (ev) => { ev.stopPropagation(); openProjectStatusMenu(chip, e, () => String(fm.title || e.name), paint); };
+            const mEl = div.querySelector('.meta');
+            if (mEl) mEl.after(chip); else div.appendChild(chip);
+          } catch (err) { /* 单个失败不影响其他 */ }
+        };
+        for (let i = 0; i < rows.length; i += 4) await Promise.all(rows.slice(i, i + 4).map(fillP));
+      }
       /* 文章列表：异步回填 published 写作时间 + 真实标题（每批 4 个并发），顺序默认不动 */
       if (key === 'posts' && rows.length) {
         const fill = async (row) => {
@@ -1982,6 +2240,8 @@ function listRoute(key) {
             if (!md) return;
             const data = await ghGetFile(`${col.path}/${e.name}/${md.name}`);
             const { fm } = parseFrontmatter(data.text);
+            const th = makeListThumb(coverThumbUrl(fm.image, `${col.path}/${e.name}`));
+            if (th) div.prepend(th);
             const dEl = div.querySelector('.date');
             if (dEl && fm.published) { dEl.textContent = '📅 ' + String(fm.published).slice(0, 10); row.date = String(fm.published); }
             const tEl = div.querySelector('.title');
@@ -2014,6 +2274,7 @@ routes.edit = async (arg) => {
   const draftKey = `admin-edit-draft:${key}:${name}`;
   view.innerHTML = '<div class="card"><h2>加载中…</h2></div>';
   let fm = {}, body = '', sha = null, filePath = '', dirName = '';
+  let rawFmText = ''; // 原文件全文：保存时按行保留表单未管理的 frontmatter 字段
 
   try {
     if (isNew) {
@@ -2030,10 +2291,12 @@ routes.edit = async (arg) => {
       if (!md) throw new Error('目录里没有 md 文件');
       const data = await ghGetFile(`${col.path}/${name}/${md.name}`);
       ({ fm, body } = parseFrontmatter(data.text));
+      rawFmText = data.text;
       sha = data.sha; filePath = `${col.path}/${name}/${md.name}`;
     } else {
       const data = await ghGetFile(`${col.path}/${name}`);
       ({ fm, body } = parseFrontmatter(data.text));
+      rawFmText = data.text;
       sha = data.sha; filePath = `${col.path}/${name}`;
     }
   } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
@@ -2126,7 +2389,7 @@ routes.edit = async (arg) => {
     /* 项目 / 单页：通用表单 */
     const fieldDefs = {
       title: '标题', published: '发布时间', description: '描述',
-      image: '封面', tags: '标签（逗号分隔）', draft: '草稿',
+      image: '封面', status: '状态', tags: '标签（逗号分隔）', draft: '草稿',
     };
     const fields = col.fields || Object.keys(fieldDefs);
     for (const f of fields) {
@@ -2135,6 +2398,16 @@ routes.edit = async (arg) => {
       if (Array.isArray(val)) val = val.join(', ');
       if (f === 'draft') {
         infoHtml += `<div class="field"><label>选项</label><div class="pills">${pill('draft', '📝 草稿', isTrue(val))}</div></div>`;
+      } else if (f === 'status') {
+        /* 项目状态：与博客 projects-utils 的标准 key 对齐（旧值不在标准内时原样给一行，选了就改正） */
+        const statusOpts = [['planning', '🕐 计划中'], ['developing', '💻 开发中'], ['published', '🚀 已发布'], ['archived', '📦 已归档']];
+        const cur = String(val ?? '');
+        const extra = cur && !statusOpts.some(([v]) => v === cur)
+          ? `<option value="${esc(cur)}" selected>${esc(cur)}（旧值，建议改选标准状态）</option>` : '';
+        infoHtml += `<div class="field"><label>${esc(label)}</label><select data-f="status">
+          <option value=""${cur ? '' : ' selected'}>未设置</option>${extra}
+          ${statusOpts.map(([v, t]) => `<option value="${v}"${v === cur ? ' selected' : ''}>${t}</option>`).join('')}
+        </select></div>`;
       } else if (f === 'published') {
         infoHtml += `<div class="field"><label>${esc(label)}</label><input type="datetime-local" id="f-published" value="${dtLocal(val)}"></div>`;
       } else if (f === 'description') {
@@ -2680,7 +2953,22 @@ routes.edit = async (arg) => {
       }
       if (renamed) toast(`已存在同名文件，自动改名保存为 ${path}`);
     }
-    const text = serializeFrontmatter(newFm, newBody);
+    /* 表单没渲染的 frontmatter 字段整段保留原文（如项目 link 的嵌套结构、slug、order）：
+       newFm 只收 [data-f]，不保留的话保存一次就全被抹掉；逐行简易解析器也重组不了嵌套字段 */
+    const renderedKeys = new Set();
+    view.querySelectorAll('[data-f]').forEach((el) => renderedKeys.add(el.dataset.f));
+    const managedKeys = new Set([...renderedKeys, 'published', 'updated']);
+    if (pwOn) { managedKeys.add('password'); managedKeys.add('passwordHint'); }
+    const rawBlock = (String(rawFmText || '').match(/^---\r?\n([\s\S]*?)\r?\n---/) || [])[1] || '';
+    const keptLines = [];
+    let keeping = false;
+    for (const line of rawBlock.split('\n')) {
+      const kv = line.match(/^([A-Za-z0-9_-]+):/);
+      if (kv) { keeping = !managedKeys.has(kv[1]); if (keeping) keptLines.push(line); }
+      else if (keeping) keptLines.push(line);
+    }
+    let text = serializeFrontmatter(newFm, newBody);
+    if (keptLines.length) text = text.replace(/\n---\n/, `\n${keptLines.join('\n')}\n---\n`);
     $('#btn-save').disabled = true;
     try {
       await saveWithLog(path, text, sha, `${isNew ? '新建' : '更新'} ${path} [管理台]`, { type: col.label || key, action: isNew ? '新建' : '更新', target: path });
@@ -5729,9 +6017,10 @@ routes.theme = async () => {
     const nav = blockOf(t, /^\tnavbar\s*:/m);
     const navStyle = getIn(t, nav, /navbarStyle\s*:\s*"(\w+)"/);
     const anaM = t.match(/analyticsStyle\s*:\s*"([\w-]+)"/);
+    const modeM = t.match(/siteMode\s*:\s*"(\w+)"/);
     const mobileMenu = getIn(t, nav, /mobileMenuStyle\s*:\s*"(\w+)"/);
     if (hue === null || border === null || follow === null || layout === null) return null;
-    return { hue: Number(hue), cardBorder: border === 'true', cardFollow: follow === 'true', layout, layoutMobile: layoutM || layout, navbarStyle: navStyle || 'classic', mobileMenuStyle: mobileMenu || 'drawer', analyticsStyle: anaM ? anaM[1] : 'classic' };
+    return { hue: Number(hue), cardBorder: border === 'true', cardFollow: follow === 'true', layout, layoutMobile: layoutM || layout, navbarStyle: navStyle || 'classic', mobileMenuStyle: mobileMenu || 'drawer', analyticsStyle: anaM ? anaM[1] : 'classic', siteMode: modeM ? modeM[1] : 'full' };
   }
   function parseBgw(t) {
     const mm = t.match(/^\tmode\s*:\s*"(\w+)"/m);
@@ -5805,6 +6094,7 @@ routes.theme = async () => {
     out = setIn(out, nav, /mobileMenuStyle\s*:\s*"\w+"/, `mobileMenuStyle: "${s.mobileMenuStyle}"`);
     if (out === null) return null;
     out = out.replace(/analyticsStyle\s*:\s*"[\w-]+"/, `analyticsStyle: "${s.analyticsStyle}"`);
+    out = out.replace(/siteMode\s*:\s*"\w+"/, `siteMode: "${s.siteMode}"`);
     return out;
   }
   function applyBgw(t, s) {
@@ -5921,6 +6211,8 @@ routes.theme = async () => {
       <div class="field"><label>导航栏样式（全站默认）</label><div class="pills">${seg('navbarStyle', 'classic', '▬ 通栏')}${seg('navbarStyle', 'float', '▭ 悬浮卡片')}${seg('navbarStyle', 'capsule', '💊 悬浮胶囊')}${seg('navbarStyle', 'segment', '💊💊💊 三段胶囊')}</div>
       <p class="hint">三段胶囊：导航栏拆成左站名 / 中菜单 / 右控件三颗胶囊，向下滚动时左右两段收成圆形，右段汉堡打开快捷面板。访客可以在博客调色板（显示设置）里自己切换样式，那是访客本地的选择，不改这里的全站默认。</p></div>
       <div class="field"><label>移动端菜单样式</label><div class="pills">${seg('mobileMenuStyle', 'drawer', '全屏抽屉')}${seg('mobileMenuStyle', 'card', '浮层卡片')}</div></div>
+      <div class="field"><label>站点形态（全站默认）</label><div class="pills">${seg('siteMode', 'full', '🌸 华彩')}${seg('siteMode', 'pure', '🍃 素简')}</div>
+      <p class="hint">素简 = 简洁导航 · 专注阅读（对标朝朝听雨的 Pure 形态）：隐藏横幅壁纸、花瓣特效、看板娘与音乐浮动件，侧栏只留个人卡 / 公告 / 最近评论 / 标签，文章页正文单列、右栏只留目录。访客可以在博客调色板（显示设置）里自己切换形态，那是访客本地的选择，不改这里的全站默认。</p></div>
       <div class="field"><label>站点统计页样式</label><div class="pills">${seg('analyticsStyle', 'classic', '现行版（手搓）')}${seg('analyticsStyle', 'azuma', 'azuma 同款（带插画）')}${seg('analyticsStyle', 'azuma-clean', 'azuma 清爽版（无插画）')}</div>
       <p class="hint">azuma 同款 = 圈子里流传的 Aemeath 统计页（访问脉冲 7/30/90 天切换、推送节奏带贪吃蛇、中国地图、最近评论），数据走本站自己的 Umami / Waline。带插画版的 7 张图已全部压成 webp（原版 5.5MB → 约 0.7MB）。切换前可以先开 /analytics-azuma/ 与 /analytics-azuma-clean/ 两张预览页对比，三套随时互切。</p></div>
     </div>

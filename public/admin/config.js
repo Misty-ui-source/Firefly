@@ -59,7 +59,7 @@ window.ADMIN_CONFIG = {
       label: '项目',
       path: 'src/content/projects',
       mode: 'file',
-      fields: ['title', 'published', 'description', 'image', 'tags', 'draft'],
+      fields: ['title', 'published', 'description', 'image', 'status', 'tags', 'draft'],
     },
     spec: {
       label: '单页',

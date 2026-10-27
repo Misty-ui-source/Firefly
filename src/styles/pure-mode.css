@@ -1,0 +1,743 @@
+/* ============================================================
+ * 站点形态 · 素简（pure）样式
+ * ------------------------------------------------------------
+ * 机制与导航栏样式（data-navbar-style）同套：siteConfig.siteMode 为全站默认，
+ * 访客在显示设置里覆盖后存 localStorage（siteMode），由 Layout 头部脚本在
+ * 绘制前把结果写到 html[data-site-mode]；本文件全部规则都收在
+ * html[data-site-mode="pure"] 下，华彩（full）时整文件不生效。
+ * 版式数值对标朝朝听雨 rainzt.cn 的 Pure 形态（其 /site-themes/pure-theme.css
+ * 实测：壳宽 70rem、博客网格 3fr/1fr gap 2rem、卡片 1px 线边 + 1rem 圆角 +
+ * 无阴影、封面 60% 宽淡化背景 opacity .38、文章页 1fr/15rem gap 2.5rem）。
+ * 与他不同的是这边不渲第二套 DOM：同一套 DOM 靠网格重排 + 样式切换实现。
+ * 颜色一律走现有 CSS 变量，亮 / 暗模式都成立。
+ * 注意：整文件放在 @layer components 里——main.css 的卡片粗边框、玻璃底等
+ * 规则同在这个 layer 且带 !important，跨 layer 时 layered !important 会压过
+ * unlayered !important（优先级反转），只有同层才能靠特异性正常竞争。
+ * ============================================================ */
+
+@layer components {
+
+/* ---------- 全局：纯白底、去掉装饰层 ---------- */
+
+/* 浅色下页面底改纯白（他的 --pure-bg 即其页面底色，浅色为纯白）。
+   --page-bg 定义在无 layer 的样式里，layer 内的变量覆盖赢不了它，
+   所以这里直接给 html / body 写死白色，不绕变量 */
+html[data-site-mode="pure"] {
+	background: var(--page-bg) !important;
+	scroll-padding-top: 5.5rem;
+}
+html[data-site-mode="pure"] body {
+	background: var(--page-bg) !important;
+}
+html[data-site-mode="pure"]:not(.dark),
+html[data-site-mode="pure"]:not(.dark) body {
+	background: #ffffff !important;
+}
+
+/* 横幅 / 壁纸层（连带其内的波纹、渐变、标题叠加层）整体隐藏 */
+html[data-site-mode="pure"] #wallpaper-wrapper,
+html[data-site-mode="pure"] #header-waves,
+html[data-site-mode="pure"] #wallpaper-gradient,
+html[data-site-mode="pure"] #banner-images-container,
+html[data-site-mode="pure"] #banner-overlay-container,
+html[data-site-mode="pure"] #banner-dim-container,
+/* 花瓣 / 粒子特效 canvas（SakuraEffect 的 #canvas_sakura 与 ParticleEffects 的 canvas_<kind>） */
+html[data-site-mode="pure"] #canvas_sakura,
+html[data-site-mode="pure"] canvas[id^="canvas_"],
+/* 背景音乐浮动播放器、看板娘、Spine 模型、首页可拖拽贴纸 */
+html[data-site-mode="pure"] #bg-player,
+html[data-site-mode="pure"] .l2d-buddy,
+html[data-site-mode="pure"] #l2d-widget-container,
+html[data-site-mode="pure"] #spine-model-container,
+html[data-site-mode="pure"] #draggable-stickers {
+	display: none !important;
+	visibility: hidden !important;
+}
+/* l2d-widget 库把角色根渲染成无 id/class 的 body 级 fixed div（内联 z-index: 9999、直挂 canvas，
+   气泡是它的子元素），没有稳定钩子，只能按这组内联特征认人；小伙伴的根同理（另有 .l2d-buddy 兜底） */
+html[data-site-mode="pure"] body > div[style*="z-index: 9999"]:has(> canvas) {
+	display: none !important;
+	visibility: hidden !important;
+}
+
+/* 壁纸没了，内容区顶回导航栏下方（原 banner 模式会把内容压到横幅之下）；
+   导航栏已瘦到 4rem，顶距跟着收 0.25rem */
+html[data-site-mode="pure"] .content-panel {
+	--content-top: 5.25rem !important;
+}
+
+/* 切页过渡在素简下关掉，避免形态切换后残留位移 / 透明动画 */
+html[data-site-mode="pure"] #swup-container {
+	transform: none !important;
+}
+html[data-site-mode="pure"] #content-wrapper {
+	animation: none !important;
+	opacity: 1 !important;
+	transform: none !important;
+}
+
+/* 分类标签条：素简下不出现（与他的 #category-bar-wrapper 处理一致） */
+html[data-site-mode="pure"] #category-bar-wrapper {
+	display: none !important;
+}
+
+/* ---------- 卡片：回到不透明底，1px 线边、1rem 圆角、无阴影 ---------- */
+html[data-site-mode="pure"] .card-base,
+html[data-site-mode="pure"] .card-base-transparent {
+	background-color: var(--card-bg) !important;
+	backdrop-filter: none !important;
+}
+html[data-site-mode="pure"] .card-base {
+	border: 1px solid var(--line-divider) !important;
+	border-radius: 1rem !important;
+	box-shadow: none !important;
+}
+
+/* ---------- 导航栏：素净化（纯色底、无毛玻璃、无胶囊变形） ---------- */
+/* 调色板 / 搜索 / 亮暗切换等按钮本身保留可用，只收掉导航栏的表面装饰 */
+html[data-site-mode="pure"] #navbar,
+html[data-site-mode="pure"] #navbar > div {
+	border-radius: 0 !important;
+	box-shadow: none !important;
+}
+html[data-site-mode="pure"] #navbar > div,
+html[data-site-mode="pure"][data-has-wallpaper] body #navbar > div {
+	background-color: var(--page-bg) !important;
+	border: none !important;
+	margin: 0 !important;
+	height: 4rem !important;
+	--navbar-surface-blur: 0px !important;
+}
+/* 导航内层与内容壳同宽（70rem），品牌与链接贴着内容两边站，不再满幅摊开 */
+html[data-site-mode="pure"] #navbar .navbar-segments {
+	max-width: 70rem !important;
+}
+/* 浅色下导航底与页面同为纯白（--page-bg 变量本身仍是淡青值，只有 html/body 被写死成白色，
+   导航这里不同步就会露出一道色带） */
+html[data-site-mode="pure"]:not(.dark) #navbar > div,
+html[data-site-mode="pure"]:not(.dark)[data-has-wallpaper] body #navbar > div {
+	background-color: #ffffff !important;
+}
+/* 导航瘦身（照他的纯字导航）：链接图标全去掉只留名字，字重 700→500、字号 0.9375rem，
+   左右内边距收紧；带子菜单的只保留小箭头（他的 Pure 同样留 chevron）。
+   移动端抽屉菜单不在 #navbar 这套渲染里，不受影响 */
+html[data-site-mode="pure"] #navbar .navbar-icon {
+	display: none !important;
+}
+html[data-site-mode="pure"] #navbar .dropdown-container > a,
+html[data-site-mode="pure"] #navbar .dropdown-container > button {
+	font-size: 0.9375rem !important;
+	font-weight: 500 !important;
+	padding-inline: 0.75rem !important;
+}
+html[data-site-mode="pure"] #navbar .navbar-seg-left a {
+	font-weight: 500 !important;
+}
+html[data-site-mode="pure"] #navbar > div::before {
+	backdrop-filter: none !important;
+	-webkit-backdrop-filter: none !important;
+}
+/* 三段胶囊形态下把三颗胶囊的表面也抹平，整条退回一条素栏 */
+html[data-site-mode="pure"] .navbar-seg,
+html[data-site-mode="pure"][data-navbar-style="segment"] #navbar .navbar-seg.navbar-seg {
+	background: transparent !important;
+	box-shadow: none !important;
+	border-color: transparent !important;
+	border-radius: 0 !important;
+}
+html[data-site-mode="pure"] .navbar-seg::before {
+	display: none !important;
+}
+/* 导航栏里的音乐 / 背景视频按钮属于装饰入口，素简下隐藏（播放器本体在侧栏/页面内仍可用） */
+html[data-site-mode="pure"] #music-player-switch,
+html[data-site-mode="pure"] #bg-player-toggle {
+	display: none !important;
+}
+
+/* ---------- 页脚：发丝线分隔，只留备案行与版权行 ---------- */
+html[data-site-mode="pure"] .site-footer {
+	border-top: 1px solid var(--line-divider);
+}
+html[data-site-mode="pure"] .site-footer .text-50 > div:last-child {
+	display: none !important;
+}
+
+/* ---------- 浮动按钮：方形描边小钮，浮动目录收起 ---------- */
+html[data-site-mode="pure"] #floating-toc-wrapper {
+	display: none !important;
+}
+html[data-site-mode="pure"] .floating-controls-container :is(.floating-btn, .scroll-progress-circle) {
+	width: 2.75rem;
+	height: 2.75rem;
+	border: 1px solid var(--line-divider);
+	border-radius: 0.875rem !important;
+	background: var(--card-bg) !important;
+	box-shadow: none !important;
+	backdrop-filter: none !important;
+}
+
+/* ---------- 侧栏瘦身：只保留四件（个人卡、公告、最近评论、标签），其余 widget 隐藏 ---------- */
+html[data-site-mode="pure"] widget-layout[data-id="categories"],
+html[data-site-mode="pure"] widget-layout[data-id="latest-dynamics"],
+html[data-site-mode="pure"] widget-layout[data-id="site-stats"],
+html[data-site-mode="pure"] widget-layout[data-id="site-info"],
+html[data-site-mode="pure"] widget-layout[data-id="calendar-widget"],
+html[data-site-mode="pure"] widget-layout[data-id="analytics-snapshot"],
+html[data-site-mode="pure"] widget-layout[data-id^="music-widget-"] {
+	display: none !important;
+}
+
+/* 个人卡：顶部大图收成小圆头像居中 */
+html[data-site-mode="pure"] .card-base:has(.profile-avatar-image) > a:has(.profile-avatar-image) {
+	width: 5.5rem !important;
+	height: 5.5rem !important;
+	margin-inline: auto !important;
+	border-radius: 9999px !important;
+}
+html[data-site-mode="pure"] .profile-avatar-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+/* 公告卡：两个按钮（了解更多 / 关闭）撤掉薄荷底，改细描边素钮，跟右栏去色一致 */
+html[data-site-mode="pure"] widget-layout[data-id="announcement"] .btn-regular {
+	background: transparent !important;
+	box-shadow: none !important;
+	border: 1px solid var(--line-divider) !important;
+	color: var(--content-meta) !important;
+}
+
+/* ---------- 内容页通用件去色（友链 / 留言等页面共用） ---------- */
+/* 页头图标块：主题色实底 → 细描边素框（friends/guestbook 等页共用 .page-icon） */
+html[data-site-mode="pure"] .page-icon {
+	background: transparent !important;
+	border: 1px solid var(--line-divider) !important;
+	color: var(--content-meta) !important;
+}
+/* 筛选药丸（友链分类等 .category-pill）：去主题色调，选中态用正文色的浅灰洗 */
+html[data-site-mode="pure"] .category-pill {
+	background: transparent !important;
+	border-color: var(--line-divider) !important;
+	color: var(--content-meta) !important;
+}
+html[data-site-mode="pure"] .category-pill[data-active] {
+	background: color-mix(in srgb, currentColor 14%, transparent) !important;
+	border-color: var(--line-divider) !important;
+	color: inherit !important;
+	font-weight: 600;
+}
+/* 正文列表圆点：主题色 → 中性灰（留言页的清单、文章正文同理） */
+html[data-site-mode="pure"] .custom-md :is(ul, ol) li::marker {
+	color: var(--content-meta) !important;
+}
+/* 评论区头：渐变小竖条改中性线色、标题回正文色、装饰圆点阵淡化为线色 */
+html[data-site-mode="pure"] #post-comments [class*="bg-linear-to-b"] {
+	background: var(--line-divider) !important;
+}
+html[data-site-mode="pure"] #post-comments h3 {
+	color: inherit !important;
+}
+html[data-site-mode="pure"] #post-comments [class*="text-(--primary)"] {
+	color: var(--line-divider) !important;
+}
+
+/* 标签 widget：药丸改细描边 */
+html[data-site-mode="pure"] widget-layout[data-id="tags"] a {
+	border: 1px solid var(--line-divider) !important;
+	background: transparent !important;
+	box-shadow: none !important;
+}
+
+/* ---------- 列表页布局：壳宽 70rem，主列 3fr + 右栏 1fr（他的博客网格原值） ---------- */
+@media (min-width: 768px) {
+	html[data-site-mode="pure"] body:not(:has(#post-container)):has(#left-sidebar, #right-sidebar) #content-panel-inner {
+		--cols-md: minmax(0, 3fr) minmax(0, 1fr) !important;
+		--cols-xl: minmax(0, 3fr) minmax(0, 1fr) !important;
+		max-width: 70rem !important;
+	}
+	html[data-site-mode="pure"] body:not(:has(#post-container)) #main-grid {
+		column-gap: 2rem !important;
+		row-gap: 1.25rem !important;
+		/* 前四行给右栏四件套（各自自然高），末行 1fr 空行吸收主列的富余高度；
+		   否则主列跨行时多余高度会被摊进右栏的行里、把标签顶到页面底部 */
+		grid-template-rows: auto auto auto auto 1fr;
+	}
+	/* 右栏合并：左右两栏的根与内层分组统统 display:contents，widget 直接成为
+	   主网格子项，逐个钉进右栏同一列——顺序：个人卡 → 公告 → 最新评论 → 标签
+	   （公告在原站就是紧贴个人卡下方，这里照原站逻辑放最新评论上面）。
+	   （文章页不在此列：那边目录要保留 sticky，右栏结构不动） */
+	html[data-site-mode="pure"] body:not(:has(#post-container)) #left-sidebar,
+	html[data-site-mode="pure"] body:not(:has(#post-container)) #right-sidebar,
+	html[data-site-mode="pure"] body:not(:has(#post-container)) #left-sidebar > div,
+	html[data-site-mode="pure"] body:not(:has(#post-container)) #right-sidebar > div {
+		/* !important 不可省：根与分组都带 Tailwind 的 flex 类（utilities 层压 components 层） */
+		display: contents !important;
+	}
+	html[data-site-mode="pure"] body:not(:has(#post-container)) #content-column {
+		grid-column: 1;
+		grid-row: 1 / -1;
+		min-width: 0;
+	}
+	html[data-site-mode="pure"] body:not(:has(#post-container)) :is(#left-sidebar, #right-sidebar) widget-layout {
+		grid-column: 2;
+		min-width: 0;
+	}
+	html[data-site-mode="pure"] body:not(:has(#post-container)) #left-sidebar .card-base:has(.profile-avatar-image) {
+		grid-column: 2;
+		grid-row: 1;
+		min-width: 0;
+	}
+	html[data-site-mode="pure"] body:not(:has(#post-container)) #left-sidebar widget-layout[data-id="announcement"] {
+		grid-row: 2;
+	}
+	html[data-site-mode="pure"] body:not(:has(#post-container)) #right-sidebar widget-layout[data-id="recent-comments"] {
+		grid-row: 3;
+	}
+	html[data-site-mode="pure"] body:not(:has(#post-container)) #left-sidebar widget-layout[data-id="tags"] {
+		grid-row: 4;
+	}
+}
+
+/* ---------- 文章卡：他的 Pure 预览卡数值 ---------- */
+/* 列表强制单列（他的 Pure 首页只有列表形态）：盖掉 grid 模式的自动网格，
+   与访客在华彩下选的列表 / 网格偏好无关，切回华彩即恢复 */
+html[data-site-mode="pure"] #post-list-container {
+	display: flex !important;
+	flex-direction: column;
+	gap: 1rem !important;
+}
+html[data-site-mode="pure"] .post-card-wrapper {
+	isolation: isolate;
+}
+html[data-site-mode="pure"] .post-card-content {
+	width: 100% !important;
+	max-width: 100% !important;
+	padding: 1.25rem 1.25rem 0.5rem !important;
+	position: relative;
+	z-index: 1;
+}
+/* 元信息行挪到标题上方当时间行（他的顺序：时间 → 标题 → 摘要 → 标签） */
+html[data-site-mode="pure"] .post-meta {
+	order: -1;
+	margin: 0 0 0.35rem !important;
+	font-size: 0.8125rem;
+	color: var(--content-meta);
+}
+html[data-site-mode="pure"] .post-meta .meta-icon {
+	color: var(--content-meta);
+}
+html[data-site-mode="pure"] .post-meta .meta-icon {
+	background: transparent !important;
+	width: auto !important;
+	height: auto !important;
+	border-radius: 0 !important;
+	margin-right: 0.35rem;
+}
+html[data-site-mode="pure"] .post-meta .meta-icon svg {
+	font-size: 0.9375rem !important;
+	width: 0.9375rem;
+	height: 0.9375rem;
+}
+html[data-site-mode="pure"] .post-card-title {
+	font-size: 1.125rem !important;
+	font-weight: 500 !important;
+	line-height: 1.65 !important;
+	margin-bottom: 0.5rem !important;
+}
+html[data-site-mode="pure"] .post-card-title::before {
+	display: none !important;
+}
+html[data-site-mode="pure"] .post-card-content .description {
+	font-size: 0.875rem;
+	line-height: 1.8;
+}
+/* 封面不删：贴到卡片右侧做淡化背景（60% 宽、opacity .38、向左渐隐），与他的 __cover 同款。
+   定位类在 Tailwind utilities layer 里、grid 模式在 main.css 里也各有一套，
+   不带 !important 压不过去 */
+html[data-site-mode="pure"] .post-card-wrapper.has-cover .post-card-image {
+	position: absolute !important;
+	inset: 0 0 0 auto !important;
+	width: 60% !important;
+	height: 100% !important;
+	aspect-ratio: auto !important;
+	border-radius: 0 !important;
+	opacity: 0.38;
+	z-index: 0;
+	pointer-events: none;
+	mask-image: linear-gradient(to right, transparent, black) !important;
+	-webkit-mask-image: linear-gradient(to right, transparent, black) !important;
+}
+html[data-site-mode="pure"] .post-card-wrapper.has-cover .post-card-image img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+/* 卡片悬停：底色轻轻变灰（他的 hover 同款） */
+html[data-site-mode="pure"] .post-card-wrapper:hover {
+	background-color: var(--btn-plain-bg-hover) !important;
+}
+/* 底部标签：细描边药丸 */
+html[data-site-mode="pure"] .post-card-bottom-tags a {
+	border: 1px solid var(--line-divider) !important;
+	background: transparent !important;
+	border-radius: 999px !important;
+	box-shadow: none !important;
+	font-size: 0.75rem;
+}
+
+/* ---------- 品牌与右栏去色（素简下不留主题色装饰） ---------- */
+/* Alexander 旁边的 logo 图标去掉，只留站名文字（与他的纯文字品牌一致） */
+html[data-site-mode="pure"] #navbar .navbar-logo {
+	display: none !important;
+}
+/* widget 标题：去掉主题色竖条，字重收一档 */
+html[data-site-mode="pure"] .widget-title {
+	font-weight: 600 !important;
+}
+html[data-site-mode="pure"] .widget-title::before {
+	display: none !important;
+}
+/* 个人卡：社交按钮的薄荷底撤掉只留灰字图标；名字下那截主题色小杠改中性线色 */
+html[data-site-mode="pure"] .card-base:has(.profile-avatar-image) .btn-regular {
+	background: transparent !important;
+	box-shadow: none !important;
+	color: var(--content-meta) !important;
+}
+html[data-site-mode="pure"] .card-base:has(.profile-avatar-image) [class*="bg-(--primary)"] {
+	background-color: var(--line-divider) !important;
+}
+/* 标签药丸（右栏与文章卡底部）：文字改回正文色，不再用主题色染字 */
+html[data-site-mode="pure"] widget-layout[data-id="tags"] :is(a, button),
+html[data-site-mode="pure"] widget-layout[data-id="tags"] :is(a, button) * {
+	color: inherit !important;
+}
+html[data-site-mode="pure"] .post-card-bottom-tags a {
+	color: inherit !important;
+}
+html[data-site-mode="pure"] .post-card-bottom-tags > span {
+	background: transparent !important;
+	color: var(--content-meta) !important;
+}
+
+/* ---------- 列表页信息行 + 文章页阅读件（素简专属，华彩下恒隐藏） ---------- */
+.pure-page-info {
+	display: none;
+}
+html[data-site-mode="pure"] .pure-page-info {
+	display: block;
+	margin-bottom: 1rem;
+	font-size: 0.8125rem;
+	color: var(--content-meta);
+}
+#pure-reading-progress {
+	display: none;
+}
+html[data-site-mode="pure"] body:has(#post-container) #pure-reading-progress {
+	display: block;
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 2px;
+	z-index: 100;
+	transform-origin: 0 50%;
+	transform: scaleX(0);
+	background: #26262a;
+	pointer-events: none;
+}
+html.dark[data-site-mode="pure"] body:has(#post-container) #pure-reading-progress {
+	background: #e5e5e5;
+}
+/* 上一篇 / 下一篇：大按钮卡退成纯文字行（ chevron 缩小、去主题色） */
+html[data-site-mode="pure"] body:has(#post-container) #content-wrapper > div:has(> a > .btn-card) {
+	gap: 1rem !important;
+	margin-bottom: 1.5rem !important;
+}
+html[data-site-mode="pure"] body:has(#post-container) #content-wrapper > div:has(> a > .btn-card) .btn-card {
+	background: transparent !important;
+	box-shadow: none !important;
+	border: none !important;
+	height: auto !important;
+	padding: 0.25rem 0 !important;
+	font-size: 0.9375rem;
+}
+html[data-site-mode="pure"] body:has(#post-container) #content-wrapper > div:has(> a > .btn-card) .btn-card [class*="text-(--primary)"] {
+	color: var(--content-meta) !important;
+	font-size: 1.25rem !important;
+}
+
+/* ---------- 文章页：单列居中，左栏全隐，右栏只留目录 ---------- */
+/* 左栏整列隐藏（含移动端底部侧栏，阅读时不打扰） */
+html[data-site-mode="pure"] body:has(#post-container) #left-sidebar-wrapper,
+html[data-site-mode="pure"] body:has(#post-container) #left-sidebar-dynamic,
+html[data-site-mode="pure"] body:has(#post-container) #left-sidebar,
+html[data-site-mode="pure"] body:has(#post-container) #mobile-bottom-sidebar {
+	display: none !important;
+}
+/* 右栏只留目录：最近动态 / 最近评论在文章页也不出现 */
+html[data-site-mode="pure"] body:has(#post-container) widget-layout[data-id="latest-dynamics"],
+html[data-site-mode="pure"] body:has(#post-container) widget-layout[data-id="recent-comments"] {
+	display: none !important;
+}
+/* 正文容器去卡片化：透明、无边、无影（与他的 #post-container 处理一致） */
+html[data-site-mode="pure"] #post-container {
+	background: transparent !important;
+	border: 0 !important;
+	box-shadow: none !important;
+	backdrop-filter: none !important;
+}
+html[data-site-mode="pure"] .custom-md {
+	line-height: 1.9;
+}
+/* 文章头部的元信息图标同样去掉薄荷色小方块，与卡片元信息行一致 */
+html[data-site-mode="pure"] #post-container .meta-icon {
+	background: transparent !important;
+	width: auto !important;
+	height: auto !important;
+	border-radius: 0 !important;
+	margin-right: 0.35rem;
+	color: var(--content-meta);
+}
+/* 文章头：照他的阅读页收拾——封面提到最前（容器转纵向 flex，只给封面 wrapper 一个 -1 序，
+    overlay 变体里封面块本来就是第一子元素，不受影响）；标题去左边的主题色竖条、
+   字重降到 500、字号 1.875rem；字数 / 分钟那行的图标小方块一并抹平 */
+html[data-site-mode="pure"] #post-container {
+	display: flex;
+	flex-direction: column;
+}
+html[data-site-mode="pure"] #post-container > * {
+	min-width: 0;
+}
+html[data-site-mode="pure"] #post-container > div:has(#post-cover) {
+	order: -1;
+}
+/* 头图别撑满整列：照他的 hero 上限收到 65ch，左对齐 */
+html[data-site-mode="pure"] #post-container #post-cover {
+	max-width: 65ch;
+}
+html[data-site-mode="pure"] #post-container [data-pagefind-meta="title"] {
+	font-size: 1.875rem !important;
+	font-weight: 500 !important;
+	line-height: 1.3 !important;
+}
+html[data-site-mode="pure"] #post-container [data-pagefind-meta="title"]::before {
+	display: none !important;
+}
+html[data-site-mode="pure"] #post-container > .flex-row.gap-5 .h-6.w-6 {
+	background: transparent !important;
+}
+/* 目录去卡片化：他的目录就是裸文字列——透明底、无边框，编号徽章也撤掉底色 */
+html[data-site-mode="pure"] body:has(#post-container) .card-base:has(#sidebar-toc) {
+	background: transparent !important;
+	border: 0 !important;
+	box-shadow: none !important;
+}
+html[data-site-mode="pure"] #sidebar-toc .toc-badge {
+	background: transparent !important;
+}
+html[data-site-mode="pure"] .card-base:has(#sidebar-toc) .widget-title {
+	font-size: 0.9375rem !important;
+	font-weight: 500 !important;
+}
+html[data-site-mode="pure"] .card-base:has(#sidebar-toc) .widget-title::before {
+	display: none !important;
+}
+@media (min-width: 768px) {
+	html[data-site-mode="pure"] #content-panel-inner {
+		--grid-sidebar-width: 15rem !important;
+	}
+}
+@media (min-width: 768px) and (max-width: 1279.98px) {
+	/* 平板：目录不进主网格（走浮动目录），正文单列 */
+	html[data-site-mode="pure"] body:has(#post-container) #content-panel-inner {
+		--cols-md: minmax(0, 1fr) !important;
+		--content-ratio-md: 0.85 !important;
+	}
+}
+@media (min-width: 1280px) {
+	/* 桌面：正文 1fr + 目录 15rem，gap 2.5rem（他的文章页网格原值）。
+	   --content-ratio 必须归 1：它在 layout-base 里是内容栏自身的 max-width 百分比，
+	   留 0.72 会把正文缩进轨道中央、与目录之间空出一大截（目录看着像贴在屏边）；
+	   壳宽同样封顶 70rem，正文占满轨道后目录自然贴到正文右侧 */
+	html[data-site-mode="pure"] body:has(#post-container) #content-panel-inner {
+		--cols-xl: minmax(0, 1fr) var(--grid-sidebar-width) !important;
+		--content-ratio-xl: 1 !important;
+		max-width: 70rem !important;
+	}
+	html[data-site-mode="pure"] body:has(#post-container) #main-grid {
+		column-gap: 2.5rem !important;
+	}
+}
+
+/* ---------- 第二轮扫尾：各内容页漏网的主题色 ---------- */
+/* 实心主题色块（搜索页标题图标、朋友圈页头图标与切换药丸、分页当前页、徽章类）一律改墨色块。
+   选择器必须锚定类名边界（开头或空格后）：WidgetLayout 标题的 class 里有 before:bg-(--primary)，
+   不锚定会误伤整个标题元素（踩过一次，标题被刷成黑条） */
+html[data-site-mode="pure"] [class^="bg-(--primary)"],
+html[data-site-mode="pure"] [class*=" bg-(--primary)"],
+html[data-site-mode="pure"] [class^="bg-[var(--primary)]"]:not([class*="/10"]),
+html[data-site-mode="pure"] [class*=" bg-[var(--primary)]"]:not([class*="/10"]) {
+	background-color: #26262a !important;
+	color: #fff !important;
+}
+html.dark[data-site-mode="pure"] [class^="bg-(--primary)"],
+html.dark[data-site-mode="pure"] [class*=" bg-(--primary)"],
+html.dark[data-site-mode="pure"] [class^="bg-[var(--primary)]"]:not([class*="/10"]),
+html.dark[data-site-mode="pure"] [class*=" bg-[var(--primary)]"]:not([class*="/10"]) {
+	background-color: #e5e5e5 !important;
+	color: #17171a !important;
+}
+/* 方括号写法的主题色文字（朋友圈图标/计数片）：回正文色，顺带让它们的灰洗底色不再被 currentColor 染绿 */
+html[data-site-mode="pure"] [class^="text-[var(--primary)]"],
+html[data-site-mode="pure"] [class*=" text-[var(--primary)]"] {
+	color: inherit !important;
+}
+/* 主题色 10% 淡底（朋友圈统计小卡、日期更新片）改中性灰洗 */
+html[data-site-mode="pure"] [class*="bg-[var(--primary)]/10"] {
+	background-color: color-mix(in srgb, currentColor 8%, transparent) !important;
+}
+/* 朋友圈日期圈的主题色边、搜索结果高亮词 */
+html[data-site-mode="pure"] [class*="border-[var(--primary)]"] {
+	border-color: var(--line-divider) !important;
+}
+html[data-site-mode="pure"] mark {
+	background: color-mix(in srgb, currentColor 14%, transparent) !important;
+	color: inherit !important;
+}
+/* 列表页头计数（动态/项目等共用 .page-count）：数字不再主题色 */
+html[data-site-mode="pure"] .page-count {
+	color: inherit !important;
+}
+/* 归档：年份圈描边、分类片（明暗各一份底色类）、文章小圆点 */
+html[data-site-mode="pure"] archive-panel [class*="outline-(--primary)"] {
+	outline-color: var(--line-divider) !important;
+}
+html[data-site-mode="pure"]:not(.dark) archive-panel [class*="oklch(0.95_0.025"] {
+	background: color-mix(in srgb, currentColor 8%, transparent) !important;
+	color: inherit !important;
+}
+html.dark[data-site-mode="pure"] archive-panel [class*="oklch(0.25_0.025"] {
+	background: color-mix(in srgb, currentColor 10%, transparent) !important;
+	color: inherit !important;
+}
+html[data-site-mode="pure"] archive-panel a.archive-post:hover [class*="oklch(0.95_0.025"],
+html[data-site-mode="pure"] archive-panel a.archive-post:hover [class*="oklch(0.25_0.025"] {
+	background: color-mix(in srgb, currentColor 16%, transparent) !important;
+	color: inherit !important;
+}
+html[data-site-mode="pure"] archive-panel [class*="oklch(0.5_0.05"] {
+	background: var(--content-meta) !important;
+}
+/* 动态：引言装饰、置顶徽章、行内代码片（正文 .custom-md 通用） */
+html[data-site-mode="pure"] .page-entry-decoration {
+	color: var(--content-meta) !important;
+}
+html[data-site-mode="pure"] .page-pinned-badge {
+	background: color-mix(in srgb, currentColor 9%, transparent) !important;
+	color: inherit !important;
+}
+html[data-site-mode="pure"] .custom-md code {
+	background: color-mix(in srgb, currentColor 9%, transparent) !important;
+	color: inherit !important;
+}
+/* 浮动按钮：图标回正文色（形状在第一轮已改方形描边） */
+html[data-site-mode="pure"] .floating-controls-container .floating-btn {
+	color: inherit !important;
+}
+
+/* ---------- 日历页素简适配 ---------- */
+html[data-site-mode="pure"] .calendar-mark {
+	background: var(--content-meta) !important;
+}
+html[data-site-mode="pure"] .calendar-holiday-name {
+	color: inherit !important;
+}
+html[data-site-mode="pure"] .calendar-cell.is-holiday {
+	background: color-mix(in srgb, currentColor 4%, transparent) !important;
+}
+html[data-site-mode="pure"] .calendar-cell.is-today {
+	border-color: var(--content-meta) !important;
+	box-shadow: inset 0 0 0 1px var(--content-meta) !important;
+}
+html[data-site-mode="pure"] .calendar-cell.is-selected {
+	border-color: var(--content-meta) !important;
+	background: color-mix(in srgb, currentColor 6%, transparent) !important;
+}
+html[data-site-mode="pure"] .calendar-cell:hover {
+	border-color: var(--content-meta) !important;
+}
+html[data-site-mode="pure"] .calendar-weekdays .is-weekend {
+	color: inherit !important;
+}
+html[data-site-mode="pure"] .calendar-lunar.is-fest {
+	color: var(--content-meta) !important;
+}
+html[data-site-mode="pure"] .cd-tag {
+	color: var(--content-meta) !important;
+	border-color: var(--line-divider) !important;
+}
+html[data-site-mode="pure"] .cd-row:hover {
+	border-color: var(--content-meta) !important;
+}
+
+/* ---------- Waline 评论区素简适配 ---------- */
+/* Waline v3 全靠 --waline-* 变量驱动：把绿主题/蓝徽章压成中性灰阶，链接、点赞、
+   排序选中、反应票数、登录昵称都读这两个变量，一处生效全区跟随 */
+html[data-site-mode="pure"] #waline {
+	--waline-theme-color: #3f3f46;
+	--waline-active-color: #18181b;
+	--waline-badge-color: #71717a;
+	--waline-bg-color: var(--card-bg);
+}
+html.dark[data-site-mode="pure"] #waline {
+	--waline-theme-color: #d4d4d8;
+	--waline-active-color: #fafafa;
+	--waline-badge-color: #a1a1aa;
+	--waline-color: #d4d4d8;
+	--waline-bg-color: var(--card-bg);
+	--waline-bg-color-light: rgb(255 255 255 / 5%);
+	--waline-bg-color-hover: rgb(255 255 255 / 8%);
+	--waline-border-color: var(--line-divider);
+	--waline-info-bg-color: rgb(255 255 255 / 6%);
+	--waline-bq-color: rgb(255 255 255 / 12%);
+}
+/* 主按钮（提交评论）：变量压不干净（暗色下深底变浅底、白字要翻黑），单独钉死 */
+html[data-site-mode="pure"] #waline .wl-btn.primary {
+	background: #26262a !important;
+	border-color: #26262a !important;
+	color: #fff !important;
+}
+html[data-site-mode="pure"] #waline .wl-btn.primary:hover {
+	background: #3f3f46 !important;
+	border-color: #3f3f46 !important;
+}
+html.dark[data-site-mode="pure"] #waline .wl-btn.primary {
+	background: #e4e4e7 !important;
+	border-color: #e4e4e7 !important;
+	color: #18181b !important;
+}
+html.dark[data-site-mode="pure"] #waline .wl-btn.primary:hover {
+	background: #fafafa !important;
+	border-color: #fafafa !important;
+}
+
+} /* @layer components */
+
+/* —— 层外规则：Waline.astro 里昵称绿色是无 layer 的 !important，
+      layered 的 !important 压不过它，这两条只能同为无 layer 才能生效 —— */
+/* 评论昵称：站点强涂的绿色撤掉，回正文色 */
+html[data-site-mode="pure"] .wl-nick,
+html[data-site-mode="pure"] .wl-comment .wl-user .wl-nick,
+html[data-site-mode="pure"] .wl-card .wl-nick {
+	color: inherit !important;
+}
+/* zhz-ai 徽章：脚本注入的紫渐变改成中性灰药丸 */
+html[data-site-mode="pure"] .muse-butler-badge {
+	background: #e7e7ea !important;
+	color: #3f3f46 !important;
+}
+html.dark[data-site-mode="pure"] .muse-butler-badge {
+	background: #2e2e33 !important;
+	color: #d4d4d8 !important;
+}

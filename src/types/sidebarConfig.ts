@@ -11,6 +11,7 @@ export type WidgetComponentType =
 	| "music"
 	| "siteInfo"
 	| "dynamic"
+	| "onThisDay"
 	| "recentComments";
 
 export type WidgetComponentConfig = {

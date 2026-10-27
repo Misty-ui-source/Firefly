@@ -251,7 +251,7 @@ const wallpaperPosition = state.isFullscreenMode
 
             function isBannerWallpaperMode() {
                 var mode = document.documentElement.getAttribute('data-wallpaper-mode');
-                return mode === WALLPAPER_BANNER || mode === 'fullscreen';
+                return mode === WALLPAPER_BANNER || mode === 'fullscreen' || mode === 'overlay';
             }
 
             // 图片淡入：Layout 里的全局 initImageLoadFadeIn 只在解析期扫一次，
@@ -468,7 +468,7 @@ const wallpaperPosition = state.isFullscreenMode
                         if (isCarouselEnabled()) materializeAhead(slides, 0);
                     }
                 }
-                if (e.detail && (e.detail.mode === 'banner' || e.detail.mode === 'fullscreen')) {
+                if (e.detail && (e.detail.mode === 'banner' || e.detail.mode === 'fullscreen' || e.detail.mode === 'overlay')) {
                     if (isCarouselEnabled()) startAutoPlay();
                 } else {
                     stopAutoPlay();

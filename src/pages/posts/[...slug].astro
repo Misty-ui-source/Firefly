@@ -681,6 +681,27 @@ const seriesData = await getSeriesPosts(entry);
     }
   </script>
 
+  <!-- 素简阅读进度线：仅素简 + 文章页显示（样式在 pure-mode.css），华彩下恒隐藏 -->
+  <div id="pure-reading-progress" aria-hidden="true"></div>
+  <script is:inline>
+    if (!window.__pureProgressBound) {
+      window.__pureProgressBound = true;
+      window.__pureProgressUpdate = function () {
+        var bar = document.getElementById("pure-reading-progress");
+        var art = document.getElementById("post-container");
+        if (!bar || !art) return;
+        var rect = art.getBoundingClientRect();
+        var total = rect.height - window.innerHeight;
+        var read = Math.min(Math.max(-rect.top, 0), Math.max(total, 1));
+        bar.style.transform = "scaleX(" + (total > 0 ? read / total : 0) + ")";
+      };
+      document.addEventListener("scroll", window.__pureProgressUpdate, { passive: true });
+      document.addEventListener("swup:contentReplaced", window.__pureProgressUpdate);
+      window.addEventListener("resize", window.__pureProgressUpdate);
+    }
+    if (window.__pureProgressUpdate) window.__pureProgressUpdate();
+  </script>
+
   {
     siteConfig.post.postNavigation && (
       <div

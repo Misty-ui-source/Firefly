@@ -30,6 +30,7 @@ const heading =
 
 <MainGridLayout heading={heading}>
   {page.currentPage === 1 && <DraggableStickers />}
+  <div class="pure-page-info" aria-hidden="true">第 {page.currentPage} 页 · 本页 {len} 篇，共 {page.total} 篇</div>
   <PostPage page={page} />
   {
     page.total > page.size && (
