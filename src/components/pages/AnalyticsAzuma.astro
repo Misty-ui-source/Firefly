@@ -35,7 +35,7 @@ const walineServerUrl = commentConfig.waline?.serverURL ?? "";
 		data-ready={hasPublicStats ? "true" : "false"}
 		aria-labelledby="analytics-title"
 	>
-		<header class="analytics-hero card-base onload-animation">
+		<header class="analytics-hero analytics-hero--art card-base onload-animation">
 			<div class="analytics-hero__grid">
 				<div class="analytics-hero__copy">
 					<div class="analytics-kicker">
@@ -3241,13 +3241,18 @@ const walineServerUrl = commentConfig.waline?.serverURL ?? "";
 		overflow: hidden;
 		padding: clamp(1rem, 2vw, 1.5rem);
 		border: 1px solid var(--analytics-border);
-		background:
-			linear-gradient(90deg, rgb(255 255 255 / 96%) 0%, rgb(255 255 255 / 90%) 29%, rgb(255 255 255 / 47%) 61%, rgb(255 255 255 / 12%) 100%),
-			url("/assets/images/analytics/analytics-hero.webp") center right / cover no-repeat !important;
 		box-shadow: 0 1.3rem 3.5rem rgb(35 77 130 / 0.08), inset 0 1px 0 rgb(255 255 255 / 0.58);
 	}
 
-	:root.dark .analytics-hero {
+	/* hero 背景必须挂在 --art 修饰类上：/analytics/ 会同时加载清爽版的样式，
+	   两边同名 .analytics-hero 的 background 谁后加载谁赢，插画会被清爽版的纯渐变盖掉 */
+	.analytics-hero--art {
+		background:
+			linear-gradient(90deg, rgb(255 255 255 / 96%) 0%, rgb(255 255 255 / 90%) 29%, rgb(255 255 255 / 47%) 61%, rgb(255 255 255 / 12%) 100%),
+			url("/assets/images/analytics/analytics-hero.webp") center right / cover no-repeat !important;
+	}
+
+	:root.dark .analytics-hero--art {
 		background:
 			linear-gradient(90deg, rgb(17 25 42 / 94%) 0%, rgb(17 25 42 / 86%) 30%, rgb(17 25 42 / 46%) 64%, rgb(17 25 42 / 16%) 100%),
 			url("/assets/images/analytics/analytics-hero.webp") center right / cover no-repeat !important;
