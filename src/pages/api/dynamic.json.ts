@@ -1,5 +1,7 @@
 import { getCollection } from "astro:content";
 import { createMarkdownProcessor } from "@astrojs/markdown-remark";
+import { remarkMark } from "@/plugins/remark-mark.js";
+import { remarkWikiLink } from "@/plugins/remark-wiki-link.js";
 import {
 	dynamicSearchText,
 	dynamicSlug,
@@ -9,7 +11,11 @@ import {
 const markdownImagePattern = /!\[([^\]]*)\]\((\S+?)(?:\s+["']([^"']*)["'])?\)/g;
 
 export async function GET(): Promise<Response> {
-	const processor = await createMarkdownProcessor();
+	// 必须与 astro.config 的正文管线对齐：裸处理器不带 remarkMark，
+	// 动态里的 ==高亮== 会原样吐出（2026-10-28 用户报障后补）
+	const processor = await createMarkdownProcessor({
+		remarkPlugins: [remarkMark, remarkWikiLink],
+	});
 	const dynamics = sortDynamics(await getCollection("dynamic"));
 	const data = await Promise.all(
 		dynamics.map(async (entry) => {
