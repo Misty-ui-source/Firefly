@@ -355,5 +355,12 @@
     "action": "新建",
     "target": "src/content/diary/2026-10-27(1).md",
     "detail": ""
+  },
+  {
+    "ts": "2026-10-27T17:00:48.353Z",
+    "type": "单页",
+    "action": "改图床口令",
+    "target": "/picbed/",
+    "detail": ""
   }
 ]
