@@ -96,6 +96,13 @@ enum I18nKey {
 	musicAudioPlayer = "musicAudioPlayer",
 
 	themeColor = "themeColor",
+	navbarStyle = "navbarStyle",
+	navbarStyleClassic = "navbarStyleClassic",
+	navbarStyleFloat = "navbarStyleFloat",
+	navbarStyleCapsule = "navbarStyleCapsule",
+	navbarStyleSegment = "navbarStyleSegment",
+	displaySettings = "displaySettings",
+	lightDarkMode = "lightDarkMode",
 
 	lightMode = "lightMode",
 	darkMode = "darkMode",

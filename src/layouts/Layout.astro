@@ -157,7 +157,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
 ---
 
 <!doctype html>
-<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"}>
+<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"} data-navbar-style={siteConfig.navbar.navbarStyle ?? "classic"}>
   <head>
     <meta charset="UTF-8" />
     {commentConfig?.type === "waline" && commentConfig?.waline?.serverURL && (
@@ -361,6 +361,9 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
         baseUrl: import.meta.env.BASE_URL,
         cardTransparentOpacity: backgroundWallpaper.overlay?.cardOpacity ?? 0.6,
         fullscreenLayout,
+        defaultNavbarStyle: siteConfig.navbar.navbarStyle ?? "classic",
+        isNavbarStyleSwitchable:
+          displaySettingsConfig.navbarStyleSwitchable,
       }}
     >
       // 主题初始化 - 与setting-utils.ts保持一致
@@ -441,6 +444,26 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
       document.documentElement.setAttribute(
         "data-wallpaper-mode",
         wallpaperMode
+      );
+
+      // 初始化导航栏样式 - 优先 localStorage（显示设置里改过时），否则用配置默认
+      const navbarStyleStored = isNavbarStyleSwitchable
+        ? localStorage.getItem("navbarStyle")
+        : null;
+      if (!isNavbarStyleSwitchable) {
+        localStorage.removeItem("navbarStyle");
+      }
+      const resolvedNavbarStyle = [
+        "classic",
+        "float",
+        "capsule",
+        "segment",
+      ].includes(navbarStyleStored)
+        ? navbarStyleStored
+        : defaultNavbarStyle;
+      document.documentElement.setAttribute(
+        "data-navbar-style",
+        resolvedNavbarStyle
       );
 
       // 初始化期间禁用 content-panel/wrapper 过渡，避免加载时布局/变量变化产生内容移动动画；

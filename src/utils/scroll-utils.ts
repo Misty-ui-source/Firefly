@@ -20,6 +20,9 @@ export function scrollFunction(): void {
 	}
 
 	const scrollTop = document.documentElement.scrollTop;
+	// 滚动方向增量（dynamic 隐藏与三段收拢共用，在此统一计算）
+	const delta = scrollTop - lastScrollTop;
+	lastScrollTop = scrollTop;
 	const bannerHeight = window.innerHeight * (BANNER_HEIGHT / 100);
 	const navbarElement = document.getElementById("navbar");
 
@@ -45,8 +48,6 @@ export function scrollFunction(): void {
 		});
 	} else if (navbarMode === "dynamic" && navbar) {
 		// 动态：下滑隐藏 / 轻微上滑立即显示 / 滚回顶部(<80px)常显
-		const delta = scrollTop - lastScrollTop;
-		lastScrollTop = scrollTop;
 		operations.push(() => {
 			const isHome = document.body.classList.contains("is-home");
 			// 壁纸/hero 边界：banner 首页 65vh、非首页 45vh；fullscreen 仅首页整屏（100lvh），非首页无 hero 为 0。
@@ -60,7 +61,10 @@ export function scrollFunction(): void {
 						((isHome ? BANNER_HEIGHT_HOME : BANNER_HEIGHT_NON_HOME) / 100)
 					: 0;
 			const overHero = scrollTop < heroBoundary;
-			if (overHero || delta < 0 || scrollTop <= 80) {
+			const isSegmentStyle =
+				document.documentElement.getAttribute("data-navbar-style") ===
+				"segment";
+			if (overHero || delta < 0 || scrollTop <= 80 || isSegmentStyle) {
 				navbar.classList.remove("navbar-hidden");
 			} else if (delta > 0 && scrollTop > 150) {
 				navbar.classList.add("navbar-hidden");
@@ -100,6 +104,19 @@ export function scrollFunction(): void {
 	}
 
 	// 批量执行DOM操作
+	// 三段胶囊收拢：下滑且超过 80px 时 #navbar 挂 navbar-collapsed（左右段收成圆），上滑/回顶恢复
+	if (navbarElement) {
+		operations.push(() => {
+			const isSegmentStyle =
+				document.documentElement.getAttribute("data-navbar-style") ===
+				"segment";
+			navbarElement.classList.toggle(
+				"navbar-collapsed",
+				isSegmentStyle && scrollTop > 80 && delta > 0,
+			);
+		});
+	}
+
 	if (operations.length > 0) {
 		requestAnimationFrame(() => {
 			operations.forEach((op) => {

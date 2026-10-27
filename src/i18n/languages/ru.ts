@@ -121,6 +121,13 @@ export const ru: Translation = {
 	[Key.noData]: "Нет данных",
 
 	[Key.themeColor]: "Цвет темы",
+	[Key.navbarStyle]: "Стиль навигации",
+	[Key.navbarStyleClassic]: "Классика",
+	[Key.navbarStyleFloat]: "Плавающая карточка",
+	[Key.navbarStyleCapsule]: "Капсула",
+	[Key.navbarStyleSegment]: "Сегментная",
+	[Key.displaySettings]: "Настройки отображения",
+	[Key.lightDarkMode]: "Светлая/тёмная тема",
 
 	[Key.lightMode]: "Светлая",
 	[Key.darkMode]: "Тёмная",

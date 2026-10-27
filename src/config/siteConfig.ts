@@ -136,7 +136,14 @@ export const siteConfig: SiteConfig = {
 		// "fixed"：固定在顶部常显
 		// "dynamic"：固定在顶部，下滑隐藏、轻微上滑显示
 		navbarMode: "dynamic",
+		// 导航栏样式："classic" 通栏 / "float" 悬浮卡片 / "capsule" 悬浮胶囊 / "segment" 三段胶囊（下滑时左右段收成圆）
+		navbarStyle: "classic",
+		// 移动端菜单样式："drawer" 全屏抽屉 / "card" 浮层卡片
+		mobileMenuStyle: "drawer",
 	},
+
+	// 站点统计页样式："classic" 现行手搓版 / "azuma" Aemeath 同款版（预览直达 /analytics-azuma/）
+	analyticsStyle: "classic",
 
 	// 站点开始日期，用于统计运行天数
 	siteStartDate: "2026-10-15",

@@ -1124,3 +1124,12 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
   .stat-row { font-size: 11px; white-space: nowrap; overflow: hidden; }
   .stat-row b { flex: 0 0 auto; }
 }
+
+/* ---------- 表情面板（2026-10-27） ---------- */
+.emoji-panel { position: fixed; z-index: 9998; padding: 10px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius); box-shadow: var(--shadow); -webkit-backdrop-filter: blur(20px) saturate(140%); backdrop-filter: blur(20px) saturate(140%); }
+.emoji-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.emoji-tab { border: 1px solid var(--card-border); background: transparent; color: var(--text); border-radius: 999px; padding: 3px 11px; font-size: 13px; cursor: pointer; }
+.emoji-tab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 2px; max-height: 264px; overflow-y: auto; }
+.emoji-cell { font-size: 21px; line-height: 1.3; padding: 4px 0; border: none; background: transparent; border-radius: 8px; cursor: pointer; text-align: center; color: inherit; }
+.emoji-cell:hover { background: var(--accent); }

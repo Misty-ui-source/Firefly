@@ -29,6 +29,9 @@ export type Favicon = {
 
 export type NavbarMode = "static" | "fixed" | "dynamic";
 
+// 导航栏样式：classic 通栏（默认）/ float 悬浮卡片 / capsule 悬浮胶囊 / segment 三段胶囊（下滑收拢）
+export type NavbarStyle = "classic" | "float" | "capsule" | "segment";
+
 export type SiteConfig = {
 	title: string;
 	subtitle: string;
@@ -80,9 +83,14 @@ export type SiteConfig = {
 		followTheme?: boolean; // 导航栏图标和标题是否跟随主题色
 		// 导航栏模式：static（不固定，随页面滚动消失）/ fixed（固定在顶部常显）/ dynamic（固定在顶部，下滑隐藏、轻微上滑显示）
 		navbarMode?: NavbarMode;
+		navbarStyle?: NavbarStyle; // 导航栏样式，默认 classic；访客可在显示设置里覆盖（localStorage）
+		mobileMenuStyle?: "drawer" | "card"; // 移动端菜单样式：drawer 全屏抽屉（默认）/ card 浮层卡片
 		/** @deprecated 由 navbarMode 取代；true→fixed，false→static */
 		stickyNavbar?: boolean;
 	};
+
+	// 站点统计页样式："classic" 现行手搓版（默认）/ "azuma" Aemeath 同款版；控制台主题页可切换
+	analyticsStyle?: "classic" | "azuma" | "azuma-clean";
 
 	// 页面开关配置
 	pages: {

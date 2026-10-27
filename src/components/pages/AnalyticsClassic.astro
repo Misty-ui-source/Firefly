@@ -1,0 +1,1421 @@
+---
+// 站点统计页 - 学习 HY (9ll.uk/analytics/) 设计
+// 数据来源：Umami（构建时拉取）+ GitHub（构建时拉取）
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import RecentCommentsSidebar from "@/components/widget/RecentCommentsSidebar.svelte";
+import githubActivity from "@/data/github-activity.json";
+import umamiStats from "@/data/umami-stats.json";
+import { commentConfig } from "@/config";
+
+// Waline 服务地址（复用首页边栏配置）
+const walineServer = commentConfig.waline?.serverURL || "https://waline.lanerc.me";
+
+// Umami 真实数据（构建时拉取）
+const umami = umamiStats as {
+  allTime?: { visitors: number; pageviews: number; visits: number };
+  today?: { visitors: number; pageviews: number };
+  daily?: { date: string; pageviews: number }[];
+  hourly?: { date: string; pageviews: number }[];
+  topPages?: { url: string; views: number }[];
+  devices?: { name: string; count: number }[];
+  browsers?: { name: string; count: number }[];
+  referrers?: { name: string; count: number }[];
+  regions?: { name: string; count: number }[];
+  referrers?: { name: string; count: number }[];
+  online?: number;
+  updatedAt: string;
+};
+
+const stats = {
+  totalVisitors: umami.allTime?.visitors ?? 0,
+  totalPageviews: umami.allTime?.pageviews ?? 0,
+  todayVisitors: umami.today?.visitors ?? 0,
+  todayPageviews: umami.today?.pageviews ?? 0,
+  online: umami.online ?? 0,
+};
+
+// GitHub 推送数据
+const gh = githubActivity as {
+  username: string;
+  repos: string[];
+  totalCommits52w: number;
+  lastPushAt: string | null;
+  heatmap: { week: number; days: number[] }[];
+  updatedAt: string;
+};
+
+const title = "站点统计";
+const description = "本站的整体访问趋势，不记录任何可识别个人身份的信息";
+---
+
+<MainGridLayout title={title} description={description}>
+  <div class="analytics-page">
+    <!-- Hero 遥测卡 -->
+    <section class="card hero-card">
+      <div class="hero-content">
+        <div class="card-label"><span class="dot"></span>UMAMI / PUBLIC TELEMETRY</div>
+        <h1 class="hero-title">站点统计</h1>
+        <p class="hero-desc">这里展示的是本站的整体趋势，不记录任何可识别个人身份的信息。</p>
+        <div class="hero-tags">
+          <span class="tag">🔒 公开只读</span>
+          <span class="tag">📅 按北京时间汇总</span>
+        </div>
+        <div class="online-badge" id="live-online"><span class="online-dot"></span>{stats.online > 0 ? `${stats.online} 人在线` : "在线"}</div>
+        <div class="data-source">
+          <div class="ds-label">DATA SOURCE</div>
+          <a href="https://umami.lanerc.me/share/EG15WwHeRvz2lmd2" target="_blank" rel="noopener" class="ds-link">Umami ↗</a>
+          <div class="ds-updated" id="live-updated">正在拉取数据…</div>
+          <button id="refresh-stats" class="refresh-btn" title="清除缓存并重新拉取实时数据">🔄 刷新数据</button>
+        </div>
+        <div class="hero-footer">
+          <span>LANERC / 2026</span>
+          <span class="hero-motto">MEASURE WHAT MATTERS</span>
+        </div>
+      </div>
+      <div class="hero-image">
+        <img class="hero-glow" src="/images/analytics/card-1.png" alt="" aria-hidden="true" loading="lazy" />
+        <img class="hero-main" src="/images/analytics/card-1.png" alt="站点统计" loading="lazy" />
+      </div>
+    </section>
+
+    <!-- 四张数字卡 -->
+    <section class="stat-cards">
+      <div class="card stat-card tint-pink">
+        <div class="stat-label all-time">ALL-TIME</div>
+        <div class="stat-number" data-stat="totalVisitors">{stats.totalVisitors.toLocaleString()}</div>
+        <div class="stat-name">累计访客</div>
+        <div class="stat-note">不含迁移前历史累计</div>
+        <img class="stat-bg" src="/images/analytics/card-2.png" alt="" loading="lazy" />
+        <span class="snow s1">❄</span><span class="snow s2">❄</span><span class="snow s3">❄</span>
+      </div>
+      <div class="card stat-card tint-pink">
+        <div class="stat-label all-time">ALL-TIME</div>
+        <div class="stat-number" data-stat="totalPageviews">{stats.totalPageviews.toLocaleString()}</div>
+        <div class="stat-name">累计浏览</div>
+        <div class="stat-note">不含迁移前历史累计</div>
+        <img class="stat-bg" src="/images/analytics/card-3.png" alt="" loading="lazy" />
+        <span class="snow s1">❄</span><span class="snow s2">❄</span><span class="snow s3">❄</span>
+      </div>
+      <div class="card stat-card tint-cream">
+        <div class="stat-label today">TODAY</div>
+        <div class="stat-number" data-stat="todayVisitors">{stats.todayVisitors.toLocaleString()}</div>
+        <div class="stat-name">今日访客</div>
+        <div class="stat-note">北京时间 00:00 起</div>
+        <img class="stat-bg" src="/images/analytics/card-4.jpg" alt="" loading="lazy" />
+        <span class="snow s1">❄</span><span class="snow s2">❄</span><span class="snow s3">❄</span>
+      </div>
+      <div class="card stat-card tint-cream">
+        <div class="stat-label today">TODAY</div>
+        <div class="stat-number" data-stat="todayPageviews">{stats.todayPageviews.toLocaleString()}</div>
+        <div class="stat-name">今日浏览</div>
+        <div class="stat-note">实时公开数据</div>
+        <img class="stat-bg" src="/images/analytics/card-5.png" alt="" loading="lazy" />
+        <span class="snow s1">❄</span><span class="snow s2">❄</span><span class="snow s3">❄</span>
+      </div>
+    </section>
+
+    <!-- 双栏布局：左宽右窄 -->
+    <div class="analytics-grid">
+      <div class="grid-left">
+    <!-- 访问脉冲 -->
+    <section class="card pulse-card">
+      <span class="petal p1">🌸</span><span class="petal p2">🌸</span><span class="petal p3">❄</span>
+      <img class="pulse-bg" src="/images/analytics/card-10.png" alt="" loading="lazy" />
+      <div class="card-header">
+        <div>
+          <div class="card-label">TRAFFIC / SIGNAL</div>
+          <h2 class="card-title">访问脉冲</h2>
+          <p class="card-subtitle">每天的浏览量与访客数</p>
+        </div>
+        <div class="card-actions">
+          <p class="hint-text">每一个卡片都有小动画哦～<br />想再看一次，点右侧刷新</p>
+          <div class="time-tabs">
+            <button class="time-tab" data-range="7">7天</button>
+            <button class="time-tab active" data-range="30">30天</button>
+            <button class="time-tab" data-range="90">90天</button>
+          </div>
+        </div>
+      </div>
+      <div class="chart-placeholder" id="traffic-chart">
+        {umami.daily && umami.daily.length > 0 ? (
+          (() => {
+            const daily = [...umami.daily!].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(-30);
+            const maxPv = Math.max(...daily.map((x) => x.pageviews), 1);
+            const W = 600, H = 160, padL = 8, padR = 8, padT = 12, padB = 24;
+            const iw = W - padL - padR, ih = H - padT - padB;
+            const n = daily.length;
+            let path = "";
+            const dots = daily.map((d, i) => {
+              const x = n === 1 ? padL + iw / 2 : padL + (i / (n - 1)) * iw;
+              const y = padT + ih - (d.pageviews / maxPv) * ih;
+              path += (i === 0 ? "M" : "L") + x.toFixed(1) + "," + y.toFixed(1);
+              const r = d.pageviews > 0 ? 5 : 3;
+              const color = d.pageviews > 0 ? "#2d7cff" : "#d0d7de";
+              return <circle cx={x} cy={y} r={r} fill={color} opacity={0.85}><title>{`${d.date.slice(0,10)}: ${d.pageviews} 浏览`}</title></circle>;
+            });
+            const labels = daily.map((d, i) => {
+              if (n > 31 && i % Math.ceil(n / 15) !== 0 && i !== n - 1) return null;
+              const x = n === 1 ? padL + iw / 2 : padL + (i / (n - 1)) * iw;
+              const anchor = i === 0 ? "start" : (i === n - 1 ? "end" : "middle");
+              const lx = i === 0 ? padL : (i === n - 1 ? W - padR : x);
+              return <text x={lx} y={H - 6} font-size={9} fill="#999" text-anchor={anchor}>{d.date.slice(5, 10)}</text>;
+            });
+            return (
+              <svg viewBox={`0 0 ${W} ${H}`} class="dot-chart" style="width:100%;height:auto;display:block">
+                <path d={path} fill="none" stroke="#2d7cff" stroke-width={1.5} opacity={0.3} />
+                {dots}
+                {labels}
+              </svg>
+            );
+          })()
+        ) : (
+          <p class="muted">暂无访问数据</p>
+        )}
+      </div>
+      <div class="pulse-bottom">
+        <div>
+          <h3>本周期数据 <span class="muted range-label">近 30 天</span><span class="muted"> · 北京时间</span></h3>
+          <div class="period-grid" id="period-stats">
+            {(() => {
+              const daily = umami.daily ?? [];
+              const pv = daily.reduce((s, d) => s + d.pageviews, 0);
+              const activeDays = daily.filter((d) => d.pageviews > 0).length;
+              const peak = daily.length ? Math.max(...daily.map((d) => d.pageviews)) : 0;
+              return (
+                <>
+                  <div class="pstat"><span class="ps-icon">📊</span><div><div class="ps-label">浏览量</div><div class="ps-value" data-pv>{pv}</div></div></div>
+                  <div class="pstat"><span class="ps-icon">👥</span><div><div class="ps-label">访客数</div><div class="ps-value" data-period-visitors>{umami.allTime?.visitors ?? 0}</div></div></div>
+                  <div class="pstat"><span class="ps-icon">📅</span><div><div class="ps-label">活跃天数</div><div class="ps-value"><span data-active>{activeDays}</span>/<span data-rangedays>30</span></div><div class="ps-sub">有访问记录的日期</div></div></div>
+                  <div class="pstat"><span class="ps-icon">📈</span><div><div class="ps-label">单日峰值</div><div class="ps-value" data-peak>{peak}</div><div class="ps-sub">最高浏览量</div></div></div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+        <div>
+          <h3>大家在看什么 <span class="muted range-label">近 30 天</span><span class="muted"> · 访客</span></h3>
+          <div class="top-pages-grid" id="top-pages">
+            {umami.topPages && umami.topPages.length > 0 ? (
+              umami.topPages.slice(0, 4).map((p, i) => (
+                <a class="tp-item tp-link" href={p.url} title={p.url}>
+                  <span class="tp-rank">{String(i + 1).padStart(2, "0")}</span>
+                  <div class="tp-info"><div class="tp-url">{p.url === "/" ? "首页" : p.url.length > 16 ? p.url.slice(0, 16) + "…" : p.url}</div><div class="tp-sub">{p.url === "/" ? "站点入口" : "页面路径"}</div></div>
+                  <b class="tp-count">{p.views}</b>
+                </a>
+              ))
+            ) : (
+              <p class="muted">暂无数据</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- 推送节奏 -->
+    <section class="card push-card" style="position:relative;overflow:hidden">
+      <span class="petal p1">🌸</span><span class="petal p2">🌸</span><span class="petal p3">❄</span>
+      <div class="card-header">
+        <div>
+          <div class="card-label">OPERATIONS / RELEASES</div>
+          <h2 class="card-title">推送节奏</h2>
+          <p class="card-subtitle">按 GitHub 提交时间观察活跃密度</p>
+        </div>
+        <span class="tag green">已记录</span>
+      </div>
+      <div class="push-grid">
+        <div class="push-stat bg-peach">
+          <span class="push-icon">🕐</span>
+          <div><div class="ps-label">最近一次推送</div><div class="ps-value">{gh.lastPushAt ? new Date(gh.lastPushAt).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : "--"}</div></div>
+        </div>
+        <div class="push-stat bg-pink">
+          <span class="push-icon">📅</span>
+          <div><div class="ps-label">52周提交</div><div class="ps-value">{gh.totalCommits52w} 次</div><div class="ps-sub">保持活跃 ✦</div></div>
+        </div>
+        <div class="push-stat bg-cream">
+          <span class="push-icon">📊</span>
+          <div><div class="ps-label">追踪仓库</div><div class="ps-value repo-names">{gh.repos.slice(0, 3).join(" / ")}</div><div class="ps-sub">基于全部推送</div></div>
+        </div>
+        <div class="push-stat bg-lavender">
+          <span class="push-icon">🔥</span>
+          <div><div class="ps-label">数据更新</div><div class="ps-value">{gh.updatedAt.slice(5, 10)}</div><div class="ps-sub">持续更新中</div></div>
+        </div>
+      </div>
+      <div class="push-content">
+        <div class="push-main">
+          <div class="github-heatmap" id="github-heatmap">
+            {gh.heatmap.length > 0 ? (
+              <div class="gh-grid">
+                {gh.heatmap.map((w) => (
+                  <div class="gh-week">
+                    {w.days.map((c, di) => (
+                      <span
+                        class={`gh-day lv-${c === 0 ? 0 : c < 3 ? 1 : c < 6 ? 2 : c < 10 ? 3 : 4}`}
+                        title={`${new Date((w.week + di * 86400) * 1000).toLocaleDateString("zh-CN")}: ${c} commits`}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+              <div class="gh-legend">
+                <span>少</span>
+                <span class="gh-day lv-0"></span><span class="gh-day lv-1"></span><span class="gh-day lv-2"></span><span class="gh-day lv-3"></span><span class="gh-day lv-4"></span>
+                <span>多</span>
+              </div>
+              <img src="/images/analytics/card-14.jpg" alt="" loading="lazy" class="gh-sakura" />
+            ) : (
+              <p class="muted">GitHub 提交热力图（构建时拉取，需跑 scripts/fetch-github-activity.py）</p>
+            )}
+          </div>
+        </div>
+        <div class="push-image">
+          <img src="/images/analytics/card-7.jpg" alt="推送节奏" loading="lazy" />
+          <p class="cute-text">持续热爱，一直在更新~</p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- 访客活跃时间 -->
+    <section class="card tint-activity">
+      <span class="petal p1">🌸</span><span class="petal p2">🌸</span><span class="petal p3">❄</span><span class="petal p4">🌸</span>
+      <div class="card-header">
+        <div>
+          <div class="card-label">VISITOR / ACTIVITY</div>
+          <h2 class="card-title">访客活跃时间</h2>
+          <p class="card-subtitle">看看大家通常在什么时候来这里</p>
+        </div>
+        <span class="tag">近 30 天</span>
+      </div>
+      <div class="activity-content">
+        <div class="heatmap-wrap" id="activity-heatmap">
+          {(() => {
+            const hourly = umami.hourly ?? [];
+            // 按北京时间聚合：weekday(0=周一) x hour(0-23)
+            const grid: number[][] = Array.from({ length: 7 }, () => new Array(24).fill(0));
+            let maxV = 1;
+            for (const h of hourly) {
+              const d = new Date(h.date);
+              // 转北京时间
+              const bj = new Date(d.getTime() + 8 * 3600 * 1000);
+              const wd = (bj.getUTCDay() + 6) % 7; // 0=周一
+              const hr = bj.getUTCHours();
+              grid[wd][hr] += h.pageviews;
+              if (grid[wd][hr] > maxV) maxV = grid[wd][hr];
+            }
+            const weekNames = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+            const hourLabels = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
+            const intensity = (v: number) => {
+              if (v === 0) return "background:#f0ebe3";
+              const t = v / maxV;
+              if (t < 0.25) return "background:#f5d6a8";
+              if (t < 0.5) return "background:#eeb864";
+              if (t < 0.75) return "background:#e09a3c";
+              return "background:#c97a1e";
+            };
+            // 统计最活跃时间/星期/夜间占比
+            let peakH = 0, peakHv = -1, peakD = 0, peakDv = -1, night = 0, total = 0;
+            const hourTot = new Array(24).fill(0);
+            const dayTot = new Array(7).fill(0);
+            grid.forEach((row, wd) => row.forEach((v, hr) => {
+              hourTot[hr] += v; dayTot[wd] += v; total += v;
+              if (hr >= 22 || hr < 6) night += v;
+            }));
+            hourTot.forEach((v, i) => { if (v > peakHv) { peakHv = v; peakH = i; } });
+            dayTot.forEach((v, i) => { if (v > peakDv) { peakDv = v; peakD = i; } });
+            const nightRatio = total ? Math.round((night / total) * 100) : 0;
+            return (
+              <>
+                <div class="heatmap-grid">
+                  <div class="hm-corner"></div>
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <div class="hm-hlabel">{String(h).padStart(2, "0")}时</div>
+                  ))}
+                  {grid.map((row, wd) => (
+                    <>
+                      <div class="hm-wlabel">{weekNames[wd]}</div>
+                      {row.map((v, hr) => (
+                        hourLabels.includes(hr) || true ? (
+                          <div class="hm-dot" style={intensity(v)} title={`${weekNames[wd]} ${String(hr).padStart(2, "0")}时: ${v} 浏览`}></div>
+                        ) : null
+                      ))}
+                    </>
+                  ))}
+                </div>
+                <p class="muted small">按北京时间聚合 30 天访问记录 · 鼠标移入查看具体时段</p>
+                <div class="heatmap-legend"><span>少</span><i style="background:#ebedf0"></i><i style="background:#c6e48b"></i><i style="background:#7bc96f"></i><i style="background:#239a3b"></i><i style="background:#196127"></i><span>多</span></div>
+                <div class="stats-with-character">
+                  <div class="four-stats">
+                    <div class="fstat"><span class="fs-icon">🕐</span><div><div class="fs-label">最活跃时间</div><div class="fs-value">{peakHv > 0 ? `${String(peakH).padStart(2, "0")}:00` : "--"}</div></div></div>
+                    <div class="fstat"><span class="fs-icon">📅</span><div><div class="fs-label">最活跃星期</div><div class="fs-value">{peakDv > 0 ? weekNames[peakD] : "--"}</div></div></div>
+                    <div class="fstat"><span class="fs-icon">🌙</span><div><div class="fs-label">夜间访问占比</div><div class="fs-value">{total ? `${nightRatio}%` : "--"}</div></div></div>
+                    <div class="fstat"><span class="fs-icon">📊</span><div><div class="fs-label">今日访客</div><div class="fs-value">{stats.todayVisitors || "--"}</div></div></div>
+                  </div>
+                  <div class="activity-side-below">
+                    <img src="/images/analytics/card-8.jpg" alt="访客活跃时间" loading="lazy" />
+                    <p class="cute-text">有你来，真好！♡</p>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      </div>
+      <div class="heatmap-legend">
+        <span class="muted small">按北京时间聚合 · 数据只保留统计维度</span>
+        <span class="legend-dots">少 <i style="background:#f0ebe3"></i><i style="background:#f5d6a8"></i><i style="background:#eeb864"></i><i style="background:#e09a3c"></i><i style="background:#c97a1e"></i> 多</span>
+      </div>
+    </section>
+
+      </div>
+      <div class="grid-right">
+    <!-- 设备与浏览器 -->
+    <section class="card device-card" style="position:relative;overflow:hidden">
+      <span class="petal p1">🌸</span><span class="petal p2">🌸</span><span class="petal p3">❄</span>
+      <div class="card-header">
+        <div>
+          <div class="card-label">VISITORS / DEVICES</div>
+          <h2 class="card-title">设备与浏览器</h2>
+          <p class="card-subtitle">访客从哪里来</p>
+        </div>
+      </div>
+      {(() => {
+        const deviceColors = ["#7eb8f0", "#8fd8b8", "#f0c878", "#b8a0f0", "#f0a0c0"];
+        const browserColors = ["#a080f0", "#f0c878", "#78d0d0", "#f0a080", "#f0a0c0", "#a0c8f0"];
+        const makeDonut = (items: {name: string; count: number}[], colors: string[], icon: string) => {
+          const total = items.reduce((s, x) => s + x.count, 0) || 1;
+          let offset = 25; // 从顶部开始
+          const R = 54, C = 2 * Math.PI * R;
+          const segs = items.map((item, i) => {
+            const frac = item.count / total;
+            const len = frac * C;
+            const color = colors[i % colors.length];
+            const el = (
+              <circle cx="70" cy="70" r={R} fill="none" stroke={color} stroke-width="18"
+                stroke-dasharray={`${len} ${C - len}`} stroke-dashoffset={-offset}
+                transform="rotate(-90 70 70)" stroke-linecap="butt" data-seg-index={i} />
+            );
+            offset += len;
+            return { el, color, pct: Math.round(frac * 100) };
+          });
+          return (
+            <div class="donut-row">
+              <div class="donut-wrap">
+                <svg viewBox="0 0 140 140" class="donut-svg">
+                  <circle cx="70" cy="70" r={R} fill="none" stroke="#f3f0ea" stroke-width="18" />
+                  {segs.map(s => s.el)}
+                </svg>
+                <span class="donut-icon">{icon}</span>
+              </div>
+              <div class="donut-legend">
+                {items.map((item, i) => (
+                  <div class="legend-item" data-legend-index={i}>
+                    <span class="legend-dot" style={`background:${segs[i].color}`}></span>
+                    <span class="legend-name">{item.name}</span>
+                    <b class="legend-pct">{segs[i].pct}%</b>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        };
+        return (
+          <>
+            <div id="device-donut">
+              <h3>设备分布</h3>
+              {umami.devices && umami.devices.length > 0
+                ? makeDonut(umami.devices, deviceColors, "🖥️")
+                : <p class="muted">暂无数据</p>}
+            </div>
+            <div style="margin-top:1.2rem" id="browser-donut">
+              <h3>浏览器偏好</h3>
+              {umami.browsers && umami.browsers.length > 0
+                ? makeDonut(umami.browsers, browserColors, "🌐")
+                : <p class="muted">暂无数据</p>}
+            </div>
+          </>
+        );
+      })()}
+    </section>
+
+
+    <!-- 访客地域分布 -->
+    <section class="card map-card" style="position:relative;overflow:hidden">
+      <span class="petal p1">🌸</span><span class="petal p2">🌸</span><span class="petal p3">❄</span>
+      <div class="card-header">
+        <div>
+          <div class="card-label">VISITORS / MAP</div>
+          <h2 class="card-title">访客地域分布</h2>
+          <p class="card-subtitle">按国家统计 · 近 30 天</p>
+        </div>
+        <span class="tag">TOP 国家</span>
+      </div>
+      <div id="region-map"><p class="muted">加载中…</p></div>
+      <p class="muted small">按近 30 天访客国家统计 · <a href="https://umami.lanerc.me/share/EG15WwHeRvz2lmd2" target="_blank" rel="noopener">查看数据 ↗</a></p>
+    </section>
+
+
+    <!-- 流量来源 -->
+    <section class="card source-card">
+      <span class="petal p1">🌸</span><span class="petal p2">🌸</span><span class="petal p3">❄</span>
+      <img class="source-bg" src="/images/analytics/card-6.png" alt="" loading="lazy" />
+      <div class="card-header">
+        <div>
+          <div class="card-label">TRAFFIC / SOURCES</div>
+          <h2 class="card-title">流量来源</h2>
+          <p class="card-subtitle">近 30 天</p>
+        </div>
+      </div>
+      {(() => {
+        const srcColors = ["#7eb8f0", "#f0c878", "#8fd8b8", "#b8a0f0"];
+        const refs = umami.referrers ?? [];
+        if (refs.length === 0) {
+          return <p class="muted">暂无来源数据 · 新站数据收集中</p>;
+        }
+        const total = refs.reduce((s, x) => s + x.count, 0) || 1;
+        let offset = 25;
+        const R = 54, C = 2 * Math.PI * R;
+        const segs = refs.slice(0, 4).map((item, i) => {
+          const frac = item.count / total;
+          const len = frac * C;
+          const color = srcColors[i % srcColors.length];
+          const el = (
+            <circle cx="70" cy="70" r={R} fill="none" stroke={color} stroke-width="18"
+              stroke-dasharray={`${len} ${C - len}`} stroke-dashoffset={-offset}
+              transform="rotate(-90 70 70)" data-seg-index={i} />
+          );
+          offset += len;
+          return { el, color, pct: Math.round(frac * 100), name: item.name || "直接访问" };
+        });
+        return (
+          <div class="donut-row" id="source-donut">
+            <div class="donut-wrap">
+              <svg viewBox="0 0 140 140" class="donut-svg">
+                <circle cx="70" cy="70" r={R} fill="none" stroke="#f3f0ea" stroke-width="18" />
+                {segs.map(s => s.el)}
+              </svg>
+              <span class="donut-icon">🔗</span>
+            </div>
+            <div class="donut-legend">
+              {segs.map((s, idx) => (
+                <div class="legend-item" data-legend-index={idx}>
+                  <span class="legend-dot" style={`background:${s.color}`}></span>
+                  <span class="legend-name">{s.name}</span>
+                  <b class="legend-pct">{s.pct}%</b>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+    </section>
+
+    <!-- 最近评论 -->
+    <section class="card" style="position:relative;overflow:hidden">
+      <span class="petal p1">🌸</span><span class="petal p2">🌸</span><span class="petal p3">❄</span>
+      <div class="card-header">
+        <div>
+          <div class="card-label">COMMUNITY / RECENT NOTES</div>
+          <h2 class="card-title">最近评论</h2>
+          <p class="card-subtitle">有人来过，也留下了几句值得被看见的话。</p>
+        </div>
+        <a href="/guestbook/" class="tag-link">去留言板</a>
+      </div>
+      <RecentCommentsSidebar client:load server={walineServer} limit={8} />
+      <p class="muted small">已展示 8 条公开评论 · 内容来自 Waline</p>
+    </section>
+
+
+      </div>
+    </div>
+    <!-- 页脚 -->
+    <section class="card footer-card">
+      <div class="card-label">A SMALL PUBLIC RECORD</div>
+      <p>谢谢你来过，也谢谢你愿意停下几秒钟。</p>
+      <a href="/about/" class="footer-link">回到关于我 ↗</a>
+    </section>
+  </div>
+</MainGridLayout>
+
+<script type="application/json" id="umami-daily-data" is:inline set:html={JSON.stringify(umami.daily ?? [])}></script>
+<script is:inline>
+  // 访问脉冲 7/30/90 天切换
+  (function() {
+    const dataEl = document.getElementById('umami-daily-data');
+    if (!dataEl) return;
+    let allDaily = [];
+    try { allDaily = JSON.parse(dataEl.textContent || '[]'); } catch(e) { return; }
+    // 按日期排序（旧→新）
+    allDaily.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const tabs = document.querySelectorAll('.time-tab');
+    const chartEl = document.getElementById('traffic-chart');
+    if (!tabs.length || !chartEl) return;
+
+    function render(range) {
+      const daily = allDaily.slice(-range);
+      // 更新 tab 高亮
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.range == String(range)));
+      // 更新"近 X 天"文案
+      document.querySelectorAll('.range-label').forEach(el => { el.textContent = `近 ${range} 天`; });
+      document.querySelectorAll('[data-rangedays]').forEach(el => { el.textContent = range; });
+      // 重绘点图（SVG 圆点，参考 HY 风格）
+      if (daily.length > 0) {
+        const maxPv = Math.max(...daily.map(x => x.pageviews), 1);
+        const W = 600, H = 160, padL = 8, padR = 8, padT = 12, padB = 24;
+        const iw = W - padL - padR, ih = H - padT - padB;
+        const n = daily.length;
+        let dots = "", labels = "";
+        daily.forEach((d, i) => {
+          const x = n === 1 ? padL + iw / 2 : padL + (i / (n - 1)) * iw;
+          const y = padT + ih - (d.pageviews / maxPv) * ih;
+          const r = d.pageviews > 0 ? 5 : 3;
+          const color = d.pageviews > 0 ? "#2d7cff" : "#d0d7de";
+          dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${color}" opacity="0.85"><title>${d.date.slice(0,10)}: ${d.pageviews} 浏览</title></circle>`;
+          if (n <= 31 || i % Math.ceil(n / 15) === 0 || i === n - 1) {
+            var anchor = "middle", lx = x;
+            if (i === 0) { anchor = "start"; lx = padL; }
+            if (i === n - 1) { anchor = "end"; lx = W - padR; }
+            labels += `<text x="${lx.toFixed(1)}" y="${H - 6}" font-size="9" fill="#999" text-anchor="${anchor}">${d.date.slice(5, 10)}</text>`;
+          }
+        });
+        // 连线（淡）
+        let path = "";
+        daily.forEach((d, i) => {
+          const x = n === 1 ? padL + iw / 2 : padL + (i / (n - 1)) * iw;
+          const y = padT + ih - (d.pageviews / maxPv) * ih;
+          path += (i === 0 ? "M" : "L") + x.toFixed(1) + "," + y.toFixed(1);
+        });
+        chartEl.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="dot-chart" style="width:100%;height:auto;display:block"><path d="${path}" fill="none" stroke="#2d7cff" stroke-width="1.5" opacity="0.3"/>${dots}${labels}</svg>`;
+      } else {
+        chartEl.innerHTML = '<p class="muted">暂无访问数据</p>';
+      }
+      // 更新本周期统计
+      const pv = daily.reduce((s, d) => s + d.pageviews, 0);
+      const active = daily.filter(d => d.pageviews > 0).length;
+      const peak = daily.length ? Math.max(...daily.map(d => d.pageviews)) : 0;
+      const pvEl = document.querySelector('[data-pv]');
+      const activeEl = document.querySelector('[data-active]');
+      const peakEl = document.querySelector('[data-peak]');
+      if (pvEl) pvEl.textContent = pv;
+      if (activeEl) activeEl.textContent = active;
+      if (peakEl) peakEl.textContent = peak;
+      // 拉取该周期的访客数（Umami stats API）
+      // 大陆网络下 umami.lanerc.me 可能连接缓慢，加 8 秒超时避免无限挂起
+      try {
+        var cached = JSON.parse(localStorage.getItem("lanerc-umami-share-token-v2") || "null");
+        var tk = cached && cached.data ? cached.data : null;
+        var fetchWithTimeout = function (url, opts) {
+          var ctrl = new AbortController();
+          var timer = setTimeout(function () { ctrl.abort(); }, 8000);
+          var o = opts || {};
+          o.signal = ctrl.signal;
+          return fetch(url, o).then(function (r) { clearTimeout(timer); return r; }, function (e) { clearTimeout(timer); throw e; });
+        };
+        var doFetch = function (info) {
+          var end = Date.now(), start = end - range * 86400000;
+          var url = "/api/umami/api/websites/" + info.websiteId + "/stats?startAt=" + start + "&endAt=" + end;
+          return fetchWithTimeout(url, { headers: { "x-umami-share-token": info.token, "x-umami-share-context": "1" } }).then(function (r) { return r.json(); });
+        };
+        var p = tk ? Promise.resolve(tk) : fetchWithTimeout("/api/umami/api/share/EG15WwHeRvz2lmd2").then(function (r) { return r.json(); }).then(function (d) { return { websiteId: d.websiteId, token: d.token }; });
+        p.then(doFetch).then(function (s) {
+          var vEl = document.querySelector('[data-period-visitors]');
+          if (vEl && s && s.visitors != null) vEl.textContent = s.visitors;
+        }).catch(function () {});
+      } catch (e) {}
+    }
+
+    tabs.forEach(t => {
+      t.addEventListener('click', () => render(parseInt(t.dataset.range, 10)));
+    });
+
+    // 监听实时数据更新事件
+    document.addEventListener('umami-daily-updated', () => {
+      try { allDaily = JSON.parse(dataEl.textContent || '[]'); } catch(e) { return; }
+      allDaily.sort((a, b) => new Date(a.date) - new Date(b.date));
+      const active = document.querySelector('.time-tab.active');
+      const range = active ? parseInt(active.dataset.range, 10) : 30;
+      render(range);
+    });
+  })();
+</script>
+
+<style>
+  .analytics-page { display: flex; flex-direction: column; gap: 1.25rem; }
+  .card {
+    background: var(--card-bg, #fff);
+    border: 3px solid #1a1a1a;
+    border-radius: 16px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .card-label {
+    font-size: 0.72rem; letter-spacing: 0.12em; font-weight: 700;
+    color: oklch(0.65 0.15 174); margin-bottom: 0.4rem;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .card-label .dot { width: 8px; height: 8px; border-radius: 50%; background: oklch(0.65 0.15 174); display: inline-block; }
+  .card-title { font-size: 1.6rem; font-weight: 800; margin: 0 0 0.25rem; }
+  .card-subtitle { color: #888; font-size: 0.9rem; margin: 0; }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+  .muted { color: #999; } .small { font-size: 0.8rem; }
+
+  /* Hero */
+  .hero-card { display: flex; gap: 1.5rem; align-items: center; }
+  .hero-content { flex: 1; }
+  .hero-title { font-size: 2.2rem; font-weight: 900; margin: 0.3rem 0; }
+  .hero-desc { color: #666; margin-bottom: 0.8rem; }
+  .hero-tags { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; flex-wrap: wrap; }
+  .tag {
+    display: inline-block; padding: 0.25rem 0.7rem; border-radius: 999px;
+    background: #f0f0f0; font-size: 0.8rem; border: 1px solid #ddd;
+  }
+  .tag.green { background: #e6f9f0; border-color: #bfe8d0; color: #1a7a4a; }
+  .online-badge {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    background: #e6f9f0; color: #1a7a4a; border-radius: 999px;
+    padding: 0.3rem 0.8rem; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.8rem;
+  }
+  .online-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulse 2s infinite; }
+  @keyframes pulse { 50% { opacity: 0.4; } }
+  .data-source { margin: 0.6rem 0; }
+  .ds-label { font-size: 0.7rem; letter-spacing: 0.1em; color: #999; }
+  .ds-link { font-weight: 700; color: inherit; }
+  .ds-updated { font-size: 0.8rem; color: #999; }
+  .hero-footer { display: flex; justify-content: space-between; font-size: 0.75rem; color: #aaa; margin-top: 1rem; letter-spacing: 0.08em; }
+  .hero-image { width: 220px; flex-shrink: 0; position: relative; }
+  .hero-main { width: 100%; border-radius: 12px; position: relative; z-index: 1;
+    -webkit-mask-image: radial-gradient(ellipse 95% 95% at 50% 50%, #000 75%, transparent 100%);
+    mask-image: radial-gradient(ellipse 95% 95% at 50% 50%, #000 75%, transparent 100%); }
+  .hero-glow { position: absolute; inset: -12px; width: calc(100% + 24px); height: calc(100% + 24px); object-fit: cover; border-radius: 20px; filter: blur(18px) saturate(1.4); opacity: 0.55; z-index: 0; }
+
+  /* 数字卡 */
+  .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
+  /* HY 式双栏：左宽右窄 */
+  .analytics-grid { display: grid; grid-template-columns: 1.65fr 1fr; gap: 1.25rem; align-items: start; }
+  .grid-left, .grid-right { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+  .stat-card { min-height: 150px; }
+  .stat-label { font-size: 0.7rem; letter-spacing: 0.1em; font-weight: 700; margin-bottom: 0.3rem; }
+  .stat-label.all-time { color: oklch(0.65 0.15 174); }
+  .stat-label.today { color: oklch(0.55 0.18 300); }
+  .stat-number { font-size: 2rem; font-weight: 900; }
+  .stat-name { font-weight: 600; margin-top: 0.2rem; }
+  .stat-note { font-size: 0.78rem; color: #999; }
+  .stat-card { position: relative; overflow: hidden; }
+  /* 按图片主色给卡片底晕染 */
+  .stat-card.tint-pink { background: linear-gradient(135deg, #fff 55%, #fdeef4 100%); }
+  .stat-card.tint-cream { background: linear-gradient(135deg, #fff 55%, #fdf6ec 100%); }
+  .stat-bg { position: absolute; right: 0; top: 0; height: 100%; width: 52%; object-fit: cover; object-position: center top; opacity: 0.5; pointer-events: none;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 50%);
+    mask-image: linear-gradient(to right, transparent 0%, black 50%);
+  }
+  /* 雪花点缀：少而淡 */
+  .snow { position: absolute; color: #b8d8e8; opacity: 0.5; font-size: 10px; pointer-events: none; animation: snowfall 7s linear infinite; }
+  .snow.s1 { left: 12%; top: -12px; animation-delay: 0s; }
+  .snow.s2 { left: 42%; top: -12px; animation-delay: 2.5s; font-size: 8px; }
+  .snow.s3 { left: 68%; top: -12px; animation-delay: 5s; font-size: 12px; }
+  @keyframes snowfall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+    15% { opacity: 0.55; }
+    100% { transform: translateY(170px) rotate(120deg); opacity: 0; }
+  }
+
+  /* 双栏 */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem; }
+  .two-col h3 { font-size: 1rem; margin: 0 0 0.6rem; }
+
+  /* 时间切换 */
+  .time-tabs { display: flex; gap: 0.3rem; background: #f3f3f3; border-radius: 999px; padding: 0.25rem; }
+  .time-tab { border: none; background: none; padding: 0.35rem 0.9rem; border-radius: 999px; cursor: pointer; font-size: 0.85rem; }
+  .time-tab.active { background: oklch(0.65 0.15 174); color: #fff; font-weight: 600; }
+  .hint-text { font-size: 0.78rem; color: #999; text-align: right; margin: 0 0 0.5rem; line-height: 1.4; }
+  .card-actions { display: flex; flex-direction: column; align-items: flex-end; }
+  .ms-row { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed #eee; font-size: 0.9rem; }
+  .ms-row b { font-weight: 700; }
+  .rank { color: oklch(0.65 0.15 174); font-size: 0.8rem; margin-right: 0.4rem; }
+
+  /* 推送 */
+  .push-content { display: flex; gap: 1.5rem; }
+  .push-main { flex: 1; min-width: 0; }
+  .push-image { width: 180px; text-align: center; flex-shrink: 0; }
+  .push-image img { width: 100%; border-radius: 12px; }
+  .cute-text { font-size: 0.85rem; color: oklch(0.55 0.15 174); margin-top: 0.5rem; font-style: italic; }
+  .push-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin: 1rem 0; }
+  .push-stat { background: #f8f8f8; border-radius: 12px; padding: 0.8rem; }
+  .ps-label { display: block; font-size: 0.78rem; color: #888; }
+  .ps-value { font-size: 1.1rem; font-weight: 700; }
+  .quote-card { background: #fef9f0; border-radius: 12px; padding: 1rem; font-size: 0.9rem; }
+
+  /* 活跃时间 */
+  .activity-content { display: flex; gap: 1.5rem; align-items: flex-start; }
+  .heatmap-wrap { flex: 1; min-width: 0; }
+  .heatmap-grid { display: grid; grid-template-columns: 36px repeat(24, 1fr); gap: 3px; align-items: center; margin: 0.8rem 0; }
+  .heatmap-legend { display: flex; align-items: center; justify-content: flex-end; gap: 3px; font-size: 0.7rem; color: #999; margin: 0.3rem 0 0.8rem; }
+  .heatmap-legend i { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
+  .hm-corner { width: 36px; }
+  .hm-hlabel { font-size: 0.58rem; color: #aaa; text-align: center; white-space: nowrap; }
+  .hm-wlabel { font-size: 0.65rem; color: #888; }
+  .hm-dot { width: 100%; aspect-ratio: 1; border-radius: 50%; min-width: 7px; }
+  .activity-side { width: 170px; text-align: center; flex-shrink: 0; }
+  .activity-side img { width: 100%; border-radius: 12px; }
+  .activity-side-below { width: 140px; text-align: center; flex-shrink: 0; }
+  .activity-side-below img { width: 100%; border-radius: 12px; }
+  .cute-text { font-size: 0.8rem; color: #e08a9e; margin-top: 0.3rem; }
+  .stats-with-character { display: flex; gap: 1rem; align-items: flex-start; }
+  .stats-with-character .four-stats { flex: 1; }
+  .four-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-top: 1rem; width: 100%; }
+  .fstat { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem; background: #faf8f5; border-radius: 12px; padding: 0.8rem 0.5rem; min-height: 88px; box-sizing: border-box; text-align: center; }
+  .fs-icon { font-size: 1.25rem; }
+  .fs-label { display: block; font-size: 0.66rem; color: #999; white-space: nowrap; }
+  .fs-value { font-size: 1.05rem; font-weight: 800; white-space: nowrap; }
+  .heatmap-legend { display: flex; justify-content: space-between; align-items: center; margin-top: 0.8rem; flex-wrap: wrap; gap: 0.5rem; }
+  .legend-dots { font-size: 0.7rem; color: #999; display: flex; align-items: center; gap: 3px; }
+  .legend-dots i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  /* 访问脉冲：HY 式双区 */
+  .pulse-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem; }
+  .period-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  /* 访问脉冲：极淡背景图铺满 */
+  .pulse-card { position: relative; overflow: hidden; }
+  .pulse-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center top; opacity: 0.08; pointer-events: none; }
+  .pulse-card > *:not(.pulse-bg) { position: relative; z-index: 1; }
+  /* 本周期数据：防换行，对齐 HY */
+  .pstat { display: flex; align-items: center; gap: 0.6rem; background: #faf8f5; border-radius: 12px; padding: 0.6rem 0.8rem; min-width: 0; height: 72px; box-sizing: border-box; }
+  .pstat > div { min-width: 0; flex: 1; }
+  .ps-icon { font-size: 1.2rem; flex-shrink: 0; }
+  .ps-label { font-size: 0.66rem; color: #888; white-space: nowrap; }
+  .ps-value { font-size: 1.1rem; font-weight: 800; white-space: nowrap; line-height: 1.2; }
+  .ps-sub { font-size: 0.6rem; color: #aaa; white-space: nowrap; }
+  .top-pages-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .tp-item { display: flex; align-items: center; gap: 0.5rem; background: #faf8f5; border-radius: 12px; padding: 0.6rem 0.8rem; min-width: 0; height: 72px; box-sizing: border-box; }
+  .tp-link { text-decoration: none; color: inherit; transition: transform 0.15s, box-shadow 0.15s; cursor: pointer; }
+  .tp-link:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .tp-rank { font-size: 0.7rem; font-weight: 800; color: oklch(0.65 0.15 174); background: #fff; border-radius: 8px; padding: 0.18rem 0.4rem; flex-shrink: 0; }
+  .tp-info { flex: 1; min-width: 0; }
+  .tp-url { font-size: 0.74rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+  .tp-sub { font-size: 0.6rem; color: #aaa; white-space: nowrap; }
+  .tp-count { font-size: 0.95rem; font-weight: 800; flex-shrink: 0; }
+  /* 流量来源：8% 樱花背景 */
+  .source-card { position: relative; overflow: hidden; }
+  .source-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.08; pointer-events: none; }
+  .source-card > *:not(.source-bg) { position: relative; z-index: 1; }
+  /* 设备卡：背景图铺满 + 90% 淡化 */
+  .device-card {
+    background-image: linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url('/images/analytics/card-11.jpg');
+    background-size: cover;
+    background-position: center;
+  }
+  /* 推送节奏：背景图铺满 + 92% 淡化 */
+  .push-card {
+    background-image: linear-gradient(rgba(255,255,255,0.92), rgba(255,255,255,0.92)), url('/images/analytics/card-12.jpg');
+    background-size: cover;
+    background-position: center top;
+  }
+  /* 地域分布：背景图铺满 + 90% 淡化 */
+  .map-card {
+    background-image: linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url('/images/analytics/card-13.jpg');
+    background-size: cover;
+    background-position: center;
+  }
+  /* 推送热力图下方樱花图 */
+  .gh-sakura { width: 100%; height: auto; display: block; border-radius: 12px; margin-top: 0.8rem; opacity: 0.4; }
+  /* 推送节奏：HY 式 2x2 + 男孩淡背景 */
+  .push-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 1rem 0; }
+  .push-stat { display: flex; align-items: center; gap: 0.7rem; border-radius: 12px; padding: 0.8rem 1rem; min-width: 0; }
+  .push-stat > div { min-width: 0; flex: 1; }
+  .push-icon { font-size: 1.4rem; flex-shrink: 0; }
+  .bg-peach { background: #fef3ec; } .bg-pink { background: #fdf0f4; }
+  .bg-cream { background: #fef9ec; } .bg-lavender { background: #f3f0fd; }
+  .repo-names { font-size: 0.9rem !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* 6 号卡起字体紧凑 */
+  .analytics-grid .card-title, .analytics-grid + .card .card-title { font-size: 1.35rem; }
+  .analytics-grid h3 { font-size: 0.95rem; }
+  .analytics-grid .card-subtitle { font-size: 0.8rem; }
+  .analytics-grid .card-label { font-size: 0.68rem; }
+  /* 环形图 */
+  .donut-row { display: flex; align-items: center; gap: 0.9rem; margin-top: 0.5rem; }
+  .donut-legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; }
+  .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .legend-icon { font-size: 0.9rem; flex-shrink: 0; }
+  .legend-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #555; }
+  .legend-pct { font-weight: 800; font-size: 0.85rem; }
+  .donut-row { display: flex; align-items: center; gap: 1.2rem; margin-top: 0.6rem; }
+  .donut-wrap { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
+  .donut-svg { width: 120px; height: 120px; transform: rotate(0deg); }
+  .donut-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; }
+  .tag-link { font-size: 0.78rem; color: oklch(0.55 0.15 174); font-weight: 700; white-space: nowrap; }
+  @media (max-width: 768px) { .pulse-bottom { grid-template-columns: 1fr; } }
+  /* 活跃时间卡：粉色晕染 + 樱花花瓣 */
+  .tint-activity { position: relative; overflow: hidden; background: linear-gradient(135deg, #fff 60%, #fdeef4 100%); }
+  .petal { position: absolute; font-size: 14px; opacity: 0.45; pointer-events: none; animation: petalfall 9s linear infinite; z-index: 0; }
+  .petal.p1 { left: 8%; top: -20px; animation-delay: 0s; }
+  .petal.p2 { left: 35%; top: -20px; animation-delay: 3s; font-size: 11px; }
+  .petal.p3 { left: 62%; top: -20px; animation-delay: 5.5s; font-size: 10px; }
+  .petal.p4 { left: 85%; top: -20px; animation-delay: 7s; font-size: 13px; }
+  @keyframes petalfall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+    12% { opacity: 0.5; }
+    100% { transform: translateY(420px) rotate(160deg); opacity: 0; }
+  }
+  .tint-activity > *:not(.petal) { position: relative; z-index: 1; }
+  .card[style*="overflow:hidden"] > *:not(.petal) { position: relative; z-index: 1; }
+
+  /* GitHub 热力图 */
+  .gh-grid { display: flex; gap: 3px; overflow-x: auto; padding: 0.5rem 0; }
+  .gh-week { display: flex; flex-direction: column; gap: 3px; }
+  .gh-day { width: 11px; height: 11px; border-radius: 3px; background: #ebedf0; display: inline-block; }
+  .gh-day.lv-0 { background: #ebedf0; }
+  .gh-day.lv-1 { background: #9be9a8; }
+  .gh-day.lv-2 { background: #40c463; }
+  .gh-day.lv-3 { background: #30a14e; }
+  .gh-day.lv-4 { background: #216e39; }
+  .gh-legend { display: flex; align-items: center; gap: 4px; font-size: 0.75rem; color: #888; margin-top: 0.5rem; }
+  .gh-legend .gh-day { width: 10px; height: 10px; }
+  .ps-value.small { font-size: 0.9rem; }
+
+  /* 来源 */
+  .source-content { display: flex; gap: 1.5rem; align-items: center; }
+  .source-content > div:first-child { flex: 1; }
+  .source-image { width: 160px; border-radius: 12px; }
+
+  /* 页脚卡 */
+  .footer-card { text-align: center; }
+  .footer-link { color: oklch(0.55 0.15 174); font-weight: 600; }
+
+  .refresh-btn {
+    margin-top: 8px; padding: 6px 14px; border: 1px solid #e0d8cc; border-radius: 20px;
+    background: #fff; cursor: pointer; font-size: 13px; color: #666;
+  }
+  .refresh-btn:hover { background: #f5f0e8; }
+  .refresh-btn:disabled { opacity: 0.6; cursor: wait; }
+  .chart-placeholder, #device-chart, #browser-chart, #region-map, #source-chart, #recent-comments, #top-pages, #period-stats, .mini-stats, .top-pages {
+    min-height: 80px; color: #999; font-size: 0.9rem;
+  }
+  .bar-chart { display: flex; align-items: flex-end; gap: 6px; min-height: 150px; padding: 0.5rem 0; }
+  .bar-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bar { width: 18px; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, oklch(0.75 0.15 174), oklch(0.6 0.15 174)); min-height: 8px; }
+  .bar-label { font-size: 0.65rem; color: #999; }
+
+  @media (max-width: 768px) {
+    .stat-cards { grid-template-columns: repeat(2, 1fr); }
+    .analytics-grid { grid-template-columns: 1fr; }
+    .two-col { grid-template-columns: 1fr; }
+    .hero-card { flex-direction: column; }
+    .hero-image { width: 160px; }
+    .four-stats { grid-template-columns: repeat(2, 1fr); }
+    .push-content, .activity-content, .source-content { flex-direction: column; }
+  }
+</style>
+
+<script is:inline>
+// 静态 JSON 优先尝试：VPS 定时任务每 5 分钟生成 /api/stats.json
+// 成功则渲染并设置标志，主 script 会直接返回；失败则静默，主 script 走原有 API 逻辑
+(function () {
+	// 重置跨页残留标志：Swup 导航时 window 对象复用，上次的 true 会导致主脚本误判跳过
+	window.__lanercStatsDone = false;
+	window.__lanercStatsData = null;
+	function fmt(n) { return Number(n || 0).toLocaleString(); }
+
+	// 数字从0快速递增动画（约800ms，easeOut）
+	function countUp(el, target) {
+		if (!el || target == null) return;
+		target = Number(target);
+		if (isNaN(target)) return;
+		var start = 0;
+		var duration = 800;
+		var startTime = null;
+		function step(ts) {
+			if (!startTime) startTime = ts;
+			var p = Math.min((ts - startTime) / duration, 1);
+			// easeOutCubic
+			var eased = 1 - Math.pow(1 - p, 3);
+			var cur = Math.round(start + (target - start) * eased);
+			el.textContent = cur.toLocaleString();
+			if (p < 1) requestAnimationFrame(step);
+		}
+		requestAnimationFrame(step);
+	}
+
+	function renderStatic(d) {
+		var map = { totalVisitors: d.totalVisitors, totalPageviews: d.totalPageviews, todayVisitors: d.todayVisitors, todayPageviews: d.todayPageviews };
+		Object.keys(map).forEach(function (k) {
+			var el = document.querySelector('[data-stat="' + k + '"]');
+			if (el && map[k] != null) countUp(el, map[k]);
+		});
+		var onlineEl = document.getElementById("live-online");
+		if (onlineEl && d.online != null) {
+			onlineEl.innerHTML = '<span class="online-dot"></span>' + (d.online > 0 ? d.online + " 人在线" : "在线");
+		}
+		var updatedEl = document.getElementById("live-updated");
+		if (updatedEl) {
+			var t = new Date().toLocaleString("zh-CN", { hour12: false }).slice(0, 16);
+			updatedEl.textContent = "实时更新于 " + t + " · 30天区间";
+		}
+		try {
+			localStorage.setItem("lanerc-umami-live", JSON.stringify({ ts: Date.now(), data: d }));
+		} catch (e) {}
+		// 静态数据渲染慢卡片：donut/脉冲/国家/热门页面（数据已在 stats.json，无需等 API）
+		try {
+			var arr = d.pageviews90 || [];
+			var el = document.getElementById("umami-daily-data");
+			if (el && arr.length) {
+				el.textContent = JSON.stringify(arr);
+				if (window.__renderPulse) window.__renderPulse();
+			}
+			var devC = ["#7eb8f0", "#8fd8b8", "#f0c878", "#b8a0f0", "#f0a0c0"];
+			var broC = ["#a080f0", "#f0c878", "#78d0d0", "#f0a080", "#f0a0c0", "#a0c8f0"];
+			var srcC = ["#7eb8f0", "#f0c878", "#8fd8b8", "#b8a0f0"];
+			if (d.device && d.device.length && window.updateDonut) {
+				var del = document.getElementById("device-donut");
+				if (del) window.updateDonut("device-donut", d.device, devC);
+			}
+			if (d.browser && d.browser.length && window.updateDonut) {
+				var bel = document.getElementById("browser-donut");
+				if (bel) window.updateDonut("browser-donut", d.browser, broC);
+			}
+			if (d.referrer && d.referrer.length && window.updateDonut) {
+				window.updateDonut("source-donut", d.referrer.map(function (x) { return { x: x.x || "直接访问", y: x.y }; }), srcC);
+			}
+			var countryNames = { CN: "中国", US: "美国", JP: "日本", HK: "香港", TW: "台湾", GB: "英国", DE: "德国", FR: "法国", KR: "韩国", SG: "新加坡" };
+			var ctyColors = ["#f06a6a", "#7eb8f0", "#f0c878", "#8fd8b8", "#b8a0f0"];
+			if (d.country && d.country.length) {
+				var cel = document.getElementById("region-map");
+				if (cel) {
+					var mapped = d.country.map(function (x) { return { x: countryNames[x.x] || x.x, y: x.y }; });
+					if (window.createDonutHTML && !cel.querySelector(".donut-row")) {
+						cel.innerHTML = window.createDonutHTML(mapped, ctyColors, "");
+					} else if (window.updateDonut) {
+						window.updateDonut("region-map", mapped, ctyColors);
+					}
+				}
+			}
+			if (d.url && d.url.length) {
+				var tel = document.getElementById("top-pages");
+				if (tel && window.__renderTopPages) window.__renderTopPages(d.url);
+			}
+		} catch (e) {}
+	}
+	window.__lanercStatsPromise = (function () {
+		var ctrl = new AbortController();
+		var timer = setTimeout(function () { ctrl.abort(); }, 8000);
+		return fetch("/api/stats.json", { cache: "no-store", signal: ctrl.signal })
+			.then(function (r) { clearTimeout(timer); return r; }, function (e) { clearTimeout(timer); throw e; });
+	})()
+		.then(function (r) { if (!r.ok) throw 0; return r.json(); })
+		.then(function (d) {
+			if (d && (d.totalVisitors != null || d.totalPageviews != null)) {
+				// 新鲜度检查：generatedAt 超过 10 分钟视为过期，走实时 API
+				var genAt = d.generatedAt ? new Date(d.generatedAt).getTime() : 0;
+				if (genAt && (Date.now() - genAt) < 10 * 60 * 1000) {
+					renderStatic(d);
+					window.__lanercStatsDone = true;
+					window.__lanercStatsData = d;  // 完整数据（含 device/browser/country 等），供其他卡片使用
+					return true;
+				}
+			}
+			return false;
+		})
+		.catch(function () { return false; });
+})();
+</script>
+
+<script is:inline>
+// 静态 JSON 优先（独立 script 块已尝试）：若命中则直接返回
+// 逻辑：VPS 每 5 分钟生成 /api/stats.json，走 CDN 毫秒级；失败则走下方原有 Umami API
+// is:inline：配合 Swup 无刷新导航，每次进统计页都重新执行
+(function () {
+	var SHARE_ID = "EG15WwHeRvz2lmd2";
+	var API_BASE = "/api/umami";
+	var TOKEN_KEY = "lanerc-umami-share-token-v2";
+	var DATA_KEY = "lanerc-umami-live";
+	var TOKEN_TTL = 24 * 60 * 60 * 1000;
+	var DATA_TTL = 0; // 用户要求：不缓存，每次进页面都重新拉
+
+	function fmt(n) { return Number(n || 0).toLocaleString(); }
+
+	// 数字从0快速递增动画（约800ms，easeOut）
+	function countUp(el, target) {
+		if (!el || target == null) return;
+		target = Number(target);
+		if (isNaN(target)) return;
+		var start = 0;
+		var duration = 800;
+		var startTime = null;
+		function step(ts) {
+			if (!startTime) startTime = ts;
+			var p = Math.min((ts - startTime) / duration, 1);
+			// easeOutCubic
+			var eased = 1 - Math.pow(1 - p, 3);
+			var cur = Math.round(start + (target - start) * eased);
+			el.textContent = cur.toLocaleString();
+			if (p < 1) requestAnimationFrame(step);
+		}
+		requestAnimationFrame(step);
+	}
+
+	function render(d) {
+		var map = {
+			totalVisitors: d.totalVisitors,
+			totalPageviews: d.totalPageviews,
+			todayVisitors: d.todayVisitors,
+			todayPageviews: d.todayPageviews,
+		};
+		Object.keys(map).forEach(function (k) {
+			var el = document.querySelector('[data-stat="' + k + '"]');
+			if (el && map[k] != null) countUp(el, map[k]);
+		});
+		var onlineEl = document.getElementById("live-online");
+		if (onlineEl && d.online != null) {
+			onlineEl.innerHTML = '<span class="online-dot"></span>' + (d.online > 0 ? d.online + " 人在线" : "在线");
+		}
+		var updatedEl = document.getElementById("live-updated");
+		if (updatedEl) {
+			var t = new Date().toLocaleString("zh-CN", { hour12: false }).slice(0, 16);
+			updatedEl.textContent = "实时更新于 " + t + " · 30天区间";
+		}
+	}
+
+	function getCached(key, ttl) {
+		try {
+			var c = JSON.parse(localStorage.getItem(key) || "null");
+			if (c && Date.now() - c.ts < ttl) return c.data;
+		} catch (e) {}
+		return null;
+	}
+	function setCached(key, data) {
+		try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data: data })); } catch (e) {}
+	}
+
+	// 先看数据缓存
+	var cachedData = getCached(DATA_KEY, DATA_TTL);
+	if (cachedData) { render(cachedData); return; }
+
+	function fetchWithTimeout(url, opts) {
+		var ctrl = new AbortController();
+		var timer = setTimeout(function () { ctrl.abort(); }, 8000);
+		var o = opts || {};
+		o.signal = ctrl.signal;
+		return fetch(url, o).then(function (r) { clearTimeout(timer); return r; }, function (e) { clearTimeout(timer); throw e; });
+	}
+
+	function fetchShare() {
+		var cached = getCached(TOKEN_KEY, TOKEN_TTL);
+		if (cached) return Promise.resolve(cached);
+		return fetchWithTimeout(API_BASE + "/api/share/" + SHARE_ID)
+			.then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+			.then(function (d) {
+				var info = { websiteId: d.websiteId, token: d.token };
+				setCached(TOKEN_KEY, info);
+				return info;
+			});
+	}
+
+	function umamiGet(info, path) {
+		return fetchWithTimeout(API_BASE + path, {
+			headers: {
+				"x-umami-share-token": info.token,
+				"x-umami-share-context": "1",
+			},
+		}).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+	}
+
+	fetchShare().then(function (info) {
+		var now = Date.now();
+		var day = 24 * 60 * 60 * 1000;
+		var p30 = { startAt: now - 30 * day, endAt: now };
+		var pToday = { startAt: new Date().setHours(0, 0, 0, 0), endAt: now };
+		var qs = function (p) { return "?startAt=" + p.startAt + "&endAt=" + p.endAt + "&unit=day&timezone=Asia/Shanghai"; };
+		var wid = info.websiteId;
+		return Promise.all([
+			umamiGet(info, "/api/websites/" + wid + "/stats" + qs(p30)).catch(function () { return null; }),
+			umamiGet(info, "/api/websites/" + wid + "/stats" + qs(pToday)).catch(function () { return null; }),
+			umamiGet(info, "/api/realtime/" + wid).catch(function () { return null; }),
+		]).then(function (res) {
+			var all = res[0], today = res[1], realtime = res[2];
+			// 在线人数：5 分钟内有活动的去重 session 数（不是 events 总数）
+			var online = 0;
+			if (realtime && realtime.events) {
+				var seen = {}, cutoff = Date.now() - 5 * 60 * 1000;
+				realtime.events.forEach(function (e) {
+					var t = new Date(e.createdAt).getTime();
+					if (t >= cutoff && e.sessionId && !seen[e.sessionId]) {
+						seen[e.sessionId] = 1;
+						online++;
+					}
+				});
+			}
+			var d = {
+				totalVisitors: all && all.visitors != null ? all.visitors : null,
+				totalPageviews: all && all.pageviews != null ? all.pageviews : null,
+				todayVisitors: today && today.visitors != null ? today.visitors : null,
+				todayPageviews: today && today.pageviews != null ? today.pageviews : null,
+				online: online,
+			};
+			// 至少有一项有效才渲染
+			if (d.totalVisitors != null || d.totalPageviews != null) {
+				render(d);
+				setCached(DATA_KEY, d);
+			}
+		});
+	}).catch(function () {
+		var updatedEl = document.getElementById("live-updated");
+		if (updatedEl) updatedEl.textContent = "目前暂时拉取不到";
+	});
+})();
+</script>
+
+<script is:inline>
+// 各卡片图表实时更新（Umami 分享接口）
+(function () {
+	function getShare() {
+		try {
+			var c = JSON.parse(localStorage.getItem("lanerc-umami-share-token-v2") || "null");
+			if (c && Date.now() - c.ts < 86400000) return Promise.resolve(c.data);
+		} catch (e) {}
+		return fetch("/api/umami/api/share/EG15WwHeRvz2lmd2")
+			.then(function (r) { return r.json(); })
+			.then(function (d) {
+				var info = { websiteId: d.websiteId, token: d.token };
+				try { localStorage.setItem("lanerc-umami-share-token-v2", JSON.stringify({ ts: Date.now(), data: info })); } catch (e) {}
+				return info;
+			});
+	}
+	function uget(info, path, retried) {
+		return fetch("/api/umami" + path, {
+			headers: { "x-umami-share-token": info.token, "x-umami-share-context": "1" }
+		}).then(function (r) {
+			if (r.status === 401 && !retried) {
+				// token 失效：清缓存，重新获取 token 后重试一次
+				try { localStorage.removeItem("lanerc-umami-share-token-v2"); } catch (e) {}
+				return getShare().then(function (newInfo) {
+					return uget(newInfo, path, true);
+				});
+			}
+			if (!r.ok) throw new Error(r.status);
+			return r.json();
+		});
+	}
+	var iconMap = { "laptop": "💻", "mobile": "📱", "tablet": "📱", "desktop": "🖥️", "中国": "🇨🇳", "美国": "🇺🇸", "日本": "🇯🇵", "香港": "🇭🇰", "台湾": "🇹🇼", "英国": "🇬🇧", "德国": "🇩🇪", "法国": "🇫🇷", "韩国": "🇰🇷", "新加坡": "🇸🇬", "chrome": "🌐", "edge-chromium": "🌐", "chromium-webview": "📱", "safari": "🧭", "firefox": "🦊" };
+	function updateDonut(containerId, items, colors) {
+		var container = document.getElementById(containerId);
+		if (!container) return;
+		var row = container.querySelector(".donut-row");
+		if (!row) return;
+		var total = items.reduce(function (s, x) { return s + x.y; }, 0) || 1;
+		var R = 54, C = 2 * Math.PI * R, offset = 25;
+		items.slice(0, 5).forEach(function (item, i) {
+			var frac = item.y / total, len = frac * C, color = colors[i % colors.length];
+			// 更新 circle 的数据属性（不重建 DOM）
+			var circle = row.querySelector('circle[data-seg-index="' + i + '"]');
+			if (circle) {
+				circle.setAttribute("stroke", color);
+				circle.setAttribute("stroke-dasharray", len + " " + (C - len));
+				circle.setAttribute("stroke-dashoffset", -offset);
+			}
+			// 更新图例（只改文本，不重建）
+			var legendItem = row.querySelector('[data-legend-index="' + i + '"]');
+			if (legendItem) {
+				var nameEl = legendItem.querySelector(".legend-name");
+				var pctEl = legendItem.querySelector(".legend-pct");
+				var dotEl = legendItem.querySelector(".legend-dot");
+				if (nameEl) nameEl.textContent = item.x || "未知";
+				if (pctEl) pctEl.textContent = Math.round(frac * 100) + "%";
+				if (dotEl) dotEl.style.background = color;
+			}
+			offset += len;
+		});
+	}
+	function createDonutHTML(items, colors, icon) {
+		var total = items.reduce(function (s, x) { return s + x.y; }, 0) || 1;
+		var R = 54, C = 2 * Math.PI * R, offset = 25, svg = "", legend = "";
+		items.slice(0, 5).forEach(function (item, i) {
+			var frac = item.y / total, len = frac * C, color = colors[i % colors.length];
+			svg += '<circle cx="70" cy="70" r="' + R + '" fill="none" stroke="' + color + '" stroke-width="18" stroke-dasharray="' + len + " " + (C - len) + '" stroke-dashoffset="' + (-offset) + '" transform="rotate(-90 70 70)" data-seg-index="' + i + '" data-astro-cid-bhxyrf2g/>';
+			offset += len;
+			legend += '<div class="legend-item" data-legend-index="' + i + '" data-astro-cid-bhxyrf2g><span class="legend-dot" data-astro-cid-bhxyrf2g style="background:' + color + '"></span><span class="legend-name" data-astro-cid-bhxyrf2g>' + (item.x || "未知") + '</span><b class="legend-pct" data-astro-cid-bhxyrf2g>' + Math.round(frac * 100) + "%</b></div>";
+		});
+		var iconHtml = icon ? '<span class="donut-icon">' + icon + "</span>" : "";
+		return '<div class="donut-row" data-astro-cid-bhxyrf2g><div class="donut-wrap" data-astro-cid-bhxyrf2g><svg viewBox="0 0 140 140" class="donut-svg" data-astro-cid-bhxyrf2g><circle cx="70" cy="70" r="54" fill="none" stroke="#f3f0ea" stroke-width="18" data-astro-cid-bhxyrf2g/>' + svg + "</svg>" + iconHtml + '</div><div class="donut-legend" data-astro-cid-bhxyrf2g>' + legend + "</div></div>";
+	}
+
+	// 暴露 donut 函数供静态数据渲染使用
+	window.updateDonut = updateDonut;
+	window.createDonutHTML = createDonutHTML;
+
+	// 每次进页面都真去 Umami 拉实时数据，不用构建时的静态数据充数
+	startApiFetch();
+
+	function startApiFetch() {
+	getShare().then(function (info) {
+		var wid = info.websiteId, now = Date.now(), day = 86400000;
+		var q = function (s, e, u) { return "?startAt=" + s + "&endAt=" + e + "&unit=" + u + "&timezone=Asia/Shanghai"; };
+		var mq = q(now - 30 * day, now, "day");
+
+		// 静态 JSON 优先：如果已有完整数据，直接渲染各卡片，跳过 API
+		var sd = window.__lanercStatsData;
+		if (sd && sd.pageviews90 && sd.device) {
+			try {
+				// 访问脉冲图
+				var arr = sd.pageviews90 || [];
+				var el = document.getElementById("umami-daily-data");
+				if (el && arr.length) {
+					el.textContent = JSON.stringify(arr);
+					if (window.__renderPulse) window.__renderPulse();
+				}
+				// 设备/浏览器/来源 donut
+				var devC = ["#7eb8f0", "#8fd8b8", "#f0c878", "#b8a0f0", "#f0a0c0"];
+				var broC = ["#a080f0", "#f0c878", "#78d0d0", "#f0a080", "#f0a0c0", "#a0c8f0"];
+				var srcC = ["#7eb8f0", "#f0c878", "#8fd8b8", "#b8a0f0"];
+				if (sd.device && sd.device.length && window.updateDonut) {
+					var del = document.getElementById("device-donut");
+					if (del) window.updateDonut("device-donut", sd.device, devC);
+				}
+				if (sd.browser && sd.browser.length && window.updateDonut) {
+					var bel = document.getElementById("browser-donut");
+					if (bel) window.updateDonut("browser-donut", sd.browser, broC);
+				}
+				if (sd.referrer && sd.referrer.length && window.updateDonut) {
+					window.updateDonut("source-donut", sd.referrer.map(function (x) { return { x: x.x || "直接访问", y: x.y }; }), srcC);
+				}
+				// 国家分布
+				var countryNames = { CN: "中国", US: "美国", JP: "日本", HK: "香港", TW: "台湾", GB: "英国", DE: "德国", FR: "法国", KR: "韩国", SG: "新加坡" };
+				var ctyColors = ["#f06a6a", "#7eb8f0", "#f0c878", "#8fd8b8", "#b8a0f0"];
+				if (sd.country && sd.country.length) {
+					var cel = document.getElementById("region-map");
+					if (cel) {
+						var mapped = sd.country.map(function (x) { return { x: countryNames[x.x] || x.x, y: x.y }; });
+						if (window.createDonutHTML && !cel.querySelector(".donut-row")) {
+							cel.innerHTML = window.createDonutHTML(mapped, ctyColors, "");
+						} else if (window.updateDonut) {
+							window.updateDonut("region-map", mapped, ctyColors);
+						}
+					}
+				}
+				// 热门页面
+				if (sd.url && sd.url.length) {
+					var tel = document.getElementById("top-pages");
+				if (tel && window.__renderTopPages) window.__renderTopPages(sd.url);
+				}
+			} catch (e) {}
+			return; // 已用静态数据渲染，跳过 API 调用
+		}
+
+		function delay(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
+		// 访问脉冲（延迟启动，避免并发触发限流）
+		delay(500).then(function () {
+			return uget(info, "/api/websites/" + wid + "/pageviews" + q(now - 90 * day, now, "day"));
+		}).then(function (r) {
+			var arr = (r.pageviews || []).map(function (p) { return { date: p.x, pageviews: p.y }; });
+			var el = document.getElementById("umami-daily-data");
+			if (el && arr.length) {
+				el.textContent = JSON.stringify(arr);
+				document.dispatchEvent(new CustomEvent("umami-daily-updated"));
+			}
+		}).catch(function () {});
+
+		// 活跃时间 7x24
+		uget(info, "/api/websites/" + wid + "/pageviews" + q(now - 30 * day, now, "hour")).then(function (r) {
+			var wrap = document.getElementById("activity-heatmap");
+			if (!wrap || !r.pageviews) return;
+			var grid = [], maxV = 1, d, h;
+			for (d = 0; d < 7; d++) grid.push(new Array(24).fill(0));
+			r.pageviews.forEach(function (p) {
+				var bj = new Date(new Date(p.x).getTime() + 28800000);
+				var wd = (bj.getUTCDay() + 6) % 7;
+				h = bj.getUTCHours();
+				grid[wd][h] += p.y;
+				if (grid[wd][h] > maxV) maxV = grid[wd][h];
+			});
+			var weekNames = ["一", "二", "三", "四", "五", "六", "日"], html = '<div class="heatmap-grid" data-astro-cid-bhxyrf2g><div class="hm-corner" data-astro-cid-bhxyrf2g></div>';
+			for (var hh = 0; hh < 24; hh++) html += '<div class="hm-hlabel" data-astro-cid-bhxyrf2g>' + (hh < 10 ? "0" + hh : hh) + '时</div>';
+			grid.forEach(function (row, wd) {
+				html += '<div class="hm-wlabel" data-astro-cid-bhxyrf2g>' + weekNames[wd] + "</div>";
+				row.forEach(function (v, hr) {
+					var op = v === 0 ? 0.06 : 0.15 + 0.85 * (v / maxV);
+					var bg = v === 0 ? "#ebedf0" : "rgba(64,196,99," + op.toFixed(2) + ")";
+					html += '<div class="hm-dot" data-astro-cid-bhxyrf2g style="background:' + bg + '" title="' + weekNames[wd] + " " + (hr < 10 ? "0" + hr : hr) + "时: " + v + ' 浏览"></div>';
+				});
+			});
+			var old = wrap.querySelector(".heatmap-grid");
+			if (old) old.outerHTML = html + "</div>";
+		}).catch(function () {});
+
+		// donut 图
+		var devC = ["#7eb8f0", "#8fd8b8", "#f0c878", "#b8a0f0", "#f0a0c0"];
+		var broC = ["#a080f0", "#f0c878", "#78d0d0", "#f0a080", "#f0a0c0", "#a0c8f0"];
+		var srcC = ["#7eb8f0", "#f0c878", "#8fd8b8", "#b8a0f0"];
+		uget(info, "/api/websites/" + wid + "/metrics" + mq + "&type=device").then(function (r) {
+			var el = document.getElementById("device-donut");
+			if (el && r && r.length) updateDonut("device-donut", r, devC);
+		}).catch(function () {});
+		uget(info, "/api/websites/" + wid + "/metrics" + mq + "&type=browser").then(function (r) {
+			var el = document.getElementById("browser-donut");
+			if (el && r && r.length) updateDonut("browser-donut", r, broC);
+		}).catch(function () {});
+		uget(info, "/api/websites/" + wid + "/metrics" + mq + "&type=referrer").then(function (r) {
+			if (r && r.length) updateDonut("source-donut", r.map(function (x) { return { x: x.x || "直接访问", y: x.y }; }), srcC);
+		}).catch(function () {});
+		// 国家分布 donut
+		var countryNames = { CN: "中国", US: "美国", JP: "日本", HK: "香港", TW: "台湾", GB: "英国", DE: "德国", FR: "法国", KR: "韩国", SG: "新加坡" };
+		var ctyColors = ["#f06a6a", "#7eb8f0", "#f0c878", "#8fd8b8", "#b8a0f0"];
+		uget(info, "/api/websites/" + wid + "/metrics" + mq + "&type=country").then(function (r) {
+			var el = document.getElementById("region-map");
+			if (el && r && r.length) {
+				var mapped = r.map(function (x) { return { x: countryNames[x.x] || x.x, y: x.y }; });
+				if (!el.querySelector(".donut-row")) {
+					el.innerHTML = createDonutHTML(mapped, ctyColors, "");
+				} else {
+					updateDonut("region-map", mapped, ctyColors);
+				}
+			}
+		}).catch(function () {});
+		// 热门页面
+		uget(info, "/api/websites/" + wid + "/metrics" + mq + "&type=url").then(function (r) {
+			var el = document.getElementById("top-pages");
+			if (el && r && r.length) {
+				var html = "";
+				r.slice(0, 4).forEach(function (p, i) {
+					var url = p.x || "/";
+					var shortUrl = url === "/" ? "首页" : (url.length > 16 ? url.slice(0, 16) + "…" : url);
+					var sub = url === "/" ? "站点入口" : "页面路径";
+					html += '<a class="tp-item tp-link" href="' + url + '" title="' + url + '"><span class="tp-rank">' + ("0" + (i + 1)).slice(-2) + '</span><div class="tp-info"><div class="tp-url">' + shortUrl + '</div><div class="tp-sub">' + sub + '</div></div><b class="tp-count">' + p.y + "</b></a>";
+				});
+				el.innerHTML = html;
+			}
+		}).catch(function () {});
+	}).catch(function () {});
+
+	// 手动刷新按钮：清缓存并重拉
+	var refreshBtn = document.getElementById("refresh-stats");
+	if (refreshBtn) {
+		refreshBtn.addEventListener("click", function () {
+			try {
+				localStorage.removeItem("lanerc-umami-share-token-v2");
+			Object.keys(localStorage).forEach(function (k) {
+				if (k.indexOf("lanerc-umami-") === 0) localStorage.removeItem(k);
+			});
+			} catch (e) {}
+			refreshBtn.textContent = "\u23f3 \u5237\u65b0\u4e2d...";
+			refreshBtn.disabled = true;
+			location.reload();
+		});
+	}
+	} // end startApiFetch
+})();
+</script>
+
+
+<script>
+// 独立补充：已在统计页时，点击导航栏"站点统计"滚动回顶部
+(function () {
+	document.addEventListener("click", function (e) {
+		var a = e.target.closest ? e.target.closest('a[href="/analytics/"], a[href="/analytics"]') : null;
+		if (!a) return;
+		if (location.pathname.replace(/\/$/, "") === "/analytics") {
+			e.preventDefault();
+			window.scrollTo({ top: 0, behavior: "smooth" });
+		}
+	});
+})();
+</script>

@@ -11,6 +11,7 @@ import {
 import type {
 	FullscreenWallpaperLayout,
 	LIGHT_DARK_MODE,
+	NavbarStyle,
 	WALLPAPER_MODE,
 } from "@/types/config";
 import {
@@ -369,6 +370,49 @@ export function setFullscreenLayout(layout: FullscreenWallpaperLayout): void {
 		localStorage.setItem("fullscreenLayout", safeLayout);
 	}
 	applyFullscreenLayoutToDocument(safeLayout);
+}
+
+const NAVBAR_STYLES: NavbarStyle[] = ["classic", "float", "capsule", "segment"];
+
+export function getDefaultNavbarStyle(): NavbarStyle {
+	const v = siteConfig.navbar.navbarStyle ?? "classic";
+	return NAVBAR_STYLES.includes(v) ? v : "classic";
+}
+
+export function getStoredNavbarStyle(): NavbarStyle {
+	const defaultStyle = getDefaultNavbarStyle();
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.getItem !== "function"
+	) {
+		return defaultStyle;
+	}
+	if (!displaySettingsConfig.navbarStyleSwitchable) {
+		localStorage.removeItem("navbarStyle");
+		return defaultStyle;
+	}
+	const stored = localStorage.getItem("navbarStyle") as NavbarStyle | null;
+	return stored && NAVBAR_STYLES.includes(stored) ? stored : defaultStyle;
+}
+
+export function applyNavbarStyleToDocument(style: NavbarStyle): void {
+	if (typeof document === "undefined") return;
+	const safe: NavbarStyle = NAVBAR_STYLES.includes(style) ? style : "classic";
+	document.documentElement.setAttribute("data-navbar-style", safe);
+	window.dispatchEvent(
+		new CustomEvent("navbarStyleChange", { detail: { style: safe } }),
+	);
+}
+
+export function setNavbarStyle(style: NavbarStyle): void {
+	const safe: NavbarStyle = NAVBAR_STYLES.includes(style) ? style : "classic";
+	if (
+		typeof localStorage !== "undefined" &&
+		typeof localStorage.setItem === "function"
+	) {
+		localStorage.setItem("navbarStyle", safe);
+	}
+	applyNavbarStyleToDocument(safe);
 }
 
 export function applyWallpaperModeToDocument(

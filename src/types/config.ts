@@ -49,6 +49,7 @@ export type {
 export type {
 	Favicon,
 	LIGHT_DARK_MODE,
+	NavbarStyle,
 	SiteConfig,
 	WALLPAPER_MODE,
 } from "./siteConfig";

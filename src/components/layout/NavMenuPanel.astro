@@ -10,12 +10,18 @@ interface Props {
 
 const processedLinks = Astro.props.links;
 const navTitle = siteConfig.navbar.title || siteConfig.title;
+// 移动端菜单样式：drawer 全屏抽屉（默认）/ card 导航栏下方浮层卡片
+const mobileMenuStyle = siteConfig.navbar.mobileMenuStyle ?? "drawer";
+const isCardMenu = mobileMenuStyle === "card";
+// 卡片模式不锁背景滚动（抽屉才锁）：属性按模式条件挂载
+const scrollLockAttrs = isCardMenu
+	? {}
+	: { "data-floating-panel-scroll-lock": true };
 ---
-<div id="nav-menu-panel" class:list={["float-panel-closed fixed inset-0 z-1100"]} data-floating-panel data-floating-panel-trigger="nav-menu-switch" data-floating-panel-scroll-lock inert aria-hidden="true">
-    <!-- 遮罩（scrim）：点击关闭 -->
-    <div class="mobile-menu-scrim" aria-hidden="true"></div>
-    <!-- 抽屉：MD3 侧边导航，右侧滑入，占满整高，内部滚动 -->
-    <aside class="mobile-menu-drawer" role="dialog" aria-modal="true" aria-label="导航菜单">
+<div id="nav-menu-panel" class:list={[isCardMenu ? "float-panel float-panel-closed nav-menu--card fixed right-4 top-22 z-1100 w-80 max-w-[calc(100vw-2rem)]" : "float-panel-closed nav-menu--drawer fixed inset-0 z-1100"]} data-floating-panel data-floating-panel-trigger="nav-menu-switch" {...scrollLockAttrs} inert aria-hidden="true">
+    {!isCardMenu && <div class="mobile-menu-scrim" aria-hidden="true"></div>}
+    <!-- 抽屉：MD3 侧边导航，右侧滑入，占满整高，内部滚动 / 卡片：导航栏下方浮层，结构共用 -->
+    <aside class={isCardMenu ? "mobile-menu-card-inner" : "mobile-menu-drawer"} role="dialog" aria-modal="true" aria-label="导航菜单">
         <header class="mobile-menu-header">
             <span class="mobile-menu-title">{navTitle}</span>
             <button type="button" class="mobile-menu-close" aria-label="关闭菜单">
@@ -103,7 +109,7 @@ const navTitle = siteConfig.navbar.title || siteConfig.title;
     }
 
     /* MD3 抽屉：面板改成透明全屏定位层，动画放在「遮罩/抽屉」子层上 */
-    #nav-menu-panel {
+    #nav-menu-panel.nav-menu--drawer {
         top: 0;
         bottom: 0;
         border-radius: 0; /* 覆盖 .float-panel 的圆角，避免遮罩四角被裁剪 */
@@ -115,7 +121,7 @@ const navTitle = siteConfig.navbar.title || siteConfig.title;
         transition: none;
     }
     /* 关闭态：整体不可点，但不再整体淡出/下移（动画由子层负责） */
-    #nav-menu-panel.float-panel-closed {
+    #nav-menu-panel.nav-menu--drawer.float-panel-closed {
         opacity: 1;
         transform: none;
         pointer-events: none;
@@ -291,6 +297,12 @@ const navTitle = siteConfig.navbar.title || siteConfig.title;
     .mobile-submenu .mobile-menu-item {
         padding-left: 52px;
     }
+    /* ---- 卡片模式：根即浮层卡片，限高内部滚动 ---- */
+    #nav-menu-panel.nav-menu--card {
+        max-height: 80vh;
+        overflow-y: auto;
+        padding: 0.5rem;
+    }
 </style>
 
 <script>
@@ -330,7 +342,7 @@ const navTitle = siteConfig.navbar.title || siteConfig.title;
     // 不主动关的话切页后抽屉会一直开着。仅匹配 <a>，手风琴触发器是 <button>，触发展开时不关。
     document.addEventListener("click", (e) => {
         const t = e.target;
-        if (t instanceof Element && t.closest(".mobile-menu-drawer a[href]")) {
+        if (t instanceof Element && t.closest(".mobile-menu-drawer a[href], .nav-menu--card a[href]")) {
             document.getElementById("nav-menu-panel")?.classList.add("float-panel-closed");
         }
     });

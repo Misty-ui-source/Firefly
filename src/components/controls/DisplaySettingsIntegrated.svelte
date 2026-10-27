@@ -16,6 +16,7 @@ import {
 	getDefaultFullscreenLayout,
 	getDefaultGradientEnabled,
 	getDefaultHue,
+	getDefaultNavbarStyle,
 	getDefaultOverlayBlur,
 	getDefaultOverlayCardOpacity,
 	getDefaultOverlayOpacity,
@@ -36,6 +37,7 @@ import {
 	getStoredCardFollowThemeEnabled,
 	getStoredFireflyEnabled,
 	getStoredFullscreenLayout,
+	getStoredNavbarStyle,
 	getStoredGradientEnabled,
 	getStoredOverlayBlur,
 	getStoredOverlayCardOpacity,
@@ -64,6 +66,7 @@ import {
 	setOverlayOpacity,
 	setSakuraEnabled,
 	setSnowEnabled,
+	setNavbarStyle,
 	setNotesEnabled,
 	setRainEnabled,
 	setMeteorEnabled,
@@ -100,6 +103,14 @@ type TabKey = "appearance" | "wallpaper" | "effects";
 
 let hue = $state(getHue());
 const defaultHue = getDefaultHue();
+let navbarStyle = $state(getStoredNavbarStyle());
+const defaultNavbarStyle = getDefaultNavbarStyle();
+const navbarStyleOptions = [
+	{ value: "classic", labelKey: I18nKey.navbarStyleClassic },
+	{ value: "float", labelKey: I18nKey.navbarStyleFloat },
+	{ value: "capsule", labelKey: I18nKey.navbarStyleCapsule },
+	{ value: "segment", labelKey: I18nKey.navbarStyleSegment },
+] as const;
 let wallpaperMode: WALLPAPER_MODE = $state(backgroundWallpaper.mode);
 const defaultWallpaperMode = backgroundWallpaper.mode;
 let fullscreenLayout: FullscreenWallpaperLayout = $state(
@@ -172,6 +183,7 @@ let effectiveDefaultLayout = $derived(
 	isMobileWidth ? mobileDefaultLayout : defaultLayout,
 );
 const showThemeColor = displaySettingsConfig.themeColorSwitchable;
+const showNavbarStyle = displaySettingsConfig.navbarStyleSwitchable;
 const isWavesSwitchable = displaySettingsConfig.wavesSwitchable;
 const isGradientSwitchable = displaySettingsConfig.gradientSwitchable;
 // 检查是否启用横幅标题配置（功能开关，非用户切换开关）
@@ -401,6 +413,10 @@ let hasVisibleOverlaySlider = $derived(
 function resetHue() {
 	hue = getDefaultHue();
 	requestAnimationFrame(refreshAllRangeProgress);
+}
+
+function resetNavbarStyle() {
+	navbarStyle = defaultNavbarStyle;
 }
 
 function resetWallpaperMode() {
@@ -791,6 +807,10 @@ $effect(() => {
 });
 
 $effect(() => {
+	setNavbarStyle(navbarStyle);
+});
+
+$effect(() => {
 	if (wallpaperMode === WALLPAPER_OVERLAY) {
 		if (isOverlayOpacitySwitchable) {
 			setOverlayOpacity(overlayOpacity);
@@ -862,6 +882,36 @@ $effect(() => {
 			<div class="hue-slider-shell w-full h-6 px-1 bg-[oklch(0.80_0.10_0)] dark:bg-[oklch(0.70_0.10_0)] rounded-md select-none">
 				<input aria-label={i18n(I18nKey.themeColor)} type="range" min="0" max="360" bind:value={hue}
 					   class="slider" id="colorSlider" step="5" style="width: 100%">
+			</div>
+		</div>
+		{/if}
+
+		<!-- Navbar Style Section -->
+		{#if showNavbarStyle}
+		<div class="">
+			<div class="section-title">
+				{i18n(I18nKey.navbarStyle)}
+				<button aria-label="Reset to Default" class="btn-regular rounded-md active:scale-90"
+						class:opacity-0={navbarStyle === defaultNavbarStyle} class:pointer-events-none={navbarStyle === defaultNavbarStyle}
+						disabled={navbarStyle === defaultNavbarStyle} aria-hidden={navbarStyle === defaultNavbarStyle ? "true" : undefined} onclick={resetNavbarStyle}>
+					<div class="text-(--btn-content)">
+						<Icon icon="fa7-solid:arrow-rotate-left" class="text-[0.75rem]"></Icon>
+					</div>
+				</button>
+			</div>
+			<div class="flex flex-wrap gap-2">
+				{#each navbarStyleOptions as opt}
+				<button
+					aria-label={i18n(opt.labelKey)}
+					class="flex-1 min-w-[45%] btn-regular rounded-md py-2 px-3 flex items-center justify-center gap-2 active:scale-95 transition-all relative overflow-hidden"
+					class:opacity-60={navbarStyle !== opt.value}
+					class:bg-(--btn-regular-bg-hover)={navbarStyle === opt.value}
+					onclick={() => { navbarStyle = opt.value; }}
+					title={i18n(opt.labelKey)}
+				>
+					<span class="text-xs font-medium">{i18n(opt.labelKey)}</span>
+				</button>
+				{/each}
 			</div>
 		</div>
 		{/if}

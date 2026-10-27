@@ -118,6 +118,13 @@ export const zh_TW: Translation = {
 	[Key.noData]: "暫無資料",
 
 	[Key.themeColor]: "主題色相",
+	[Key.navbarStyle]: "導覽列樣式",
+	[Key.navbarStyleClassic]: "通欄",
+	[Key.navbarStyleFloat]: "懸浮卡片",
+	[Key.navbarStyleCapsule]: "懸浮膠囊",
+	[Key.navbarStyleSegment]: "三段膠囊",
+	[Key.displaySettings]: "顯示設定",
+	[Key.lightDarkMode]: "亮暗模式",
 
 	[Key.lightMode]: "亮色",
 	[Key.darkMode]: "暗色",

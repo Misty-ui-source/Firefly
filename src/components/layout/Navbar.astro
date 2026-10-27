@@ -157,9 +157,10 @@ const logoVariants = await Promise.all(
     </script>
     <div class:list={[
         className,
-        "overflow-visible! h-18 px-4"
+        "navbar-bar overflow-visible! h-18 px-4"
     ]}>
-        <div class="mx-auto h-full w-full max-w-(--page-width) grid grid-cols-[auto_minmax(0,1fr)_auto] items-center">
+        <div class="navbar-segments mx-auto h-full w-full max-w-(--page-width) grid grid-cols-[auto_minmax(0,1fr)_auto] items-center">
+          <div class="navbar-seg navbar-seg-left flex items-center">
             <a href={url('/')} class="btn-plain scale-animation rounded-lg h-13 px-3 md:px-5 font-bold active:scale-95">
                 <div class:list={[
                     "flex flex-row items-center text-md",
@@ -186,11 +187,12 @@ const logoVariants = await Promise.all(
                                     ) : (
                                         <Icon name="material-symbols:home-pin-outline" class="navbar-logo text-[1.75rem] mb-1 mr-2" />
                                     )}
-                    {navbarTitle}
+                    <span class="navbar-title-text">{navbarTitle}</span>
                 </div>
             </a>
+          </div>
             <div class:list={[
-                "hidden lg:flex items-center space-x-1 col-start-2",
+                "navbar-seg navbar-seg-center hidden lg:flex items-center space-x-1 col-start-2",
                 isNavbarMenuCentered
                     ? "justify-center"
                     : "justify-start pl-2"
@@ -199,7 +201,8 @@ const logoVariants = await Promise.all(
                     return <DropdownMenu link={l} />;
                 })}
             </div>
-            <div class="flex col-start-3 justify-self-end">
+            <div class="navbar-seg navbar-seg-right flex items-center col-start-3 justify-self-end">
+              <div class="navbar-right-controls flex items-center">
                 <!--<SearchPanel client:load>-->
                 <Search
                     client:load
@@ -228,9 +231,39 @@ const logoVariants = await Promise.all(
                 )}
                 {/* @ts-ignore */}
                 <LightDarkSwitch client:load></LightDarkSwitch>
-                <button aria-label="Menu" aria-controls="nav-menu-panel" aria-expanded="false" name="Nav Menu" class="btn-plain scale-animation rounded-lg w-11 h-11 active:scale-90 lg:hidden!" id="nav-menu-switch">
+              </div>
+                <button aria-label="Menu" aria-controls="nav-menu-panel" aria-expanded="false" name="Nav Menu" class="btn-plain scale-animation rounded-lg w-11 h-11 active:scale-90" id="nav-menu-switch">
                     <Icon name="material-symbols:menu-rounded" class="text-[1.25rem]"></Icon>
                 </button>
+                {/* 三段胶囊收拢态（PC）快捷面板：点行保持收拢、原位弹出对应子卡；其余样式/移动端不启用（CSS 控制显隐） */}
+                <div id="navbar-quick-panel" class="float-panel float-panel-closed absolute top-full right-0 mt-2 w-max min-w-52 p-1.5 z-50" data-floating-panel data-floating-panel-trigger="nav-menu-switch" inert aria-hidden="true">
+                    <button type="button" class="navbar-quick-row" data-quick-action="search">
+                        <Icon name="material-symbols:search" class="text-[1.25rem]"></Icon>
+                        <span>{i18n(I18nKey.search)}</span>
+                    </button>
+                    {musicPlayerConfig.showInNavbar && (
+                        <button type="button" class="navbar-quick-row" data-quick-action="music">
+                            <Icon name="material-symbols:music-note-rounded" class="text-[1.25rem]"></Icon>
+                            <span>{i18n(I18nKey.music)}</span>
+                        </button>
+                    )}
+                    {backgroundWallpaper.playerEnable && backgroundWallpaper.mode !== "none" && (
+                        <button type="button" class="navbar-quick-row" data-quick-action="video">
+                            <Icon name="material-symbols:play-arrow-rounded" class="text-[1.5rem]"></Icon>
+                            <span>{i18n(I18nKey.videoPlay)}</span>
+                        </button>
+                    )}
+                    {hasDisplaySettings && (
+                        <button type="button" class="navbar-quick-row" data-quick-action="display">
+                            <Icon name="material-symbols:palette-outline" class="text-[1.25rem]"></Icon>
+                            <span>{i18n(I18nKey.displaySettings)}</span>
+                        </button>
+                    )}
+                    <button type="button" class="navbar-quick-row" data-quick-action="theme">
+                        <Icon name="material-symbols:dark-mode-outline-rounded" class="text-[1.25rem]"></Icon>
+                        <span>{i18n(I18nKey.lightDarkMode)}</span>
+                    </button>
+                </div>
             </div>
         </div>
         {musicPlayerConfig.showInNavbar && (
@@ -258,8 +291,17 @@ function loadButtonScript() {
     if (menuBtn) {
         menuBtn.onclick = function () {
             let menuPanel = document.getElementById("nav-menu-panel");
-            if (menuPanel) {
+            let quickPanel = document.getElementById("navbar-quick-panel");
+            const isSegment =
+                document.documentElement.getAttribute("data-navbar-style") ===
+                "segment";
+            const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+            if (isSegment && isDesktop && quickPanel) {
+                quickPanel.classList.toggle("float-panel-closed");
+                if (menuPanel) menuPanel.classList.add("float-panel-closed");
+            } else if (menuPanel) {
                 menuPanel.classList.toggle("float-panel-closed");
+                if (quickPanel) quickPanel.classList.add("float-panel-closed");
             }
         };
     }
@@ -328,7 +370,62 @@ function loadButtonScript() {
         };
     }
 
+    // 三段收拢态快捷面板：点行 → 关快捷卡（video 行除外）+ 程序化点原控件，保持收拢、子卡原位弹出。
+    // 搜索行特殊：PC 搜索入口是内嵌输入框，聚焦即打开搜索面板（移动端输入框在面板内，点 search-switch）。
+    document.addEventListener("click", function (event) {
+        if (!(event.target instanceof Element)) return;
+        const row = event.target.closest(
+            "#navbar-quick-panel [data-quick-action]",
+        );
+        if (!row) return;
+        event.stopImmediatePropagation();
+        const action = row.getAttribute("data-quick-action");
+        const triggerByAction: Record<string, string> = {
+            music: "music-player-switch",
+            video: "bg-player-toggle",
+            display: "display-settings-switch",
+            theme: "scheme-switch",
+        };
+        if (action !== "video") {
+            document
+                .getElementById("navbar-quick-panel")
+                ?.classList.add("float-panel-closed");
+        }
+        if (action === "search") {
+            // 本主题桌面搜索面板只在输入关键词后才肯开（setPanelVisibility 的空关键词守卫），
+            // 内嵌输入框又被收拢裁掉看不见——改走移动端开关：面板内有 #search-bar-inside 输入框，
+            // 收拢态由 navbar.css 放行显示，点开后焦点直接落进去打字。
+            document.getElementById("search-switch")?.click();
+            setTimeout(() => {
+                document
+                    .querySelector<HTMLElement>("#search-bar-inside input")
+                    ?.focus();
+            }, 0);
+        } else if (action && triggerByAction[action]) {
+            document.getElementById(triggerByAction[action])?.click();
+        }
+    });
+
     document.addEventListener("click", function(event) {
+        // 快捷面板的外部关闭：五个控件触发按钮的程序化点击不算「点外面」（video 行点完快捷卡要留着）
+        const quickPanel = document.getElementById("navbar-quick-panel");
+        if (quickPanel && !quickPanel.classList.contains("float-panel-closed")) {
+            const ignoreIds = [
+                "navbar-quick-panel",
+                "nav-menu-switch",
+                "search-switch",
+                "search-input-desktop",
+                "music-player-switch",
+                "bg-player-toggle",
+                "display-settings-switch",
+                "scheme-switch",
+            ];
+            const inIgnore = ignoreIds.some((id) => {
+                const el = document.getElementById(id);
+                return el && event.target instanceof Node && el.contains(event.target);
+            });
+            if (!inIgnore) quickPanel.classList.add("float-panel-closed");
+        }
         // nav-menu-panel 不再走点击外部关闭：面板现在覆盖全屏（inset-0），任意点击都在面板内，
         // 该监听永不触发；关闭由抽屉自己的遮罩点击/Document 委托负责。
         const panels = ["display-setting", "music-nav-panel", "theme-mode-panel"];

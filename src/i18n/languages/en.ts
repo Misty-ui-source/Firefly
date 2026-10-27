@@ -121,6 +121,13 @@ export const en: Translation = {
 	[Key.noData]: "No data yet",
 
 	[Key.themeColor]: "Theme Color",
+	[Key.navbarStyle]: "Navbar Style",
+	[Key.navbarStyleClassic]: "Classic",
+	[Key.navbarStyleFloat]: "Floating Card",
+	[Key.navbarStyleCapsule]: "Capsule",
+	[Key.navbarStyleSegment]: "Segmented",
+	[Key.displaySettings]: "Display Settings",
+	[Key.lightDarkMode]: "Light/Dark Mode",
 
 	[Key.lightMode]: "Light",
 	[Key.darkMode]: "Dark",

@@ -35,8 +35,12 @@ export function initLayout(): void {
 		"display-setting",
 		"display-settings-switch",
 	]);
-	// nav-menu-panel 现为全屏抽屉（inset-0），点击外部永不触发且由遮罩点击关闭，
-	// 不再注册 click-outside（见 NavMenuPanel.astro 的 document 委托）。
+	// nav-menu-panel：抽屉模式（inset-0）点击恒在面板内、此监听永不触发（关闭走遮罩/委托）；
+	// 卡片模式（mobileMenuStyle=card）靠它点外部关闭。两种模式都注册，无副作用。
+	setClickOutsideToClose("nav-menu-panel", [
+		"nav-menu-panel",
+		"nav-menu-switch",
+	]);
 	setClickOutsideToClose("search-panel", [
 		"search-panel",
 		"search-bar",

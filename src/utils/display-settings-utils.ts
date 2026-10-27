@@ -21,6 +21,7 @@ function parseBooleanEnv(raw: unknown): boolean | undefined {
 const DISABLED_SETTINGS: DisplaySettingsConfig = {
 	enable: false,
 	themeColorSwitchable: false,
+	navbarStyleSwitchable: false,
 	layoutSwitchable: false,
 	cardBorderSwitchable: false,
 	cardFollowThemeSwitchable: false,

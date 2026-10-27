@@ -325,3 +325,244 @@ html[data-has-wallpaper] #navbar[data-transparent-mode="semi"].navbar-sticky-sha
 :root.dark[data-has-wallpaper] #navbar[data-transparent-mode="semi"].navbar-sticky-shadow>div {
     box-shadow: inset 0 1px 0 var(--navbar-glass-highlight), 0 1px 0 var(--navbar-glass-hairline) !important;
 }
+
+/* ============================================
+ * 导航栏样式（siteConfig.navbar.navbarStyle，访客可在显示设置覆盖，html[data-navbar-style]）
+ * classic 通栏（默认，无本节规则）/ float 悬浮卡片 / capsule 悬浮胶囊 / segment 三段胶囊
+ * ============================================ */
+
+/* ---------- float 悬浮卡片 & capsule 悬浮胶囊：整条离框浮起 ---------- */
+html[data-navbar-style="float"] #navbar > div,
+html[data-navbar-style="capsule"] #navbar > div {
+    height: 4rem;
+    margin-top: 0.25rem;
+    margin-inline: 0.75rem;
+}
+html[data-navbar-style="float"] #navbar,
+html[data-navbar-style="float"] #navbar > div {
+    border-radius: 1rem;
+}
+html[data-navbar-style="capsule"] #navbar,
+html[data-navbar-style="capsule"] #navbar > div {
+    border-radius: 9999px;
+}
+/* 玻璃态规则以 !important 写死了旧圆角，这里用更高特异性收回 */
+html[data-navbar-style="float"][data-has-wallpaper] #navbar[data-transparent-mode] > div {
+    border-radius: 1rem !important;
+}
+html[data-navbar-style="capsule"][data-has-wallpaper] #navbar[data-transparent-mode] > div {
+    border-radius: 9999px !important;
+}
+@media (max-width: 767px) {
+    html[data-navbar-style="float"] #navbar > div,
+    html[data-navbar-style="capsule"] #navbar > div {
+        margin-inline: 0.5rem;
+    }
+}
+
+/* ---------- 汉堡按钮显隐（接管原 lg:hidden! 的职责，避免 Tailwind important 层序反转） ---------- */
+@media (min-width: 1024px) {
+    html:not([data-navbar-style="segment"]) #nav-menu-switch {
+        display: none;
+    }
+}
+/* 三段模式：汉堡改走 width 连续过渡，非收拢态收成 0 宽（避免 display 单帧切换的反向弹出） */
+html[data-navbar-style="segment"] #nav-menu-switch {
+    overflow: hidden;
+    transition:
+        width 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.25s ease,
+        visibility 0.36s;
+}
+@media (min-width: 1024px) {
+    html[data-navbar-style="segment"] #navbar:not(.navbar-collapsed) #nav-menu-switch {
+        width: 0;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+}
+
+/* ---------- segment 三段胶囊 ---------- */
+/* 整条 bar 退成透明载体，表面下放到三段 */
+html[data-navbar-style="segment"] #navbar > div {
+    background: transparent;
+    border-style: none;
+    box-shadow: none;
+    border-radius: 0;
+    height: 4rem;
+    margin-top: 0.25rem;
+    margin-inline: 0.75rem;
+    --navbar-surface-blur: 0px;
+}
+html[data-navbar-style="segment"] #navbar > div::before {
+    display: none;
+}
+html[data-navbar-style="segment"][data-has-wallpaper] #navbar[data-transparent-mode] > div,
+:root.dark[data-navbar-style="segment"][data-has-wallpaper] #navbar[data-transparent-mode] > div {
+    background: transparent !important;
+    box-shadow: none !important;
+    --navbar-surface-blur: 0px !important;
+}
+html[data-navbar-style="segment"] #navbar {
+    border-radius: 0;
+}
+html[data-navbar-style="segment"] #navbar.navbar-sticky-shadow {
+    box-shadow: none;
+}
+@media (max-width: 767px) {
+    html[data-navbar-style="segment"] #navbar > div {
+        margin-inline: 0.5rem;
+    }
+}
+
+/* 三段布局：左站名 / 中菜单 / 右控件，左右段按内容定宽 */
+html[data-navbar-style="segment"] .navbar-segments {
+    grid-template-columns: 1fr auto 1fr;
+    max-width: none;
+}
+html[data-navbar-style="segment"] .navbar-seg-left {
+    /* 左轨 1fr 的自动下限按内容 min-content 算，会把站名挤掉尾巴——给左段一个够放下 logo+站名的地板 */
+    min-width: 11.5rem;
+    justify-self: start;
+}
+html[data-navbar-style="segment"] .navbar-seg-center {
+    justify-self: center;
+}
+html[data-navbar-style="segment"] .navbar-seg-right {
+    justify-self: end;
+    position: relative;
+}
+
+/* 段表面：与 bar 同款（底色 + 毛玻璃层 + 边框接入点） */
+html[data-navbar-style="segment"] .navbar-seg {
+    position: relative;
+    height: 100%;
+    padding-inline: 0.5rem;
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    background-color: var(--card-bg);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transition:
+        padding 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+        background-color 0.3s ease,
+        box-shadow 0.3s ease;
+}
+:root.dark[data-navbar-style="segment"] .navbar-seg {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+html[data-navbar-style="segment"] .navbar-seg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    backdrop-filter: blur(var(--navbar-seg-blur, 0px));
+}
+html.enable-card-border[data-navbar-style="segment"] .navbar-seg {
+    border-color: var(--line-divider);
+}
+
+/* 段玻璃态：banner semi / semifull(已滚动) —— 与 bar 玻璃规则同表达式 */
+@media (min-width: 1024px) {
+    html[data-navbar-style="segment"][data-has-wallpaper] #navbar[data-transparent-mode="semi"] .navbar-seg,
+    html[data-navbar-style="segment"][data-has-wallpaper] #navbar[data-transparent-mode="semifull"].scrolled .navbar-seg {
+        --navbar-seg-blur: var(--navbar-glass-blur, 20px);
+        background: color-mix(in oklch, var(--card-bg) calc(var(--opacity-45) * 100%), transparent);
+    }
+    html[data-navbar-style="segment"][data-has-wallpaper] #navbar[data-transparent-mode="semifull"]:not(.scrolled) .navbar-seg {
+        --navbar-seg-blur: 0px;
+        background: transparent;
+        border-color: transparent;
+        box-shadow: none;
+    }
+}
+@media (max-width: 1023px) {
+    html[data-navbar-style="segment"][data-has-wallpaper] #navbar[data-transparent-mode="semi"][data-is-home="true"] .navbar-seg,
+    html[data-navbar-style="segment"][data-has-wallpaper] #navbar[data-transparent-mode="semifull"][data-is-home="true"].scrolled .navbar-seg {
+        --navbar-seg-blur: var(--navbar-glass-blur, 20px);
+        background: color-mix(in oklch, var(--card-bg) calc(var(--opacity-45) * 100%), transparent);
+    }
+    html[data-navbar-style="segment"][data-has-wallpaper] #navbar[data-transparent-mode="semifull"][data-is-home="true"]:not(.scrolled) .navbar-seg {
+        --navbar-seg-blur: 0px;
+        background: transparent;
+        border-color: transparent;
+        box-shadow: none;
+    }
+}
+
+/* 站名帘式收起（收拢动画的地基） */
+html[data-navbar-style="segment"] .navbar-title-text {
+    display: inline-block;
+    overflow: hidden;
+    white-space: nowrap;
+    vertical-align: bottom;
+    max-width: 16rem;
+    transition:
+        max-width 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.2s ease;
+}
+
+/* 控件组帘式收起：max-width 裁掉流内按钮；绝对定位的子卡包含块在 bar 上，不受裁切 */
+html[data-navbar-style="segment"] .navbar-right-controls {
+    overflow: hidden;
+    max-width: 36rem;
+    transition:
+        max-width 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.25s ease;
+}
+
+/* ---------- 收拢态（下滑 >80px，scroll-utils 挂 .navbar-collapsed） ---------- */
+html[data-navbar-style="segment"] #navbar.navbar-collapsed .navbar-title-text {
+    max-width: 0;
+    opacity: 0;
+}
+html[data-navbar-style="segment"] #navbar.navbar-collapsed .navbar-seg-left .navbar-logo {
+    margin-right: 0;
+}
+html[data-navbar-style="segment"] #navbar.navbar-collapsed .navbar-seg-left > a {
+    padding-left: calc(0.625rem - 1px);
+    padding-right: calc(0.625rem - 1px);
+}
+html[data-navbar-style="segment"] #navbar.navbar-collapsed .navbar-seg-right {
+    padding-left: calc(0.625rem - 1px);
+    padding-right: calc(0.625rem - 1px);
+}
+html[data-navbar-style="segment"] #navbar.navbar-collapsed .navbar-right-controls {
+    max-width: 0;
+}
+/* 淡出守卫：搜索/亮暗子卡开着时控件组不许淡出（opacity 作用于整棵子树，子卡会跟着隐身） */
+html[data-navbar-style="segment"] #navbar.navbar-collapsed:not(:has(:is(#search-panel, #theme-mode-panel):not(.float-panel-closed))) .navbar-right-controls {
+    opacity: 0;
+}
+
+/* ---------- 收拢态快捷面板 ---------- */
+html:not([data-navbar-style="segment"]) #navbar-quick-panel {
+    display: none !important;
+}
+html[data-navbar-style="segment"] #navbar:not(.navbar-collapsed) #navbar-quick-panel {
+    display: none;
+}
+.navbar-quick-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+}
+.navbar-quick-row:hover {
+    background: var(--btn-plain-bg-hover);
+}
+
+/* 收拢态从快捷面板唤起搜索时，面板内给移动端用的输入框顶上（全端常驻的桌面输入框被裁切看不见） */
+html[data-navbar-style="segment"] #navbar.navbar-collapsed #search-bar-inside {
+    display: flex;
+}

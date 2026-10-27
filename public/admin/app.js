@@ -2177,6 +2177,7 @@ routes.edit = async (arg) => {
       <button class="btn btn-small" data-md="table" type="button" title="表格">🗒 表格</button>
       <button class="btn btn-small" data-md="hr" type="button" title="分割线">➖ 分割线</button>
       <button class="btn btn-small" id="btn-img" type="button">🖼 插入图片</button>
+      <button class="btn btn-small" id="btn-emoji" type="button" title="插入表情（Unicode 字符，Markdown 原生支持）">😊 表情</button>
       <input type="file" id="f-img" accept="image/*" multiple class="hidden">
       <button class="btn btn-small" id="btn-import" type="button" title="也可以直接把文件拖到页面上">📥 导入文件</button>
       <input type="file" id="f-import" accept=".md,.markdown,.txt,.png,.jpg,.jpeg,.gif,.webp,.avif" multiple class="hidden">
@@ -2325,6 +2326,74 @@ routes.edit = async (arg) => {
       else if (k === 'hr') insertAtCursor('\n---\n');
     };
   });
+  /* ---------- 😊 表情面板：全量 Unicode 表情点选插入（Markdown 原生支持，无需短码） ---------- */
+  const EMOJI_CATS = [
+    ['笑脸', '😀 😃 😄 😁 😆 😅 🤣 😂 🙂 🙃 😶‍🌫️ 😉 😊 😇 🥰 😍 🤩 😘 😗 ☺️ 😚 😙 🥲 😋 😛 😜 🤪 😝 🤑 🤗 🤭 🫢 🫣 🤫 🤔 🫡 🤐 🤨 😐 😑 😶 🫥 😏 😒 🙄 😬 😮‍💨 🤥 🫠 😌 😔 😪 🤤 😴 😷 🤒 🤕 🤢 🤮 🤧 🥵 🥶 🥴 😵 😵‍💫 🤯 🤠 🥳 🥸 😎 🤓 🧐 😕 🫤 😟 🙁 ☹️ 😮 😯 😲 😳 🥹 🥺 🥹 😦 😧 😨 😰 😥 😢 😭 😱 😖 😣 😞 😓 😩 😫 🥱 😤 😡 😠 🤬 🥵 😈 👿 💀 ☠️ 💩 🤡 👹 👺 👻 👽 👾 🤖 😺 😸 😹 😻 😼 😽 🙀 😿 😾'],
+    ['手势', '👋 🤚 🖐️ ✋ 🖖 🫱 🫲 🫳 🫴 🫷 🫸 👌 🤌 🤏 ✌️ 🤞 🫰 🤟 🤘 🤙 👈 👉 👆 🖕 👇 ☝️ 🫵 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 🫶 👐 🤲 🤝 🙏 ✍️ 💅 🤳 💪 🦾 🦵 🦶 👂 🦻 👃 🧠 🫀 🫁 🦷 🦴 👀 👁️ 👅 👄 🫦 💋 🧑‍💻 👨‍💻 👩‍💻 🧑‍🎓 🧑‍🎨 🧑‍🚀 🧑‍🎄 🎅 🤶 🦸 🦹 🧙 🧚 🧛 🧜 🧝 🧞 🧟 💃 🕺 👯 🧖 🧗 🤺 🏇 ⛷️ 🏂 🪂 🏋️ 🤸 🤾 🧘 🏄 🏊 🚣 🚵 🚴 🤽 🤹'],
+    ['情感', '❤️ 🩷 🧡 💛 💚 💙 🩵 💜 🤎 🖤 🩶 🤍 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 ♥️ ❤️‍🔥 ❤️‍🩹 💌 💯 💢 💥 💫 💦 💨 💣 💬 🗨️ 🗯️ 💭 💤 😍 🥰 😻 🤗 💑 💏 👩‍❤️‍👨 👨‍❤️‍👨 👩‍❤️‍👩 👩‍❤️‍💋‍👨 💐 🌹 🥀 🌷 🌺'],
+    ['动物', '🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐻‍❄️ 🐨 🐯 🦁 🐮 🐷 🐽 🐸 🐵 🙈 🙉 🙊 🐒 🐔 🐧 🐦 🐤 🐣 🐥 🦆 🦅 🦉 🦇 🐺 🐗 🐴 🦄 🫎 🐝 🪱 🦋 🐌 🐞 🐜 🪰 🪲 🪳 🕷️ 🕸️ 🦂 🐢 🐍 🦎 🦖 🦕 🐙 🦑 🦐 🦞 🦀 🪼 🐡 🐠 🐟 🐬 🐳 🐋 🦈 🪸 🐊 🐅 🐆 🦓 🫏 🦍 🦧 🐘 🦣 🦛 🦏 🐪 🐫 🦒 🦘 🦬 🐃 🐂 🐄 🐎 🐖 🐏 🐑 🦙 🐐 🦌 🐕 🐩 🦮 🐕‍🦺 🐈 🐈‍⬛ 🪶 🐓 🦃 🦤 🦚 🦜 🦢 🦩 🕊️ 🐇 🦝 🦨 🦡 🦦 🦫 🦥 🐁 🐀 🐿️ 🦔'],
+    ['美食', '🍏 🍎 🍐 🍊 🍋 🍋‍🟩 🍌 🍉 🍇 🍓 🫐 🍈 🍒 🍑 🥭 🍍 🥥 🥝 🍅 🍆 🥑 🥦 🥬 🥒 🌶️ 🫑 🌽 🥕 🫒 🧄 🧅 🥔 🍠 🫚 🥐 🥯 🍞 🥖 🥨 🧀 🥚 🍳 🧈 🥞 🧇 🥓 🥩 🍗 🍖 🦴 🌭 🍔 🍟 🍕 🫓 🥪 🥙 🧆 🌮 🌯 🫔 🥗 🥘 🫕 🥫 🍝 🍜 🍲 🍛 🍣 🍱 🥟 🦪 🍤 🍙 🍚 🍘 🍥 🥠 🥮 🍢 🍡 🍧 🍨 🍦 🥧 🧁 🍰 🎂 🍮 🍭 🍬 🍫 🍿 🍩 🍪 🌰 🥜 🫘 🍯 ☕ 🍵 🧃 🥤 🧋 🍶 🍺 🍻 🥂 🍷 🥃 🍸 🍹 🧉 🍾 🧊 🥄 🍴 🍽️ 🥣 🥡 🧂'],
+    ['活动', '⚽ 🏀 🏈 ⚾ 🥎 🎾 🏐 🏉 🎱 🪀 🏓 🏸 🏒 🏑 🥍 🏏 🪃 🥅 ⛳ 🪁 🏹 🎣 🤿 🥊 🥋 🎽 🛹 🛼 🛷 ⛸️ 🥌 🎿 ⛷️ 🏂 🏋️ 🏆 🥇 🥈 🥉 🏅 🎖️ 🏵️ 🎗️ 🎫 🎟️ 🎪 🤹 🎭 🩰 🎨 🎬 🎤 🎧 🎼 🎹 🥁 🪘 🎷 🎺 🪗 🎸 🪕 🎻 📱 💻 🎮 🕹️ 🎲 🎯 🎳 🎰 🎲 🧩 🎃 🎄 🎆 🎇 🧨 ✨ 🎈 🎉 🎊 🎋 🎍 🎎 🎏 🎐 🎑 🧧 🎀 🎁 🎗️ 👑 💍 🎓 🎒'],
+    ['出行', '🚗 🚕 🚙 🚌 🚎 🏎️ 🚓 🚑 🚒 🚐 🛻 🚚 🚛 🚜 🛵 🏍️ 🛺 🚨 🚔 🚍 🚘 🚖 🚡 🚠 🚟 🚃 🚋 🚞 🚝 🚄 🚅 🚈 🚂 🚆 🚇 🚊 🚉 ✈️ 🛫 🛬 🪂 💺 🚁 🚀 🛸 🛰️ 🧳 ⌛ ⏰ 🗺️ 🧭 🏖️ 🏝️ 🏜️ 🌋 ⛰️ 🏔️ 🏕️ 🏠 🏡 🏢 🏬 🏥 🏦 🏨 🏪 🏫 🏭 ⛽ 🚧 🚦 🚥 🛑 ⛲ 🌁 🌉 🌌 🛣️ 🛤️ 🌅 🌄 🌇 🌆 🌃'],
+    ['物品', '⌚ 📱 📲 💻 ⌨️ 🖥️ 🖨️ 🖱️ 💽 💾 💿 📀 📼 📷 📸 📹 🎥 📽️ 🎞️ 📞 ☎️ 📠 📺 📻 🎙️ 🎚️ 🎛️ 🧭 ⏱️ ⏰ ⏳ 📡 🔋 🪫 🔌 💡 🔦 🕯️ 🧯 🛢️ 💸 💵 💴 💶 💷 💰 💳 💎 ⚖️ 🧰 🔧 🔨 ⚒️ 🛠️ ⛏️ 🔩 ⚙️ 💣 🔪 🗡️ ⚔️ 🛡️ 🚬 ⚰️ ⚱️ 🏺 🔮 📿 🧿 🪬 💈 ⚗️ 🔭 🔬 💊 💉 🩸 🧬 🦠 🧫 🧪 🌡️ 🧴 🧼 🧽 🧹 🧺 🧻 🚪 🪑 🚽 🚿 🛁 🪥 🪒 🧷 🧵 🪡 👓 🕶️ 🥽 🥼 🦺 👔 👕 👖 🧣 🧤 🧥 🧦 👗 👘 👙 👚 👛 👜 👝 🛍️ 🎒 👞 👟 🥾 🥿 👠 👡 🩰 👢 👑 💄 💍 💎 🪭 📚 📖 🔖 📝 ✏️ ✂️ 📌 📍 📎 🖇️ 🔒 🔓 🔑 🗝️ ✉️ 📩 📨 📦'],
+    ['自然', '☀️ 🌧️ ⛈️ 🌩️ 🌦️ 🌨️ ❄️ ☃️ ⛄ 🌊 🔥 💧 🌱 🌿 ☘️ 🍀 🎍 🎋 🍃 🍂 🍁 🍄 🐚 🌾 💐 🌷 🌹 🥀 🌺 🌸 🌼 🌻 🌞 🌝 🌚 🌕 🌖 🌗 🌘 🌑 🌒 🌓 🌔 🌙 🌎 🌍 🌏 💫 ⭐ 🌟 ✨ ⚡ ☄️ 🌪️ 🌈 ⛅ 🌤️ 🌥️ 🌡️ 🌀 🌫️ 🌬️ 🫧 ❄️ ☂️ ☔ 🌂'],
+    ['符号', '♻️ ⚕️ ♾️ ✝️ ☪️ 🕉️ ☸️ ✡️ 🔯 🕎 ☦️ ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ 🆔 ⚛️ 🉑 ☢️ ☣️ 📴 📳 🈶 🈚 🈸 🈺 🈷️ ✴️ 🆚 💮 🉐 ㊙️ ㊗️ 🈴 🈵 🈹 🈲 🅰️ 🅱️ 🆎 🆑 🅾️ 🆘 ❌ ⭕ 🛑 ⛔ 📛 🚫 💢 ♨️ 🚷 🚯 🚳 🚱 🔞 📵 🚭 ❗ ❕ ❓ ❔ ‼️ ⁉️ 🔅 🔆 〽️ ⚠️ 🚸 🔱 ⚜️ 🔰 ✅ 🈯 💹 ❇️ ✳️ ❎ 🌐 💠 Ⓜ️ 🔵 🔴 ⚫ ⚪ 🟠 🟡 🟢 🔺 🔻 💠 🔶 🔷 🔸 🔹 ⬛ ⬜ ◼️ ◻️ ▪️ ▫️ 🇨🇳 🇺🇸 🇬🇧 🇯🇵 🇰🇷 🇫🇷 🇩🇪 🇮🇹 🇪🇸 🇷🇺 🇮🇳 🇧🇷 🇨🇦 🇦🇺 🇭🇰 🇹🇼 🇸🇬 🏳️ 🏴 🏁 🚩'],
+  ];
+  const EMOJI_FAVS = '😀 😂 😊 😍 🥹 👍 🙏 🔥 ✨ 🎉 💪 👀 😭 ❤️ 💯 🚀 🐱 🌸 🍜 ☕ 📌 ✅ 🎂 🤔 😅 🙌 👋 🥰 😴 🌙 ⭐ 🍺 🎵 📷 💡 🚗 🏠 💼 📚 ✈️';
+  const emojiPanel = document.createElement('div');
+  emojiPanel.className = 'emoji-panel hidden';
+  emojiPanel.innerHTML = '<div class="emoji-tabs"></div><div class="emoji-grid"></div>';
+  view.appendChild(emojiPanel);
+  const emojiTabs = emojiPanel.querySelector('.emoji-tabs');
+  const emojiGrid = emojiPanel.querySelector('.emoji-grid');
+  const emojiRecent = () => { try { return JSON.parse(localStorage.getItem('console-emoji-recent') || '[]'); } catch (e) { return []; } };
+  const renderEmojiGrid = (list) => {
+    emojiGrid.innerHTML = '';
+    for (const em of list.split(' ').filter(Boolean)) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'emoji-cell'; b.textContent = em;
+      b.onclick = () => {
+        insertAtCursor(em);
+        try {
+          const rec = [em, ...emojiRecent().filter((x) => x !== em)].slice(0, 28);
+          localStorage.setItem('console-emoji-recent', JSON.stringify(rec));
+        } catch (e) {}
+      };
+      emojiGrid.appendChild(b);
+    }
+  };
+  const emojiTabList = [['常用', null], ...EMOJI_CATS];
+  emojiTabList.forEach(([name], i) => {
+    const t = document.createElement('button');
+    t.type = 'button'; t.className = 'emoji-tab' + (i === 0 ? ' on' : ''); t.textContent = name;
+    t.onclick = () => {
+      emojiTabs.querySelectorAll('.emoji-tab').forEach((x) => x.classList.remove('on'));
+      t.classList.add('on');
+      if (i === 0) { const rec = emojiRecent(); renderEmojiGrid(rec.length ? rec.join(' ') : EMOJI_FAVS); }
+      else renderEmojiGrid(EMOJI_CATS[i - 1][1]);
+      emojiGrid.scrollTop = 0;
+    };
+    emojiTabs.appendChild(t);
+  });
+  renderEmojiGrid(emojiRecent().length ? emojiRecent().join(' ') : EMOJI_FAVS);
+  const btnEmoji = $('#btn-emoji');
+  const placeEmojiPanel = () => {
+    const r = btnEmoji.getBoundingClientRect();
+    const w = Math.min(436, window.innerWidth - 16);
+    emojiPanel.style.width = w + 'px';
+    emojiPanel.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
+    const estH = 340;
+    emojiPanel.style.top = (r.bottom + estH + 12 > window.innerHeight ? Math.max(8, r.top - estH - 6) : r.bottom + 6) + 'px';
+  };
+  btnEmoji.onclick = () => {
+    if (emojiPanel.classList.contains('hidden')) { placeEmojiPanel(); emojiPanel.classList.remove('hidden'); }
+    else emojiPanel.classList.add('hidden');
+  };
+  document.addEventListener('mousedown', (ev) => {
+    if (!emojiPanel.isConnected) return;
+    if (!emojiPanel.classList.contains('hidden') && !emojiPanel.contains(ev.target) && ev.target !== btnEmoji && !btnEmoji.contains(ev.target)) emojiPanel.classList.add('hidden');
+  });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && emojiPanel.isConnected) emojiPanel.classList.add('hidden'); });
   /* ---------- 正文右键菜单：工具栏全部 Markdown 动作搬到光标处，写长文不用滚回顶部 ---------- */
   const ctxMenu = document.createElement('div');
   ctxMenu.className = 'ctx-menu hidden';
@@ -2346,6 +2415,7 @@ routes.edit = async (arg) => {
     <button type="button" data-c="hr">分割线</button>
     <button type="button" data-c="video">🎬 视频</button>
     <button type="button" data-c="img">🖼 图片</button>
+    <button type="button" data-c="emoji">😊 表情</button>
     <button type="button" data-c="import">📥 导入文件</button>`;
   view.appendChild(ctxMenu);
   /* 代码块辅栏：悬停/点「代码块」时在主菜单旁展开，选语言 */
@@ -2436,6 +2506,7 @@ routes.edit = async (arg) => {
     else if (c === 'hr') insertAtCursor('\n---\n');
     else if (c === 'video') $('#btn-video').click();
     else if (c === 'img') $('#btn-img').click();
+    else if (c === 'emoji') $('#btn-emoji').click();
     else if (c === 'import') $('#btn-import').click();
     else if (c.startsWith('cb:')) insertCodeBlock(c.slice(3));
   };
@@ -5655,8 +5726,12 @@ routes.theme = async () => {
     const follow = getIn(t, card, /followTheme\s*:\s*(true|false)/);
     const layout = getIn(t, pl, /defaultMode\s*:\s*"(\w+)"/);
     const layoutM = getIn(t, pl, /mobileDefaultMode\s*:\s*"(\w+)"/);
+    const nav = blockOf(t, /^\tnavbar\s*:/m);
+    const navStyle = getIn(t, nav, /navbarStyle\s*:\s*"(\w+)"/);
+    const anaM = t.match(/analyticsStyle\s*:\s*"([\w-]+)"/);
+    const mobileMenu = getIn(t, nav, /mobileMenuStyle\s*:\s*"(\w+)"/);
     if (hue === null || border === null || follow === null || layout === null) return null;
-    return { hue: Number(hue), cardBorder: border === 'true', cardFollow: follow === 'true', layout, layoutMobile: layoutM || layout };
+    return { hue: Number(hue), cardBorder: border === 'true', cardFollow: follow === 'true', layout, layoutMobile: layoutM || layout, navbarStyle: navStyle || 'classic', mobileMenuStyle: mobileMenu || 'drawer', analyticsStyle: anaM ? anaM[1] : 'classic' };
   }
   function parseBgw(t) {
     const mm = t.match(/^\tmode\s*:\s*"(\w+)"/m);
@@ -5722,6 +5797,14 @@ routes.theme = async () => {
     if (out === null) return null;
     pl = blockOf(out, /postListLayout\s*:/);
     out = setIn(out, pl, /mobileDefaultMode\s*:\s*"\w+"/, `mobileDefaultMode: "${s.layoutMobile}"`);
+    if (out === null) return null;
+    let nav = blockOf(out, /^\tnavbar\s*:/m);
+    out = setIn(out, nav, /navbarStyle\s*:\s*"\w+"/, `navbarStyle: "${s.navbarStyle}"`);
+    if (out === null) return null;
+    nav = blockOf(out, /^\tnavbar\s*:/m);
+    out = setIn(out, nav, /mobileMenuStyle\s*:\s*"\w+"/, `mobileMenuStyle: "${s.mobileMenuStyle}"`);
+    if (out === null) return null;
+    out = out.replace(/analyticsStyle\s*:\s*"[\w-]+"/, `analyticsStyle: "${s.analyticsStyle}"`);
     return out;
   }
   function applyBgw(t, s) {
@@ -5835,6 +5918,11 @@ routes.theme = async () => {
       <div class="field"><label>文章布局（桌面默认）</label><div class="pills">${seg('layout', 'list', '☰ 列表')}${seg('layout', 'grid', '⊞ 网格')}</div></div>
       <div class="field"><label>文章布局（移动端默认）</label><div class="pills">${seg('layoutMobile', 'list', '☰ 列表')}${seg('layoutMobile', 'grid', '⊞ 网格')}</div></div>
       <div class="field"><label>卡片样式</label><div class="pills">${pill('cardBorder', '卡片边框和阴影')}${pill('cardFollow', '卡片跟随主题色')}</div></div>
+      <div class="field"><label>导航栏样式（全站默认）</label><div class="pills">${seg('navbarStyle', 'classic', '▬ 通栏')}${seg('navbarStyle', 'float', '▭ 悬浮卡片')}${seg('navbarStyle', 'capsule', '💊 悬浮胶囊')}${seg('navbarStyle', 'segment', '💊💊💊 三段胶囊')}</div>
+      <p class="hint">三段胶囊：导航栏拆成左站名 / 中菜单 / 右控件三颗胶囊，向下滚动时左右两段收成圆形，右段汉堡打开快捷面板。访客可以在博客调色板（显示设置）里自己切换样式，那是访客本地的选择，不改这里的全站默认。</p></div>
+      <div class="field"><label>移动端菜单样式</label><div class="pills">${seg('mobileMenuStyle', 'drawer', '全屏抽屉')}${seg('mobileMenuStyle', 'card', '浮层卡片')}</div></div>
+      <div class="field"><label>站点统计页样式</label><div class="pills">${seg('analyticsStyle', 'classic', '现行版（手搓）')}${seg('analyticsStyle', 'azuma', 'azuma 同款（带插画）')}${seg('analyticsStyle', 'azuma-clean', 'azuma 清爽版（无插画）')}</div>
+      <p class="hint">azuma 同款 = 圈子里流传的 Aemeath 统计页（访问脉冲 7/30/90 天切换、推送节奏带贪吃蛇、中国地图、最近评论），数据走本站自己的 Umami / Waline。带插画版的 7 张图已全部压成 webp（原版 5.5MB → 约 0.7MB）。切换前可以先开 /analytics-azuma/ 与 /analytics-azuma-clean/ 两张预览页对比，三套随时互切。</p></div>
     </div>
     <div class="card">
       <h2>🖼 默认壁纸模式 <span class="sub">访客也能在博客的调色板面板里自己切换</span></h2>

@@ -29,6 +29,9 @@ export const displaySettingsConfig: DisplaySettingsConfig =
 		// 主题色选择器开关
 		themeColorSwitchable: true,
 
+		// 导航栏样式切换开关
+		navbarStyleSwitchable: true,
+
 		// 文章列表布局切换开关
 		layoutSwitchable: true,
 

@@ -120,6 +120,13 @@ export const ja: Translation = {
 	[Key.noData]: "データなし",
 
 	[Key.themeColor]: "テーマカラー",
+	[Key.navbarStyle]: "ナビバーのスタイル",
+	[Key.navbarStyleClassic]: "クラシック",
+	[Key.navbarStyleFloat]: "フローティングカード",
+	[Key.navbarStyleCapsule]: "カプセル",
+	[Key.navbarStyleSegment]: "セグメント",
+	[Key.displaySettings]: "表示設定",
+	[Key.lightDarkMode]: "ライト/ダーク",
 
 	[Key.lightMode]: "ライト",
 	[Key.darkMode]: "ダーク",

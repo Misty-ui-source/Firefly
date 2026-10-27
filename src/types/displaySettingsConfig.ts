@@ -20,6 +20,9 @@ export type DisplaySettingsConfig = {
 	// 主题色选择器开关
 	themeColorSwitchable: boolean;
 
+	// 导航栏样式切换开关（显示设置里可选通栏/悬浮卡片/悬浮胶囊/三段胶囊）
+	navbarStyleSwitchable: boolean;
+
 	// 文章列表布局切换开关
 	layoutSwitchable: boolean;
 

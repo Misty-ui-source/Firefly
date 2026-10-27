@@ -120,6 +120,13 @@ export const ko: Translation = {
 	[Key.noData]: "데이터 없음",
 
 	[Key.themeColor]: "테마 색상",
+	[Key.navbarStyle]: "내비게이션 바 스타일",
+	[Key.navbarStyleClassic]: "클래식",
+	[Key.navbarStyleFloat]: "플로팅 카드",
+	[Key.navbarStyleCapsule]: "캡슐",
+	[Key.navbarStyleSegment]: "세그먼트",
+	[Key.displaySettings]: "디스플레이 설정",
+	[Key.lightDarkMode]: "라이트/다크 모드",
 
 	[Key.lightMode]: "라이트",
 	[Key.darkMode]: "다크",
