@@ -143,7 +143,7 @@ export const siteConfig: SiteConfig = {
 	},
 
 	// 站点统计页样式："classic" 现行手搓版 / "azuma" Aemeath 同款版（预览直达 /analytics-azuma/）
-	analyticsStyle: "classic",
+	analyticsStyle: "azuma",
 
 	// 站点开始日期，用于统计运行天数
 	siteStartDate: "2026-10-15",
