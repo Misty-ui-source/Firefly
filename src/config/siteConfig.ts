@@ -137,7 +137,7 @@ export const siteConfig: SiteConfig = {
 		// "dynamic"：固定在顶部，下滑隐藏、轻微上滑显示
 		navbarMode: "dynamic",
 		// 导航栏样式："classic" 通栏 / "float" 悬浮卡片 / "capsule" 悬浮胶囊 / "segment" 三段胶囊（下滑时左右段收成圆）
-		navbarStyle: "classic",
+		navbarStyle: "capsule",
 		// 移动端菜单样式："drawer" 全屏抽屉 / "card" 浮层卡片
 		mobileMenuStyle: "drawer",
 	},
