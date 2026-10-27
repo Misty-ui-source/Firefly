@@ -5580,7 +5580,7 @@ function reportRenderBody(stats, range, word, demo, backfillCount) {
       </div>
       <div class="report-section">
         <h3>📈 ${word === '月' ? '每日' : '每月'}操作量</h3>
-        <div class="report-bars">${bars.map((b) => `<div class="report-bar-wrap"><span class="report-bar-val">${b.count || ''}</span><div class="report-bar" style="height:${Math.max(2, Math.round((b.count / maxBar) * 90))}px"></div><span class="report-bar-date">${esc(b.date.slice(5))}</span></div>`).join('')}</div>
+        <div class="report-bars">${bars.map((b) => `<div class="report-bar-wrap"><span class="report-bar-val">${b.count || ''}</span><div class="report-bar" style="height:${Math.max(2, Math.round((b.count / maxBar) * 90))}px"></div><span class="report-bar-date">${esc(word === '月' ? String(Number(b.date.slice(8, 10))) : b.date.slice(5))}</span></div>`).join('')}</div>
       </div>
       <div class="report-section">
         <h3>🌟 本周期亮点</h3>
