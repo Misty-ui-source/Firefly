@@ -12,6 +12,7 @@ export const site = {
   desc: "记录代码、折腾与生活",
   url: "https://lanerc.me",
   avatar: "https://lanerc.me/avatar.png",
+  screenshot: "https://lanerc.me/screenshot.png",
   email: "xz011@qq.com",
 };
 
@@ -49,7 +50,7 @@ export const notes = [
             <h3 class="text-lg font-bold">{site.name}</h3>
             <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">{site.desc}</p>
           </div>
-          <button type="button" onclick={`(function(b){var t=['站点名称：${site.name}','站点描述：${site.desc}','站点链接：${site.url}','头像链接：${site.avatar}','订阅链接：https://lanerc.me/rss.xml'].join('\\n');if(navigator.clipboard){navigator.clipboard.writeText(t);}var s=b.querySelector('span');var o=s.textContent;s.textContent='已复制';setTimeout(function(){s.textContent=o;},1500);})(this)`} class="ml-auto shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-black/5 px-3 py-1.5 text-xs font-medium text-neutral-500 transition-colors hover:bg-black/10 hover:text-(--primary) dark:bg-white/5 dark:text-neutral-400 dark:hover:bg-white/10 cursor-pointer">
+          <button type="button" onclick={`(function(b){var t=['站点名称：${site.name}','站点描述：${site.desc}','站点链接：${site.url}','头像链接：${site.avatar}','站点图片：${site.screenshot}','订阅链接：https://lanerc.me/rss.xml'].join('\\n');if(navigator.clipboard){navigator.clipboard.writeText(t);}var s=b.querySelector('span');var o=s.textContent;s.textContent='已复制';setTimeout(function(){s.textContent=o;},1500);})(this)`} class="ml-auto shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-black/5 px-3 py-1.5 text-xs font-medium text-neutral-500 transition-colors hover:bg-black/10 hover:text-(--primary) dark:bg-white/5 dark:text-neutral-400 dark:hover:bg-white/10 cursor-pointer">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
             <span>全部复制</span>
           </button>
@@ -62,7 +63,7 @@ export const notes = [
             { label: "站点描述", value: site.desc },
             { label: "站点链接", value: site.url },
             { label: "头像链接", value: site.avatar },
-            { label: "站点图片", value: "https://lanerc.me/screenshot.png" },
+            { label: "站点图片", value: site.screenshot },
           ].map((item) => (
             <div class="flex items-center justify-between gap-2 rounded-lg bg-black/5 dark:bg-white/5 px-3 py-2">
               <div class="min-w-0">

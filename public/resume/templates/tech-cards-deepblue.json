@@ -1,0 +1,23 @@
+{
+ "id": "tech-cards-deepblue",
+ "name": "科技卡片 · 深蓝",
+ "cat": "internet",
+ "layout": "cards",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#1450a0",
+  "acc2": "#0d3a75",
+  "soft": "#e7eefb"
+ },
+ "tags": [
+  "分节卡片",
+  "分区清晰"
+ ],
+ "desc": "分节卡片 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

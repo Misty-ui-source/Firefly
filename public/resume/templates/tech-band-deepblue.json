@@ -1,0 +1,23 @@
+{
+ "id": "tech-band-deepblue",
+ "name": "科技色带 · 深蓝",
+ "cat": "internet",
+ "layout": "band",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#1450a0",
+  "acc2": "#0d3a75",
+  "soft": "#e7eefb"
+ },
+ "tags": [
+  "色带头图",
+  "科技感"
+ ],
+ "desc": "色带头图 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

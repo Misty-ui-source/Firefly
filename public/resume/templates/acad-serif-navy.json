@@ -1,0 +1,23 @@
+{
+ "id": "acad-serif-navy",
+ "name": "衬线经典 · 藏青",
+ "cat": "academic",
+ "layout": "single",
+ "secstyle": "line",
+ "font": "serif",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#1f4e79",
+  "acc2": "#2f6da3",
+  "soft": "#e8eff6"
+ },
+ "tags": [
+  "单栏",
+  "衬线正文"
+ ],
+ "desc": "单栏 · 衬线 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

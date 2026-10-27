@@ -1,0 +1,25 @@
+{
+ "id": "cre-side-rose-light",
+ "name": "玫瑰浅侧栏",
+ "cat": "creative",
+ "layout": "sidebarL",
+ "secstyle": "dot",
+ "font": "round",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#c2517a",
+  "acc2": "#9c3a5f",
+  "soft": "#fbeef3",
+  "side": "#fbeef3",
+  "sideInk": "#23272c"
+ },
+ "tags": [
+  "左栏双栏",
+  "浅色侧栏"
+ ],
+ "desc": "左栏双栏 · 圆体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

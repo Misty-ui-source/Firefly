@@ -1,0 +1,23 @@
+{
+ "id": "campus-classic-teal",
+ "name": "校招经典 · 青绿",
+ "cat": "campus",
+ "layout": "single",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#0e7c6b",
+  "acc2": "#0a5c50",
+  "soft": "#e9f4f1"
+ },
+ "tags": [
+  "单栏",
+  "经典稳妥"
+ ],
+ "desc": "单栏 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

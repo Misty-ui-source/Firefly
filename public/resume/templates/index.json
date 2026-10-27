@@ -1,0 +1,1524 @@
+{
+ "packs": [
+  {
+   "id": "campus-classic-teal",
+   "name": "校招经典 · 青绿",
+   "cat": "campus",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "经典稳妥"
+   ],
+   "desc": "单栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-classic-teal.json"
+  },
+  {
+   "id": "campus-classic-navy",
+   "name": "校招经典 · 藏青",
+   "cat": "campus",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "经典稳妥"
+   ],
+   "desc": "单栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-classic-navy.json"
+  },
+  {
+   "id": "campus-timeline-teal",
+   "name": "时间轴 · 青绿",
+   "cat": "campus",
+   "layout": "timeline",
+   "tags": [
+    "时间轴",
+    "经历成线"
+   ],
+   "desc": "时间轴 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-timeline-teal.json"
+  },
+  {
+   "id": "campus-timeline-navy",
+   "name": "时间轴 · 藏青",
+   "cat": "campus",
+   "layout": "timeline",
+   "tags": [
+    "时间轴",
+    "经历成线"
+   ],
+   "desc": "时间轴 · 黑体 · 紧凑",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-timeline-navy.json"
+  },
+  {
+   "id": "campus-band-sky",
+   "name": "青春色带 · 天蓝",
+   "cat": "campus",
+   "layout": "band",
+   "tags": [
+    "色带头图",
+    "清新亮眼"
+   ],
+   "desc": "色带头图 · 圆体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-band-sky.json"
+  },
+  {
+   "id": "campus-band-teal",
+   "name": "青春色带 · 青绿",
+   "cat": "campus",
+   "layout": "band",
+   "tags": [
+    "色带头图",
+    "清新亮眼"
+   ],
+   "desc": "色带头图 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-band-teal.json"
+  },
+  {
+   "id": "campus-cards-teal",
+   "name": "卡片式 · 青绿",
+   "cat": "campus",
+   "layout": "cards",
+   "tags": [
+    "分节卡片",
+    "分区清晰"
+   ],
+   "desc": "分节卡片 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-cards-teal.json"
+  },
+  {
+   "id": "campus-cards-sky",
+   "name": "卡片式 · 天蓝",
+   "cat": "campus",
+   "layout": "cards",
+   "tags": [
+    "分节卡片",
+    "分区清晰"
+   ],
+   "desc": "分节卡片 · 黑体 · 宽松",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-cards-sky.json"
+  },
+  {
+   "id": "campus-lake-line",
+   "name": "湖蓝清新",
+   "cat": "campus",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "清新亮眼"
+   ],
+   "desc": "单栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-lake-line.json"
+  },
+  {
+   "id": "campus-rose-soft",
+   "name": "浅玫瑰",
+   "cat": "campus",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "温柔配色"
+   ],
+   "desc": "单栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-rose-soft.json"
+  },
+  {
+   "id": "campus-timeline-lake",
+   "name": "时间轴 · 湖蓝",
+   "cat": "campus",
+   "layout": "timeline",
+   "tags": [
+    "时间轴",
+    "经历成线"
+   ],
+   "desc": "时间轴 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-timeline-lake.json"
+  },
+  {
+   "id": "campus-graphite-compact",
+   "name": "石墨紧凑",
+   "cat": "campus",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "内容多时"
+   ],
+   "desc": "单栏 · 黑体 · 紧凑",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-graphite-compact.json"
+  },
+  {
+   "id": "campus-band-coral",
+   "name": "活力色带 · 珊瑚",
+   "cat": "campus",
+   "layout": "band",
+   "tags": [
+    "色带头图",
+    "活力醒目"
+   ],
+   "desc": "色带头图 · 圆体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-band-coral.json"
+  },
+  {
+   "id": "campus-cards-pine",
+   "name": "卡片式 · 松绿",
+   "cat": "campus",
+   "layout": "cards",
+   "tags": [
+    "分节卡片",
+    "分区清晰"
+   ],
+   "desc": "分节卡片 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-cards-pine.json"
+  },
+  {
+   "id": "campus-indigo-line",
+   "name": "靛蓝稳重",
+   "cat": "campus",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "经典稳妥"
+   ],
+   "desc": "单栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-indigo-line.json"
+  },
+  {
+   "id": "campus-timeline-graphite",
+   "name": "时间轴 · 石墨",
+   "cat": "campus",
+   "layout": "timeline",
+   "tags": [
+    "时间轴",
+    "经历成线"
+   ],
+   "desc": "时间轴 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-timeline-graphite.json"
+  },
+  {
+   "id": "campus-sky-loose",
+   "name": "天蓝宽松",
+   "cat": "campus",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "清新亮眼"
+   ],
+   "desc": "单栏 · 黑体 · 宽松",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-sky-loose.json"
+  },
+  {
+   "id": "campus-band-violet",
+   "name": "青春色带 · 紫罗兰",
+   "cat": "campus",
+   "layout": "band",
+   "tags": [
+    "色带头图",
+    "活力醒目"
+   ],
+   "desc": "色带头图 · 圆体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "campus-band-violet.json"
+  },
+  {
+   "id": "wps-campus-side",
+   "name": "WPS 常见款 · 校招侧栏",
+   "cat": "campus",
+   "layout": "sidebarL",
+   "tags": [
+    "左栏双栏",
+    "技能条"
+   ],
+   "desc": "左栏双栏 · 黑体 · 标准疏密",
+   "source": "版式参考：WPS 常见简历款 · 本站重制",
+   "license": "MIT",
+   "file": "wps-campus-side.json"
+  },
+  {
+   "id": "wps-intern-compact",
+   "name": "WPS 常见款 · 实习一页纸",
+   "cat": "campus",
+   "layout": "sidebarR",
+   "tags": [
+    "右栏双栏",
+    "技能条"
+   ],
+   "desc": "右栏双栏 · 黑体 · 紧凑",
+   "source": "版式参考：WPS 常见简历款 · 本站重制",
+   "license": "MIT",
+   "file": "wps-intern-compact.json"
+  },
+  {
+   "id": "tech-side-navy",
+   "name": "藏青侧栏",
+   "cat": "internet",
+   "layout": "sidebarL",
+   "tags": [
+    "左栏双栏",
+    "深色侧栏"
+   ],
+   "desc": "左栏双栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-side-navy.json"
+  },
+  {
+   "id": "tech-side-deepblue",
+   "name": "深海侧栏",
+   "cat": "internet",
+   "layout": "sidebarL",
+   "tags": [
+    "左栏双栏",
+    "深色侧栏"
+   ],
+   "desc": "左栏双栏 · 黑体 · 紧凑",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-side-deepblue.json"
+  },
+  {
+   "id": "tech-sider-graphite",
+   "name": "石墨右栏",
+   "cat": "internet",
+   "layout": "sidebarR",
+   "tags": [
+    "右栏双栏",
+    "深色侧栏"
+   ],
+   "desc": "右栏双栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-sider-graphite.json"
+  },
+  {
+   "id": "tech-side-teal-light",
+   "name": "青绿浅侧栏",
+   "cat": "internet",
+   "layout": "sidebarL",
+   "tags": [
+    "左栏双栏",
+    "浅色侧栏"
+   ],
+   "desc": "左栏双栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-side-teal-light.json"
+  },
+  {
+   "id": "tech-band-deepblue",
+   "name": "科技色带 · 深蓝",
+   "cat": "internet",
+   "layout": "band",
+   "tags": [
+    "色带头图",
+    "科技感"
+   ],
+   "desc": "色带头图 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-band-deepblue.json"
+  },
+  {
+   "id": "tech-band-graphite",
+   "name": "科技色带 · 石墨",
+   "cat": "internet",
+   "layout": "band",
+   "tags": [
+    "色带头图",
+    "科技感"
+   ],
+   "desc": "色带头图 · 黑体 · 紧凑",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-band-graphite.json"
+  },
+  {
+   "id": "tech-side-sky",
+   "name": "天蓝侧栏",
+   "cat": "internet",
+   "layout": "sidebarL",
+   "tags": [
+    "左栏双栏",
+    "深色侧栏"
+   ],
+   "desc": "左栏双栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-side-sky.json"
+  },
+  {
+   "id": "tech-sider-violet",
+   "name": "紫罗兰右栏",
+   "cat": "internet",
+   "layout": "sidebarR",
+   "tags": [
+    "右栏双栏",
+    "深色侧栏"
+   ],
+   "desc": "右栏双栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-sider-violet.json"
+  },
+  {
+   "id": "tech-side-lake-light",
+   "name": "湖蓝浅侧栏",
+   "cat": "internet",
+   "layout": "sidebarL",
+   "tags": [
+    "左栏双栏",
+    "浅色侧栏"
+   ],
+   "desc": "左栏双栏 · 黑体 · 宽松",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-side-lake-light.json"
+  },
+  {
+   "id": "tech-cards-deepblue",
+   "name": "科技卡片 · 深蓝",
+   "cat": "internet",
+   "layout": "cards",
+   "tags": [
+    "分节卡片",
+    "分区清晰"
+   ],
+   "desc": "分节卡片 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-cards-deepblue.json"
+  },
+  {
+   "id": "tech-timeline-sky",
+   "name": "时间轴 · 天蓝",
+   "cat": "internet",
+   "layout": "timeline",
+   "tags": [
+    "时间轴",
+    "经历成线"
+   ],
+   "desc": "时间轴 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-timeline-sky.json"
+  },
+  {
+   "id": "tech-side-indigo",
+   "name": "靛蓝侧栏",
+   "cat": "internet",
+   "layout": "sidebarL",
+   "tags": [
+    "左栏双栏",
+    "深色侧栏"
+   ],
+   "desc": "左栏双栏 · 黑体 · 紧凑",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-side-indigo.json"
+  },
+  {
+   "id": "tech-band-violet",
+   "name": "科技色带 · 紫罗兰",
+   "cat": "internet",
+   "layout": "band",
+   "tags": [
+    "色带头图",
+    "科技感"
+   ],
+   "desc": "色带头图 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-band-violet.json"
+  },
+  {
+   "id": "tech-single-deepblue",
+   "name": "深蓝单栏",
+   "cat": "internet",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "经典稳妥"
+   ],
+   "desc": "单栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-single-deepblue.json"
+  },
+  {
+   "id": "tech-sider-teal",
+   "name": "青绿右栏",
+   "cat": "internet",
+   "layout": "sidebarR",
+   "tags": [
+    "右栏双栏",
+    "深色侧栏"
+   ],
+   "desc": "右栏双栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-sider-teal.json"
+  },
+  {
+   "id": "wps-skillbar-side",
+   "name": "WPS 常见款 · 技能条双栏",
+   "cat": "internet",
+   "layout": "sidebarL",
+   "tags": [
+    "左栏双栏",
+    "技能条"
+   ],
+   "desc": "左栏双栏 · 黑体 · 标准疏密",
+   "source": "版式参考：WPS 常见简历款 · 本站重制",
+   "license": "MIT",
+   "file": "wps-skillbar-side.json"
+  },
+  {
+   "id": "tech-timeline-deepblue",
+   "name": "时间轴 · 深蓝",
+   "cat": "internet",
+   "layout": "timeline",
+   "tags": [
+    "时间轴",
+    "经历成线"
+   ],
+   "desc": "时间轴 · 黑体 · 紧凑",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-timeline-deepblue.json"
+  },
+  {
+   "id": "tech-band-teal",
+   "name": "科技色带 · 青绿",
+   "cat": "internet",
+   "layout": "band",
+   "tags": [
+    "色带头图",
+    "科技感"
+   ],
+   "desc": "色带头图 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "tech-band-teal.json"
+  },
+  {
+   "id": "min-graphite",
+   "name": "极简 · 石墨",
+   "cat": "minimal",
+   "layout": "minimal",
+   "tags": [
+    "极简版式",
+    "克制留白"
+   ],
+   "desc": "极简版式 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "min-graphite.json"
+  },
+  {
+   "id": "min-ink",
+   "name": "极简 · 墨黑",
+   "cat": "minimal",
+   "layout": "minimal",
+   "tags": [
+    "极简版式",
+    "克制留白"
+   ],
+   "desc": "极简版式 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "min-ink.json"
+  },
+  {
+   "id": "min-navy",
+   "name": "极简 · 藏青",
+   "cat": "minimal",
+   "layout": "minimal",
+   "tags": [
+    "极简版式",
+    "克制留白"
+   ],
+   "desc": "极简版式 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "min-navy.json"
+  },
+  {
+   "id": "min-teal-loose",
+   "name": "极简 · 青绿宽松",
+   "cat": "minimal",
+   "layout": "minimal",
+   "tags": [
+    "极简版式",
+    "克制留白"
+   ],
+   "desc": "极简版式 · 黑体 · 宽松",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "min-teal-loose.json"
+  },
+  {
+   "id": "min-serif-ink",
+   "name": "极简衬线",
+   "cat": "minimal",
+   "layout": "minimal",
+   "tags": [
+    "极简版式",
+    "留学生风"
+   ],
+   "desc": "极简版式 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "min-serif-ink.json"
+  },
+  {
+   "id": "min-lake-faint",
+   "name": "淡色单栏 · 湖蓝",
+   "cat": "minimal",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "淡彩"
+   ],
+   "desc": "单栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "min-lake-faint.json"
+  },
+  {
+   "id": "min-compact",
+   "name": "紧凑极简",
+   "cat": "minimal",
+   "layout": "minimal",
+   "tags": [
+    "极简版式",
+    "内容多时"
+   ],
+   "desc": "极简版式 · 黑体 · 紧凑",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "min-compact.json"
+  },
+  {
+   "id": "min-academic-lite",
+   "name": "学术极简",
+   "cat": "minimal",
+   "layout": "academic",
+   "tags": [
+    "学术版式",
+    "留学生风"
+   ],
+   "desc": "学术版式 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "min-academic-lite.json"
+  },
+  {
+   "id": "min-rose-faint",
+   "name": "淡玫瑰极简",
+   "cat": "minimal",
+   "layout": "minimal",
+   "tags": [
+    "极简版式",
+    "淡彩"
+   ],
+   "desc": "极简版式 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "min-rose-faint.json"
+  },
+  {
+   "id": "min-serif-nocolor",
+   "name": "无色衬线经典",
+   "cat": "minimal",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "黑白灰"
+   ],
+   "desc": "单栏 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "min-serif-nocolor.json"
+  },
+  {
+   "id": "min-sky-loose",
+   "name": "淡蓝宽松极简",
+   "cat": "minimal",
+   "layout": "minimal",
+   "tags": [
+    "极简版式",
+    "淡彩"
+   ],
+   "desc": "极简版式 · 黑体 · 宽松",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "min-sky-loose.json"
+  },
+  {
+   "id": "wps-min-bw",
+   "name": "WPS 常见款 · 极简黑白",
+   "cat": "minimal",
+   "layout": "minimal",
+   "tags": [
+    "极简版式",
+    "黑白灰"
+   ],
+   "desc": "极简版式 · 黑体 · 标准疏密",
+   "source": "版式参考：WPS 常见简历款 · 本站重制",
+   "license": "MIT",
+   "file": "wps-min-bw.json"
+  },
+  {
+   "id": "min-hairline-slate",
+   "name": "发丝线单栏",
+   "cat": "minimal",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "黑白灰"
+   ],
+   "desc": "单栏 · 黑体 · 紧凑",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "min-hairline-slate.json"
+  },
+  {
+   "id": "acad-plum",
+   "name": "学术 · 梅子红",
+   "cat": "academic",
+   "layout": "academic",
+   "tags": [
+    "学术版式",
+    "编号分节"
+   ],
+   "desc": "学术版式 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "acad-plum.json"
+  },
+  {
+   "id": "acad-ink",
+   "name": "学术 · 墨黑",
+   "cat": "academic",
+   "layout": "academic",
+   "tags": [
+    "学术版式",
+    "编号分节"
+   ],
+   "desc": "学术版式 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "acad-ink.json"
+  },
+  {
+   "id": "acad-navy",
+   "name": "学术 · 藏青",
+   "cat": "academic",
+   "layout": "academic",
+   "tags": [
+    "学术版式",
+    "居中标题"
+   ],
+   "desc": "学术版式 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "acad-navy.json"
+  },
+  {
+   "id": "acad-serif-navy",
+   "name": "衬线经典 · 藏青",
+   "cat": "academic",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "衬线正文"
+   ],
+   "desc": "单栏 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "acad-serif-navy.json"
+  },
+  {
+   "id": "acad-wine-loose",
+   "name": "学术 · 酒红宽松",
+   "cat": "academic",
+   "layout": "academic",
+   "tags": [
+    "学术版式",
+    "编号分节"
+   ],
+   "desc": "学术版式 · 衬线 · 宽松",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "acad-wine-loose.json"
+  },
+  {
+   "id": "acad-serif-plum",
+   "name": "衬线经典 · 梅子",
+   "cat": "academic",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "衬线正文"
+   ],
+   "desc": "单栏 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "acad-serif-plum.json"
+  },
+  {
+   "id": "acad-graphite-compact",
+   "name": "学术 · 石墨紧凑",
+   "cat": "academic",
+   "layout": "academic",
+   "tags": [
+    "学术版式",
+    "编号分节"
+   ],
+   "desc": "学术版式 · 衬线 · 紧凑",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "acad-graphite-compact.json"
+  },
+  {
+   "id": "acad-kai-ink",
+   "name": "楷体学术",
+   "cat": "academic",
+   "layout": "academic",
+   "tags": [
+    "学术版式",
+    "楷体标题"
+   ],
+   "desc": "学术版式 · 楷体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "acad-kai-ink.json"
+  },
+  {
+   "id": "acad-serif-timeline",
+   "name": "衬线时间轴",
+   "cat": "academic",
+   "layout": "timeline",
+   "tags": [
+    "时间轴",
+    "衬线正文"
+   ],
+   "desc": "时间轴 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "acad-serif-timeline.json"
+  },
+  {
+   "id": "acad-brown",
+   "name": "学术 · 棕褐",
+   "cat": "academic",
+   "layout": "academic",
+   "tags": [
+    "学术版式",
+    "编号分节"
+   ],
+   "desc": "学术版式 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "acad-brown.json"
+  },
+  {
+   "id": "wps-acad-pro",
+   "name": "WPS 常见款 · 研究生款",
+   "cat": "academic",
+   "layout": "academic",
+   "tags": [
+    "学术版式",
+    "编号分节"
+   ],
+   "desc": "学术版式 · 衬线 · 标准疏密",
+   "source": "版式参考：WPS 常见简历款 · 本站重制",
+   "license": "MIT",
+   "file": "wps-acad-pro.json"
+  },
+  {
+   "id": "acad-deepblue",
+   "name": "学术 · 深蓝",
+   "cat": "academic",
+   "layout": "academic",
+   "tags": [
+    "学术版式",
+    "居中标题"
+   ],
+   "desc": "学术版式 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "acad-deepblue.json"
+  },
+  {
+   "id": "cre-coral",
+   "name": "创意 · 珊瑚",
+   "cat": "creative",
+   "layout": "creative",
+   "tags": [
+    "创意版式",
+    "大字标题"
+   ],
+   "desc": "创意版式 · 圆体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "cre-coral.json"
+  },
+  {
+   "id": "cre-violet",
+   "name": "创意 · 紫罗兰",
+   "cat": "creative",
+   "layout": "creative",
+   "tags": [
+    "创意版式",
+    "大字标题"
+   ],
+   "desc": "创意版式 · 圆体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "cre-violet.json"
+  },
+  {
+   "id": "cre-band-rose",
+   "name": "色带 · 玫瑰",
+   "cat": "creative",
+   "layout": "band",
+   "tags": [
+    "色带头图",
+    "彩色头图"
+   ],
+   "desc": "色带头图 · 圆体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "cre-band-rose.json"
+  },
+  {
+   "id": "cre-side-rose-light",
+   "name": "玫瑰浅侧栏",
+   "cat": "creative",
+   "layout": "sidebarL",
+   "tags": [
+    "左栏双栏",
+    "浅色侧栏"
+   ],
+   "desc": "左栏双栏 · 圆体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "cre-side-rose-light.json"
+  },
+  {
+   "id": "cre-amber-loose",
+   "name": "创意 · 琥珀宽松",
+   "cat": "creative",
+   "layout": "creative",
+   "tags": [
+    "创意版式",
+    "大字标题"
+   ],
+   "desc": "创意版式 · 圆体 · 宽松",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "cre-amber-loose.json"
+  },
+  {
+   "id": "cre-band-violet",
+   "name": "色带 · 紫罗兰",
+   "cat": "creative",
+   "layout": "band",
+   "tags": [
+    "色带头图",
+    "彩色头图"
+   ],
+   "desc": "色带头图 · 圆体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "cre-band-violet.json"
+  },
+  {
+   "id": "cre-teal",
+   "name": "创意 · 青绿",
+   "cat": "creative",
+   "layout": "creative",
+   "tags": [
+    "创意版式",
+    "大字标题"
+   ],
+   "desc": "创意版式 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "cre-teal.json"
+  },
+  {
+   "id": "cre-cards-rose",
+   "name": "彩色卡片 · 玫瑰",
+   "cat": "creative",
+   "layout": "cards",
+   "tags": [
+    "分节卡片",
+    "分区清晰"
+   ],
+   "desc": "分节卡片 · 圆体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "cre-cards-rose.json"
+  },
+  {
+   "id": "cre-side-violet-light",
+   "name": "紫罗兰浅侧栏",
+   "cat": "creative",
+   "layout": "sidebarL",
+   "tags": [
+    "左栏双栏",
+    "浅色侧栏"
+   ],
+   "desc": "左栏双栏 · 圆体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "cre-side-violet-light.json"
+  },
+  {
+   "id": "cre-graphite",
+   "name": "创意 · 石墨",
+   "cat": "creative",
+   "layout": "creative",
+   "tags": [
+    "创意版式",
+    "大字标题"
+   ],
+   "desc": "创意版式 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "cre-graphite.json"
+  },
+  {
+   "id": "cre-band-amber",
+   "name": "色带 · 琥珀",
+   "cat": "creative",
+   "layout": "band",
+   "tags": [
+    "色带头图",
+    "彩色头图"
+   ],
+   "desc": "色带头图 · 圆体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "cre-band-amber.json"
+  },
+  {
+   "id": "wps-geo-creative",
+   "name": "WPS 常见款 · 几何色块",
+   "cat": "creative",
+   "layout": "creative",
+   "tags": [
+    "创意版式",
+    "大字标题"
+   ],
+   "desc": "创意版式 · 圆体 · 标准疏密",
+   "source": "版式参考：WPS 常见简历款 · 本站重制",
+   "license": "MIT",
+   "file": "wps-geo-creative.json"
+  },
+  {
+   "id": "cre-rose",
+   "name": "创意 · 玫瑰",
+   "cat": "creative",
+   "layout": "creative",
+   "tags": [
+    "创意版式",
+    "大字标题"
+   ],
+   "desc": "创意版式 · 圆体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "cre-rose.json"
+  },
+  {
+   "id": "cre-side-coral",
+   "name": "珊瑚侧栏",
+   "cat": "creative",
+   "layout": "sidebarL",
+   "tags": [
+    "左栏双栏",
+    "深色侧栏"
+   ],
+   "desc": "左栏双栏 · 圆体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "cre-side-coral.json"
+  },
+  {
+   "id": "cre-timeline-coral",
+   "name": "时间轴 · 珊瑚",
+   "cat": "creative",
+   "layout": "timeline",
+   "tags": [
+    "时间轴",
+    "经历成线"
+   ],
+   "desc": "时间轴 · 圆体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "cre-timeline-coral.json"
+  },
+  {
+   "id": "formal-ink",
+   "name": "严肃 · 墨黑",
+   "cat": "formal",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "体制内风"
+   ],
+   "desc": "单栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "formal-ink.json"
+  },
+  {
+   "id": "formal-navy-serif",
+   "name": "严肃 · 藏青衬线",
+   "cat": "formal",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "体制内风"
+   ],
+   "desc": "单栏 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "formal-navy-serif.json"
+  },
+  {
+   "id": "formal-wine-serif",
+   "name": "严肃 · 酒红衬线",
+   "cat": "formal",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "体制内风"
+   ],
+   "desc": "单栏 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "formal-wine-serif.json"
+  },
+  {
+   "id": "formal-acad-ink",
+   "name": "体制学术 · 墨黑",
+   "cat": "formal",
+   "layout": "academic",
+   "tags": [
+    "学术版式",
+    "编号分节"
+   ],
+   "desc": "学术版式 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "formal-acad-ink.json"
+  },
+  {
+   "id": "formal-graphite-compact",
+   "name": "严肃 · 石墨紧凑",
+   "cat": "formal",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "内容多时"
+   ],
+   "desc": "单栏 · 黑体 · 紧凑",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "formal-graphite-compact.json"
+  },
+  {
+   "id": "formal-navy-loose",
+   "name": "衬线正式 · 藏青宽松",
+   "cat": "formal",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "衬线正文"
+   ],
+   "desc": "单栏 · 衬线 · 宽松",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "formal-navy-loose.json"
+  },
+  {
+   "id": "formal-deepblue",
+   "name": "严肃 · 深蓝",
+   "cat": "formal",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "体制内风"
+   ],
+   "desc": "单栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "formal-deepblue.json"
+  },
+  {
+   "id": "formal-acad-plum",
+   "name": "体制学术 · 梅子",
+   "cat": "formal",
+   "layout": "academic",
+   "tags": [
+    "学术版式",
+    "编号分节"
+   ],
+   "desc": "学术版式 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "formal-acad-plum.json"
+  },
+  {
+   "id": "wps-table-formal",
+   "name": "WPS 常见款 · 表格风",
+   "cat": "formal",
+   "layout": "table",
+   "tags": [
+    "表格版式",
+    "表格排版"
+   ],
+   "desc": "表格版式 · 黑体 · 标准疏密",
+   "source": "版式参考：WPS 常见简历款 · 本站重制",
+   "license": "MIT",
+   "file": "wps-table-formal.json"
+  },
+  {
+   "id": "formal-brown-serif",
+   "name": "严肃 · 棕褐衬线",
+   "cat": "formal",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "衬线正文"
+   ],
+   "desc": "单栏 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "formal-brown-serif.json"
+  },
+  {
+   "id": "formal-timeline-navy",
+   "name": "时间轴 · 正式藏青",
+   "cat": "formal",
+   "layout": "timeline",
+   "tags": [
+    "时间轴",
+    "经历成线"
+   ],
+   "desc": "时间轴 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "formal-timeline-navy.json"
+  },
+  {
+   "id": "formal-slate",
+   "name": "严肃 · 岩蓝",
+   "cat": "formal",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "体制内风"
+   ],
+   "desc": "单栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "formal-slate.json"
+  },
+  {
+   "id": "formal-ink-serif",
+   "name": "衬线正式 · 墨黑",
+   "cat": "formal",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "衬线正文"
+   ],
+   "desc": "单栏 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "formal-ink-serif.json"
+  },
+  {
+   "id": "formal-acad-navy",
+   "name": "体制学术 · 藏青",
+   "cat": "formal",
+   "layout": "academic",
+   "tags": [
+    "学术版式",
+    "居中标题"
+   ],
+   "desc": "学术版式 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "formal-acad-navy.json"
+  },
+  {
+   "id": "formal-ink-compact",
+   "name": "紧凑正式 · 墨黑",
+   "cat": "formal",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "内容多时"
+   ],
+   "desc": "单栏 · 黑体 · 紧凑",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "formal-ink-compact.json"
+  },
+  {
+   "id": "formal-side-navy-light",
+   "name": "正式浅侧栏 · 藏青",
+   "cat": "formal",
+   "layout": "sidebarL",
+   "tags": [
+    "左栏双栏",
+    "浅色侧栏"
+   ],
+   "desc": "左栏双栏 · 黑体 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "formal-side-navy-light.json"
+  },
+  {
+   "id": "wps-formal-serif",
+   "name": "WPS 常见款 · 严肃衬线",
+   "cat": "formal",
+   "layout": "single",
+   "tags": [
+    "单栏",
+    "体制内风"
+   ],
+   "desc": "单栏 · 衬线 · 标准疏密",
+   "source": "版式参考：WPS 常见简历款 · 本站重制",
+   "license": "MIT",
+   "file": "wps-formal-serif.json"
+  },
+  {
+   "id": "formal-serif-cards",
+   "name": "衬线卡片 · 正式",
+   "cat": "formal",
+   "layout": "cards",
+   "tags": [
+    "分节卡片",
+    "分区清晰"
+   ],
+   "desc": "分节卡片 · 衬线 · 标准疏密",
+   "source": "本站自制版式",
+   "license": "MIT",
+   "file": "formal-serif-cards.json"
+  },
+  {
+   "id": "en-harvard",
+   "name": "英文款 · Harvard 经典单栏",
+   "cat": "formal",
+   "layout": "single",
+   "tags": [
+    "英文款",
+    "无照片"
+   ],
+   "desc": "哈佛就业指导的经典逻辑：姓名居中、分节克制、无照片无花色，留学申请与外企投递通用",
+   "source": "本站自制版式（英文）",
+   "license": "MIT",
+   "file": "en-harvard.json",
+   "lang": "en"
+  },
+  {
+   "id": "en-wallstreet",
+   "name": "英文款 · Wall Street 紧凑款",
+   "cat": "formal",
+   "layout": "single",
+   "tags": [
+    "英文款",
+    "紧凑"
+   ],
+   "desc": "投行咨询风的紧凑单栏：信息密度高、一页装下三年经历",
+   "source": "本站自制版式（英文）",
+   "license": "MIT",
+   "file": "en-wallstreet.json",
+   "lang": "en"
+  },
+  {
+   "id": "en-ivy",
+   "name": "英文款 · Ivy 学术衬线",
+   "cat": "academic",
+   "layout": "academic",
+   "tags": [
+    "英文款",
+    "编号分节"
+   ],
+   "desc": "常春藤学术风：衬线字体 + 编号分节，适合研究生申请与科研岗位",
+   "source": "本站自制版式（英文）",
+   "license": "MIT",
+   "file": "en-ivy.json",
+   "lang": "en"
+  },
+  {
+   "id": "en-oxford",
+   "name": "英文款 · Oxford 学者款",
+   "cat": "academic",
+   "layout": "academic",
+   "tags": [
+    "英文款",
+    "学术"
+   ],
+   "desc": "牛津学者气质的深红衬线款，论文与荣誉条目排布考究",
+   "source": "本站自制版式（英文）",
+   "license": "MIT",
+   "file": "en-oxford.json",
+   "lang": "en"
+  },
+  {
+   "id": "en-silicon",
+   "name": "英文款 · Silicon Valley 科技款",
+   "cat": "internet",
+   "layout": "single",
+   "tags": [
+    "英文款",
+    "科技"
+   ],
+   "desc": "硅谷工程师简历的常见长相：无照片、技能前置、项目说话",
+   "source": "本站自制版式（英文）",
+   "license": "MIT",
+   "file": "en-silicon.json",
+   "lang": "en"
+  },
+  {
+   "id": "en-london",
+   "name": "英文款 · London 双栏",
+   "cat": "internet",
+   "layout": "sidebarR",
+   "tags": [
+    "英文款",
+    "双栏"
+   ],
+   "desc": "伦敦求职市场常见的右栏双栏：联系方式与技能独立成栏",
+   "source": "本站自制版式（英文）",
+   "license": "MIT",
+   "file": "en-london.json",
+   "lang": "en"
+  },
+  {
+   "id": "theme-flat",
+   "name": "Flat 经典双栏",
+   "cat": "internet",
+   "layout": "single",
+   "tags": [
+    "真转换",
+    "左右分栏"
+   ],
+   "desc": "JSON Resume 经典主题 Flat 的结构与样式移植：左侧栏标题 + 右侧内容，绿色点缀",
+   "source": "转换自 jsonresume-theme-flat（上游模板与 CSS）",
+   "license": "MIT",
+   "file": "theme-flat.json"
+  },
+  {
+   "id": "theme-kendall",
+   "name": "Kendall 照片双栏",
+   "cat": "internet",
+   "layout": "single",
+   "tags": [
+    "真转换",
+    "双栏"
+   ],
+   "desc": "JSON Resume 主题 Kendall 的结构与样式移植：居中照片头、左主栏右副栏的经典双栏",
+   "source": "转换自 jsonresume-theme-kendall（上游模板与 CSS）",
+   "license": "MIT",
+   "file": "theme-kendall.json"
+  },
+  {
+   "id": "en-minimal",
+   "name": "英文款 · Minimal EN",
+   "cat": "minimal",
+   "layout": "minimal",
+   "tags": [
+    "英文款",
+    "极简"
+   ],
+   "desc": "极简英文单栏：只剩文字本身，打印最干净",
+   "source": "本站自制版式（英文）",
+   "license": "MIT",
+   "file": "en-minimal.json",
+   "lang": "en"
+  },
+  {
+   "id": "theme-onepage",
+   "name": "OnePage 单页衬线",
+   "cat": "minimal",
+   "layout": "single",
+   "tags": [
+    "真转换",
+    "单栏"
+   ],
+   "desc": "JSON Resume 主题 OnePage 的结构与样式移植：衬线字体、虚线分节、左标题右内容的一页式排版",
+   "source": "转换自 jsonresume-theme-onepage（上游模板与 CSS）",
+   "license": "MIT",
+   "file": "theme-onepage.json"
+  },
+  {
+   "id": "theme-simple",
+   "name": "Simple 简约顶栏",
+   "cat": "minimal",
+   "layout": "single",
+   "tags": [
+    "真转换",
+    "单栏"
+   ],
+   "desc": "JSON Resume 主题 Simple 的结构与样式移植：顶部色带放照片与姓名，下方标签式信息排版",
+   "source": "转换自 jsonresume-theme-simple（上游模板与 CSS）",
+   "license": "MIT",
+   "file": "theme-simple.json"
+  },
+  {
+   "id": "theme-concise",
+   "name": "英文款 · Concise 简明（转换）",
+   "cat": "minimal",
+   "layout": "single",
+   "tags": [
+    "真转换",
+    "英文款"
+   ],
+   "desc": "JSON Resume 主题 Concise 的结构与样式移植（静态全显版）：横贯式分节标题、英文排版",
+   "source": "转换自 jsonresume-theme-concise（上游模板与 CSS）",
+   "license": "MIT",
+   "file": "theme-concise.json",
+   "lang": "en"
+  }
+ ]
+}

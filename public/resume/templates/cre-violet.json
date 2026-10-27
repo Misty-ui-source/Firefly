@@ -1,0 +1,23 @@
+{
+ "id": "cre-violet",
+ "name": "创意 · 紫罗兰",
+ "cat": "creative",
+ "layout": "creative",
+ "secstyle": "bar",
+ "font": "round",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#6c4bd8",
+  "acc2": "#4e32a8",
+  "soft": "#efeafd"
+ },
+ "tags": [
+  "创意版式",
+  "大字标题"
+ ],
+ "desc": "创意版式 · 圆体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

@@ -1,0 +1,24 @@
+{
+ "id": "en-london",
+ "name": "英文款 · London 双栏",
+ "cat": "internet",
+ "layout": "sidebarR",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#44546a",
+  "acc2": "#324052",
+  "soft": "#edf0f4"
+ },
+ "tags": [
+  "英文款",
+  "双栏"
+ ],
+ "desc": "伦敦求职市场常见的右栏双栏：联系方式与技能独立成栏",
+ "source": "本站自制版式（英文）",
+ "license": "MIT",
+ "css": "",
+ "lang": "en"
+}

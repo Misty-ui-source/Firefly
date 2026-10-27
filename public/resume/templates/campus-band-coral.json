@@ -1,0 +1,23 @@
+{
+ "id": "campus-band-coral",
+ "name": "活力色带 · 珊瑚",
+ "cat": "campus",
+ "layout": "band",
+ "secstyle": "dot",
+ "font": "round",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#e0653a",
+  "acc2": "#b84a26",
+  "soft": "#fdf0e9"
+ },
+ "tags": [
+  "色带头图",
+  "活力醒目"
+ ],
+ "desc": "色带头图 · 圆体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

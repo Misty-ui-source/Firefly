@@ -1,0 +1,25 @@
+{
+ "id": "tech-side-sky",
+ "name": "天蓝侧栏",
+ "cat": "internet",
+ "layout": "sidebarL",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#2b7de9",
+  "acc2": "#1a5cb8",
+  "soft": "#e9f2fd",
+  "side": "#2b7de9",
+  "sideInk": "#eef3f7"
+ },
+ "tags": [
+  "左栏双栏",
+  "深色侧栏"
+ ],
+ "desc": "左栏双栏 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

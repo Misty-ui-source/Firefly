@@ -1,0 +1,25 @@
+{
+ "id": "tech-side-navy",
+ "name": "藏青侧栏",
+ "cat": "internet",
+ "layout": "sidebarL",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#1f4e79",
+  "acc2": "#2f6da3",
+  "soft": "#e8eff6",
+  "side": "#1f4e79",
+  "sideInk": "#eef3f7"
+ },
+ "tags": [
+  "左栏双栏",
+  "深色侧栏"
+ ],
+ "desc": "左栏双栏 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

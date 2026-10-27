@@ -1,0 +1,26 @@
+{
+ "id": "wps-intern-compact",
+ "name": "WPS 常见款 · 实习一页纸",
+ "cat": "campus",
+ "layout": "sidebarR",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "compact",
+ "photo": "round",
+ "palette": {
+  "acc": "#1f4e79",
+  "acc2": "#2f6da3",
+  "soft": "#e8eff6",
+  "side": "#1f4e79",
+  "sideInk": "#eef3f7"
+ },
+ "tags": [
+  "右栏双栏",
+  "技能条"
+ ],
+ "desc": "右栏双栏 · 黑体 · 紧凑",
+ "source": "版式参考：WPS 常见简历款 · 本站重制",
+ "license": "MIT",
+ "css": "",
+ "skillBars": true
+}

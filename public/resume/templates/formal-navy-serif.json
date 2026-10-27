@@ -1,0 +1,23 @@
+{
+ "id": "formal-navy-serif",
+ "name": "严肃 · 藏青衬线",
+ "cat": "formal",
+ "layout": "single",
+ "secstyle": "bar",
+ "font": "serif",
+ "density": "normal",
+ "photo": "square",
+ "palette": {
+  "acc": "#1f4e79",
+  "acc2": "#2f6da3",
+  "soft": "#e8eff6"
+ },
+ "tags": [
+  "单栏",
+  "体制内风"
+ ],
+ "desc": "单栏 · 衬线 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

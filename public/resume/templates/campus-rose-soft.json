@@ -1,0 +1,23 @@
+{
+ "id": "campus-rose-soft",
+ "name": "浅玫瑰",
+ "cat": "campus",
+ "layout": "single",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#c2517a",
+  "acc2": "#9c3a5f",
+  "soft": "#fbeef3"
+ },
+ "tags": [
+  "单栏",
+  "温柔配色"
+ ],
+ "desc": "单栏 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

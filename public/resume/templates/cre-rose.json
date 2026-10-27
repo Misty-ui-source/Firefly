@@ -1,0 +1,23 @@
+{
+ "id": "cre-rose",
+ "name": "创意 · 玫瑰",
+ "cat": "creative",
+ "layout": "creative",
+ "secstyle": "dot",
+ "font": "round",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#c2517a",
+  "acc2": "#9c3a5f",
+  "soft": "#fbeef3"
+ },
+ "tags": [
+  "创意版式",
+  "大字标题"
+ ],
+ "desc": "创意版式 · 圆体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

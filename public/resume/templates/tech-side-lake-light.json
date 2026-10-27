@@ -1,0 +1,25 @@
+{
+ "id": "tech-side-lake-light",
+ "name": "湖蓝浅侧栏",
+ "cat": "internet",
+ "layout": "sidebarL",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "loose",
+ "photo": "round",
+ "palette": {
+  "acc": "#0e7f86",
+  "acc2": "#0a5f64",
+  "soft": "#e8f5f5",
+  "side": "#e8f5f5",
+  "sideInk": "#23272c"
+ },
+ "tags": [
+  "左栏双栏",
+  "浅色侧栏"
+ ],
+ "desc": "左栏双栏 · 黑体 · 宽松",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

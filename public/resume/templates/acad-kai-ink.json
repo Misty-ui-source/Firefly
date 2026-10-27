@@ -1,0 +1,23 @@
+{
+ "id": "acad-kai-ink",
+ "name": "楷体学术",
+ "cat": "academic",
+ "layout": "academic",
+ "secstyle": "line",
+ "font": "kai",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#22252a",
+  "acc2": "#22252a",
+  "soft": "#f1f1f1"
+ },
+ "tags": [
+  "学术版式",
+  "楷体标题"
+ ],
+ "desc": "学术版式 · 楷体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

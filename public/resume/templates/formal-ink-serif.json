@@ -1,0 +1,23 @@
+{
+ "id": "formal-ink-serif",
+ "name": "衬线正式 · 墨黑",
+ "cat": "formal",
+ "layout": "single",
+ "secstyle": "bar",
+ "font": "serif",
+ "density": "normal",
+ "photo": "square",
+ "palette": {
+  "acc": "#22252a",
+  "acc2": "#22252a",
+  "soft": "#f1f1f1"
+ },
+ "tags": [
+  "单栏",
+  "衬线正文"
+ ],
+ "desc": "单栏 · 衬线 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

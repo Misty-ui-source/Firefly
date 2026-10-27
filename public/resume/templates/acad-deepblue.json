@@ -1,0 +1,23 @@
+{
+ "id": "acad-deepblue",
+ "name": "学术 · 深蓝",
+ "cat": "academic",
+ "layout": "academic",
+ "secstyle": "bar",
+ "font": "serif",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#1450a0",
+  "acc2": "#0d3a75",
+  "soft": "#e7eefb"
+ },
+ "tags": [
+  "学术版式",
+  "居中标题"
+ ],
+ "desc": "学术版式 · 衬线 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

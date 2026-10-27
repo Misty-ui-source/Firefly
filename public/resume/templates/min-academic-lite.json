@@ -1,0 +1,23 @@
+{
+ "id": "min-academic-lite",
+ "name": "学术极简",
+ "cat": "minimal",
+ "layout": "academic",
+ "secstyle": "line",
+ "font": "serif",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#22252a",
+  "acc2": "#22252a",
+  "soft": "#f1f1f1"
+ },
+ "tags": [
+  "学术版式",
+  "留学生风"
+ ],
+ "desc": "学术版式 · 衬线 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

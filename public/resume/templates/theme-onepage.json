@@ -1,0 +1,24 @@
+{
+ "id": "theme-onepage",
+ "name": "OnePage 单页衬线",
+ "cat": "minimal",
+ "layout": "single",
+ "builder": "onepage",
+ "secstyle": "line",
+ "font": "serif",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#444444",
+  "acc2": "#444444",
+  "soft": "#f2f2f2"
+ },
+ "tags": [
+  "真转换",
+  "单栏"
+ ],
+ "desc": "JSON Resume 主题 OnePage 的结构与样式移植：衬线字体、虚线分节、左标题右内容的一页式排版",
+ "source": "转换自 jsonresume-theme-onepage（上游模板与 CSS）",
+ "license": "MIT",
+ "css": "\n.rsr-root[data-theme='onepage'] { padding: 0; font-size: 14px; }\n.rsr-root[data-theme='onepage'] #resume { max-width: none; margin: 0; padding: 52px 60px; border: none; box-shadow: none; }\n\n.rsr-root[data-theme='onepage'] {background: #EEEEEE;\n  font: 12px \"Times New Roman\", Times, sans-serif;\n  line-height: 1.4;\n  margin: 40px 0; }\n.rsr-root[data-theme='onepage'] em {color: #999; }\n.rsr-root[data-theme='onepage'] p {line-height: 1.4; }\n.rsr-root[data-theme='onepage'] ul {margin-bottom: 0; }\n.rsr-root[data-theme='onepage'] li {margin-bottom: 2px; }\n.rsr-root[data-theme='onepage'] a {text-decoration: none; }\n.rsr-root[data-theme='onepage'] #resume {margin: 0 auto;\n  max-width: 600px;\n  padding: 80px 100px;\n  background: #fff;\n  border: 1px solid #ccc;\n  box-shadow: 2px 2px 4px #aaa;\n  -webkit-box-shadow: 2px 2px 4px #aaa; }\n.rsr-root[data-theme='onepage'] .coursesList {width: 28%;\n  vertical-align: top;\n  display: inline-block; }\n.rsr-root[data-theme='onepage'] .largeFont {font-size: 20px; }\n.rsr-root[data-theme='onepage'] .smallFont {font-size: 12px; }\n.rsr-root[data-theme='onepage'] .sectionBlock {display: flex;\n  width: 100%; }\n.rsr-root[data-theme='onepage'] .sectionName {width: 18%;\n  vertical-align: top;\n  display: inline-block; }\n.rsr-root[data-theme='onepage'] .sectionContent {width: 80%;\n  vertical-align: top;\n  display: inline-block; }\n.rsr-root[data-theme='onepage'] .sectionContent ul {padding-left: 20px;\n  margin-top: 6px;\n  list-style-type: circle; }\n.rsr-root[data-theme='onepage'] .sectionContent .title {font-weight: bold; }\n.rsr-root[data-theme='onepage'] .sectionContent .date {float: right; }\n.rsr-root[data-theme='onepage'] .sectionContent .separator {height: 14px; }\n.rsr-root[data-theme='onepage'] .sectionLine {border-style: dashed;\n  border-width: 1px;\n  border-color: #CFCFCF;\n  margin-top: 10px;\n  margin-bottom: 10px; }\n.rsr-root[data-theme='onepage'] .divider {font-weight: bold;\n  margin-left: 5px;\n  margin-right: 5px; }\n.rsr-root[data-theme='onepage'] .summary {margin-top: 6px; }\n.rsr-root[data-theme='onepage'] .skillBlock {margin-bottom: 4px; }\n.rsr-root[data-theme='onepage'] .jobBlock {page-break-inside: avoid; }"
+}

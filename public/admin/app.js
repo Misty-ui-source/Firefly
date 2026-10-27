@@ -1513,6 +1513,90 @@ async function mountGnssSection() {
   } catch (e) { box.innerHTML = '<p class="hint">读不到 src/config/gnssConfig.ts（可能还没上线这个文件）。</p>'; }
 }
 
+/* 📄 简历生成器页设置：读写 src/config/resumeConfig.ts（标题/简介/页脚说明），
+ * 并可切换 siteConfig.pages.resume 开关。页面先内测：不挂导航，直达 /resume/ 可用。 */
+async function mountResumeSection() {
+  if ($('#resume-sec')) return;
+  const gnssSec = $('#gnss-sec');
+  const diaryCard = document.querySelector('#diary-list')?.closest('.card');
+  const anchor = gnssSec || diaryCard || $('#list');
+  if (!anchor) return;
+  const sec = document.createElement('div');
+  sec.className = 'card';
+  sec.id = 'resume-sec';
+  sec.innerHTML = `<h2>📄 简历生成器</h2>
+    <p class="hint">博客 /resume/ 页（内测中，未挂导航入口）：标题、简介、页脚说明与页面开关。保存后重新构建生效。<span class="meta copyable" data-copy="/resume/" title="点击复制页面地址">/resume/ 📋</span></p>
+    <div id="resume-form"><p class="hint">读取中…</p></div>`;
+  anchor.after(sec);
+  const box = sec.querySelector('#resume-form');
+  const PATH = 'src/config/resumeConfig.ts';
+  const SITE = 'src/config/siteConfig.ts';
+  try {
+    const cf = await ghGetFile(PATH);
+    let cSha = cf.sha;
+    const t = cf.text;
+    const pickS = (key, dft) => { const m = t.match(new RegExp(key + '\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"')); try { return m ? JSON.parse('"' + m[1] + '"') : dft; } catch (e) { return dft; } };
+    const notesBlock = (t.match(/notes\s*:\s*\[([\s\S]*?)\]/) || [])[1] || '';
+    const notesList = [...notesBlock.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => { try { return JSON.parse('"' + m[1] + '"'); } catch (e) { return m[1]; } });
+    const cfg = {
+      title: pickS('title', '简历生成器'), description: pickS('description', ''), footnote: pickS('footnote', ''),
+      notesTitle: pickS('notesTitle', ''), notes: notesList.join('\n'),
+    };
+    let siteSha = null, enabled = true;
+    try {
+      const sf = await ghGetFile(SITE);
+      siteSha = sf.sha;
+      const m = sf.text.match(/resume:\s*(true|false)/);
+      enabled = m ? m[1] === 'true' : true;
+    } catch (e) { /* 读不到站点配置时开关按开处理，保存时跳过开关写入 */ }
+    box.innerHTML = `
+      <div class="field"><label>页面标题</label><input type="text" id="rs-title" value="${esc(cfg.title)}"></div>
+      <div class="field"><label>页面简介</label><input type="text" id="rs-desc" value="${esc(cfg.description)}"></div>
+      <div class="field"><label>页脚说明</label><textarea id="rs-foot" rows="3">${esc(cfg.footnote)}</textarea></div>
+      <div class="field"><label>说明卡片标题（让访客放心那张卡）</label><input type="text" id="rs-notes-title" value="${esc(cfg.notesTitle)}"></div>
+      <div class="field"><label>说明卡片条目（一行一条，可用 &lt;strong&gt; 加粗）</label><textarea id="rs-notes" rows="6">${esc(cfg.notes)}</textarea></div>
+      <div class="field"><label>页面开关</label><div class="pills"><label class="pill ${enabled ? 'on' : ''}"><input type="checkbox" id="rs-enabled" ${enabled ? 'checked' : ''} hidden>启用 /resume/ 页</label></div>
+      <p class="hint">关掉后 /resume/ 返回 404（内测入口也随之关闭）；导航入口目前未挂，与此开关无关。</p></div>
+      <button class="btn" id="rs-save">💾 保存简历生成器设置</button>`;
+    const pillEl = box.querySelector('#rs-enabled').closest('.pill');
+    box.querySelector('#rs-enabled').addEventListener('change', (e) => pillEl.classList.toggle('on', e.target.checked));
+    box.querySelector('#rs-save').onclick = async () => {
+      const out = {
+        title: box.querySelector('#rs-title').value.trim() || '简历生成器',
+        description: box.querySelector('#rs-desc').value.trim(),
+        footnote: box.querySelector('#rs-foot').value.trim(),
+        notesTitle: box.querySelector('#rs-notes-title').value.trim(),
+        notes: box.querySelector('#rs-notes').value.split('\n').map((s) => s.trim()).filter(Boolean),
+      };
+      const text = '// 简历生成器页配置：标题、简介、页脚说明与说明卡片。\n'
+        + '// 也可以在管理台「单页 → 📄 简历生成器」里改。\n'
+        + 'export const resumeConfig = {\n'
+        + `\ttitle: ${JSON.stringify(out.title)},\n`
+        + `\tdescription: ${JSON.stringify(out.description)},\n`
+        + `\tfootnote: ${JSON.stringify(out.footnote)},\n`
+        + `\tnotesTitle: ${JSON.stringify(out.notesTitle)},\n`
+        + '\tnotes: [\n'
+        + out.notes.map((n) => `\t\t${JSON.stringify(n)},`).join('\n') + '\n'
+        + '\t],\n'
+        + '};\n';
+      try {
+        const res = await saveWithLog(PATH, text, cSha, '简历生成器页设置更新 [管理台]', { type: '单页', action: '改简历生成器设置', target: out.title });
+        cSha = res.content.sha;
+        const wantEnabled = box.querySelector('#rs-enabled').checked;
+        if (siteSha && wantEnabled !== enabled) {
+          const sf = await ghGetFile(SITE);
+          const newText = sf.text.replace(/resume:\s*(true|false)/, `resume: ${wantEnabled}`);
+          if (newText !== sf.text) {
+            await saveWithLog(SITE, newText, sf.sha, `简历生成器页${wantEnabled ? '开启' : '关闭'} [管理台]`, { type: '单页', action: wantEnabled ? '开启简历生成器页' : '关闭简历生成器页', target: '/resume/' });
+          }
+          enabled = wantEnabled; siteSha = null;
+        }
+        toast('简历生成器设置已保存，重新构建后生效');
+      } catch (e) { toast(e.message, true); }
+    };
+  } catch (e) { box.innerHTML = '<p class="hint">读不到 src/config/resumeConfig.ts（可能还没上线这个文件）。</p>'; }
+}
+
 /* 单页评论区开关：写各页专属配置里的 showComment（友链/打赏/动态）。
  * 留言板跟全局评论走、一直开着；关于页模板里没评论组件，开不了——都不在此列。 */
 const SPEC_COMMENT_TARGETS = [
@@ -1802,7 +1886,7 @@ function listRoute(key) {
       </div><div id="list"></div>`;
     $('#btn-new').onclick = () => { location.hash = `#/edit/${key}/__new__`; };
     if (key === 'posts') mountLinkCardButton();
-    if (key === 'spec') { mountSpecCommentCard(); mountDiarySection(); mountGnssSection(); }
+    if (key === 'spec') { mountSpecCommentCard(); mountDiarySection(); mountGnssSection(); mountResumeSection(); }
     const listEl = $('#list');
     /* 文章列表排序：默认文件名倒序，点按钮切到发布时间倒序（日期回填完会自动按当前模式重排） */
     let rowsRef = null;

@@ -1,0 +1,23 @@
+{
+ "id": "campus-timeline-lake",
+ "name": "时间轴 · 湖蓝",
+ "cat": "campus",
+ "layout": "timeline",
+ "secstyle": "dot",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#0e7f86",
+  "acc2": "#0a5f64",
+  "soft": "#e8f5f5"
+ },
+ "tags": [
+  "时间轴",
+  "经历成线"
+ ],
+ "desc": "时间轴 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

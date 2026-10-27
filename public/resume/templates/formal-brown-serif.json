@@ -1,0 +1,23 @@
+{
+ "id": "formal-brown-serif",
+ "name": "严肃 · 棕褐衬线",
+ "cat": "formal",
+ "layout": "single",
+ "secstyle": "line",
+ "font": "serif",
+ "density": "normal",
+ "photo": "square",
+ "palette": {
+  "acc": "#7a5230",
+  "acc2": "#5d3d22",
+  "soft": "#f6efe7"
+ },
+ "tags": [
+  "单栏",
+  "衬线正文"
+ ],
+ "desc": "单栏 · 衬线 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

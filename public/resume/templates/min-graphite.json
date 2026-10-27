@@ -1,0 +1,23 @@
+{
+ "id": "min-graphite",
+ "name": "极简 · 石墨",
+ "cat": "minimal",
+ "layout": "minimal",
+ "secstyle": "line",
+ "font": "sans",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#3c4653",
+  "acc2": "#2b323c",
+  "soft": "#eef0f2"
+ },
+ "tags": [
+  "极简版式",
+  "克制留白"
+ ],
+ "desc": "极简版式 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

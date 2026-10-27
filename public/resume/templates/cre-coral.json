@@ -1,0 +1,23 @@
+{
+ "id": "cre-coral",
+ "name": "创意 · 珊瑚",
+ "cat": "creative",
+ "layout": "creative",
+ "secstyle": "dot",
+ "font": "round",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#e0653a",
+  "acc2": "#b84a26",
+  "soft": "#fdf0e9"
+ },
+ "tags": [
+  "创意版式",
+  "大字标题"
+ ],
+ "desc": "创意版式 · 圆体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

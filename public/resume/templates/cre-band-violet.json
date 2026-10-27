@@ -1,0 +1,23 @@
+{
+ "id": "cre-band-violet",
+ "name": "色带 · 紫罗兰",
+ "cat": "creative",
+ "layout": "band",
+ "secstyle": "dot",
+ "font": "round",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#6c4bd8",
+  "acc2": "#4e32a8",
+  "soft": "#efeafd"
+ },
+ "tags": [
+  "色带头图",
+  "彩色头图"
+ ],
+ "desc": "色带头图 · 圆体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

@@ -1,0 +1,23 @@
+{
+ "id": "campus-band-sky",
+ "name": "青春色带 · 天蓝",
+ "cat": "campus",
+ "layout": "band",
+ "secstyle": "dot",
+ "font": "round",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#2b7de9",
+  "acc2": "#1a5cb8",
+  "soft": "#e9f2fd"
+ },
+ "tags": [
+  "色带头图",
+  "清新亮眼"
+ ],
+ "desc": "色带头图 · 圆体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

@@ -1,0 +1,23 @@
+{
+ "id": "min-rose-faint",
+ "name": "淡玫瑰极简",
+ "cat": "minimal",
+ "layout": "minimal",
+ "secstyle": "line",
+ "font": "sans",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#c2517a",
+  "acc2": "#9c3a5f",
+  "soft": "#fbeef3"
+ },
+ "tags": [
+  "极简版式",
+  "淡彩"
+ ],
+ "desc": "极简版式 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

@@ -1,0 +1,23 @@
+{
+ "id": "cre-band-rose",
+ "name": "色带 · 玫瑰",
+ "cat": "creative",
+ "layout": "band",
+ "secstyle": "dot",
+ "font": "round",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#c2517a",
+  "acc2": "#9c3a5f",
+  "soft": "#fbeef3"
+ },
+ "tags": [
+  "色带头图",
+  "彩色头图"
+ ],
+ "desc": "色带头图 · 圆体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

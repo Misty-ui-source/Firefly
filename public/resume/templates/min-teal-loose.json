@@ -1,0 +1,23 @@
+{
+ "id": "min-teal-loose",
+ "name": "极简 · 青绿宽松",
+ "cat": "minimal",
+ "layout": "minimal",
+ "secstyle": "line",
+ "font": "sans",
+ "density": "loose",
+ "photo": "none",
+ "palette": {
+  "acc": "#0e7c6b",
+  "acc2": "#0a5c50",
+  "soft": "#e9f4f1"
+ },
+ "tags": [
+  "极简版式",
+  "克制留白"
+ ],
+ "desc": "极简版式 · 黑体 · 宽松",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

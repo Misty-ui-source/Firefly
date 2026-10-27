@@ -1,0 +1,23 @@
+{
+ "id": "tech-timeline-sky",
+ "name": "时间轴 · 天蓝",
+ "cat": "internet",
+ "layout": "timeline",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#2b7de9",
+  "acc2": "#1a5cb8",
+  "soft": "#e9f2fd"
+ },
+ "tags": [
+  "时间轴",
+  "经历成线"
+ ],
+ "desc": "时间轴 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

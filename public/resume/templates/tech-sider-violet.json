@@ -1,0 +1,25 @@
+{
+ "id": "tech-sider-violet",
+ "name": "紫罗兰右栏",
+ "cat": "internet",
+ "layout": "sidebarR",
+ "secstyle": "dot",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#6c4bd8",
+  "acc2": "#4e32a8",
+  "soft": "#efeafd",
+  "side": "#6c4bd8",
+  "sideInk": "#eef3f7"
+ },
+ "tags": [
+  "右栏双栏",
+  "深色侧栏"
+ ],
+ "desc": "右栏双栏 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

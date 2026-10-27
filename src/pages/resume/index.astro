@@ -1,0 +1,124 @@
+---
+import { Icon } from "astro-icon/components";
+import { resumeConfig, siteConfig } from "@/config";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import "@/styles/pages/common.css";
+
+// 简历生成器：纯前端工具页。填一次内容（本地自动保存），100 套模板按分类随便换，
+// 导出 PDF / HTML / JSON / Markdown / PNG。数据全程只在访客浏览器里，不经过服务器。
+// 先内测：siteConfig.pages.resume 控制开关，导航暂不挂入口，直达 /resume/ 可用。
+if (!(siteConfig.pages as Record<string, boolean>).resume) {
+	return Astro.redirect("/404/");
+}
+
+const title = resumeConfig.title || "简历生成器";
+const description = resumeConfig.description || "";
+---
+
+<MainGridLayout title={title} description={description}>
+	<link rel="stylesheet" href="/resume/style.css" />
+	<section class="page-shell" aria-labelledby="resume-page-title">
+		<header class="page-header card-base">
+			<div class="page-heading">
+				<div class="page-icon" aria-hidden="true">
+					<Icon name="material-symbols:description-rounded" />
+				</div>
+				<div>
+					<h2 id="resume-page-title">{title}</h2>
+					{description && <p>{description}</p>}
+				</div>
+			</div>
+			<div class="page-count" aria-label="模板数量">
+				<Icon name="material-symbols:style-rounded" />
+				<strong>108</strong>
+				<span>套模板</span>
+			</div>
+		</header>
+
+		<div class="card-base rs-card">
+			<div class="rs-topline">
+				<button type="button" class="rs-current-tpl" id="rs-open-modal" aria-haspopup="dialog">
+					<span class="rs-current-thumb" id="rs-current-thumb"></span>
+					<span class="rs-current-meta">
+						<span class="rs-current-name" id="rs-current-name">选择模板</span>
+						<span class="rs-current-sub">点这里打开模板库挑选</span>
+					</span>
+					<span class="rs-current-cta">🎨 换模板</span>
+				</button>
+				<div class="rs-topline-actions">
+					<button type="button" class="rs-btn rs-btn-ghost" id="rs-sample">✨ 填充示例</button>
+					<button type="button" class="rs-btn rs-btn-ghost" id="rs-import">📥 导入 JSON</button>
+					<button type="button" class="rs-btn rs-btn-ghost" id="rs-clear">🗑 清空</button>
+					<input type="file" id="rs-import-file" accept="application/json,.json" hidden />
+				</div>
+			</div>
+
+			<div class="rs-stylebar">
+				<div class="rs-style-group">
+					<span class="rs-style-label">主题色</span>
+					<div class="rs-colors" id="rs-colors"></div>
+				</div>
+				<label class="rs-style-group">字号
+					<select id="rs-fontsize">
+						<option value="s">小</option>
+						<option value="m" selected>标准</option>
+						<option value="l">大</option>
+					</select>
+				</label>
+				<label class="rs-style-group">行距
+					<select id="rs-leading">
+						<option value="compact">紧凑</option>
+						<option value="normal" selected>标准</option>
+						<option value="loose">宽松</option>
+					</select>
+				</label>
+				<span class="rs-saved" id="rs-saved" aria-live="polite"></span>
+			</div>
+
+			<div class="rs-mobiletabs" role="tablist" aria-label="编辑与预览">
+				<button type="button" class="rs-mtab is-active" data-mtab="form">✏️ 编辑</button>
+				<button type="button" class="rs-mtab" data-mtab="preview">👀 预览</button>
+			</div>
+
+			<div class="rs-main">
+				<div class="rs-form" id="rs-form"></div>
+				<div class="rs-preview-col" id="rs-preview-col">
+					<div class="rs-preview-bar">
+						<div class="rs-zoom">
+							<button type="button" class="rs-btn rs-btn-small" data-zoom="fit">适应宽度</button>
+							<button type="button" class="rs-btn rs-btn-small" data-zoom="100">100%</button>
+							<button type="button" class="rs-btn rs-btn-small" data-zoom="out">－</button>
+							<button type="button" class="rs-btn rs-btn-small" data-zoom="in">＋</button>
+						</div>
+						<div class="rs-exports">
+							<button type="button" class="rs-btn rs-btn-primary" id="rs-exp-pdf">⬇ PDF</button>
+							<button type="button" class="rs-btn" data-exp="html">HTML</button>
+							<button type="button" class="rs-btn" data-exp="json">JSON</button>
+							<button type="button" class="rs-btn" data-exp="md">Markdown</button>
+							<button type="button" class="rs-btn" data-exp="png">PNG</button>
+						</div>
+					</div>
+					<div class="rs-preview-wrap" id="rs-preview-wrap">
+						<div class="rs-page-scaler" id="rs-scaler">
+							<div class="rs-page" id="rs-page"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="card-base rs-card rs-notes">
+			<h3 class="rs-notes-title">
+				<Icon name="material-symbols:verified-user-rounded" />
+				{resumeConfig.notesTitle}
+			</h3>
+			<ul class="rs-notes-list">
+				{resumeConfig.notes.map((n) => <li set:html={n} />)}
+			</ul>
+			<p class="rs-foot">{resumeConfig.footnote}</p>
+		</div>
+	</section>
+</MainGridLayout>
+
+<script is:inline src="/resume/templates.js"></script>
+<script is:inline src="/resume/app.js"></script>

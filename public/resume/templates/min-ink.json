@@ -1,0 +1,23 @@
+{
+ "id": "min-ink",
+ "name": "极简 · 墨黑",
+ "cat": "minimal",
+ "layout": "minimal",
+ "secstyle": "line",
+ "font": "sans",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#22252a",
+  "acc2": "#22252a",
+  "soft": "#f1f1f1"
+ },
+ "tags": [
+  "极简版式",
+  "克制留白"
+ ],
+ "desc": "极简版式 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

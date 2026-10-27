@@ -1,0 +1,23 @@
+{
+ "id": "wps-geo-creative",
+ "name": "WPS 常见款 · 几何色块",
+ "cat": "creative",
+ "layout": "creative",
+ "secstyle": "dot",
+ "font": "round",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#6c4bd8",
+  "acc2": "#4e32a8",
+  "soft": "#efeafd"
+ },
+ "tags": [
+  "创意版式",
+  "大字标题"
+ ],
+ "desc": "创意版式 · 圆体 · 标准疏密",
+ "source": "版式参考：WPS 常见简历款 · 本站重制",
+ "license": "MIT",
+ "css": ".rsr-root .rsr-name{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}"
+}

@@ -1,0 +1,25 @@
+{
+ "id": "tech-side-teal-light",
+ "name": "青绿浅侧栏",
+ "cat": "internet",
+ "layout": "sidebarL",
+ "secstyle": "line",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#0e7c6b",
+  "acc2": "#0a5c50",
+  "soft": "#e9f4f1",
+  "side": "#e9f4f1",
+  "sideInk": "#23272c"
+ },
+ "tags": [
+  "左栏双栏",
+  "浅色侧栏"
+ ],
+ "desc": "左栏双栏 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

@@ -1,0 +1,23 @@
+{
+ "id": "cre-band-amber",
+ "name": "色带 · 琥珀",
+ "cat": "creative",
+ "layout": "band",
+ "secstyle": "dot",
+ "font": "round",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#b7791f",
+  "acc2": "#8f5c14",
+  "soft": "#faf3e3"
+ },
+ "tags": [
+  "色带头图",
+  "彩色头图"
+ ],
+ "desc": "色带头图 · 圆体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

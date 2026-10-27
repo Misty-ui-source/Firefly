@@ -1,0 +1,23 @@
+{
+ "id": "campus-timeline-navy",
+ "name": "时间轴 · 藏青",
+ "cat": "campus",
+ "layout": "timeline",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "compact",
+ "photo": "round",
+ "palette": {
+  "acc": "#1f4e79",
+  "acc2": "#2f6da3",
+  "soft": "#e8eff6"
+ },
+ "tags": [
+  "时间轴",
+  "经历成线"
+ ],
+ "desc": "时间轴 · 黑体 · 紧凑",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

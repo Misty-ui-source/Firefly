@@ -1,0 +1,24 @@
+{
+ "id": "en-ivy",
+ "name": "英文款 · Ivy 学术衬线",
+ "cat": "academic",
+ "layout": "academic",
+ "secstyle": "num",
+ "font": "serif",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#1f4e79",
+  "acc2": "#2f6da3",
+  "soft": "#e8eff6"
+ },
+ "tags": [
+  "英文款",
+  "编号分节"
+ ],
+ "desc": "常春藤学术风：衬线字体 + 编号分节，适合研究生申请与科研岗位",
+ "source": "本站自制版式（英文）",
+ "license": "MIT",
+ "css": "",
+ "lang": "en"
+}

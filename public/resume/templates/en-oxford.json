@@ -1,0 +1,24 @@
+{
+ "id": "en-oxford",
+ "name": "英文款 · Oxford 学者款",
+ "cat": "academic",
+ "layout": "academic",
+ "secstyle": "line",
+ "font": "serif",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#8e2f3c",
+  "acc2": "#671f29",
+  "soft": "#faecee"
+ },
+ "tags": [
+  "英文款",
+  "学术"
+ ],
+ "desc": "牛津学者气质的深红衬线款，论文与荣誉条目排布考究",
+ "source": "本站自制版式（英文）",
+ "license": "MIT",
+ "css": "",
+ "lang": "en"
+}

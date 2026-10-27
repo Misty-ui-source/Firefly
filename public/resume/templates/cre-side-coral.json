@@ -1,0 +1,25 @@
+{
+ "id": "cre-side-coral",
+ "name": "珊瑚侧栏",
+ "cat": "creative",
+ "layout": "sidebarL",
+ "secstyle": "dot",
+ "font": "round",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#e0653a",
+  "acc2": "#b84a26",
+  "soft": "#fdf0e9",
+  "side": "#e0653a",
+  "sideInk": "#eef3f7"
+ },
+ "tags": [
+  "左栏双栏",
+  "深色侧栏"
+ ],
+ "desc": "左栏双栏 · 圆体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

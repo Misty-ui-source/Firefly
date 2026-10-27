@@ -1,0 +1,23 @@
+{
+ "id": "tech-band-violet",
+ "name": "科技色带 · 紫罗兰",
+ "cat": "internet",
+ "layout": "band",
+ "secstyle": "dot",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#6c4bd8",
+  "acc2": "#4e32a8",
+  "soft": "#efeafd"
+ },
+ "tags": [
+  "色带头图",
+  "科技感"
+ ],
+ "desc": "色带头图 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

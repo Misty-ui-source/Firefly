@@ -1,0 +1,26 @@
+{
+ "id": "wps-skillbar-side",
+ "name": "WPS 常见款 · 技能条双栏",
+ "cat": "internet",
+ "layout": "sidebarL",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#1450a0",
+  "acc2": "#0d3a75",
+  "soft": "#e7eefb",
+  "side": "#e7eefb",
+  "sideInk": "#23272c"
+ },
+ "tags": [
+  "左栏双栏",
+  "技能条"
+ ],
+ "desc": "左栏双栏 · 黑体 · 标准疏密",
+ "source": "版式参考：WPS 常见简历款 · 本站重制",
+ "license": "MIT",
+ "css": "",
+ "skillBars": true
+}

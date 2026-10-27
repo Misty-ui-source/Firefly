@@ -1,0 +1,23 @@
+{
+ "id": "min-compact",
+ "name": "紧凑极简",
+ "cat": "minimal",
+ "layout": "minimal",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "compact",
+ "photo": "none",
+ "palette": {
+  "acc": "#3c4653",
+  "acc2": "#2b323c",
+  "soft": "#eef0f2"
+ },
+ "tags": [
+  "极简版式",
+  "内容多时"
+ ],
+ "desc": "极简版式 · 黑体 · 紧凑",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

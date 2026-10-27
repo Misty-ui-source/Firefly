@@ -1,0 +1,23 @@
+{
+ "id": "tech-band-teal",
+ "name": "科技色带 · 青绿",
+ "cat": "internet",
+ "layout": "band",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#0e7c6b",
+  "acc2": "#0a5c50",
+  "soft": "#e9f4f1"
+ },
+ "tags": [
+  "色带头图",
+  "科技感"
+ ],
+ "desc": "色带头图 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

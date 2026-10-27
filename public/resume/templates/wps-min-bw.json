@@ -1,0 +1,23 @@
+{
+ "id": "wps-min-bw",
+ "name": "WPS 常见款 · 极简黑白",
+ "cat": "minimal",
+ "layout": "minimal",
+ "secstyle": "line",
+ "font": "sans",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#22252a",
+  "acc2": "#22252a",
+  "soft": "#f1f1f1"
+ },
+ "tags": [
+  "极简版式",
+  "黑白灰"
+ ],
+ "desc": "极简版式 · 黑体 · 标准疏密",
+ "source": "版式参考：WPS 常见简历款 · 本站重制",
+ "license": "MIT",
+ "css": ""
+}

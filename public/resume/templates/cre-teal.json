@@ -1,0 +1,23 @@
+{
+ "id": "cre-teal",
+ "name": "创意 · 青绿",
+ "cat": "creative",
+ "layout": "creative",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#0e7c6b",
+  "acc2": "#0a5c50",
+  "soft": "#e9f4f1"
+ },
+ "tags": [
+  "创意版式",
+  "大字标题"
+ ],
+ "desc": "创意版式 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

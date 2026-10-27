@@ -1,0 +1,24 @@
+{
+ "id": "en-silicon",
+ "name": "英文款 · Silicon Valley 科技款",
+ "cat": "internet",
+ "layout": "single",
+ "secstyle": "dot",
+ "font": "sans",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#1450a0",
+  "acc2": "#0d3a75",
+  "soft": "#e7eefb"
+ },
+ "tags": [
+  "英文款",
+  "科技"
+ ],
+ "desc": "硅谷工程师简历的常见长相：无照片、技能前置、项目说话",
+ "source": "本站自制版式（英文）",
+ "license": "MIT",
+ "css": "",
+ "lang": "en"
+}

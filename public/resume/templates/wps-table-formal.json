@@ -1,0 +1,23 @@
+{
+ "id": "wps-table-formal",
+ "name": "WPS 常见款 · 表格风",
+ "cat": "formal",
+ "layout": "table",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "square",
+ "palette": {
+  "acc": "#22252a",
+  "acc2": "#22252a",
+  "soft": "#f1f1f1"
+ },
+ "tags": [
+  "表格版式",
+  "表格排版"
+ ],
+ "desc": "表格版式 · 黑体 · 标准疏密",
+ "source": "版式参考：WPS 常见简历款 · 本站重制",
+ "license": "MIT",
+ "css": ""
+}

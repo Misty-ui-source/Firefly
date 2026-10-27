@@ -1,0 +1,24 @@
+{
+ "id": "en-minimal",
+ "name": "英文款 · Minimal EN",
+ "cat": "minimal",
+ "layout": "minimal",
+ "secstyle": "line",
+ "font": "sans",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#22252a",
+  "acc2": "#22252a",
+  "soft": "#f1f1f1"
+ },
+ "tags": [
+  "英文款",
+  "极简"
+ ],
+ "desc": "极简英文单栏：只剩文字本身，打印最干净",
+ "source": "本站自制版式（英文）",
+ "license": "MIT",
+ "css": "",
+ "lang": "en"
+}

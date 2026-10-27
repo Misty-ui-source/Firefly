@@ -1,0 +1,24 @@
+{
+ "id": "theme-flat",
+ "name": "Flat 经典双栏",
+ "cat": "internet",
+ "layout": "single",
+ "builder": "flat",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#2ecc71",
+  "acc2": "#27ae60",
+  "soft": "#f4f6f5"
+ },
+ "tags": [
+  "真转换",
+  "左右分栏"
+ ],
+ "desc": "JSON Resume 经典主题 Flat 的结构与样式移植：左侧栏标题 + 右侧内容，绿色点缀",
+ "source": "转换自 jsonresume-theme-flat（上游模板与 CSS）",
+ "license": "MIT",
+ "css": "\n.rsr-root[data-theme='flat'] .container { width: auto; max-width: 706px; margin: 0 auto; padding: 0; }\n.rsr-root[data-theme='flat'] .row { margin: 0; }\n.rsr-root[data-theme='flat'] .row::after { content: \"\"; display: table; clear: both; }\n.rsr-root[data-theme='flat'] .col-sm-3 { width: 25%; float: left; }\n.rsr-root[data-theme='flat'] .col-sm-9 { width: 75%; float: left; }\n.rsr-root[data-theme='flat'] .col-sm-6 { width: 50%; float: left; }\n.rsr-root[data-theme='flat'] .col-sm-12 { width: 100%; float: left; }\n.rsr-root[data-theme='flat'] .col-sm-push-3 { margin-left: 25%; }\n.rsr-root[data-theme='flat'] .pull-right { float: right; }\n.rsr-root[data-theme='flat'] #header { margin: -42px -46px 0; padding: 30px 46px 6px; }\n.rsr-root[data-theme='flat'] .keywords { line-height: 1.8; }\n\n.rsr-root[data-theme='flat'] {background: #fff;\n\tfont-family: Lato, sans-serif;\n\tmargin: 0 0 80px; }\n.rsr-root[data-theme='flat'] a {color: #2ecc71; }\n.rsr-root[data-theme='flat'] a:focus, .rsr-root[data-theme='flat'] a:hover {color: #f1c40f;\n\ttext-decoration: none; }\n.rsr-root[data-theme='flat'] p {line-height: 1.5;\n\tmargin: 0; }\n.rsr-root[data-theme='flat'] p + p {margin-top: 10px; }\n.rsr-root[data-theme='flat'] h1, .rsr-root[data-theme='flat'] h2, .rsr-root[data-theme='flat'] h3, .rsr-root[data-theme='flat'] h4 {margin-top: 0 }\n.rsr-root[data-theme='flat'] section {margin-top: 30px; }\n.rsr-root[data-theme='flat'] li {line-height: 1.8;\n\tlist-style: none; }\n.rsr-root[data-theme='flat'] li:before {content: \"\\f052\";\n\tfloat: left;\n\tfont: 13px Octicons;\n\tmargin-top: 6px;\n\tmargin-left: -20px;\n\topacity: .1;\n\tposition: absolute; }\n.rsr-root[data-theme='flat'] blockquote {border-left: 5px solid #e7e9ec;\n\tfont-size: 14px; }\n.rsr-root[data-theme='flat'] em {color: #95a5a6;\n\tfont-weight: normal;\n\tfont-style: normal; }\n.rsr-root[data-theme='flat'] h4 span:first-child {color: #000;\n\tfont-weight: bold; }\n.rsr-root[data-theme='flat'] .container {max-width: 750px;\n\tpadding: 0 30px; }\n.rsr-root[data-theme='flat'] .col-sm-6 {margin-bottom: 10px; }\n.rsr-root[data-theme='flat'] .col-sm-12 h4 {margin-top: 12px; }\n.rsr-root[data-theme='flat'] .col-sm-12 + .col-sm-12 {margin-top: 30px; }\n.rsr-root[data-theme='flat'] #header {background: #f4f6f6;\n\tpadding: 50px 0;\n\tmargin-bottom: 30px; }\n.rsr-root[data-theme='flat'] #header h2 {color: #95a5a6;\n\tfont-size: 24px; }\n.rsr-root[data-theme='flat'] #content h3 {color: #f1c40f;\n\tfont-size: 26px;\n\tmargin-top: -4px; }\n.rsr-root[data-theme='flat'] #content aside {text-align: right;\n\tpadding-right: 30px; }\n.rsr-root[data-theme='flat'] #profiles .network {text-transform: capitalize; }\n.rsr-root[data-theme='flat'] #work .position, .rsr-root[data-theme='flat'] #volunteer .position {font-weight: bold;\n\tmargin-bottom: 8px; }\n.rsr-root[data-theme='flat'] #education .area {font-weight: bold; }\n.rsr-root[data-theme='flat'] #education .area:before {content: \"\\f0d7\";\n\tfont: 16px Octicons;\n\tmargin-right: 6px; }\n.rsr-root[data-theme='flat'] #education .studyType {margin-left: 25px; }\n.rsr-root[data-theme='flat'] #awards .summary, .rsr-root[data-theme='flat'] #publications .summary {margin-top: 8px; }\n.rsr-root[data-theme='flat'] #publications .website a:before {content: attr(href); }"
+}

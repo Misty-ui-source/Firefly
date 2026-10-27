@@ -1,0 +1,25 @@
+{
+ "id": "tech-side-indigo",
+ "name": "靛蓝侧栏",
+ "cat": "internet",
+ "layout": "sidebarL",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "compact",
+ "photo": "round",
+ "palette": {
+  "acc": "#33449c",
+  "acc2": "#26337a",
+  "soft": "#eaedf9",
+  "side": "#33449c",
+  "sideInk": "#eef3f7"
+ },
+ "tags": [
+  "左栏双栏",
+  "深色侧栏"
+ ],
+ "desc": "左栏双栏 · 黑体 · 紧凑",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

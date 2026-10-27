@@ -1,0 +1,23 @@
+{
+ "id": "formal-ink",
+ "name": "严肃 · 墨黑",
+ "cat": "formal",
+ "layout": "single",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "square",
+ "palette": {
+  "acc": "#22252a",
+  "acc2": "#22252a",
+  "soft": "#f1f1f1"
+ },
+ "tags": [
+  "单栏",
+  "体制内风"
+ ],
+ "desc": "单栏 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

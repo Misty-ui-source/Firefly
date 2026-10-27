@@ -1,0 +1,24 @@
+{
+ "id": "en-wallstreet",
+ "name": "英文款 · Wall Street 紧凑款",
+ "cat": "formal",
+ "layout": "single",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "compact",
+ "photo": "none",
+ "palette": {
+  "acc": "#3c4653",
+  "acc2": "#2b323c",
+  "soft": "#eef0f2"
+ },
+ "tags": [
+  "英文款",
+  "紧凑"
+ ],
+ "desc": "投行咨询风的紧凑单栏：信息密度高、一页装下三年经历",
+ "source": "本站自制版式（英文）",
+ "license": "MIT",
+ "css": "",
+ "lang": "en"
+}

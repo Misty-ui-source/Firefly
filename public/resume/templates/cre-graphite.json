@@ -1,0 +1,23 @@
+{
+ "id": "cre-graphite",
+ "name": "创意 · 石墨",
+ "cat": "creative",
+ "layout": "creative",
+ "secstyle": "dot",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#3c4653",
+  "acc2": "#2b323c",
+  "soft": "#eef0f2"
+ },
+ "tags": [
+  "创意版式",
+  "大字标题"
+ ],
+ "desc": "创意版式 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

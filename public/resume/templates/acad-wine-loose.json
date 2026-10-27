@@ -1,0 +1,23 @@
+{
+ "id": "acad-wine-loose",
+ "name": "学术 · 酒红宽松",
+ "cat": "academic",
+ "layout": "academic",
+ "secstyle": "num",
+ "font": "serif",
+ "density": "loose",
+ "photo": "none",
+ "palette": {
+  "acc": "#8e2f3c",
+  "acc2": "#671f29",
+  "soft": "#faecee"
+ },
+ "tags": [
+  "学术版式",
+  "编号分节"
+ ],
+ "desc": "学术版式 · 衬线 · 宽松",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

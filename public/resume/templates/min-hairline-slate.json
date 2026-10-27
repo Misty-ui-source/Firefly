@@ -1,0 +1,23 @@
+{
+ "id": "min-hairline-slate",
+ "name": "发丝线单栏",
+ "cat": "minimal",
+ "layout": "single",
+ "secstyle": "line",
+ "font": "sans",
+ "density": "compact",
+ "photo": "none",
+ "palette": {
+  "acc": "#44546a",
+  "acc2": "#324052",
+  "soft": "#edf0f4"
+ },
+ "tags": [
+  "单栏",
+  "黑白灰"
+ ],
+ "desc": "单栏 · 黑体 · 紧凑",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

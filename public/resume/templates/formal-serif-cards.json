@@ -1,0 +1,23 @@
+{
+ "id": "formal-serif-cards",
+ "name": "衬线卡片 · 正式",
+ "cat": "formal",
+ "layout": "cards",
+ "secstyle": "line",
+ "font": "serif",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#3c4653",
+  "acc2": "#2b323c",
+  "soft": "#eef0f2"
+ },
+ "tags": [
+  "分节卡片",
+  "分区清晰"
+ ],
+ "desc": "分节卡片 · 衬线 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

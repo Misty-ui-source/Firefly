@@ -1,0 +1,23 @@
+{
+ "id": "formal-timeline-navy",
+ "name": "时间轴 · 正式藏青",
+ "cat": "formal",
+ "layout": "timeline",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#1f4e79",
+  "acc2": "#2f6da3",
+  "soft": "#e8eff6"
+ },
+ "tags": [
+  "时间轴",
+  "经历成线"
+ ],
+ "desc": "时间轴 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

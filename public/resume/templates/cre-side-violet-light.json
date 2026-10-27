@@ -1,0 +1,25 @@
+{
+ "id": "cre-side-violet-light",
+ "name": "紫罗兰浅侧栏",
+ "cat": "creative",
+ "layout": "sidebarL",
+ "secstyle": "bar",
+ "font": "round",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#6c4bd8",
+  "acc2": "#4e32a8",
+  "soft": "#efeafd",
+  "side": "#efeafd",
+  "sideInk": "#23272c"
+ },
+ "tags": [
+  "左栏双栏",
+  "浅色侧栏"
+ ],
+ "desc": "左栏双栏 · 圆体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

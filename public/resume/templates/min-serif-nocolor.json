@@ -1,0 +1,23 @@
+{
+ "id": "min-serif-nocolor",
+ "name": "无色衬线经典",
+ "cat": "minimal",
+ "layout": "single",
+ "secstyle": "line",
+ "font": "serif",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#22252a",
+  "acc2": "#22252a",
+  "soft": "#f1f1f1"
+ },
+ "tags": [
+  "单栏",
+  "黑白灰"
+ ],
+ "desc": "单栏 · 衬线 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

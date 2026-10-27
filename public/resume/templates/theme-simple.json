@@ -1,0 +1,24 @@
+{
+ "id": "theme-simple",
+ "name": "Simple 简约顶栏",
+ "cat": "minimal",
+ "layout": "single",
+ "builder": "simple",
+ "secstyle": "line",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#4a6fa5",
+  "acc2": "#37557f",
+  "soft": "#eef1f5"
+ },
+ "tags": [
+  "真转换",
+  "单栏"
+ ],
+ "desc": "JSON Resume 主题 Simple 的结构与样式移植：顶部色带放照片与姓名，下方标签式信息排版",
+ "source": "转换自 jsonresume-theme-simple（上游模板与 CSS）",
+ "license": "MIT",
+ "css": "\n.rsr-root[data-theme='simple'] { padding: 0; }\n.rsr-root[data-theme='simple'] .container { max-width: none; padding-left: 46px; padding-right: 46px; }\n.rsr-root[data-theme='simple'] .top .container { padding-top: 30px; padding-bottom: 8px; }\n\n.rsr-root[data-theme='simple'] {background: #fff;\n  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;\n  font-size: 14px;\n  color: rgba(0, 0, 0, 0.882353);\n  line-height: 20px;\n  margin: 0; }\n.rsr-root[data-theme='simple'] em {color: #999; }\n.rsr-root[data-theme='simple'] p {line-height: 1.4; }\n.rsr-root[data-theme='simple'] ul {margin: 10px 0 20px 0;\n  padding-left: 20px; }\n.rsr-root[data-theme='simple'] blockquote {margin: 0;\n  margin-bottom: 1em; }\n.rsr-root[data-theme='simple'] .item {margin-bottom: 20px; }\n.rsr-root[data-theme='simple'] .container {margin: 0 auto;\n  max-width: 420px;\n  padding: 0 30px; }\n.rsr-root[data-theme='simple'] .top {padding-top: 20px;\n  background-color: #EEE;\n  height: 40px; }\n.rsr-root[data-theme='simple'] .center-text {text-align: center; }\n.rsr-root[data-theme='simple'] .profile-pic {float: left;\n  width: 80px;\n  height: 80px;\n  background-size: 80px;\n\n  -moz-border-radius: 50%; \n  -webkit-border-radius: 50%; \n  border-radius: 50%;\n  border-color: #FFF;\n  border-style: solid;\n  border-width: 4px; }\n.rsr-root[data-theme='simple'] .name-title {float: left;\n  margin-left: 10px; }\n.rsr-root[data-theme='simple'] .name {font-size: 25px;\n  line-height: 40px;\n  color: rgba(0,0,0,0.88);\n  font-weight: 400;\n  margin: 4px 0 0 0; }\n.rsr-root[data-theme='simple'] .job-title {font-size: 17px;\n  color: rgba(0,0,0,0.6); }\n.rsr-root[data-theme='simple'] .bio {margin: 20px 0; }\n.rsr-root[data-theme='simple'] .heading {text-transform: uppercase;\n  font-weight: 500;\n  margin: 20px 0 10px 0;\n  color: #F05C5C; }\n.rsr-root[data-theme='simple'] .item .heading {text-transform: none;\n  font-weight: 700; }\n.rsr-root[data-theme='simple'] .website {font-weight: 300; }\n.rsr-root[data-theme='simple'] .profiles .website {margin-left: 5px; }\n.rsr-root[data-theme='simple'] .label {display: inline-block;\n  font-weight: 700;\n  line-height: 1.5em; }\n.rsr-root[data-theme='simple'] .contact .label {width: 75px; }\n.rsr-root[data-theme='simple'] .clearfix {clear: both; }\n.rsr-root[data-theme='simple'] .summary {margin: 15px 0 20px 0; }\n.rsr-root[data-theme='simple'] .highlights {font-weight: 300; }\n.rsr-root[data-theme='simple'] .details {padding-left: 10px;\n  border-left-style: solid;\n  border-left-width: 2px;\n  border-left-color: #999; }\n.rsr-root[data-theme='simple'] .skills .level {font-size: 0.8em;\n  font-weight: 300;\n  color: #666; }\n.rsr-root[data-theme='simple'] .skills .item {margin-bottom: 10px; }\n.rsr-root[data-theme='simple'] .skills ul {margin-bottom: 10px; }\n.rsr-root[data-theme='simple'] .footer {margin-top: 50px;\n  height: 1px; }"
+}

@@ -1,0 +1,26 @@
+{
+ "id": "wps-campus-side",
+ "name": "WPS 常见款 · 校招侧栏",
+ "cat": "campus",
+ "layout": "sidebarL",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#0e7c6b",
+  "acc2": "#0a5c50",
+  "soft": "#e9f4f1",
+  "side": "#0e7c6b",
+  "sideInk": "#eef3f7"
+ },
+ "tags": [
+  "左栏双栏",
+  "技能条"
+ ],
+ "desc": "左栏双栏 · 黑体 · 标准疏密",
+ "source": "版式参考：WPS 常见简历款 · 本站重制",
+ "license": "MIT",
+ "css": "",
+ "skillBars": true
+}

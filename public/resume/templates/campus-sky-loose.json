@@ -1,0 +1,23 @@
+{
+ "id": "campus-sky-loose",
+ "name": "天蓝宽松",
+ "cat": "campus",
+ "layout": "single",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "loose",
+ "photo": "round",
+ "palette": {
+  "acc": "#2b7de9",
+  "acc2": "#1a5cb8",
+  "soft": "#e9f2fd"
+ },
+ "tags": [
+  "单栏",
+  "清新亮眼"
+ ],
+ "desc": "单栏 · 黑体 · 宽松",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

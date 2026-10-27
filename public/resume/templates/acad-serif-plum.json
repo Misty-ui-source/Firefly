@@ -1,0 +1,23 @@
+{
+ "id": "acad-serif-plum",
+ "name": "衬线经典 · 梅子",
+ "cat": "academic",
+ "layout": "single",
+ "secstyle": "bar",
+ "font": "serif",
+ "density": "normal",
+ "photo": "square",
+ "palette": {
+  "acc": "#5b2333",
+  "acc2": "#3f1622",
+  "soft": "#f6f1ee"
+ },
+ "tags": [
+  "单栏",
+  "衬线正文"
+ ],
+ "desc": "单栏 · 衬线 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

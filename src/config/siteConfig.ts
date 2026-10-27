@@ -23,6 +23,8 @@ const pages = resolvePageToggles({
 	diary: true,
 	// GNSS 卫星星空页面开关
 	gnss: true,
+	// 简历生成器页面开关（先内测：不挂导航入口，直达 /resume/ 可用）
+	resume: true,
 	// 项目展示页开关
 	projects: true,
 	// 相册页面开关

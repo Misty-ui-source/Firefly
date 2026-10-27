@@ -1,0 +1,23 @@
+{
+ "id": "tech-band-graphite",
+ "name": "科技色带 · 石墨",
+ "cat": "internet",
+ "layout": "band",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "compact",
+ "photo": "none",
+ "palette": {
+  "acc": "#3c4653",
+  "acc2": "#2b323c",
+  "soft": "#eef0f2"
+ },
+ "tags": [
+  "色带头图",
+  "科技感"
+ ],
+ "desc": "色带头图 · 黑体 · 紧凑",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

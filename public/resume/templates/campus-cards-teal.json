@@ -1,0 +1,23 @@
+{
+ "id": "campus-cards-teal",
+ "name": "卡片式 · 青绿",
+ "cat": "campus",
+ "layout": "cards",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#0e7c6b",
+  "acc2": "#0a5c50",
+  "soft": "#e9f4f1"
+ },
+ "tags": [
+  "分节卡片",
+  "分区清晰"
+ ],
+ "desc": "分节卡片 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

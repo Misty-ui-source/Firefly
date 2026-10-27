@@ -1,0 +1,23 @@
+{
+ "id": "campus-cards-sky",
+ "name": "卡片式 · 天蓝",
+ "cat": "campus",
+ "layout": "cards",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "loose",
+ "photo": "round",
+ "palette": {
+  "acc": "#2b7de9",
+  "acc2": "#1a5cb8",
+  "soft": "#e9f2fd"
+ },
+ "tags": [
+  "分节卡片",
+  "分区清晰"
+ ],
+ "desc": "分节卡片 · 黑体 · 宽松",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

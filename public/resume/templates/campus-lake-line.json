@@ -1,0 +1,23 @@
+{
+ "id": "campus-lake-line",
+ "name": "湖蓝清新",
+ "cat": "campus",
+ "layout": "single",
+ "secstyle": "line",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#0e7f86",
+  "acc2": "#0a5f64",
+  "soft": "#e8f5f5"
+ },
+ "tags": [
+  "单栏",
+  "清新亮眼"
+ ],
+ "desc": "单栏 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

@@ -1,0 +1,25 @@
+{
+ "id": "tech-side-deepblue",
+ "name": "深海侧栏",
+ "cat": "internet",
+ "layout": "sidebarL",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "compact",
+ "photo": "round",
+ "palette": {
+  "acc": "#1450a0",
+  "acc2": "#0d3a75",
+  "soft": "#e7eefb",
+  "side": "#1450a0",
+  "sideInk": "#eef3f7"
+ },
+ "tags": [
+  "左栏双栏",
+  "深色侧栏"
+ ],
+ "desc": "左栏双栏 · 黑体 · 紧凑",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

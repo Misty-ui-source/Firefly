@@ -1,0 +1,25 @@
+{
+ "id": "formal-side-navy-light",
+ "name": "正式浅侧栏 · 藏青",
+ "cat": "formal",
+ "layout": "sidebarL",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "square",
+ "palette": {
+  "acc": "#1f4e79",
+  "acc2": "#2f6da3",
+  "soft": "#e8eff6",
+  "side": "#e8eff6",
+  "sideInk": "#23272c"
+ },
+ "tags": [
+  "左栏双栏",
+  "浅色侧栏"
+ ],
+ "desc": "左栏双栏 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

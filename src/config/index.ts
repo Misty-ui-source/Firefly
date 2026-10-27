@@ -66,6 +66,7 @@ export { coverImageConfig } from "./coverImageConfig"; // 封面图配置
 export { displaySettingsConfig } from "./displaySettingsConfig"; // 显示设置面板开关配置
 export { dynamicConfig } from "./dynamicConfig"; // 动态页面配置
 export { diaryConfig } from "./diaryConfig"; // 日记页面配置
+export { resumeConfig } from "./resumeConfig"; // 简历生成器页面配置
 export { bubblesConfig, clickConfig, fireflyConfig, heartsConfig, leavesConfig, meteorConfig, notesConfig, rainConfig, sakuraConfig, snowConfig } from "./effectsConfig"; // 动画特效配置（樱花等）
 export { expressiveCodeConfig } from "./expressiveCodeConfig"; // 代码高亮配置
 export { fontConfig, fontsList } from "./fontConfig"; // 字体配置

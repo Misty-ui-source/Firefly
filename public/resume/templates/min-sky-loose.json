@@ -1,0 +1,23 @@
+{
+ "id": "min-sky-loose",
+ "name": "淡蓝宽松极简",
+ "cat": "minimal",
+ "layout": "minimal",
+ "secstyle": "line",
+ "font": "sans",
+ "density": "loose",
+ "photo": "none",
+ "palette": {
+  "acc": "#2b7de9",
+  "acc2": "#1a5cb8",
+  "soft": "#e9f2fd"
+ },
+ "tags": [
+  "极简版式",
+  "淡彩"
+ ],
+ "desc": "极简版式 · 黑体 · 宽松",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

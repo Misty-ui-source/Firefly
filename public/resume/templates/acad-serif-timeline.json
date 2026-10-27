@@ -1,0 +1,23 @@
+{
+ "id": "acad-serif-timeline",
+ "name": "衬线时间轴",
+ "cat": "academic",
+ "layout": "timeline",
+ "secstyle": "line",
+ "font": "serif",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#5b2333",
+  "acc2": "#3f1622",
+  "soft": "#f6f1ee"
+ },
+ "tags": [
+  "时间轴",
+  "衬线正文"
+ ],
+ "desc": "时间轴 · 衬线 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

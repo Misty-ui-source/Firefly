@@ -1,0 +1,23 @@
+{
+ "id": "formal-navy-loose",
+ "name": "衬线正式 · 藏青宽松",
+ "cat": "formal",
+ "layout": "single",
+ "secstyle": "line",
+ "font": "serif",
+ "density": "loose",
+ "photo": "square",
+ "palette": {
+  "acc": "#1f4e79",
+  "acc2": "#2f6da3",
+  "soft": "#e8eff6"
+ },
+ "tags": [
+  "单栏",
+  "衬线正文"
+ ],
+ "desc": "单栏 · 衬线 · 宽松",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

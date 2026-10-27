@@ -1,0 +1,23 @@
+{
+ "id": "acad-graphite-compact",
+ "name": "学术 · 石墨紧凑",
+ "cat": "academic",
+ "layout": "academic",
+ "secstyle": "num",
+ "font": "serif",
+ "density": "compact",
+ "photo": "none",
+ "palette": {
+  "acc": "#3c4653",
+  "acc2": "#2b323c",
+  "soft": "#eef0f2"
+ },
+ "tags": [
+  "学术版式",
+  "编号分节"
+ ],
+ "desc": "学术版式 · 衬线 · 紧凑",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

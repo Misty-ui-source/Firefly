@@ -1,0 +1,25 @@
+{
+ "id": "tech-sider-graphite",
+ "name": "石墨右栏",
+ "cat": "internet",
+ "layout": "sidebarR",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#3c4653",
+  "acc2": "#2b323c",
+  "soft": "#eef0f2",
+  "side": "#3c4653",
+  "sideInk": "#eef3f7"
+ },
+ "tags": [
+  "右栏双栏",
+  "深色侧栏"
+ ],
+ "desc": "右栏双栏 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

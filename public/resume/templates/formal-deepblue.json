@@ -1,0 +1,23 @@
+{
+ "id": "formal-deepblue",
+ "name": "严肃 · 深蓝",
+ "cat": "formal",
+ "layout": "single",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "square",
+ "palette": {
+  "acc": "#1450a0",
+  "acc2": "#0d3a75",
+  "soft": "#e7eefb"
+ },
+ "tags": [
+  "单栏",
+  "体制内风"
+ ],
+ "desc": "单栏 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

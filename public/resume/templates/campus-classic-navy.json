@@ -1,0 +1,23 @@
+{
+ "id": "campus-classic-navy",
+ "name": "校招经典 · 藏青",
+ "cat": "campus",
+ "layout": "single",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#1f4e79",
+  "acc2": "#2f6da3",
+  "soft": "#e8eff6"
+ },
+ "tags": [
+  "单栏",
+  "经典稳妥"
+ ],
+ "desc": "单栏 · 黑体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

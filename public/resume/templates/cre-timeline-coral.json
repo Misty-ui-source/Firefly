@@ -1,0 +1,23 @@
+{
+ "id": "cre-timeline-coral",
+ "name": "时间轴 · 珊瑚",
+ "cat": "creative",
+ "layout": "timeline",
+ "secstyle": "dot",
+ "font": "round",
+ "density": "normal",
+ "photo": "round",
+ "palette": {
+  "acc": "#e0653a",
+  "acc2": "#b84a26",
+  "soft": "#fdf0e9"
+ },
+ "tags": [
+  "时间轴",
+  "经历成线"
+ ],
+ "desc": "时间轴 · 圆体 · 标准疏密",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}

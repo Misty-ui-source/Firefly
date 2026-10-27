@@ -1,0 +1,24 @@
+{
+ "id": "en-harvard",
+ "name": "英文款 · Harvard 经典单栏",
+ "cat": "formal",
+ "layout": "single",
+ "secstyle": "line",
+ "font": "serif",
+ "density": "normal",
+ "photo": "none",
+ "palette": {
+  "acc": "#22252a",
+  "acc2": "#22252a",
+  "soft": "#f1f1f1"
+ },
+ "tags": [
+  "英文款",
+  "无照片"
+ ],
+ "desc": "哈佛就业指导的经典逻辑：姓名居中、分节克制、无照片无花色，留学申请与外企投递通用",
+ "source": "本站自制版式（英文）",
+ "license": "MIT",
+ "css": "",
+ "lang": "en"
+}

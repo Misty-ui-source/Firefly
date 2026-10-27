@@ -1,0 +1,23 @@
+{
+ "id": "tech-timeline-deepblue",
+ "name": "时间轴 · 深蓝",
+ "cat": "internet",
+ "layout": "timeline",
+ "secstyle": "bar",
+ "font": "sans",
+ "density": "compact",
+ "photo": "round",
+ "palette": {
+  "acc": "#1450a0",
+  "acc2": "#0d3a75",
+  "soft": "#e7eefb"
+ },
+ "tags": [
+  "时间轴",
+  "经历成线"
+ ],
+ "desc": "时间轴 · 黑体 · 紧凑",
+ "source": "本站自制版式",
+ "license": "MIT",
+ "css": ""
+}
