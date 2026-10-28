@@ -10,6 +10,11 @@ export const thoughtsConfig: ThoughtsConfig = {
 	title: "碎碎念",
 	items: [
 		{
+			title: '拉锯上滑梯的小丑都来了',
+			content: '拉锯上滑梯的小丑都来了🤣',
+			createdAt: '2026-10-28T15:42:18.010Z'
+		},
+		{
 			title: '删掉删掉',
 			content: '最后还是决定删掉那些聊天记录吧，组会上怎么想到了呢🤔',
 			createdAt: '2026-10-28T09:04:31.886Z'
