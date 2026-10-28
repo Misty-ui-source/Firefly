@@ -79,8 +79,10 @@ const payload = JSON.stringify({
 
 <script type="application/json" id="calendar-data" set:html={payload}></script>
 
-<script>
-	(function () {
+<script is:inline>
+	// 必须 is:inline：打包成外部 module 后，Swup 切页时脚本可能被跳过执行，
+	// 表现为日历只剩空壳、要手动刷新才出来（2026-10-28 报障）。内联脚本切页必重跑。
+	function __initCalendar() {
 		var RAW = "https://raw.githubusercontent.com/Misty-ui-source/Firefly/main/calendar-data/";
 		var el = document.getElementById("calendar-data");
 		if (!el) return;
@@ -176,6 +178,8 @@ const payload = JSON.stringify({
 		var label = document.querySelector("[data-cal-label]");
 		var detail = document.querySelector("[data-cal-detail]");
 		if (!grid || !label || !detail) return;
+		if (grid.dataset.calInit) return; // 同一份 DOM 只初始化一次，防看门狗补跑时重复绑事件
+		grid.dataset.calInit = "1";
 
 		var now = new Date();
 		var cursor = { y: now.getFullYear(), m: now.getMonth() };
@@ -377,5 +381,16 @@ const payload = JSON.stringify({
 			buildCountdown();
 			tickCountdown();
 		});
-	})();
+	}
+	__initCalendar();
+	// 看门狗：Swup 切页后若网格在但没渲染（脚本被跳过/抢跑的兜底），补跑一次初始化
+	if (!window.__calWatchdog) {
+		window.__calWatchdog = true;
+		document.addEventListener("swup:contentReplaced", function () {
+			setTimeout(function () {
+				var g = document.querySelector("[data-cal-grid]");
+				if (g && !g.children.length && document.getElementById("calendar-data")) __initCalendar();
+			}, 60);
+		});
+	}
 </script>
