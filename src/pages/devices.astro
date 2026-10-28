@@ -110,7 +110,7 @@ const activeCount = devices.filter((d) => d.status === "active").length;
         {devices.map((d) => (
           <div class="group border border-black/10 dark:border-white/10 rounded-2xl p-5 hover:border-[var(--primary)] hover:shadow-lg transition-all duration-300 relative overflow-hidden">
             <div
-              class="absolute inset-0 opacity-10 dark:opacity-[0.08] pointer-events-none"
+              class="absolute inset-0 opacity-10 dark:opacity-[0.16] pointer-events-none"
               style={`background-image: url(${d.bg.src}); background-size: cover; background-position: center;`}
             ></div>
             <div class="absolute inset-0 bg-[var(--primary)] opacity-0 group-hover:opacity-5 transition-opacity duration-300 pointer-events-none"></div>
