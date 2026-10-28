@@ -120,6 +120,10 @@ function fmtHM(mins: number) {
 
 <style>
   .steam-page { display: flex; flex-direction: column; gap: 1.25rem; }
+  /* 暗色前景：本页卡片背景跟 var(--card-bg) 变暗，但文字一直靠继承（初始黑），
+     暗色下玩家名/游戏名/主页链接黑底黑字（2026-10-28 扫描报障），在此钉住 */
+  :global(html.dark) .steam-page { color: oklch(0.93 0.008 var(--hue)); }
+  :global(html.dark) .pill:hover { background: oklch(0.3 0.02 var(--hue)); }
   .card {
     background: var(--card-bg, #fff);
     border: 3px solid #1a1a1a;

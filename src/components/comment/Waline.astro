@@ -99,6 +99,19 @@ const config = {
   .wl-card .wl-nick {
     color: #16a34a !important;
   }
+
+  /* 暗色提亮：Waline 自带暗色板偏暗（--waline-color 只有 #888、--waline-info-color #666），
+     再叠上本站的绿色昵称 #16a34a，在黑卡片上标题、昵称、时间都发闷（2026-10-28 用户真机报障）。
+     暗色下把文字变量和昵称各提亮一档，亮色不动 */
+  html.dark #waline {
+    --waline-color: #d6dde3;
+    --waline-info-color: #9aa7ad;
+  }
+  html.dark .wl-nick,
+  html.dark .wl-comment .wl-user .wl-nick,
+  html.dark .wl-card .wl-nick {
+    color: #4ade80 !important;
+  }
 </style>
 
 <script is:inline>

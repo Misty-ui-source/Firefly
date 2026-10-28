@@ -234,6 +234,12 @@ html {
     .card-base {
         @apply rounded-(--radius-large) overflow-hidden bg-(--card-bg) transition-colors duration-150;
     }
+    /* 卡片默认前景色：卡片只给了背景没给文字色，靠继承吃饭的内容（最新评论、日历、
+       图床等）在暗色下会继承到初始黑色、黑底黑字（2026-10-28 全站扫描报障）。
+       暗色下把卡片前景钉成近白色，自带颜色的组件不受影响。 */
+    :root.dark .card-base {
+        color: oklch(0.93 0.008 var(--hue));
+    }
     .card-base-transparent {
         @apply rounded-(--radius-large) overflow-hidden bg-(--card-bg-transparent) transition-colors duration-150;
     }
