@@ -74,9 +74,9 @@ window.ADMIN_CONFIG = {
   //           images=图片 music=音乐 gallery=相册 announce=公告 friends=友链 booknav=书签
   navLayout: {
     primary: ['dashboard', 'stats', 'posts', 'dynamic', 'projects', 'spec'],
-    secondary: ['images', 'music', 'gallery', 'announce', 'friends', 'booknav', 'blog', 'waline', 'umami'],
+    secondary: ['images', 'music', 'gallery', 'announce', 'friends', 'booknav', 'blog', 'waline', 'umami', 'search', 'medialib', 'tags', 'fonts', 'theme', 'navmgr', 'videos', 'profile', 'banner', 'timeline', 'thoughts', 'sitenav', 'diary'],
     homeCards: ['posts', 'dynamic', 'projects', 'spec', 'friends', 'gallery', 'timeline', 'thoughts', 'music', 'waline', 'blog', 'umami'],
-    labels: {}, // 自定义名称，如 { dashboard: '🏠 主页' }；不填则用默认
+    labels: { diary: '📓日记' },
   },
 
   // 右侧栏快捷入口：仅「左侧边栏 / 混合」布局 + PC 宽屏（≥1680）时显示，
