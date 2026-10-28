@@ -99,6 +99,9 @@ export type SiteConfig = {
 	// 控制台主题页可改默认，访客可在显示设置里覆盖（localStorage siteMode），样式见 styles/pure-mode.css
 	siteMode?: SiteMode;
 
+	// 素简默认阅读字体（控制台主题页可改；访客在显示设置里选过则以访客为准，localStorage pureFont）
+	pureFont?: "system" | "maru" | "lxgw" | "zhuque" | "mplus" | "luoli";
+
 	// 页面开关配置
 	pages: {
 		booknav: boolean; // 书签导航页面开关

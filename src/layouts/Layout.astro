@@ -367,6 +367,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
           displaySettingsConfig.navbarStyleSwitchable,
         defaultSiteMode: siteConfig.siteMode ?? "full",
         isSiteModeSwitchable: displaySettingsConfig.siteModeSwitchable,
+        defaultPureFont: siteConfig.pureFont ?? "system",
       }}
     >
       // 主题初始化 - 与setting-utils.ts保持一致
@@ -484,10 +485,13 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
         resolvedSiteMode
       );
 
-      // 初始化素简字体 - 调色板里选过的阅读字体，首帧前挂到 html 上（仅素简下生效）
+      // 初始化素简字体 - 优先 localStorage（调色板里选过时），否则用配置默认（控制台主题页可改），首帧前挂到 html 上（仅素简下生效）
       const pureFontStored = localStorage.getItem("pureFont");
-      if (["maru", "lxgw", "zhuque", "mplus", "luoli"].includes(pureFontStored)) {
-        document.documentElement.setAttribute("data-pure-font", pureFontStored);
+      const pureFontResolved = ["maru", "lxgw", "zhuque", "mplus", "luoli"].includes(pureFontStored)
+        ? pureFontStored
+        : defaultPureFont;
+      if (["maru", "lxgw", "zhuque", "mplus", "luoli"].includes(pureFontResolved)) {
+        document.documentElement.setAttribute("data-pure-font", pureFontResolved);
       }
 
       // 初始化期间禁用 content-panel/wrapper 过渡，避免加载时布局/变量变化产生内容移动动画；

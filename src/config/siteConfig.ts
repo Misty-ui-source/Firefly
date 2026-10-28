@@ -137,7 +137,7 @@ export const siteConfig: SiteConfig = {
 		// "dynamic"：固定在顶部，下滑隐藏、轻微上滑显示
 		navbarMode: "dynamic",
 		// 导航栏样式："classic" 通栏 / "float" 悬浮卡片 / "capsule" 悬浮胶囊 / "segment" 三段胶囊（下滑时左右段收成圆）
-		navbarStyle: "capsule",
+		navbarStyle: "classic",
 		// 移动端菜单样式："drawer" 全屏抽屉 / "card" 浮层卡片
 		mobileMenuStyle: "drawer",
 	},
@@ -148,6 +148,10 @@ export const siteConfig: SiteConfig = {
 	// 站点形态（全站默认）：full 华彩（全套呈现）/ pure 素简（简洁导航·专注阅读，对标 rainzt.cn 的 Pure 形态）；
 	// 控制台主题页可改默认，访客可在显示设置（调色板）里覆盖、存 localStorage
 	siteMode: "full",
+
+	// 素简默认阅读字体：system 系统默认 / maru Zen Maru 圆体 / mplus M PLUS 日本圆体 / luoli 中文圆体 / lxgw 霞鹜文楷 / zhuque 朱雀仿宋；
+	// 控制台主题页可改默认，访客可在显示设置（调色板）里覆盖、存 localStorage pureFont
+	pureFont: "system",
 
 	// 站点开始日期，用于统计运行天数
 	siteStartDate: "2026-10-15",

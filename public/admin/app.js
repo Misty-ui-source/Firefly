@@ -6018,9 +6018,10 @@ routes.theme = async () => {
     const navStyle = getIn(t, nav, /navbarStyle\s*:\s*"(\w+)"/);
     const anaM = t.match(/analyticsStyle\s*:\s*"([\w-]+)"/);
     const modeM = t.match(/siteMode\s*:\s*"(\w+)"/);
+    const fontM = t.match(/pureFont\s*:\s*"(\w+)"/);
     const mobileMenu = getIn(t, nav, /mobileMenuStyle\s*:\s*"(\w+)"/);
     if (hue === null || border === null || follow === null || layout === null) return null;
-    return { hue: Number(hue), cardBorder: border === 'true', cardFollow: follow === 'true', layout, layoutMobile: layoutM || layout, navbarStyle: navStyle || 'classic', mobileMenuStyle: mobileMenu || 'drawer', analyticsStyle: anaM ? anaM[1] : 'classic', siteMode: modeM ? modeM[1] : 'full' };
+    return { hue: Number(hue), cardBorder: border === 'true', cardFollow: follow === 'true', layout, layoutMobile: layoutM || layout, navbarStyle: navStyle || 'classic', mobileMenuStyle: mobileMenu || 'drawer', analyticsStyle: anaM ? anaM[1] : 'classic', siteMode: modeM ? modeM[1] : 'full', pureFont: fontM ? fontM[1] : 'system' };
   }
   function parseBgw(t) {
     const mm = t.match(/^\tmode\s*:\s*"(\w+)"/m);

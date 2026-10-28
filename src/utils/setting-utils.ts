@@ -464,15 +464,20 @@ export function setSiteMode(mode: SiteMode): void {
 export type PureFont = "system" | "maru" | "lxgw" | "zhuque" | "mplus" | "luoli";
 const PURE_FONTS: PureFont[] = ["system", "maru", "lxgw", "zhuque", "mplus", "luoli"];
 
+export function getDefaultPureFont(): PureFont {
+	const v = siteConfig.pureFont ?? "system";
+	return PURE_FONTS.includes(v as PureFont) ? (v as PureFont) : "system";
+}
+
 export function getStoredPureFont(): PureFont {
 	if (
 		typeof localStorage === "undefined" ||
 		typeof localStorage.getItem !== "function"
 	) {
-		return "system";
+		return getDefaultPureFont();
 	}
 	const stored = localStorage.getItem("pureFont") as PureFont | null;
-	return stored && PURE_FONTS.includes(stored) ? stored : "system";
+	return stored && PURE_FONTS.includes(stored) ? stored : getDefaultPureFont();
 }
 
 export function applyPureFontToDocument(font: PureFont): void {
