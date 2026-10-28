@@ -9,6 +9,7 @@ import MainGridLayout from "@/layouts/MainGridLayout.astro";
 import DraggableStickers from "@/components/features/DraggableStickers.astro";
 import "@/styles/banner-home.css";
 import { getSortedPosts } from "@/utils/content-utils";
+import { url } from "@/utils/url-utils";
 export const getStaticPaths = (async ({ paginate }) => {
 	const allBlogPosts = await getSortedPosts();
 	// 使用配置中的文章数量
@@ -30,7 +31,7 @@ const heading =
 
 <MainGridLayout heading={heading}>
   {page.currentPage === 1 && <DraggableStickers />}
-  <div class="pure-page-info" aria-hidden="true">第 {page.currentPage} 页 · 本页 {len} 篇，共 {page.total} 篇</div>
+  <div class="pure-page-info"><span class="pure-page-info-text">第 {page.currentPage} 页 · 本页 {len} 篇，共 {page.total} 篇</span><a href={url("/archive/")}>按年份查看全部文章 →</a></div>
   <PostPage page={page} />
   {
     page.total > page.size && (

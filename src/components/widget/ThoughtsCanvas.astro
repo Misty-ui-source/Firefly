@@ -147,7 +147,22 @@ const dataJson = JSON.stringify(
 		modal.classList.remove('hidden');
 	};
 
-	// 文字节点 = DOM 元素：角度/半径决定在深度截面上的位置，z 是深度（按序号均分+抖动，保证任意数量都铺满纵深）
+	// 文字节点 = DOM 元素（学 doulor 原版 ThoughtsParallax 的笛卡尔散布，不用极坐标）：
+	// 极坐标「角度+半径」随机看着均匀、实际密度向中心收，条目一少就挤成一团还互相压字；
+	// 改成把画面切成网格、每条占一格再格内抖动（格子数 ≥ 条目数，多出的空格随机跳过），
+	// 任意条数都铺满全屏不重叠；z 仍按序号均分+抖动，保证纵深层次。
+	const gridFor = (count) => {
+		const cols = Math.max(1, Math.ceil(Math.sqrt(count * 1.6)));
+		const rows = Math.max(1, Math.ceil(count / cols));
+		const cells = [];
+		for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) cells.push([c, r]);
+		for (let i = cells.length - 1; i > 0; i--) { /* 洗牌：哪几格空着、谁占哪格全随机 */
+			const j = Math.floor(Math.random() * (i + 1));
+			[cells[i], cells[j]] = [cells[j], cells[i]];
+		}
+		return { cols, rows, cells };
+	};
+	const grid = gridFor(Math.max(items.length, 1));
 	const nodes = items.map((it, i) => {
 		const el = document.createElement('span');
 		el.className = 'thoughts-text';
@@ -155,10 +170,11 @@ const dataJson = JSON.stringify(
 		el.addEventListener('click', () => openModal(it));
 		textsLayer.appendChild(el);
 		const n = Math.max(items.length, 1);
+		const [gc, gr] = grid.cells[i % grid.cells.length];
 		return {
 			it, el,
-			angle: Math.random() * 6.283,
-			rad: 0.14 + Math.random() * 0.44,
+			nx: ((gc + 0.18 + Math.random() * 0.64) / grid.cols) * 2 - 1,
+			ny: ((gr + 0.18 + Math.random() * 0.64) / grid.rows) * 2 - 1,
 			z: ((i + 0.15 + Math.random() * 0.7) / n) % 1,
 			sz: 0.6 + Math.random() * 0.4,
 			pd: 1,
@@ -220,15 +236,15 @@ const dataJson = JSON.stringify(
 		ctx.globalAlpha = 1;
 
 		// 文字：投影结果写到 DOM 元素的 transform/字号/透明度上
+		// 投影学 doulor：屏幕偏移 = 归一化坐标 × 半屏 × 透视系数，纵横同口径（原版的 0.76 纵向压扁已去掉，那也是画面显扁、文字挤在中带的原因之一）
 		for (const n of nodes) {
 			const d = relDepth(n.z);
 			/* 刚从身边掠过、绕回最远处时换个位置，避免穿行路线一成不变 */
-			if (n.pd < 0.15 && d > 0.85) { n.angle = Math.random() * 6.283; n.rad = 0.14 + Math.random() * 0.44; }
+			if (n.pd < 0.15 && d > 0.85) { n.nx = (Math.random() * 2 - 1) * 0.92; n.ny = (Math.random() * 2 - 1) * 0.92; }
 			n.pd = d;
 			const p = persp(d);
-			const a = n.angle + rot;
-			const x = cx + Math.cos(a) * n.rad * W * p * 0.5;
-			const y = cy + Math.sin(a) * n.rad * H * 0.76 * p * 0.5;
+			const x = cx + n.nx * W * p * 0.5;
+			const y = cy + n.ny * H * p * 0.5;
 			let fs = Math.max(8, Math.min(34, Math.round((11 + n.sz * 7) * p)));
 			/* 长标题在窄屏上按宽度收字号：整行最多占画布宽 86%，不许顶出两边 */
 			const tw = n.w100 * fs / 100;

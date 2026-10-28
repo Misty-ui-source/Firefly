@@ -486,7 +486,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
 
       // 初始化素简字体 - 调色板里选过的阅读字体，首帧前挂到 html 上（仅素简下生效）
       const pureFontStored = localStorage.getItem("pureFont");
-      if (["maru", "lxgw", "zhuque"].includes(pureFontStored)) {
+      if (["maru", "lxgw", "zhuque", "mplus", "luoli"].includes(pureFontStored)) {
         document.documentElement.setAttribute("data-pure-font", pureFontStored);
       }
 

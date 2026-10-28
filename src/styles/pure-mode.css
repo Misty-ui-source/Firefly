@@ -42,8 +42,14 @@ html[data-site-mode="pure"][data-pure-font="maru"] body {
 html[data-site-mode="pure"][data-pure-font="lxgw"] body {
 	font-family: var(--font-lxgw-wenkai), serif !important;
 }
+html[data-site-mode="pure"][data-pure-font="mplus"] body {
+	font-family: var(--font-m-plus-rounded-1c), sans-serif !important;
+}
 html[data-site-mode="pure"][data-pure-font="zhuque"] body {
 	font-family: var(--font-zhuque-fangsong), serif !important;
+}
+html[data-site-mode="pure"][data-pure-font="luoli"] body {
+	font-family: var(--font-luoliti), sans-serif !important;
 }
 
 /* 横幅 / 壁纸层（连带其内的波纹、渐变、标题叠加层）整体隐藏 */
@@ -53,9 +59,8 @@ html[data-site-mode="pure"] #wallpaper-gradient,
 html[data-site-mode="pure"] #banner-images-container,
 html[data-site-mode="pure"] #banner-overlay-container,
 html[data-site-mode="pure"] #banner-dim-container,
-/* 花瓣 / 粒子特效 canvas（SakuraEffect 的 #canvas_sakura 与 ParticleEffects 的 canvas_<kind>） */
-html[data-site-mode="pure"] #canvas_sakura,
-html[data-site-mode="pure"] canvas[id^="canvas_"],
+/* 粒子特效 canvas（ParticleEffects 的 canvas_<kind>）：素简只放行樱花与萤火虫（调色板「特效设置」里的两个开关，2026-10-28 用户定），其余粒子（雪花/音符/雨滴等）与点击特效在素简下继续藏 */
+html[data-site-mode="pure"] canvas[id^="canvas_"]:not(#canvas_sakura):not(#canvas_firefly),
 /* 背景音乐浮动播放器、看板娘、Spine 模型、首页可拖拽贴纸 */
 html[data-site-mode="pure"] #bg-player,
 html[data-site-mode="pure"] .l2d-buddy,
@@ -461,10 +466,28 @@ html[data-site-mode="pure"] .post-card-bottom-tags > span {
 	display: none;
 }
 html[data-site-mode="pure"] .pure-page-info {
-	display: block;
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 1rem;
 	margin-bottom: 1rem;
 	font-size: 0.8125rem;
+}
+html[data-site-mode="pure"] .pure-page-info .pure-page-info-text {
 	color: var(--content-meta);
+}
+/* 右侧「按年份查看全部文章」：显式墨色（参考 rainzt 纯净形态同款信息行）。
+   不能用 inherit——信息行不在卡片里，暗色下会继承到初始黑（守门扫描实锤过） */
+html[data-site-mode="pure"] .pure-page-info a {
+	color: #26262a;
+	text-decoration: none;
+	white-space: nowrap;
+}
+html.dark[data-site-mode="pure"] .pure-page-info a {
+	color: #e5e5e5;
+}
+html[data-site-mode="pure"] .pure-page-info a:hover {
+	text-decoration: underline;
 }
 #pure-reading-progress {
 	display: none;

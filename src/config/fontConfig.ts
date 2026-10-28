@@ -104,6 +104,15 @@ export const fontsList: FontDefinition[] = [
 		fallbacks: ["serif"],
 	},
 	{
+		name: "M PLUS Rounded 1c",
+		cssVariable: "--font-m-plus-rounded-1c",
+		provider: "fontsource",
+		weights: ["300", "400", "500", "700", "800"],
+		styles: ["normal"],
+		subsets: ["latin"],
+		fallbacks: ["sans-serif"],
+	},
+	{
 		name: "Zhuque Fangsong",
 		cssVariable: "--font-zhuque-fangsong",
 		provider: "local",
@@ -115,6 +124,19 @@ export const fontsList: FontDefinition[] = [
 			],
 		},
 		fallbacks: ["serif"],
+	},
+	{
+		name: "Luoliti",
+		cssVariable: "--font-luoliti",
+		provider: "local",
+		options: {
+			variants: [
+				{
+					src: ["./public/assets/fonts/loli.woff2"],
+				},
+			],
+		},
+		fallbacks: ["sans-serif"],
 	},
 ];
 
@@ -148,6 +170,9 @@ export const fontConfig: FontSelectionConfig = {
 			extraChars: "",
 		},
 		"--font-zhuque-fangsong": {
+			extraChars: "",
+		},
+		"--font-luoliti": {
 			extraChars: "",
 		},
 	},

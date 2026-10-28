@@ -461,8 +461,8 @@ export function setSiteMode(mode: SiteMode): void {
 
 // ─── 素简字体 ─────────────────────────────────────────────
 // 调色板在素简下提供的阅读字体切换；只存选择，字体栈由 pure-mode.css 按 data-pure-font 选
-export type PureFont = "system" | "maru" | "lxgw" | "zhuque";
-const PURE_FONTS: PureFont[] = ["system", "maru", "lxgw", "zhuque"];
+export type PureFont = "system" | "maru" | "lxgw" | "zhuque" | "mplus" | "luoli";
+const PURE_FONTS: PureFont[] = ["system", "maru", "lxgw", "zhuque", "mplus", "luoli"];
 
 export function getStoredPureFont(): PureFont {
 	if (

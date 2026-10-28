@@ -40,6 +40,8 @@ export function collectUsedFontCssVars(
 	// 两边共用这份收集逻辑，一并算作已用
 	used.add("--font-lxgw-wenkai");
 	used.add("--font-zhuque-fangsong");
+	used.add("--font-m-plus-rounded-1c");
+	used.add("--font-luoliti");
 
 	return used;
 }

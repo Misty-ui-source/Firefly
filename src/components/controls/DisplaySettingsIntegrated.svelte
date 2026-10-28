@@ -122,12 +122,15 @@ const siteModeOptions = [
 	{ value: "full", labelKey: I18nKey.siteModeFull },
 	{ value: "pure", labelKey: I18nKey.siteModePure },
 ] as const;
-// 素简下调色板精简：只留站点形态（华彩切换）、字体与列表布局，壁纸/特效整页签收起
+// 素简下调色板精简：只留站点形态（华彩切换）、字体与特效（樱花/萤火虫），壁纸整页签收起；
+// 文章布局（列表/网格）在素简下不出现——素简是单列列表、根本排不了网格（2026-10-28 用户定），原位置改放特效
 const isPure = $derived(siteMode === "pure");
 let pureFont = $state(getStoredPureFont());
 const pureFontOptions = [
 	{ value: "system", label: "" },
 	{ value: "maru", label: "Zen Maru Gothic 圆体" },
+	{ value: "mplus", label: "M PLUS Rounded 日本圆体" },
+	{ value: "luoli", label: "中文圆体" },
 	{ value: "lxgw", label: "LXGW WenKai 霞鹜文楷" },
 	{ value: "zhuque", label: "Zhuque Fangsong 朱雀仿宋" },
 ] as const;
@@ -1003,8 +1006,8 @@ $effect(() => {
 		</div>
 		{/if}
 
-		<!-- Layout Switch Section（所有页面显示） -->
-		{#if allowLayoutSwitch}
+		<!-- Layout Switch Section（华彩下所有页面显示；素简单列列表排不了网格，不显示） -->
+		{#if allowLayoutSwitch && !isPure}
 		<div class="">
 			<div class="section-title">
 				{i18n(I18nKey.postListLayout)}
@@ -1045,6 +1048,51 @@ $effect(() => {
 					</svg>
 					<span class="text-xs font-medium">{i18n(I18nKey.postListLayoutGrid)}</span>
 				</button>
+			</div>
+		</div>
+		{/if}
+
+		<!-- Pure-mode Effects Section：素简没有特效页签，在原「文章布局」的位置放两开关（樱花/萤火虫） -->
+		{#if isPure && (isSakuraSwitchable || isFireflySwitchable)}
+		<div class="">
+			<div class="section-title">
+				{i18n(I18nKey.effectsSettings)}
+			</div>
+			<div class="space-y-1">
+				{#if isSakuraSwitchable}
+				<button
+					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
+					class:bg-(--btn-regular-bg-hover)={sakuraEnabled}
+					onclick={toggleSakuraEnabled}
+				>
+					<Icon icon="mdi:flower-poppy" class="text-[1.25rem] shrink-0"></Icon>
+					<span class="text-sm flex-1">{i18n(I18nKey.sakuraEffect)}</span>
+					<div class="w-10 h-5 rounded-full transition-all duration-200 relative"
+						 class:bg-(--primary)={sakuraEnabled}
+						 class:bg-(--btn-regular-bg-active)={!sakuraEnabled}>
+						<div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+							 class:left-0.5={!sakuraEnabled}
+							 class:left-5={sakuraEnabled}></div>
+					</div>
+				</button>
+				{/if}
+				{#if isFireflySwitchable}
+				<button
+					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
+					class:bg-(--btn-regular-bg-hover)={fireflyEnabled}
+					onclick={toggleFireflyEnabled}
+				>
+					<Icon icon="mdi:sparkles" class="text-[1.25rem] shrink-0"></Icon>
+					<span class="text-sm flex-1">{i18n(I18nKey.fireflyEffect)}</span>
+					<div class="w-10 h-5 rounded-full transition-all duration-200 relative"
+						 class:bg-(--primary)={fireflyEnabled}
+						 class:bg-(--btn-regular-bg-active)={!fireflyEnabled}>
+						<div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+							 class:left-0.5={!fireflyEnabled}
+							 class:left-5={fireflyEnabled}></div>
+					</div>
+				</button>
+				{/if}
 			</div>
 		</div>
 		{/if}
