@@ -17,7 +17,7 @@ const activeItems = items.filter((item) => item.enabled !== false);
 		{enabled && activeItems.length > 0 ? (
 			<ThoughtsCanvas items={activeItems} />
 		) : (
-			<div class="border-2 border-black dark:border-white rounded-2xl p-12 bg-white dark:bg-black">
+			<div class="border-2 border-black dark:border-white rounded-2xl p-12 bg-white dark:bg-black text-black dark:text-white">
 				<p class="text-center opacity-60">还没有碎碎念，去控制台添加吧。</p>
 			</div>
 		)}

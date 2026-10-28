@@ -138,6 +138,19 @@ export const fontsList: FontDefinition[] = [
 		},
 		fallbacks: ["sans-serif"],
 	},
+	{
+		name: "HYXiaoMaiTiJ",
+		cssVariable: "--font-xiaomaiti",
+		provider: "local",
+		options: {
+			variants: [
+				{
+					src: ["./public/assets/fonts/HYXiaoMaiTiJ.woff2"],
+				},
+			],
+		},
+		fallbacks: ["sans-serif"],
+	},
 ];
 
 // ─── 字体选择与区域覆盖 ─────────────────────────────────────
@@ -173,6 +186,9 @@ export const fontConfig: FontSelectionConfig = {
 			extraChars: "",
 		},
 		"--font-luoliti": {
+			extraChars: "",
+		},
+		"--font-xiaomaiti": {
 			extraChars: "",
 		},
 	},

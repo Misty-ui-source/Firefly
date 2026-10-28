@@ -6543,6 +6543,7 @@ routes.fonts = async () => {
     '--font-zen-maru-gothic': 'Zen Maru Gothic · 日系圆体',
     '--font-m-plus-rounded-1c': 'M PLUS Rounded 1c · 日本圆体',
     '--font-luoliti': '中文圆体',
+    '--font-xiaomaiti': '汉仪小麦体',
     '--font-greatvibes': 'Great Vibes · 手写花体',
   };
   const fontLabel = (f) => FONT_CN[f.var] || f.name;
