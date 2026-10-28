@@ -502,5 +502,12 @@
     "action": "新建",
     "target": "src/content/diary/2026-10-28.md",
     "detail": ""
+  },
+  {
+    "ts": "2026-10-28T15:34:35.560Z",
+    "type": "动态",
+    "action": "新建",
+    "target": "src/content/dynamic/2026-10-28.md",
+    "detail": ""
   }
 ]
