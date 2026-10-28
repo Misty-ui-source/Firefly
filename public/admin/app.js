@@ -6096,6 +6096,7 @@ routes.theme = async () => {
     if (out === null) return null;
     out = out.replace(/analyticsStyle\s*:\s*"[\w-]+"/, `analyticsStyle: "${s.analyticsStyle}"`);
     out = out.replace(/siteMode\s*:\s*"\w+"/, `siteMode: "${s.siteMode}"`);
+    out = out.replace(/pureFont\s*:\s*"\w+"/, `pureFont: "${s.pureFont}"`);
     return out;
   }
   function applyBgw(t, s) {
@@ -6214,6 +6215,8 @@ routes.theme = async () => {
       <div class="field"><label>移动端菜单样式</label><div class="pills">${seg('mobileMenuStyle', 'drawer', '全屏抽屉')}${seg('mobileMenuStyle', 'card', '浮层卡片')}</div></div>
       <div class="field"><label>站点形态（全站默认）</label><div class="pills">${seg('siteMode', 'full', '🌸 华彩')}${seg('siteMode', 'pure', '🍃 素简')}</div>
       <p class="hint">素简 = 简洁导航 · 专注阅读（对标朝朝听雨的 Pure 形态）：隐藏横幅壁纸、花瓣特效、看板娘与音乐浮动件，侧栏只留个人卡 / 公告 / 最近评论 / 标签，文章页正文单列、右栏只留目录。访客可以在博客调色板（显示设置）里自己切换形态，那是访客本地的选择，不改这里的全站默认。</p></div>
+      <div class="field"><label>素简默认字体</label><div class="pills">${seg('pureFont', 'system', '系统默认')}${seg('pureFont', 'maru', 'Zen Maru 圆体')}${seg('pureFont', 'mplus', 'M PLUS 日本圆体')}${seg('pureFont', 'luoli', '中文圆体')}${seg('pureFont', 'lxgw', '霞鹜文楷')}${seg('pureFont', 'zhuque', '朱雀仿宋')}</div>
+      <p class="hint">访客第一次打开、且没在调色板里选过字体时，素简形态用这个字体；访客自己选过就以访客的为准，不改这里的默认。</p></div>
       <div class="field"><label>站点统计页样式</label><div class="pills">${seg('analyticsStyle', 'classic', '现行版（手搓）')}${seg('analyticsStyle', 'azuma', 'azuma 同款（带插画）')}${seg('analyticsStyle', 'azuma-clean', 'azuma 清爽版（无插画）')}</div>
       <p class="hint">azuma 同款 = 圈子里流传的 Aemeath 统计页（访问脉冲 7/30/90 天切换、推送节奏带贪吃蛇、中国地图、最近评论），数据走本站自己的 Umami / Waline。带插画版的 7 张图已全部压成 webp（原版 5.5MB → 约 0.7MB）。切换前可以先开 /analytics-azuma/ 与 /analytics-azuma-clean/ 两张预览页对比，三套随时互切。</p></div>
     </div>
