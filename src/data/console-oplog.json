@@ -523,5 +523,12 @@
     "action": "更新",
     "target": "src/content/dynamic/2026-10-28.md",
     "detail": ""
+  },
+  {
+    "ts": "2026-10-28T16:00:11.305Z",
+    "type": "日记",
+    "action": "更新",
+    "target": "src/content/diary/2026-10-28.md",
+    "detail": ""
   }
 ]
