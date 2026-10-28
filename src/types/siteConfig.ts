@@ -99,8 +99,8 @@ export type SiteConfig = {
 	// 控制台主题页可改默认，访客可在显示设置里覆盖（localStorage siteMode），样式见 styles/pure-mode.css
 	siteMode?: SiteMode;
 
-	// 素简默认阅读字体（控制台主题页可改；访客在显示设置里选过则以访客为准，localStorage pureFont）
-	pureFont?: "system" | "maru" | "lxgw" | "zhuque" | "mplus" | "luoli";
+	// 素简字体菜单（控制台字体页可管）：有序的 PureFont 键数组，第一项为默认字体；访客自选优先（localStorage pureFont）
+	pureFontMenu?: string[];
 
 	// 页面开关配置
 	pages: {

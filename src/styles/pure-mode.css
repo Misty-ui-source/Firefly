@@ -51,6 +51,21 @@ html[data-site-mode="pure"][data-pure-font="zhuque"] body {
 html[data-site-mode="pure"][data-pure-font="luoli"] body {
 	font-family: var(--font-luoliti), sans-serif !important;
 }
+html[data-site-mode="pure"][data-pure-font="inter"] body {
+	font-family: var(--font-inter), sans-serif !important;
+}
+html[data-site-mode="pure"][data-pure-font="jetbrains"] body {
+	font-family: var(--font-jetbrains-mono), monospace !important;
+}
+html[data-site-mode="pure"][data-pure-font="notoserif"] body {
+	font-family: var(--font-noto-serif-sc), serif !important;
+}
+html[data-site-mode="pure"][data-pure-font="greatvibes"] body {
+	font-family: var(--font-greatvibes), sans-serif !important;
+}
+html[data-site-mode="pure"][data-pure-font="xiaomaiti"] body {
+	font-family: var(--font-xiaomaiti), sans-serif !important;
+}
 
 /* 横幅 / 壁纸层（连带其内的波纹、渐变、标题叠加层）整体隐藏 */
 html[data-site-mode="pure"] #wallpaper-wrapper,

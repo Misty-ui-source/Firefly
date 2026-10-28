@@ -460,24 +460,81 @@ export function setSiteMode(mode: SiteMode): void {
 }
 
 // ─── 素简字体 ─────────────────────────────────────────────
-// 调色板在素简下提供的阅读字体切换；只存选择，字体栈由 pure-mode.css 按 data-pure-font 选
-export type PureFont = "system" | "maru" | "lxgw" | "zhuque" | "mplus" | "luoli";
-const PURE_FONTS: PureFont[] = ["system", "maru", "lxgw", "zhuque", "mplus", "luoli"];
+// 调色板在素简下提供的阅读字体切换；只存选择，字体栈由 pure-mode.css 按 data-pure-font 选。
+// 候选全集 = 字体库全部字体 + 系统默认；实际展示哪几款、什么顺序由 siteConfig.pureFontMenu 定
+// （控制台字体页可管），菜单第一项即默认字体
+export type PureFont =
+	| "system"
+	| "maru"
+	| "mplus"
+	| "luoli"
+	| "lxgw"
+	| "zhuque"
+	| "inter"
+	| "jetbrains"
+	| "notoserif"
+	| "greatvibes"
+	| "xiaomaiti";
+const PURE_FONTS: PureFont[] = [
+	"system",
+	"maru",
+	"mplus",
+	"luoli",
+	"lxgw",
+	"zhuque",
+	"inter",
+	"jetbrains",
+	"notoserif",
+	"greatvibes",
+	"xiaomaiti",
+];
+
+export const PURE_FONT_LABELS: Record<PureFont, string> = {
+	system: "",
+	maru: "Zen Maru Gothic 圆体",
+	mplus: "M PLUS Rounded 日本圆体",
+	luoli: "中文圆体",
+	lxgw: "LXGW WenKai 霞鹜文楷",
+	zhuque: "Zhuque Fangsong 朱雀仿宋",
+	inter: "Inter 英文无衬线",
+	jetbrains: "JetBrains Mono 等宽",
+	notoserif: "Noto Serif SC 思源宋体",
+	greatvibes: "Great Vibes 手写花体",
+	xiaomaiti: "汉仪小麦体",
+};
+
+const DEFAULT_PURE_FONT_MENU: PureFont[] = [
+	"system",
+	"maru",
+	"mplus",
+	"luoli",
+	"lxgw",
+	"zhuque",
+];
+
+export function getPureFontMenu(): PureFont[] {
+	const raw = siteConfig.pureFontMenu;
+	if (!Array.isArray(raw)) return [...DEFAULT_PURE_FONT_MENU];
+	const menu = raw.filter(
+		(k, i) => PURE_FONTS.includes(k as PureFont) && raw.indexOf(k) === i,
+	) as PureFont[];
+	return menu.length > 0 ? menu : [...DEFAULT_PURE_FONT_MENU];
+}
 
 export function getDefaultPureFont(): PureFont {
-	const v = siteConfig.pureFont ?? "system";
-	return PURE_FONTS.includes(v as PureFont) ? (v as PureFont) : "system";
+	return getPureFontMenu()[0];
 }
 
 export function getStoredPureFont(): PureFont {
+	const menu = getPureFontMenu();
 	if (
 		typeof localStorage === "undefined" ||
 		typeof localStorage.getItem !== "function"
 	) {
-		return getDefaultPureFont();
+		return menu[0];
 	}
 	const stored = localStorage.getItem("pureFont") as PureFont | null;
-	return stored && PURE_FONTS.includes(stored) ? stored : getDefaultPureFont();
+	return stored && menu.includes(stored) ? stored : menu[0];
 }
 
 export function applyPureFontToDocument(font: PureFont): void {

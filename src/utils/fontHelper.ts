@@ -42,6 +42,12 @@ export function collectUsedFontCssVars(
 	used.add("--font-zhuque-fangsong");
 	used.add("--font-m-plus-rounded-1c");
 	used.add("--font-luoliti");
+	used.add("--font-zen-maru-gothic");
+	used.add("--font-inter");
+	used.add("--font-jetbrains-mono");
+	used.add("--font-noto-serif-sc");
+	used.add("--font-greatvibes");
+	used.add("--font-xiaomaiti");
 
 	return used;
 }

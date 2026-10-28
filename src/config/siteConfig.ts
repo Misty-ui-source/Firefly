@@ -149,9 +149,10 @@ export const siteConfig: SiteConfig = {
 	// 控制台主题页可改默认，访客可在显示设置（调色板）里覆盖、存 localStorage
 	siteMode: "full",
 
-	// 素简默认阅读字体：system 系统默认 / maru Zen Maru 圆体 / mplus M PLUS 日本圆体 / luoli 中文圆体 / lxgw 霞鹜文楷 / zhuque 朱雀仿宋；
-	// 控制台主题页可改默认，访客可在显示设置（调色板）里覆盖、存 localStorage pureFont
-	pureFont: "system",
+	// 素简字体菜单（控制台字体页可管：放哪几款、按什么顺序）：数组顺序即调色板展示顺序，第一项为默认字体；
+	// 可选值 system 系统默认 / maru / mplus / luoli / lxgw / zhuque / inter / jetbrains / notoserif / greatvibes / xiaomaiti（与 setting-utils 的 PureFont 对应）
+	// 访客在显示设置（调色板）里选过的存 localStorage pureFont，优先于这里的默认
+	pureFontMenu: ["system", "maru", "mplus", "luoli", "lxgw", "zhuque"],
 
 	// 站点开始日期，用于统计运行天数
 	siteStartDate: "2026-10-15",

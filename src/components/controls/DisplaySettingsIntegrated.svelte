@@ -39,7 +39,9 @@ import {
 	getStoredFireflyEnabled,
 	getStoredFullscreenLayout,
 	getStoredNavbarStyle,
+	getPureFontMenu,
 	getStoredPureFont,
+	PURE_FONT_LABELS,
 	getStoredSiteMode,
 	getStoredGradientEnabled,
 	getStoredOverlayBlur,
@@ -126,14 +128,11 @@ const siteModeOptions = [
 // 文章布局（列表/网格）在素简下不出现——素简是单列列表、根本排不了网格（2026-10-28 用户定），原位置改放特效
 const isPure = $derived(siteMode === "pure");
 let pureFont = $state(getStoredPureFont());
-const pureFontOptions = [
-	{ value: "system", label: "" },
-	{ value: "maru", label: "Zen Maru Gothic 圆体" },
-	{ value: "mplus", label: "M PLUS Rounded 日本圆体" },
-	{ value: "luoli", label: "中文圆体" },
-	{ value: "lxgw", label: "LXGW WenKai 霞鹜文楷" },
-	{ value: "zhuque", label: "Zhuque Fangsong 朱雀仿宋" },
-] as const;
+// 选项来自 siteConfig.pureFontMenu（控制台字体页可管：放哪几款、什么顺序，第一项即默认）
+const pureFontOptions = getPureFontMenu().map((k) => ({
+	value: k,
+	label: PURE_FONT_LABELS[k],
+}));
 let wallpaperMode: WALLPAPER_MODE = $state(backgroundWallpaper.mode);
 const defaultWallpaperMode = backgroundWallpaper.mode;
 let fullscreenLayout: FullscreenWallpaperLayout = $state(

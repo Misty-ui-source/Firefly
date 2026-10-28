@@ -6018,10 +6018,9 @@ routes.theme = async () => {
     const navStyle = getIn(t, nav, /navbarStyle\s*:\s*"(\w+)"/);
     const anaM = t.match(/analyticsStyle\s*:\s*"([\w-]+)"/);
     const modeM = t.match(/siteMode\s*:\s*"(\w+)"/);
-    const fontM = t.match(/pureFont\s*:\s*"(\w+)"/);
     const mobileMenu = getIn(t, nav, /mobileMenuStyle\s*:\s*"(\w+)"/);
     if (hue === null || border === null || follow === null || layout === null) return null;
-    return { hue: Number(hue), cardBorder: border === 'true', cardFollow: follow === 'true', layout, layoutMobile: layoutM || layout, navbarStyle: navStyle || 'classic', mobileMenuStyle: mobileMenu || 'drawer', analyticsStyle: anaM ? anaM[1] : 'classic', siteMode: modeM ? modeM[1] : 'full', pureFont: fontM ? fontM[1] : 'system' };
+    return { hue: Number(hue), cardBorder: border === 'true', cardFollow: follow === 'true', layout, layoutMobile: layoutM || layout, navbarStyle: navStyle || 'classic', mobileMenuStyle: mobileMenu || 'drawer', analyticsStyle: anaM ? anaM[1] : 'classic', siteMode: modeM ? modeM[1] : 'full' };
   }
   function parseBgw(t) {
     const mm = t.match(/^\tmode\s*:\s*"(\w+)"/m);
@@ -6096,7 +6095,6 @@ routes.theme = async () => {
     if (out === null) return null;
     out = out.replace(/analyticsStyle\s*:\s*"[\w-]+"/, `analyticsStyle: "${s.analyticsStyle}"`);
     out = out.replace(/siteMode\s*:\s*"\w+"/, `siteMode: "${s.siteMode}"`);
-    out = out.replace(/pureFont\s*:\s*"\w+"/, `pureFont: "${s.pureFont}"`);
     return out;
   }
   function applyBgw(t, s) {
@@ -6215,8 +6213,6 @@ routes.theme = async () => {
       <div class="field"><label>移动端菜单样式</label><div class="pills">${seg('mobileMenuStyle', 'drawer', '全屏抽屉')}${seg('mobileMenuStyle', 'card', '浮层卡片')}</div></div>
       <div class="field"><label>站点形态（全站默认）</label><div class="pills">${seg('siteMode', 'full', '🌸 华彩')}${seg('siteMode', 'pure', '🍃 素简')}</div>
       <p class="hint">素简 = 简洁导航 · 专注阅读（对标朝朝听雨的 Pure 形态）：隐藏横幅壁纸、花瓣特效、看板娘与音乐浮动件，侧栏只留个人卡 / 公告 / 最近评论 / 标签，文章页正文单列、右栏只留目录。访客可以在博客调色板（显示设置）里自己切换形态，那是访客本地的选择，不改这里的全站默认。</p></div>
-      <div class="field"><label>素简默认字体</label><div class="pills">${seg('pureFont', 'system', '系统默认')}${seg('pureFont', 'maru', 'Zen Maru 圆体')}${seg('pureFont', 'mplus', 'M PLUS 日本圆体')}${seg('pureFont', 'luoli', '中文圆体')}${seg('pureFont', 'lxgw', '霞鹜文楷')}${seg('pureFont', 'zhuque', '朱雀仿宋')}</div>
-      <p class="hint">访客第一次打开、且没在调色板里选过字体时，素简形态用这个字体；访客自己选过就以访客的为准，不改这里的默认。</p></div>
       <div class="field"><label>站点统计页样式</label><div class="pills">${seg('analyticsStyle', 'classic', '现行版（手搓）')}${seg('analyticsStyle', 'azuma', 'azuma 同款（带插画）')}${seg('analyticsStyle', 'azuma-clean', 'azuma 清爽版（无插画）')}</div>
       <p class="hint">azuma 同款 = 圈子里流传的 Aemeath 统计页（访问脉冲 7/30/90 天切换、推送节奏带贪吃蛇、中国地图、最近评论），数据走本站自己的 Umami / Waline。带插画版的 7 张图已全部压成 webp（原版 5.5MB → 约 0.7MB）。切换前可以先开 /analytics-azuma/ 与 /analytics-azuma-clean/ 两张预览页对比，三套随时互切。</p></div>
     </div>
@@ -6537,6 +6533,15 @@ routes.fonts = async () => {
     };
   } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
 
+  /* 素简字体菜单（siteConfig.pureFontMenu）：另读一份 siteConfig，读不到时按内置默认渲染、保存时再报错 */
+  let siteSha = null, siteSrc = '', pureMenu = ['system', 'maru', 'mplus', 'luoli', 'lxgw', 'zhuque'];
+  try {
+    const sd = await ghGetFile('src/config/siteConfig.ts');
+    siteSha = sd.sha; siteSrc = sd.text;
+    const mm = siteSrc.match(/pureFontMenu\s*:\s*\[([^\]]*)\]/);
+    if (mm) { const ks = [...mm[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]); if (ks.length) pureMenu = ks; }
+  } catch (e) { /* 忽略：菜单卡仍可渲染，保存按钮会提示没读到配置 */ }
+
   /* 下拉显示名中文化（只改显示，value 仍是 CSS 变量、配置里的字体名不动——那是加载器认的名字） */
   const FONT_CN = {
     '--font-noto-serif-sc': '思源宋体',
@@ -6551,6 +6556,11 @@ routes.fonts = async () => {
     '--font-greatvibes': 'Great Vibes · 手写花体',
   };
   const fontLabel = (f) => FONT_CN[f.var] || f.name;
+  /* 素简字体键 ↔ 字体库 CSS 变量（与站点 setting-utils 的 PureFont 一一对应） */
+  const PURE_KEY_BY_VAR = { '--font-zen-maru-gothic': 'maru', '--font-inter': 'inter', '--font-jetbrains-mono': 'jetbrains', '--font-noto-serif-sc': 'notoserif', '--font-greatvibes': 'greatvibes', '--font-lxgw-wenkai': 'lxgw', '--font-m-plus-rounded-1c': 'mplus', '--font-zhuque-fangsong': 'zhuque', '--font-luoliti': 'luoli', '--font-xiaomaiti': 'xiaomaiti' };
+  const VAR_BY_PURE_KEY = Object.fromEntries(Object.entries(PURE_KEY_BY_VAR).map(([v, k]) => [k, v]));
+  const pureLabel = (k) => k === 'system' ? '系统默认' : (FONT_CN[VAR_BY_PURE_KEY[k]] || k);
+  const ALL_PURE_KEYS = ['system', ...fonts.map((f) => PURE_KEY_BY_VAR[f.var]).filter(Boolean)];
   const fontOpts = (cur) => `<option value="system"${cur === 'system' ? ' selected' : ''}>系统字体（不加载网络字体）</option>` +
     fonts.map((f) => `<option value="${esc(f.var)}"${cur === f.var ? ' selected' : ''}>${esc(fontLabel(f))}</option>`).join('');
   const regionOpts = (cur) => `<option value=""${!cur ? ' selected' : ''}>（跟随全局）</option>` +
@@ -6576,6 +6586,16 @@ routes.fonts = async () => {
       ${slotField('font-code', '代码字体', regionOpts(cfg.codeFont))}
     </div>
     <p class="hint">已注册字体 ${fonts.length} 款：${fonts.map((f) => esc(f.name)).join('、')}。想再加新字体，先在 fontConfig.ts 的 fontsList 里注册，之后这里就能选。</p>
+  </div>
+  <div class="card"><h2>🍃 素简字体菜单 <span class="sub">博客调色板在素简形态下展示的字体 · 存 siteConfig.pureFontMenu</span></h2>
+    <p class="hint">从字体库里挑哪几款放进素简菜单、用 ↑ ↓ 调顺序；排第一的固定为默认字体（访客没自己选过时用它，在调色板里也排第一）。访客自己选过的以访客为准。保存后重新构建网站生效。</p>
+    <div id="pure-menu-list"></div>
+    <div class="toolbar" style="margin-top:12px">
+      <select id="pure-menu-add" style="min-width:200px"></select>
+      <button class="btn btn-small" id="btn-pure-add">＋ 添加到菜单</button>
+      <span class="spacer"></span>
+      <button class="btn" id="btn-save-pure-menu">💾 保存素简菜单</button>
+    </div>
   </div>`;
 
   $('#btn-back').onclick = () => { location.hash = '#/dashboard'; };
@@ -6604,6 +6624,44 @@ routes.fonts = async () => {
     try {
       await saveWithLog(FONT_PATH, newSrc, sha, '修改字体设置 [管理台]', { type: '字体', action: '更新', target: '字体设置' });
       toast('字体设置已保存，重新构建后生效');
+      routes.fonts();
+    } catch (e) { toast('保存失败：' + e.message); }
+  };
+
+  /* 素简字体菜单：增删排序都在本地数组里进行，点保存才写 siteConfig */
+  const renderPureMenu = () => {
+    const box = $('#pure-menu-list');
+    if (!box) return;
+    box.innerHTML = pureMenu.map((k, i) => `
+      <div class="toolbar" style="padding:6px 0;border-bottom:1px dashed #e5e7eb">
+        <span>${i === 0 ? '🔒 ' : ''}${esc(pureLabel(k))}${i === 0 ? ' <span class="tag">默认</span>' : ''}</span>
+        <span class="spacer"></span>
+        <button class="btn btn-small" data-pm="up" data-i="${i}"${i === 0 ? ' disabled' : ''}>↑</button>
+        <button class="btn btn-small" data-pm="down" data-i="${i}"${i === pureMenu.length - 1 ? ' disabled' : ''}>↓</button>
+        <button class="btn btn-small" data-pm="del" data-i="${i}"${i === 0 || pureMenu.length <= 1 ? ' disabled' : ''}>移除</button>
+      </div>`).join('');
+    const addSel = $('#pure-menu-add');
+    const cands = ALL_PURE_KEYS.filter((k) => !pureMenu.includes(k));
+    addSel.innerHTML = cands.length ? cands.map((k) => `<option value="${k}">${esc(pureLabel(k))}</option>`).join('') : '<option value="">（库里字体都在菜单里了）</option>';
+    box.querySelectorAll('[data-pm]').forEach((b) => { b.onclick = () => {
+      const i = Number(b.dataset.i), act = b.dataset.pm;
+      if (act === 'up' && i > 0) { const t = pureMenu[i - 1]; pureMenu[i - 1] = pureMenu[i]; pureMenu[i] = t; }
+      if (act === 'down' && i < pureMenu.length - 1) { const t = pureMenu[i + 1]; pureMenu[i + 1] = pureMenu[i]; pureMenu[i] = t; }
+      if (act === 'del' && i > 0) { pureMenu.splice(i, 1); }
+      renderPureMenu();
+    }; });
+  };
+  renderPureMenu();
+  $('#btn-pure-add').onclick = () => { const v = $('#pure-menu-add').value; if (v && !pureMenu.includes(v)) { pureMenu.push(v); renderPureMenu(); } };
+  $('#btn-save-pure-menu').onclick = async () => {
+    if (!siteSrc) { toast('没读到 siteConfig.ts，刷新页面再试'); return; }
+    if (!/pureFontMenu\s*:\s*\[[^\]]*\]/.test(siteSrc)) { toast('siteConfig.ts 里没找到 pureFontMenu 字段'); return; }
+    const arr = '[' + pureMenu.map((k) => `"${k}"`).join(', ') + ']';
+    const newSite = siteSrc.replace(/pureFontMenu\s*:\s*\[[^\]]*\]/, `pureFontMenu: ${arr}`);
+    if (newSite === siteSrc) { toast('没有改动'); return; }
+    try {
+      await saveWithLog('src/config/siteConfig.ts', newSite, siteSha, '修改素简字体菜单 [管理台]', { type: '字体', action: '更新', target: '素简字体菜单' });
+      toast('素简菜单已保存，重新构建后生效');
       routes.fonts();
     } catch (e) { toast('保存失败：' + e.message); }
   };
