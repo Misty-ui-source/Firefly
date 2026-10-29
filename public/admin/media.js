@@ -113,8 +113,18 @@ function serializeStringList(items, indent) {
   const lines = items.map((s) => `${indent}\t"${s}",`);
   return `[\n${lines.join('\n')}\n${indent}]`;
 }
-// 字符串数组型配置：读 → 改 → 写回（一次 commit）
-async function updateStringListConfig(path, key, newItems, label) {
+/* 队列感知读底：同文件已入队时以队列快照为底叠加（baseSha 沿用队列条目记录的原始远端 sha，
+ * 执行时据此判断排队期间远端有没有被改过）；未入队则以远端当前文本为底。 */
+async function cfgBaseForQueue(path) {
+  const data = await ghGetFile(path);
+  if (typeof opQueueFind === 'function') {
+    const q = opQueueFind(path);
+    if (q) return { text: q.payload, sha: data.sha, baseSha: q.baseSha || null };
+  }
+  return { text: data.text, sha: data.sha, baseSha: data.sha };
+}
+// 字符串数组型配置（立即提交原路径）：读 → 改 → 写回（一次 commit）
+async function updateStringListConfigDirect(path, key, newItems, label) {
   const data = await ghGetFile(path);
   const found = extractConfigValue(data.text, key);
   if (!found) throw new Error(`配置 ${path} 里找不到 ${key}`);
@@ -123,6 +133,18 @@ async function updateStringListConfig(path, key, newItems, label) {
     + data.text.slice(found.end);
   const res = await saveWithLog(path, next, data.sha, `更新 ${label || key} [管理台]`, { type: '配置', action: '更新', target: label || key });
   return res;
+}
+// 字符串数组型配置：默认走暂存队列——生成整表新文本后按目标文件入队，不直接提交
+async function updateStringListConfig(path, key, newItems, label) {
+  if (typeof opQueueEnqueue !== 'function') return updateStringListConfigDirect(path, key, newItems, label);
+  const base = await cfgBaseForQueue(path);
+  const found = extractConfigValue(base.text, key);
+  if (!found) throw new Error(`配置 ${path} 里找不到 ${key}`);
+  const next = base.text.slice(0, found.start)
+    + found.indent + key + ': ' + serializeStringList(newItems, found.indent)
+    + base.text.slice(found.end);
+  opQueueEnqueue({ targetFile: path, label: label || key, payload: next, baseSha: base.baseSha, op: { type: '配置', action: '更新', target: label || key } });
+  return { queued: true };
 }
 /* 从 openIdx 的 { 开始按括号配平切出整块文本（字符串/注释感知） */
 function scanBraceText(text, openIdx) {
@@ -250,13 +272,17 @@ routes.images = async (arg) => {
     ]);
   } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
 
-  let wpDesktop = parseConfigStrings(extractConfigValue(bg.text, 'desktop'));
-  let wpMobile = parseConfigStrings(extractConfigValue(bg.text, 'mobile'));
-  let wpDisabled = parseConfigStrings(extractConfigValue(bg.text, 'disabled'));
-  const wpParsed = parseModeWallpapers(bg.text);
+  /* 初始列表用「远端 + 已入队快照」的合并视图：本机队列里有未执行的快照时以快照为准，
+   * 这样刷新后接着改、includes 去重判断都不会漏掉排队中的图 */
+  const bgText0 = (typeof opQueuePayload === 'function' && opQueuePayload(BG_CONFIG)) || bg.text;
+  const stickerText0 = (typeof opQueuePayload === 'function' && opQueuePayload(STICKER_CONFIG)) || sticker.text;
+  let wpDesktop = parseConfigStrings(extractConfigValue(bgText0, 'desktop'));
+  let wpMobile = parseConfigStrings(extractConfigValue(bgText0, 'mobile'));
+  let wpDisabled = parseConfigStrings(extractConfigValue(bgText0, 'disabled'));
+  const wpParsed = parseModeWallpapers(bgText0);
   let wpModeSrc = wpParsed.src;
   let wpModeCarousel = wpParsed.carousel;
-  let stickers = splitBraceObjects((extractConfigValue(sticker.text, 'stickers') || { raw: '[]' }).raw)
+  let stickers = splitBraceObjects((extractConfigValue(stickerText0, 'stickers') || { raw: '[]' }).raw)
     .map((o) => ({ src: getStrField(o, 'src'), x: getNumField(o, 'x'), y: getNumField(o, 'y'), size: getNumField(o, 'size') }));
   const albums = [];
   {
@@ -265,13 +291,21 @@ routes.images = async (arg) => {
     while ((m = re.exec(gallery.text))) albums.push({ id: m[1], name: m[2] });
   }
 
+  /* 保存分工（2026-10-29 暂存队列）：默认 save* = 只入队不提交，顶栏执行才落仓库；
+   * save*Now = 立即提交出口，走改前的原路径原语义，急用时绕过队列 */
   async function saveWallpapers() {
     await updateStringListConfig(BG_CONFIG, 'desktop', wpDesktop, '桌面壁纸');
     await updateStringListConfig(BG_CONFIG, 'mobile', wpMobile, '手机壁纸');
     await updateStringListConfig(BG_CONFIG, 'disabled', wpDisabled, '禁用壁纸');
+    toast('壁纸配置已加入待执行队列（顶栏「📥 待执行」执行后生效）');
+  }
+  async function saveWallpapersNow() {
+    await updateStringListConfigDirect(BG_CONFIG, 'desktop', wpDesktop, '桌面壁纸');
+    await updateStringListConfigDirect(BG_CONFIG, 'mobile', wpMobile, '手机壁纸');
+    await updateStringListConfigDirect(BG_CONFIG, 'disabled', wpDisabled, '禁用壁纸');
     toast('壁纸配置已保存（构建后生效）');
   }
-  async function saveModeWallpapers() {
+  function dedupeModeSrc() {
     // 保存前按 URL 去重（保留首次出现）：历史数据里混进过的重复图在这里清掉，
     // 否则同一张图占两个位置，「固定第一张」和随机抽图都会被它干扰
     WP_MODES.forEach((mode) => {
@@ -279,21 +313,46 @@ routes.images = async (arg) => {
         wpModeSrc[mode][dev] = [...new Set(wpModeSrc[mode][dev])];
       });
     });
-    const data = await ghGetFile(BG_CONFIG);
-    let text = data.text;
-    text = replaceConfigBlock(text, 'modeSrc', buildModeSrcBlock(wpModeSrc));
+  }
+  function buildModeWallpaperText(baseText) {
+    let text = replaceConfigBlock(baseText, 'modeSrc', buildModeSrcBlock(wpModeSrc));
     text = replaceConfigBlock(text, 'modeCarousel', buildModeCarouselBlock(wpModeCarousel));
+    return text;
+  }
+  async function saveModeWallpapers() {
+    dedupeModeSrc();
+    if (typeof opQueueEnqueue !== 'function') return saveModeWallpapersNow();
+    const base = await cfgBaseForQueue(BG_CONFIG);
+    const text = buildModeWallpaperText(base.text);
+    opQueueEnqueue({ targetFile: BG_CONFIG, label: '分模式壁纸', payload: text, baseSha: base.baseSha, op: { type: '配置', action: '更新', target: '分模式壁纸' } });
+    toast('分模式壁纸已加入待执行队列（顶栏「📥 待执行」执行后生效）');
+  }
+  async function saveModeWallpapersNow() {
+    dedupeModeSrc();
+    const data = await ghGetFile(BG_CONFIG);
+    const text = buildModeWallpaperText(data.text);
     await saveWithLog(BG_CONFIG, text, data.sha, '更新分模式壁纸 [管理台]', { type: '配置', action: '更新', target: '分模式壁纸' });
     toast('分模式壁纸已保存（构建后生效）');
   }
-  async function saveStickers(msg) {
-    const data = await ghGetFile(STICKER_CONFIG);
-    const found = extractConfigValue(data.text, 'stickers');
+  function buildStickerText(baseText) {
+    const found = extractConfigValue(baseText, 'stickers');
     if (!found) throw new Error('stickerConfig.ts 里找不到 stickers');
     const lines = stickers.map((s) => `${found.indent}\t{ src: "${escConfigStr(s.src)}", x: ${s.x}, y: ${s.y}, size: ${s.size} },`);
-    const next = data.text.slice(0, found.start)
+    return baseText.slice(0, found.start)
       + found.indent + 'stickers: [\n' + lines.join('\n') + '\n' + found.indent + ']'
-      + data.text.slice(found.end);
+      + baseText.slice(found.end);
+  }
+  async function saveStickers(msg) {
+    if (typeof opQueueEnqueue !== 'function') return saveStickersNow(msg);
+    const base = await cfgBaseForQueue(STICKER_CONFIG);
+    const next = buildStickerText(base.text);
+    const label = (msg || '更新首页贴纸 [管理台]').replace(/ \[管理台\]$/, '');
+    opQueueEnqueue({ targetFile: STICKER_CONFIG, label, payload: next, baseSha: base.baseSha, op: { type: '贴纸', action: '更新', target: '首页贴纸' } });
+    toast('贴纸配置已加入待执行队列（顶栏「📥 待执行」执行后生效）');
+  }
+  async function saveStickersNow(msg) {
+    const data = await ghGetFile(STICKER_CONFIG);
+    const next = buildStickerText(data.text);
     await saveWithLog(STICKER_CONFIG, next, data.sha, msg || '更新首页贴纸 [管理台]', { type: '贴纸', action: '更新', target: '首页贴纸' });
     toast('贴纸配置已保存（构建后生效）');
   }
@@ -349,9 +408,11 @@ routes.images = async (arg) => {
     toast('上传中…');
     try {
       const { urls } = await uploadImages([file], 'admin/wallpaper', 0.72);
+      // 与其余加图入口对齐：同一 URL 已在列表里就不再重复添加（此入口此前独缺这道检查）
+      if (list.includes(urls[0])) { toast('这张已经在了', true); return; }
       list.push(urls[0]);
       await saveWallpapers();
-          renderWallpapers();
+      renderWallpapers();
     } catch (e) { toast(e.message, true); }
   }
 
@@ -409,11 +470,12 @@ routes.images = async (arg) => {
   }
 
   view.innerHTML = `
-    <div class="toolbar"><span class="hint">🖼 图片管理：所有槽位一处替换。R2 槽位上传自动转 WebP；固定路径文件直接覆盖仓库原文件。每次保存 = 一次 commit，Pages 重新构建后生效。</span></div>
+    <div class="toolbar"><span class="hint">🖼 图片管理：所有槽位一处替换。R2 槽位上传自动转 WebP；固定路径文件直接覆盖仓库原文件。壁纸/贴纸改动先存进本机「📥 待执行队列」，顶栏执行才合并成一次 commit；急用可点各卡片里的「⚡ 立即提交」。<span id="img-queue-hint"></span></span></div>
 
     <div class="card">
       <h2>🖼 博客背景图 <span class="sub">${BG_CONFIG}（R2 直链，构建时不二次处理）</span></h2>
-      <p class="hint">桌面端用横版图、移动端用竖版图；多张则每次刷新随机一张。上传的图片先转 WebP 存 R2，再把地址写入配置。</p>
+      <p class="hint">桌面端用横版图、移动端用竖版图；多张则每次刷新随机一张。上传的图片先转 WebP 存 R2，再把地址写入配置（先进待执行队列）。</p>
+      <div class="toolbar"><button class="btn btn-small" id="wp-now">⚡ 立即提交共享壁纸（不走队列）</button></div>
       <h3>桌面端壁纸（${wpDesktop.length} 张）</h3>
       <div class="img-grid" id="wp-desktop"></div>
       <div class="toolbar">
@@ -432,7 +494,8 @@ routes.images = async (arg) => {
 
     <div class="card">
       <h2>🎠 分模式壁纸 <span class="sub">给每个壁纸模式配专属图和轮播开关（在「🎨 主题」页切换默认模式）</span></h2>
-      <p class="hint">规则：某模式某端<b>有专属图就只用专属图</b>，空着就回退用上面的共享图库。开启轮播就轮播；关掉轮播时，列表<b>第一张</b>就是固定显示的那张——点任意一张的「固定这张」会把它置顶（还开着轮播的话会顺手把该模式轮播关掉）。每次改动即时保存 = 一次 commit，构建后生效。</p>
+      <p class="hint">规则：某模式某端<b>有专属图就只用专属图</b>，空着就回退用上面的共享图库。开启轮播就轮播；关掉轮播时，列表<b>第一张</b>就是固定显示的那张——点任意一张的「固定这张」会把它置顶（还开着轮播的话会顺手把该模式轮播关掉）。每次改动先进待执行队列，顶栏执行后生效；急用点下方「⚡ 立即提交」。</p>
+      <div class="toolbar"><button class="btn btn-small" id="wp-mode-now">⚡ 立即提交分模式壁纸（不走队列）</button></div>
       ${[['banner', '横幅模式'], ['fullscreen', '全屏模式'], ['overlay', '透明覆盖']].map(([mode, label]) => `
       <div class="wp-mode-sec" id="wp-sec-${mode}">
         <h3>${label}专属图
@@ -496,7 +559,8 @@ routes.images = async (arg) => {
 
     <div class="card">
       <h2>✨ 首页贴纸 <span class="sub">${STICKER_CONFIG}</span></h2>
-      <p class="hint">首页可拖拽的小贴纸。换图直接覆盖原文件；改位置/尺寸后点"保存位置"；新增贴纸会上传到 src/assets/images/stickers/ 并追加配置。</p>
+      <p class="hint">首页可拖拽的小贴纸。换图直接覆盖原文件；改位置/尺寸后点"保存位置"；新增贴纸会上传到 src/assets/images/stickers/ 并追加配置。配置改动先进待执行队列，急用点下方「⚡ 立即提交」。</p>
+      <div class="toolbar"><button class="btn btn-small" id="sticker-now">⚡ 立即提交贴纸配置（不走队列）</button></div>
       <div class="img-grid" id="sticker-grid"></div>
       <div class="toolbar">
         <input type="file" id="sticker-file" accept="image/*" class="hidden">
@@ -766,6 +830,19 @@ routes.images = async (arg) => {
     }
   }
   renderStickers();
+
+  /* ⚡ 立即提交出口：绕过队列、走原路径直接落仓库（队列里已有的条目不受影响） */
+  const wpNowBtn = $('#wp-now');
+  if (wpNowBtn) wpNowBtn.onclick = async () => { try { await saveWallpapersNow(); renderWallpapers(); } catch (e) { toast(e.message, true); } };
+  const wpModeNowBtn = $('#wp-mode-now');
+  if (wpModeNowBtn) wpModeNowBtn.onclick = async () => { try { await saveModeWallpapersNow(); renderModeWallpapers(); } catch (e) { toast(e.message, true); } };
+  const stickerNowBtn = $('#sticker-now');
+  if (stickerNowBtn) stickerNowBtn.onclick = async () => { try { await saveStickersNow(); renderStickers(); } catch (e) { toast(e.message, true); } };
+  const qHint = $('#img-queue-hint');
+  if (qHint && typeof opQueueLoad === 'function') {
+    const qn = opQueueLoad().length;
+    if (qn) qHint.textContent = ` ⏳ 本机还有 ${qn} 项待执行（顶栏「📥 待执行」）。`;
+  }
 
   // ---- 报告图库（波奇酱）：内置两张 + 本机上传（R2 直链，存 localStorage） ----
   // 待联调：图库列表的仓库侧文件同步（需一次 commit；为避免每次上传都触发构建，暂只存本机）。

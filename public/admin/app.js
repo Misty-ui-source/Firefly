@@ -236,6 +236,201 @@ async function delWithLog(path, sha, message, op) {
   }
 }
 
+/* ---------- 暂存队列（图片/配置引用攒批） ----------
+ * 机制（2026-10-29 方案 A）：图片文件本体直传 R2 不变；引用/配置类保存先进本机队列
+ * （localStorage 持久化，刷新不丢），点顶栏「📥 待执行」执行时才写仓库：
+ * 逐文件 fresh 拉远端与 baseSha 比对——变过的标黄跳过、不静默覆盖；
+ * 未变的全部文件 + 操作日志汇总一条，合并成 1 个 ghCommitMulti 提交；
+ * 回读验仓一致才出队。合并键 = targetFile（同文件后入快照覆盖先入）。
+ * 注意：队列只存在本机浏览器，换设备看不到；面板里有明示。 */
+const OPQUEUE_KEY = 'admin_op_queue_v1';
+function opQueueLoad() {
+  try {
+    const v = JSON.parse(localStorage.getItem(OPQUEUE_KEY) || '[]');
+    return Array.isArray(v) ? v.filter((e) => e && e.targetFile && typeof e.payload === 'string') : [];
+  } catch (e) { return []; }
+}
+function opQueueSave(list) {
+  try { localStorage.setItem(OPQUEUE_KEY, JSON.stringify(list)); } catch (e) {}
+  opQueueRenderBadge();
+}
+function opQueueFind(targetFile) {
+  return opQueueLoad().find((e) => e.targetFile === targetFile) || null;
+}
+/* 某文件已入队的快照文本（未入队返回 null）：拼「远端 + 已入队」合并视图用 */
+function opQueuePayload(targetFile) {
+  const e = opQueueFind(targetFile);
+  return e ? e.payload : null;
+}
+/* 入队：payload = 目标文件整份新文本；baseSha = 生成该快照时依据的远端 sha（叠加入队时沿用首条的） */
+function opQueueEnqueue(item) {
+  const list = opQueueLoad();
+  const entry = {
+    id: 'q' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    ts: new Date().toISOString(),
+    kind: 'config-snapshot',
+    targetFile: item.targetFile,
+    label: item.label || item.targetFile,
+    labels: [item.label || item.targetFile],
+    payload: item.payload,
+    baseSha: item.baseSha || null,
+    op: item.op || null,
+    stale: false,
+  };
+  const i = list.findIndex((e) => e.targetFile === entry.targetFile);
+  if (i >= 0) {
+    entry.id = list[i].id;
+    entry.labels = [...new Set([...(list[i].labels || [list[i].label]), entry.label])];
+    list[i] = entry;
+  } else {
+    list.push(entry);
+  }
+  opQueueSave(list);
+  return entry;
+}
+function opQueueRemove(id) {
+  opQueueSave(opQueueLoad().filter((e) => e.id !== id));
+  opQueueRenderPanel();
+}
+function opQueueClear() {
+  opQueueSave([]);
+  opQueueRenderPanel();
+}
+let opQueueBusy = false;
+async function opQueueExecute() {
+  if (opQueueBusy) return { busy: true };
+  const list = opQueueLoad();
+  if (!list.length) { toast('待执行队列是空的'); return { committed: 0, stale: 0, bad: 0 }; }
+  opQueueBusy = true;
+  try {
+    /* 1) 逐文件 fresh 拉远端，比对 baseSha：变过的标黄跳过，保留队列等用户处理 */
+    const ready = [], stale = [];
+    for (const e of list) {
+      let curSha = null;
+      try { curSha = (await ghGetFile(e.targetFile)).sha || null; } catch (err) { curSha = null; }
+      if (curSha !== (e.baseSha || null)) { e.stale = true; stale.push(e); }
+      else { e.stale = false; ready.push(e); }
+    }
+    opQueueSave(list);
+    if (!ready.length) {
+      toast(`全部 ${stale.length} 项的远端文件在排队期间被改过，已标黄保留，请逐项核对`, true);
+      opQueueRenderPanel();
+      return { committed: 0, stale: stale.length, bad: 0 };
+    }
+    /* 2) 未变的全部文件 + oplog 汇总一条，合成 1 个 commit（与 saveWithLog 同款合并） */
+    const curText = await oplogCurrentText();
+    let entries = [];
+    try { entries = JSON.parse(curText); } catch (e2) { entries = []; }
+    if (!Array.isArray(entries)) entries = [];
+    const summary = {
+      ts: new Date().toISOString(), type: '队列', action: '执行',
+      target: ready.map((e) => e.targetFile).join('、'),
+      detail: ready.flatMap((e) => e.labels || [e.label]).join('；'),
+    };
+    const merged = oplogDedup([...entries, ...oplogLoadPending(), summary]).slice(-OPLOG_MAX_ENTRIES);
+    const oplogText = JSON.stringify(merged, null, 2) + '\n';
+    const files = ready.map((e) => ({ path: e.targetFile, content: e.payload, encoding: 'utf-8' }));
+    files.push({ path: OPLOG_PATH, content: oplogText, encoding: 'utf-8' });
+    const r = await ghCommitMulti(files, `队列执行：${ready.map((e) => e.label).join('、')} [管理台]`);
+    window._oplogText = oplogText;
+    window._oplogEntries = merged;
+    oplogSavePending([]);
+    /* 3) 回读验仓：内容与快照一致才出队，不一致的保留并点名 */
+    const doneIds = [], bad = [];
+    for (const e of ready) {
+      try {
+        const back = await ghGetFile(e.targetFile);
+        if (back.text === e.payload) doneIds.push(e.id); else bad.push(e.label);
+      } catch (err) { bad.push(e.label); }
+    }
+    opQueueSave(opQueueLoad().filter((e) => !doneIds.includes(e.id)));
+    if (bad.length) toast(`已提交，但这些文件回读不一致，已保留在队列里：${bad.join('、')}`, true);
+    else toast(`队列执行完成：${doneIds.length} 个文件已保存（1 次提交，构建后生效）${stale.length ? `；另有 ${stale.length} 项远端已变化被跳过` : ''}`);
+    opQueueRenderPanel();
+    return { committed: doneIds.length, stale: stale.length, bad: bad.length, commitSha: r.commitSha };
+  } catch (e) {
+    toast('队列执行失败，队列已保留：' + e.message, true);
+    opQueueRenderPanel();
+    return { committed: 0, stale: 0, bad: 0, error: e.message };
+  } finally {
+    opQueueBusy = false;
+  }
+}
+/* ---------- 暂存队列 UI：顶栏角标 + 面板 ---------- */
+function opQueueInitUi() {
+  if (document.getElementById('btn-opqueue')) return;
+  const right = document.querySelector('.topbar-right');
+  if (!right) return;
+  const btn = document.createElement('button');
+  btn.id = 'btn-opqueue';
+  btn.className = 'btn btn-small hidden';
+  btn.title = '待执行队列：图片/配置改动先攒在这里，执行才写入仓库';
+  btn.onclick = () => opQueueTogglePanel();
+  right.insertBefore(btn, right.firstChild);
+  const panel = document.createElement('div');
+  panel.id = 'opqueue-panel';
+  panel.className = 'opqueue-panel hidden';
+  document.body.appendChild(panel);
+  opQueueRenderBadge();
+}
+function opQueueRenderBadge() {
+  const btn = document.getElementById('btn-opqueue');
+  if (!btn) return;
+  const n = opQueueLoad().length;
+  btn.classList.toggle('hidden', n === 0);
+  btn.innerHTML = `📥 待执行 <span class="q-badge">${n}</span>`;
+}
+function opQueueTogglePanel(force) {
+  const panel = document.getElementById('opqueue-panel');
+  if (!panel) return;
+  const show = typeof force === 'boolean' ? force : panel.classList.contains('hidden');
+  if (show) { opQueueRenderPanel(); panel.classList.remove('hidden'); }
+  else panel.classList.add('hidden');
+}
+function opQueueRenderPanel() {
+  const panel = document.getElementById('opqueue-panel');
+  if (!panel) return;
+  const list = opQueueLoad();
+  const fmtTs = (iso) => {
+    const d = new Date(iso);
+    const p = (n) => String(n).padStart(2, '0');
+    return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+  panel.innerHTML = `
+    <div class="opqueue-head"><b>📥 待执行队列（${list.length}）</b>
+      <button class="mini-btn" id="opq-close">✕</button></div>
+    <p class="hint">改动先攒在本机浏览器里，点「执行全部」才合并成 1 次提交写入仓库；换设备看不到本队列。标黄 = 排队期间远端文件被改过，已跳过不覆盖。</p>
+    ${list.length ? list.map((e) => `
+      <div class="opqueue-item${e.stale ? ' stale' : ''}">
+        <div class="opqueue-main">
+          <div>${esc((e.labels || [e.label]).join('、'))}${e.stale ? ' <span class="opqueue-stale-tag">⚠ 远端已变化</span>' : ''}</div>
+          <div class="hint">${esc(e.targetFile)} · ${fmtTs(e.ts)}</div>
+        </div>
+        <button class="mini-btn danger" data-qdel="${e.id}">删除</button>
+      </div>`).join('') : '<p class="hint">队列是空的。</p>'}
+    <div class="opqueue-foot">
+      <button class="btn btn-small" id="opq-clear" ${list.length ? '' : 'disabled'}>清空全部</button>
+      <button class="btn btn-small" id="opq-exec" ${list.length ? '' : 'disabled'}>🚀 执行全部（1 次提交）</button>
+    </div>`;
+  const close = panel.querySelector('#opq-close');
+  if (close) close.onclick = () => opQueueTogglePanel(false);
+  panel.querySelectorAll('[data-qdel]').forEach((b) => {
+    b.onclick = () => { opQueueRemove(b.dataset.qdel); toast('已从队列移除（不影响已提交内容）'); };
+  });
+  const clear = panel.querySelector('#opq-clear');
+  if (clear) clear.onclick = () => {
+    if (!confirm('清空全部待执行项？（只清本机队列，不影响仓库里已提交的内容）')) return;
+    opQueueClear();
+    toast('队列已清空');
+  };
+  const exec = panel.querySelector('#opq-exec');
+  if (exec) exec.onclick = async () => {
+    exec.disabled = true;
+    exec.textContent = '执行中…';
+    await opQueueExecute();
+  };
+}
+
 /* ---------- OAuth PKCE 登录 ---------- */
 function randStr(n) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
@@ -6211,8 +6406,8 @@ routes.theme = async () => {
       <div class="field"><label>导航栏样式（全站默认）</label><div class="pills">${seg('navbarStyle', 'classic', '▬ 通栏')}${seg('navbarStyle', 'float', '▭ 悬浮卡片')}${seg('navbarStyle', 'capsule', '💊 悬浮胶囊')}${seg('navbarStyle', 'segment', '💊💊💊 三段胶囊')}</div>
       <p class="hint">三段胶囊：导航栏拆成左站名 / 中菜单 / 右控件三颗胶囊，向下滚动时左右两段收成圆形，右段汉堡打开快捷面板。访客可以在博客调色板（显示设置）里自己切换样式，那是访客本地的选择，不改这里的全站默认。</p></div>
       <div class="field"><label>移动端菜单样式</label><div class="pills">${seg('mobileMenuStyle', 'drawer', '全屏抽屉')}${seg('mobileMenuStyle', 'card', '浮层卡片')}</div></div>
-      <div class="field"><label>站点形态（全站默认）</label><div class="pills">${seg('siteMode', 'full', '🌸 华彩')}${seg('siteMode', 'pure', '🍃 素简')}</div>
-      <p class="hint">素简 = 简洁导航 · 专注阅读（对标朝朝听雨的 Pure 形态）：隐藏横幅壁纸、花瓣特效、看板娘与音乐浮动件，侧栏只留个人卡 / 公告 / 最近评论 / 标签，文章页正文单列、右栏只留目录。访客可以在博客调色板（显示设置）里自己切换形态，那是访客本地的选择，不改这里的全站默认。</p></div>
+      <div class="field"><label>站点形态（全站默认）</label><div class="pills">${seg('siteMode', 'full', '🌸 华彩')}${seg('siteMode', 'pure', '🍃 素简')}${seg('siteMode', 'harmony', '🎵 谐彩')}</div>
+      <p class="hint">素简 = 简洁导航 · 专注阅读（对标朝朝听雨的 Pure 形态）：隐藏横幅壁纸、花瓣特效、看板娘与音乐浮动件，侧栏只留个人卡 / 公告 / 最近评论 / 标签，文章页正文单列、右栏只留目录。谐彩 = Material 3 色阶 · 无边框柔影（视觉参考 Shirone 主题）：整站换成色阶分层 + 极柔阴影，导航变半透顶栏，首页横幅成舞台，文章卡片做减法；内容与功能与华彩完全一致，只换气质。访客可以在博客调色板（显示设置）里自己切换形态，那是访客本地的选择，不改这里的全站默认。</p></div>
       <div class="field"><label>站点统计页样式</label><div class="pills">${seg('analyticsStyle', 'classic', '现行版（手搓）')}${seg('analyticsStyle', 'azuma', 'azuma 同款（带插画）')}${seg('analyticsStyle', 'azuma-clean', 'azuma 清爽版（无插画）')}</div>
       <p class="hint">azuma 同款 = 圈子里流传的 Aemeath 统计页（访问脉冲 7/30/90 天切换、推送节奏带贪吃蛇、中国地图、最近评论），数据走本站自己的 Umami / Waline。带插画版的 7 张图已全部压成 webp（原版 5.5MB → 约 0.7MB）。切换前可以先开 /analytics-azuma/ 与 /analytics-azuma-clean/ 两张预览页对比，三套随时互切。</p></div>
     </div>
@@ -6702,6 +6897,7 @@ async function init() {
   $('#user-badge').textContent = '👤 ' + (localStorage.getItem(USER_KEY) || '');
   $('#user-badge').classList.remove('hidden');
   $('#btn-logout').classList.remove('hidden');
+  opQueueInitUi();
   window.addEventListener('hashchange', router);
   router();
   hideLoader();
