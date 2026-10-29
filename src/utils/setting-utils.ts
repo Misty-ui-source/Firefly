@@ -416,7 +416,7 @@ export function setNavbarStyle(style: NavbarStyle): void {
 	applyNavbarStyleToDocument(safe);
 }
 
-const SITE_MODES: SiteMode[] = ["full", "pure", "harmony"];
+const SITE_MODES: SiteMode[] = ["full", "pure", "harmony", "brick"];
 
 export function getDefaultSiteMode(): SiteMode {
 	const v = siteConfig.siteMode ?? "full";
@@ -1581,6 +1581,13 @@ export function getStoredBannerCarouselEnabled(): boolean {
 	}
 	const stored = localStorage.getItem("bannerCarouselEnabled");
 	if (stored === null) {
+		// 访客没在调色板里动过：按当前壁纸模式的管理台分模式开关（modeCarousel）显示，
+		// 与前台轮播脚本的生效顺序一致；没配分模式再回退全局默认
+		const mode = getStoredWallpaperMode();
+		const mc = backgroundWallpaper.modeCarousel;
+		if (mc && typeof mc[mode as keyof typeof mc] === "boolean") {
+			return mc[mode as keyof typeof mc] as boolean;
+		}
 		return getDefaultBannerCarouselEnabled();
 	}
 	return stored === "true";

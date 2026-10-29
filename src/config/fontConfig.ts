@@ -46,6 +46,16 @@ export const fontsList: FontDefinition[] = [
 		fallbacks: ["sans-serif"],
 	},
 	{
+		// 顽彩形态的西文字体（圆润粗体，中文无字形、自动回落系统黑体）；只在 brick-mode.css 的字体栈里引用
+		name: "Fredoka",
+		cssVariable: "--font-fredoka",
+		provider: "fontsource",
+		weights: ["300", "400", "500", "600", "700"],
+		styles: ["normal"],
+		subsets: ["latin", "latin-ext"],
+		fallbacks: ["sans-serif"],
+	},
+	{
 		name: "JetBrains Mono",
 		cssVariable: "--font-jetbrains-mono",
 		provider: "fontsource",

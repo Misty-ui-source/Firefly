@@ -48,6 +48,8 @@ export function collectUsedFontCssVars(
 	used.add("--font-noto-serif-sc");
 	used.add("--font-greatvibes");
 	used.add("--font-xiaomaiti");
+	// 顽彩形态字体栈专用（brick-mode.css 引用 var(--font-fredoka)），不在配置字段里，一并算作已用
+	used.add("--font-fredoka");
 
 	return used;
 }

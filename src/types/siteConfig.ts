@@ -32,8 +32,8 @@ export type NavbarMode = "static" | "fixed" | "dynamic";
 // 导航栏样式：classic 通栏（默认）/ float 悬浮卡片 / capsule 悬浮胶囊 / segment 三段胶囊（下滑收拢）
 export type NavbarStyle = "classic" | "float" | "capsule" | "segment";
 
-// 站点形态：full 华彩（默认，全套呈现）/ pure 素简（简洁导航·专注阅读）/ harmony 谐彩（Material 3 色阶·柔影，视觉参考 Shirone 主题）；与 utils/setting-utils.ts 的 SITE_MODES 保持一致
-export type SiteMode = "full" | "pure" | "harmony";
+// 站点形态：full 华彩（默认，全套呈现）/ pure 素简（简洁导航·专注阅读）/ harmony 谐彩（Material 3 色阶·柔影，视觉参考 Shirone 主题）/ brick 顽彩（玩具积木粗野主义：蓝描边·硬阴影·小圆角，视觉参考 xuhome）；与 utils/setting-utils.ts 的 SITE_MODES 保持一致
+export type SiteMode = "full" | "pure" | "harmony" | "brick";
 
 export type SiteConfig = {
 	title: string;
@@ -95,8 +95,8 @@ export type SiteConfig = {
 	// 站点统计页样式："classic" 现行手搓版（默认）/ "azuma" Aemeath 同款版；控制台主题页可切换
 	analyticsStyle?: "classic" | "azuma" | "azuma-clean";
 
-	// 站点形态（全站默认）：full 华彩（全套呈现）/ pure 素简（简洁导航·专注阅读）/ harmony 谐彩（Material 3 色阶·柔影）；
-	// 控制台主题页可改默认，访客可在显示设置里覆盖（localStorage siteMode），样式见 styles/pure-mode.css 与 styles/harmony-mode.css
+	// 站点形态（全站默认）：full 华彩（全套呈现）/ pure 素简（简洁导航·专注阅读）/ harmony 谐彩（Material 3 色阶·柔影）/ brick 顽彩（玩具积木粗野主义）；
+	// 控制台主题页可改默认，访客可在显示设置里覆盖（localStorage siteMode），样式见 styles/pure-mode.css、styles/harmony-mode.css 与 styles/brick-mode.css
 	siteMode?: SiteMode;
 
 	// 素简字体菜单（控制台字体页可管）：有序的 PureFont 键数组，第一项为默认字体；访客自选优先（localStorage pureFont）

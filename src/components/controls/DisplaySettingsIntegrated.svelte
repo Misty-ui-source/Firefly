@@ -114,6 +114,7 @@ import {
 	siteConfig,
 } from "@/config";
 import type { FullscreenWallpaperLayout, WALLPAPER_MODE } from "@/types/config";
+import { getModeCarouselEnabled } from "@/utils/layout-utils";
 
 type OverlaySliderItem = {
 	key: "opacity" | "blur" | "cardOpacity";
@@ -146,6 +147,7 @@ const siteModeOptions = [
 	{ value: "full", labelKey: I18nKey.siteModeFull },
 	{ value: "pure", labelKey: I18nKey.siteModePure },
 	{ value: "harmony", labelKey: I18nKey.siteModeHarmony },
+	{ value: "brick", labelKey: I18nKey.siteModeBrick },
 ] as const;
 // 素简下调色板精简：只留站点形态（华彩切换）、字体与特效（樱花/萤火虫），壁纸整页签收起；
 // 文章布局（列表/网格）在素简下不出现——素简是单列列表、根本排不了网格（2026-10-28 用户定），原位置改放特效
@@ -159,6 +161,8 @@ const pureFontOptions = getPureFontMenu().map((k) => ({
 // 谐彩专属调色板（仅 siteMode=harmony 时出现）：种子色相 / 色彩风格 / 色彩规范 /
 // 背景纹理 / overlay 三项 / 减少动态，存储键 harmony*，与全站设置互不干扰
 const isHarmony = $derived(siteMode === "harmony");
+// 顽彩：配色与导航形态由 brick-mode.css 固定（蓝描边 + 硬阴影 + 顶栏），全站主题色/导航样式两段隐藏
+const isBrick = $derived(siteMode === "brick");
 let harmonyHue = $state(getStoredHarmonyHue() ?? getHue());
 let harmonyHueCustom = $state(getStoredHarmonyHue() !== null);
 let harmonyScheme = $state(getStoredHarmonyScheme());
@@ -264,7 +268,15 @@ const defaultGradientEnabled = getDefaultGradientEnabled();
 let bannerTitleEnabled = $state(true);
 const defaultBannerTitleEnabled = getDefaultBannerTitleEnabled();
 let bannerCarouselEnabled = $state(true);
-const defaultBannerCarouselEnabled = getDefaultBannerCarouselEnabled();
+// 轮播「默认值」按当前壁纸模式取管理台分模式开关（modeCarousel），与前台轮播的生效顺序一致：
+// 访客没动过开关时显示该模式的默认值，动过以访客存储为准
+let defaultBannerCarouselEnabled = $derived(
+	wallpaperMode === WALLPAPER_BANNER ||
+		wallpaperMode === WALLPAPER_FULLSCREEN ||
+		wallpaperMode === WALLPAPER_OVERLAY
+		? getModeCarouselEnabled(wallpaperMode)
+		: getDefaultBannerCarouselEnabled(),
+);
 let sakuraEnabled = $state(true);
 const defaultSakuraEnabled = getDefaultSakuraEnabled();
 let snowEnabled = $state(true);
@@ -919,6 +931,17 @@ onMount(() => {
 	const handleWallpaperModeChange = (event: Event) => {
 		const customEvent = event as CustomEvent<{ mode: WALLPAPER_MODE }>;
 		wallpaperMode = customEvent.detail.mode;
+		// 访客没手动设置过轮播时，开关显示跟随新模式的管理台默认值（modeCarousel）
+		if (localStorage.getItem("bannerCarouselEnabled") === null) {
+			const m = customEvent.detail.mode;
+			if (
+				m === WALLPAPER_BANNER ||
+				m === WALLPAPER_FULLSCREEN ||
+				m === WALLPAPER_OVERLAY
+			) {
+				bannerCarouselEnabled = getModeCarouselEnabled(m);
+			}
+		}
 	};
 
 	window.addEventListener("wallpaperModeChange", handleWallpaperModeChange);
@@ -1032,8 +1055,8 @@ $effect(() => {
 
 	<!-- Appearance Tab: Theme Color + Layout -->
 	{#if activeTab === "appearance"}
-		<!-- Theme Color Section（谐彩下由专属色相滑杆接管，隐藏全站主题色） -->
-		{#if showThemeColor && !isPure && !isHarmony}
+		<!-- Theme Color Section（谐彩下由专属色相滑杆接管、顽彩配色固定，隐藏全站主题色） -->
+		{#if showThemeColor && !isPure && !isHarmony && !isBrick}
 		<div class="">
 			<div class="section-title">
 				{i18n(I18nKey.themeColor)}
@@ -1056,8 +1079,8 @@ $effect(() => {
 		</div>
 		{/if}
 
-		<!-- Navbar Style Section（谐彩的导航是 Top App Bar 形态，隐藏全站导航样式） -->
-		{#if showNavbarStyle && !isPure && !isHarmony}
+		<!-- Navbar Style Section（谐彩的导航是 Top App Bar 形态、顽彩是积木顶栏，隐藏全站导航样式） -->
+		{#if showNavbarStyle && !isPure && !isHarmony && !isBrick}
 		<div class="">
 			<div class="section-title">
 				{i18n(I18nKey.navbarStyle)}
@@ -1103,7 +1126,7 @@ $effect(() => {
 				{#each siteModeOptions as opt}
 				<button
 					aria-label={i18n(opt.labelKey)}
-					class="flex-1 min-w-[30%] btn-regular rounded-md py-2 px-3 flex items-center justify-center gap-2 active:scale-95 transition-all relative overflow-hidden"
+					class="flex-1 min-w-[45%] btn-regular rounded-md py-2 px-3 flex items-center justify-center gap-2 active:scale-95 transition-all relative overflow-hidden"
 					class:opacity-60={siteMode !== opt.value}
 					class:bg-(--btn-regular-bg-hover)={siteMode === opt.value}
 					onclick={() => { siteMode = opt.value; }}
@@ -1593,7 +1616,7 @@ $effect(() => {
 		{/if}
 
 		<!-- Banner Settings Section -->
-		{#if (wallpaperMode === WALLPAPER_BANNER || wallpaperMode === WALLPAPER_FULLSCREEN) && hasBannerSettings}
+		{#if ((wallpaperMode === WALLPAPER_BANNER || wallpaperMode === WALLPAPER_FULLSCREEN) && hasBannerSettings) || (wallpaperMode === WALLPAPER_OVERLAY && isBannerCarouselSwitchable)}
 		<div class="">
 			<div class="section-title">
 				{i18n(I18nKey.wallpaperSettings)}
@@ -1606,8 +1629,8 @@ $effect(() => {
 				</button>
 			</div>
 			<div class="space-y-1">
-				<!-- Banner Title Switch -->
-				{#if isBannerTitleSwitchable}
+				<!-- Banner Title Switch（覆盖透明不显示横幅标题，不出此开关） -->
+				{#if isBannerTitleSwitchable && wallpaperMode !== WALLPAPER_OVERLAY}
 				<button
 					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
 					class:bg-(--btn-regular-bg-hover)={bannerTitleEnabled}

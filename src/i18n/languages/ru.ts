@@ -130,6 +130,7 @@ export const ru: Translation = {
 	[Key.siteModeFull]: "Яркий",
 	[Key.siteModePure]: "Минимальный",
 	[Key.siteModeHarmony]: "Гармония",
+	[Key.siteModeBrick]: "Кирпичик",
 	[Key.harmonySettings]: "Палитра «Гармония»",
 	[Key.harmonyScheme]: "Стиль цвета",
 	[Key.harmonySchemeTonalSpot]: "Tonal Spot",

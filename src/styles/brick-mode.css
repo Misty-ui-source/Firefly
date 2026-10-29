@@ -1,0 +1,739 @@
+/* ============================================================
+ * 站点形态 · 顽彩（brick）样式
+ * ------------------------------------------------------------
+ * 机制与素简 / 谐彩相同：siteConfig.siteMode 为全站默认，访客在显示设置里
+ * 覆盖后存 localStorage（siteMode），由 Layout 头部脚本在绘制前把结果写到
+ * html[data-site-mode]；本文件全部规则都收在 html[data-site-mode="brick"]
+ * 下，华彩（full）/ 素简（pure）/ 谐彩（harmony）时整文件不生效。
+ * 视觉参考 xuhome（Toy Brick Brutalism 玩具积木粗野主义）的设计系统：
+ * 全站只用主色蓝一色描边（卡片 4px / 按钮 3px / 标签 2px / 行内代码
+ * 1.5px）、圆角几乎全 4px、零模糊硬阴影（偏移即积木厚度，hover 变绿）、
+ * 顶栏黄色斜切砖块 Logo、标题贴纸、圆点网 + 半透面板、文章页米黄纸纹。
+ * 数值按 2026-10-29 的 xuhome 仓库审计原值（主色 #0284c7、辅色 #0ea5e9、
+ * 琥珀 #f59e0b、浅黄 #fde68a、hover 阴影 #10b981、纸 #f6eddc / #efe1bf），
+ * 收敛进本站的令牌体系重写；素材全部站内现成件，顽彩专属壁纸为站长
+ * 提供的草地小狗插画（public/assets/images/brick/meadow-dogs.jpg）。
+ * 变量段刻意不进 @layer：variables.styl 的 :root 定义是无 layer 的，
+ * 只有同为无 layer 且特异性更高（html[data-site-mode] > :root）才压得住；
+ * 组件覆盖段进 @layer components（与 pure / harmony 同一套打法），
+ * 导航 / 横幅 / 壁纸三处要压过 navbar.css 等无 layer 规则的规则单独
+ * 放在文末的无 layer 段。
+ * ============================================================ */
+
+/* ---------- 令牌（亮色） ---------- */
+html[data-site-mode="brick"] {
+	--brick-blue: #0284c7;
+	--brick-sky: #0ea5e9;
+	--brick-sky-bright: #38bdf8;
+	--brick-amber: #f59e0b;
+	--brick-yellow: #fde68a;
+	--brick-green: #10b981;
+	--brick-red: #f87171;
+	--brick-ink: #334155;
+	--brick-deep: #0c4a6e;
+
+	--primary: #0284c7;
+	--page-bg: #faf8f5;
+	--card-bg: #ffffff;
+	--card-bg-transparent: rgb(255 255 255 / 0.88);
+
+	--btn-content: #0c4a6e;
+	--btn-regular-bg: #f0f9ff;
+	--btn-regular-bg-hover: #e0f2fe;
+	--btn-regular-bg-active: #bae6fd;
+
+	--btn-plain-bg-hover: rgb(2 132 199 / 0.1);
+	--btn-plain-bg-active: rgb(2 132 199 / 0.16);
+
+	--btn-card-bg-hover: #f0f9ff;
+	--btn-card-bg-active: #e0f2fe;
+
+	--enter-btn-bg: var(--btn-regular-bg);
+	--enter-btn-bg-hover: var(--btn-regular-bg-hover);
+	--enter-btn-bg-active: var(--btn-regular-bg-active);
+
+	--deep-text: #0c4a6e;
+	--title-active: #075985;
+
+	--line-divider: rgb(2 132 199 / 0.25);
+	--line-color: rgb(2 132 199 / 0.45);
+	--meta-divider: rgb(2 132 199 / 0.45);
+	--content-meta: rgb(51 65 85 / 0.72);
+
+	--inline-code-bg: #fde68a;
+	--inline-code-color: #0c4a6e;
+	--muted: #e0f2fe;
+	--selection-bg: #fde68a;
+	--codeblock-bg: #0f172a;
+	--codeblock-topbar-bg: #e0f2fe;
+
+	--license-block-bg: #fef3c7;
+	--float-panel-bg: rgb(255 255 255 / 0.96);
+
+	--link-underline: rgb(14 165 233 / 0.35);
+	--link-hover: #e0f2fe;
+	--link-active: #bae6fd;
+
+	--toc-badge-bg: #fde68a;
+	--toc-btn-hover: rgb(2 132 199 / 0.12);
+	--toc-btn-active: rgb(2 132 199 / 0.2);
+	--toc-indicator-bg: #fde68a;
+	--toc-item-active: #0284c7;
+
+	--l2d-msg-bg: #0284c7;
+
+	--scrollbar-bg: rgb(2 132 199 / 0.45);
+	--scrollbar-bg-hover: rgb(2 132 199 / 0.6);
+	--scrollbar-bg-active: rgb(2 132 199 / 0.75);
+
+	/* 小圆角近直角是顽彩与谐彩 16px 大圆角的根本分野：全站 --radius-large 收进 4px */
+	--radius-large: 0.25rem;
+}
+
+/* ---------- 令牌（暗色：面板换 slate，边框 / 阴影仍用主色蓝，prose 提亮蓝） ---------- */
+html.dark[data-site-mode="brick"] {
+	--primary: #38bdf8;
+	--page-bg: #0f172a;
+	--card-bg: #1e293b;
+	--card-bg-transparent: rgb(30 41 59 / 0.9);
+
+	--btn-content: #bae6fd;
+	--btn-regular-bg: #334155;
+	--btn-regular-bg-hover: #3f5875;
+	--btn-regular-bg-active: #0369a1;
+
+	--btn-plain-bg-hover: rgb(56 189 248 / 0.16);
+	--btn-plain-bg-active: rgb(56 189 248 / 0.24);
+
+	--btn-card-bg-hover: #334155;
+	--btn-card-bg-active: #3f5875;
+
+	/* --deep-text 暗色不覆写：基底契约里它恒为深色，用在亮底徽章上，覆写成浅色会低对比（谐彩扫描教训） */
+	--title-active: #7dd3fc;
+
+	--line-divider: rgb(56 189 248 / 0.3);
+	--line-color: rgb(56 189 248 / 0.45);
+	--meta-divider: rgb(56 189 248 / 0.45);
+	--content-meta: rgb(226 232 240 / 0.68);
+
+	--inline-code-bg: #334155;
+	--inline-code-color: #fde68a;
+	--muted: #334155;
+	--selection-bg: #075985;
+	--codeblock-bg: #020617;
+	--codeblock-topbar-bg: #1e293b;
+
+	--license-block-bg: #1e293b;
+	--float-panel-bg: rgb(30 41 59 / 0.96);
+
+	--link-underline: rgb(56 189 248 / 0.4);
+	--link-hover: rgb(56 189 248 / 0.18);
+	--link-active: rgb(56 189 248 / 0.28);
+
+	--toc-badge-bg: #334155;
+	--toc-btn-hover: rgb(56 189 248 / 0.16);
+	--toc-btn-active: rgb(56 189 248 / 0.26);
+	--toc-indicator-bg: #f59e0b;
+	--toc-item-active: #38bdf8;
+
+	--l2d-msg-bg: #0369a1;
+}
+
+@layer components {
+
+/* ---------- 字体：Fredoka 管西文 / 数字，中文回落系统黑体；正文基准字重 500 ---------- */
+html[data-site-mode="brick"] body {
+	font-family: var(--font-fredoka), "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif !important;
+	font-weight: 500;
+}
+html[data-site-mode="brick"] h1,
+html[data-site-mode="brick"] h2,
+html[data-site-mode="brick"] h3,
+html[data-site-mode="brick"] h4 {
+	font-weight: 900;
+}
+
+/* ---------- 卡片：4px 蓝描边 + 4px 小圆角 + 6px 硬阴影（替代 3px 纯黑粗边） ---------- */
+html[data-site-mode="brick"] .card-base,
+html[data-site-mode="brick"] .card-base-transparent {
+	border: 4px solid var(--brick-blue) !important;
+	border-radius: 4px !important;
+	box-shadow: 6px 6px 0 var(--brick-blue) !important;
+	color: var(--brick-ink);
+}
+html.dark[data-site-mode="brick"] .card-base,
+html.dark[data-site-mode="brick"] .card-base-transparent {
+	color: #e2e8f0;
+}
+/* 卡片边框开关在顽彩下不改变描边语法（与谐彩强制无边框同理，形态优先） */
+html.enable-card-border[data-site-mode="brick"] .card-base,
+html.enable-card-border[data-site-mode="brick"] .card-base-transparent,
+html.enable-card-border[data-site-mode="brick"] .btn-card {
+	border: 4px solid var(--brick-blue) !important;
+	box-shadow: 6px 6px 0 var(--brick-blue) !important;
+}
+
+/* ---------- 按钮：3px 描边 + 按压语法（hover 浮起影涨、active 按进影缩） ---------- */
+html[data-site-mode="brick"] .btn-regular {
+	border: 3px solid var(--brick-blue) !important;
+	border-radius: 4px !important;
+	box-shadow: 2px 2px 0 var(--brick-blue);
+	transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+html[data-site-mode="brick"] .btn-regular:hover {
+	transform: translate(-1px, -1px);
+	box-shadow: 3px 3px 0 var(--brick-blue);
+}
+html[data-site-mode="brick"] .btn-regular:active {
+	transform: translate(1px, 1px);
+	box-shadow: 1px 1px 0 var(--brick-blue);
+}
+html[data-site-mode="brick"] .btn-card {
+	border: 3px solid var(--brick-blue) !important;
+	border-radius: 4px !important;
+	box-shadow: 3px 3px 0 var(--brick-blue);
+	transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+html[data-site-mode="brick"] .btn-card:hover {
+	transform: translate(-1px, -1px);
+	box-shadow: 4px 4px 0 var(--brick-blue);
+}
+html[data-site-mode="brick"] .btn-card:active {
+	transform: translate(1px, 1px);
+	box-shadow: 1px 1px 0 var(--brick-blue);
+}
+/* 纯图标 / 文字按钮：hover 给一颗黄色硬阴影的小方块感，不描满边 */
+html[data-site-mode="brick"] .btn-plain {
+	border-radius: 4px !important;
+}
+html[data-site-mode="brick"] .btn-plain:hover {
+	box-shadow: 2px 2px 0 var(--brick-yellow);
+}
+
+/* ---------- 标签 / 分类：2px 描边小 chip，浅黄底，hover 填蓝变白字 ---------- */
+html[data-site-mode="brick"] .tag-item {
+	border: 2px solid var(--brick-blue) !important;
+	border-radius: 4px !important;
+	background: var(--brick-yellow) !important;
+	color: var(--brick-deep) !important;
+	box-shadow: 1px 1px 0 var(--brick-blue);
+	transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+html.dark[data-site-mode="brick"] .tag-item {
+	background: #334155 !important;
+	color: #bae6fd !important;
+}
+html[data-site-mode="brick"] .tag-item:hover {
+	background: var(--brick-sky) !important;
+	color: #ffffff !important;
+	transform: translate(-1px, -1px);
+	box-shadow: 2px 2px 0 var(--brick-blue);
+}
+html[data-site-mode="brick"] .tag-item .tag-count-badge {
+	border-radius: 2px !important;
+	background: rgb(2 132 199 / 0.16) !important;
+}
+html[data-site-mode="brick"] .category-pill {
+	border: 2px solid var(--brick-blue) !important;
+	border-radius: 4px !important;
+	background: #ffffff !important;
+	color: var(--brick-deep) !important;
+	box-shadow: 1px 1px 0 var(--brick-blue);
+	font-weight: 700;
+}
+html.dark[data-site-mode="brick"] .category-pill {
+	background: #1e293b !important;
+	color: #bae6fd !important;
+}
+html[data-site-mode="brick"] .category-pill:hover {
+	background: var(--brick-yellow) !important;
+	color: var(--brick-deep) !important;
+}
+html[data-site-mode="brick"] .category-pill[data-active] {
+	background: var(--brick-blue) !important;
+	color: #ffffff !important;
+	box-shadow: 2px 2px 0 var(--brick-deep);
+}
+html[data-site-mode="brick"] .category-pill .pill-count {
+	border-radius: 2px !important;
+	background: rgb(2 132 199 / 0.16) !important;
+}
+
+/* ---------- 文章卡：6px 蓝影，hover 浮起 4px + 10px 绿影，active 按下 ---------- */
+html[data-site-mode="brick"] .post-card-wrapper {
+	transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+html[data-site-mode="brick"] .post-card-wrapper:hover {
+	transform: translateY(-4px);
+	box-shadow: 10px 10px 0 var(--brick-green) !important;
+}
+html[data-site-mode="brick"] .post-card-wrapper:active {
+	transform: translateY(1px);
+	box-shadow: 3px 3px 0 var(--brick-blue) !important;
+}
+html[data-site-mode="brick"] .post-card-title {
+	color: var(--brick-deep) !important;
+	font-weight: 900;
+}
+html.dark[data-site-mode="brick"] .post-card-title {
+	color: #e0f2fe !important;
+}
+html[data-site-mode="brick"] .post-card-title:hover {
+	color: var(--brick-sky) !important;
+}
+/* 标题前的竖条：改成琥珀方块（积木母题），与导航斜砖呼应 */
+html[data-site-mode="brick"] .post-card-title::before {
+	background: var(--brick-amber) !important;
+	border-radius: 2px !important;
+}
+/* 元信息：图标坐进浅黄小方片，文字加粗到 800（xuhome 元信息纪律） */
+html[data-site-mode="brick"] .meta-icon {
+	background: var(--brick-yellow) !important;
+	color: var(--brick-deep) !important;
+	border: 2px solid var(--brick-blue);
+	border-radius: 4px;
+	box-shadow: 1px 1px 0 var(--brick-blue);
+}
+html[data-site-mode="brick"] .post-meta {
+	font-weight: 700;
+}
+html[data-site-mode="brick"] .pinned-btn {
+	background: var(--brick-amber) !important;
+	color: #451a03 !important;
+	border: 2px solid var(--brick-blue);
+	border-radius: 2px !important;
+	box-shadow: 1px 1px 0 var(--brick-blue);
+}
+/* 封面：3px 描边小圆角；右下角常驻黄色方片箭头（积木版的进入提示） */
+html[data-site-mode="brick"] .post-card-image {
+	border: 3px solid var(--brick-blue);
+	border-radius: 4px !important;
+}
+html[data-site-mode="brick"] .post-card-image > div:nth-child(2) {
+	justify-content: flex-end !important;
+	align-items: flex-end !important;
+	padding: 0.75rem;
+}
+html[data-site-mode="brick"] .post-card-image > div:nth-child(2) svg {
+	opacity: 1 !important;
+	transform: scale(0.55) !important;
+	background: var(--brick-yellow);
+	color: var(--brick-deep);
+	border: 2px solid var(--brick-blue);
+	border-radius: 4px;
+	padding: 0.3rem;
+	box-sizing: content-box;
+	box-shadow: 2px 2px 0 var(--brick-blue);
+}
+/* 无封面卡的进入条与悬浮按钮：收成方块 */
+html[data-site-mode="brick"] .post-card-enter-btn {
+	border-radius: 4px !important;
+}
+html[data-site-mode="brick"] .floating-btn {
+	border-radius: 4px !important;
+}
+
+/* ---------- widget 标题：竖条改琥珀方块、标题 900 ---------- */
+html[data-site-mode="brick"] .widget-title {
+	font-weight: 900;
+	color: var(--brick-deep) !important;
+}
+html.dark[data-site-mode="brick"] .widget-title {
+	color: #e0f2fe !important;
+}
+html[data-site-mode="brick"] .widget-title::before {
+	background: var(--brick-amber) !important;
+	border-radius: 2px !important;
+}
+
+/* ---------- 目录（TOC）：徽章方片化，激活指示用琥珀 ---------- */
+html[data-site-mode="brick"] .toc-item {
+	border-radius: 4px !important;
+	font-weight: 600;
+}
+html[data-site-mode="brick"] .toc-badge {
+	border: 2px solid var(--brick-blue);
+	border-radius: 2px !important;
+	box-shadow: 1px 1px 0 var(--brick-blue);
+}
+html[data-site-mode="brick"] .floating-toc-panel {
+	border: 3px solid var(--brick-blue) !important;
+	border-radius: 4px !important;
+	box-shadow: 6px 6px 0 var(--brick-blue) !important;
+}
+
+/* ---------- 表单：3px 描边，聚焦时影涨（搜索框语法推广到全站输入） ---------- */
+html[data-site-mode="brick"] :is(input[type="text"], input[type="search"], input[type="email"], input[type="url"], input[type="password"], textarea, select) {
+	border: 3px solid var(--brick-blue) !important;
+	border-radius: 4px !important;
+	background: var(--card-bg);
+	box-shadow: 2px 2px 0 var(--brick-blue);
+}
+html[data-site-mode="brick"] :is(input[type="text"], input[type="search"], input[type="email"], input[type="url"], input[type="password"], textarea, select):focus {
+	box-shadow: 4px 4px 0 var(--brick-blue);
+	outline: none;
+}
+html[data-site-mode="brick"] #search-panel input {
+	box-shadow: 4px 4px 0 var(--brick-blue);
+}
+html[data-site-mode="brick"] #search-panel input:focus {
+	box-shadow: 6px 6px 0 var(--brick-blue);
+	transform: translate(-2px, -2px);
+}
+
+/* ---------- 文章页纸纹：壳 #f6eddc + 内纸 #efe1bf，棕色圆点；暗色关点阵 ---------- */
+html[data-site-mode="brick"] #post-container {
+	background-color: #f6eddc !important;
+	background-image: radial-gradient(rgba(112, 82, 42, 0.14) 1px, transparent 1.4px);
+	background-size: 18px 18px;
+}
+html[data-site-mode="brick"] .markdown-content {
+	background-color: #efe1bf;
+	background-image: radial-gradient(rgba(112, 82, 42, 0.1) 1px, transparent 1.4px);
+	background-size: 14px 14px;
+	border: 3px solid var(--brick-blue);
+	border-radius: 4px;
+	box-shadow: 4px 4px 0 var(--brick-blue);
+	padding: clamp(1rem, 2.5vw, 2rem);
+	color: var(--brick-ink);
+}
+html.dark[data-site-mode="brick"] #post-container {
+	background-color: #1e293b !important;
+	background-image: none;
+}
+html.dark[data-site-mode="brick"] .markdown-content {
+	background-color: #0f172a;
+	background-image: none;
+	color: #e2e8f0;
+}
+
+/* ---------- 正文（prose）：行高 1.85、荧光笔、h2 蓝线 + 黄错位影 ---------- */
+html[data-site-mode="brick"] .custom-md {
+	line-height: 1.85;
+	letter-spacing: 0.01em;
+}
+html[data-site-mode="brick"] .custom-md h1,
+html[data-site-mode="brick"] .custom-md h2,
+html[data-site-mode="brick"] .custom-md h3,
+html[data-site-mode="brick"] .custom-md h4 {
+	color: var(--brick-deep) !important;
+	font-weight: 900;
+}
+html.dark[data-site-mode="brick"] .custom-md h1,
+html.dark[data-site-mode="brick"] .custom-md h2,
+html.dark[data-site-mode="brick"] .custom-md h3,
+html.dark[data-site-mode="brick"] .custom-md h4 {
+	color: var(--brick-sky-bright) !important;
+}
+html[data-site-mode="brick"] .custom-md h2 {
+	border-bottom: 3px solid var(--brick-blue);
+	box-shadow: 0 4px 0 -1px var(--brick-yellow);
+	padding-bottom: 0.3em;
+}
+html[data-site-mode="brick"] .custom-md strong {
+	color: var(--brick-deep) !important;
+	background: linear-gradient(transparent 58%, rgb(14 165 233 / 0.42) 0);
+	padding: 0 0.1em;
+}
+html.dark[data-site-mode="brick"] .custom-md strong {
+	color: #e0f2fe !important;
+}
+html[data-site-mode="brick"] .custom-md a:not(.no-styling) {
+	font-weight: 700;
+}
+html[data-site-mode="brick"] .custom-md a:not(.no-styling):hover {
+	background: linear-gradient(transparent 55%, rgb(253 230 138 / 0.85) 0) !important;
+}
+html[data-site-mode="brick"] .custom-md mark {
+	background: linear-gradient(transparent 52%, rgb(245 158 11 / 0.45) 0) !important;
+	border-radius: 2px;
+	padding: 0 0.2em;
+}
+html[data-site-mode="brick"] .custom-md :not(pre) > code {
+	border: 1.5px solid var(--brick-blue) !important;
+	border-radius: 3px !important;
+	box-shadow: 1px 1px 0 var(--brick-blue);
+	font-weight: 700;
+}
+html[data-site-mode="brick"] .custom-md .expressive-code {
+	border: 3px solid var(--brick-blue);
+	border-radius: 4px;
+	box-shadow: 4px 4px 0 var(--brick-blue);
+	overflow: hidden;
+}
+html[data-site-mode="brick"] .custom-md blockquote {
+	border: 3px solid var(--brick-blue) !important;
+	border-radius: 4px;
+	background: rgb(253 230 138 / 0.32) !important;
+	box-shadow: 3px 3px 0 var(--brick-yellow);
+	padding: 0.9em 1.2em !important;
+}
+html.dark[data-site-mode="brick"] .custom-md blockquote {
+	background: rgb(51 65 85 / 0.55) !important;
+}
+html[data-site-mode="brick"] .custom-md blockquote::before {
+	display: none !important;
+}
+html[data-site-mode="brick"] .custom-md table {
+	border: 3px solid var(--brick-blue) !important;
+	border-radius: 8px !important;
+	box-shadow: 4px 4px 0 rgb(2 132 199 / 0.9);
+}
+html[data-site-mode="brick"] .custom-md th {
+	background: #e0f2fe !important;
+	color: var(--brick-deep) !important;
+	font-weight: 900;
+}
+html.dark[data-site-mode="brick"] .custom-md th {
+	background: #334155 !important;
+	color: #e0f2fe !important;
+}
+html[data-site-mode="brick"] .custom-md img {
+	border: 3px solid var(--brick-blue);
+	border-radius: 4px;
+}
+html[data-site-mode="brick"] .custom-md hr {
+	border-top: 3px dashed rgb(2 132 199 / 0.4) !important;
+}
+html[data-site-mode="brick"] .custom-md li::marker {
+	color: var(--brick-blue) !important;
+	font-weight: 900;
+}
+
+/* ---------- 评论（Waline）：主题色跟随顽彩蓝，徽章用琥珀 ---------- */
+html[data-site-mode="brick"] #waline {
+	--waline-theme-color: #0284c7;
+	--waline-active-color: #0ea5e9;
+	--waline-badge-color: #f59e0b;
+	--waline-border-color: rgb(2 132 199 / 0.35);
+}
+html.dark[data-site-mode="brick"] #waline {
+	--waline-theme-color: #38bdf8;
+	--waline-active-color: #38bdf8;
+	--waline-badge-color: #f59e0b;
+	--waline-border-color: rgb(56 189 248 / 0.35);
+}
+html[data-site-mode="brick"] #waline .wl-btn {
+	border: 2px solid var(--brick-blue) !important;
+	border-radius: 4px !important;
+	box-shadow: 2px 2px 0 var(--brick-blue);
+}
+html[data-site-mode="brick"] #waline .wl-editor {
+	border: 3px solid var(--brick-blue) !important;
+	border-radius: 4px !important;
+}
+
+/* ---------- 减少动态：关掉浮起 / 按压位移，只留颜色变化 ---------- */
+@media (prefers-reduced-motion: reduce) {
+	html[data-site-mode="brick"] .post-card-wrapper,
+	html[data-site-mode="brick"] .btn-regular,
+	html[data-site-mode="brick"] .btn-card,
+	html[data-site-mode="brick"] .tag-item {
+		transition: none !important;
+	}
+	html[data-site-mode="brick"] .post-card-wrapper:hover,
+	html[data-site-mode="brick"] .btn-regular:hover,
+	html[data-site-mode="brick"] .btn-regular:active,
+	html[data-site-mode="brick"] .btn-card:hover,
+	html[data-site-mode="brick"] .btn-card:active,
+	html[data-site-mode="brick"] .tag-item:hover {
+		transform: none !important;
+	}
+}
+
+}
+
+/* ============================================================
+ * 无 layer 段：导航 / 横幅 / 壁纸 / 浮动面板 / 滚动条
+ * 这几处的基底规则在 navbar.css、banner-home.css、layout-styles.css 里
+ * 是无 layer 且多带 !important，本段同为无 layer + 更高特异性才压得住。
+ * ============================================================ */
+
+/* ---------- 圆点网层（24px，铺在页底之上、壁纸之下，只作底纹） ---------- */
+html[data-site-mode="brick"] #brick-dot-layer {
+	position: fixed;
+	inset: 0;
+	z-index: -20;
+	pointer-events: none;
+	background-image: radial-gradient(rgb(2 132 199 / 0.07) 2px, transparent 2.3px);
+	background-size: 24px 24px;
+}
+html.dark[data-site-mode="brick"] #brick-dot-layer {
+	background-image: radial-gradient(rgb(56 189 248 / 0.09) 2px, transparent 2.3px);
+}
+
+/* ---------- 顽彩专属壁纸：接管壁纸层（原壁纸图隐藏，布局 / 遮罩 / 波浪沿用既有机制）；
+   图片地址走 --brick-wallpaper-image 变量（WallpaperSection 按 backgroundWallpaper.brickSrc 写入，
+   控制台「图片」页维护），变量缺失时回退默认的草地小狗插画 ---------- */
+html[data-site-mode="brick"] #wallpaper-wrapper {
+	background-color: #b5dfa8;
+	background-image: linear-gradient(rgb(250 248 245 / 0.14), rgb(250 248 245 / 0.14)), var(--brick-wallpaper-image, url("/assets/images/brick/meadow-dogs.jpg"));
+	background-size: cover;
+	background-position: center;
+}
+html.dark[data-site-mode="brick"] #wallpaper-wrapper {
+	background-image: linear-gradient(rgb(15 23 42 / 0.42), rgb(15 23 42 / 0.42)), var(--brick-wallpaper-image, url("/assets/images/brick/meadow-dogs.jpg"));
+}
+html[data-site-mode="brick"] #banner-images-container {
+	opacity: 0 !important;
+}
+
+/* ---------- 顶栏：白底 + 4px 蓝底边 + 低透明硬投影，全宽直角（覆盖各导航样式与玻璃态） ---------- */
+html[data-site-mode="brick"] #navbar {
+	border-radius: 0 !important;
+	box-shadow: none !important;
+}
+html[data-site-mode="brick"] #navbar > div {
+	background: #ffffff !important;
+	border: none !important;
+	border-bottom: 4px solid var(--brick-blue) !important;
+	border-radius: 0 !important;
+	box-shadow: 0 4px 0 rgb(30 58 138 / 0.1) !important;
+	--navbar-surface-blur: 0px !important;
+	height: 4.25rem;
+}
+html.dark[data-site-mode="brick"] #navbar > div {
+	background: #1e293b !important;
+}
+html[data-site-mode="brick"] #navbar > div::before {
+	display: none !important;
+}
+@media (max-width: 639px) {
+	html[data-site-mode="brick"] #navbar > div {
+		height: 3.25rem;
+	}
+}
+/* Logo 斜砖：浅黄方块 + 2px 描边 + -skew-x-12 斜切（谐彩下是竖条，顽彩下是砖块） */
+html[data-site-mode="brick"] .navbar-brand-accent {
+	display: block;
+	flex: none;
+	width: 1.75rem;
+	height: 1.75rem;
+	margin-right: 0.6rem;
+	background: var(--brick-yellow);
+	border: 2px solid var(--brick-blue);
+	border-radius: 4px;
+	box-shadow: 2px 2px 0 var(--brick-blue);
+	transform: skewX(-12deg);
+}
+@media (min-width: 768px) {
+	html[data-site-mode="brick"] .navbar-brand-accent {
+		width: 2rem;
+		height: 2rem;
+	}
+}
+html[data-site-mode="brick"] #navbar .navbar-title-text {
+	font-weight: 900;
+	letter-spacing: 0.02em;
+}
+/* 导航链接 chip：2px 描边、米白半透底、黄阴影，hover 填蓝变白字 */
+html[data-site-mode="brick"] #navbar .dropdown-container > a,
+html[data-site-mode="brick"] #navbar .dropdown-container > button {
+	border: 2px solid var(--brick-blue) !important;
+	border-radius: 4px !important;
+	background: rgb(250 248 245 / 0.55) !important;
+	color: var(--brick-deep) !important;
+	box-shadow: 1px 1px 0 var(--brick-yellow);
+	font-weight: 900;
+	letter-spacing: 0.04em;
+}
+html.dark[data-site-mode="brick"] #navbar .dropdown-container > a,
+html.dark[data-site-mode="brick"] #navbar .dropdown-container > button {
+	background: rgb(30 41 59 / 0.65) !important;
+	color: #e0f2fe !important;
+}
+@media (min-width: 640px) {
+	html[data-site-mode="brick"] #navbar .dropdown-container > a,
+	html[data-site-mode="brick"] #navbar .dropdown-container > button {
+		box-shadow: 2px 2px 0 var(--brick-yellow);
+	}
+}
+html[data-site-mode="brick"] #navbar .dropdown-container > a:hover,
+html[data-site-mode="brick"] #navbar .dropdown-container > button:hover {
+	background: var(--brick-sky) !important;
+	color: #ffffff !important;
+}
+
+/* ---------- 横幅文案：主标题做成倾斜贴纸，副标题坐进蓝胶囊，链接行方片化 ---------- */
+html[data-site-mode="brick"] .banner-home-text-overlay .banner-title {
+	display: inline-block;
+	align-self: center;
+	background: var(--brick-yellow) !important;
+	color: var(--brick-deep) !important;
+	border: 3px solid var(--brick-blue);
+	border-radius: 4px;
+	box-shadow: 3px 3px 0 var(--brick-amber);
+	padding: 0.08em 0.4em;
+	text-shadow: none !important;
+	transform: rotate(-1deg);
+}
+html[data-site-mode="brick"] .banner-subtitle {
+	display: inline-block;
+	align-self: center;
+	background: rgb(2 132 199 / 0.85);
+	color: #ffffff !important;
+	border: 2px solid var(--brick-blue);
+	border-radius: 4px;
+	box-shadow: 2px 2px 0 var(--brick-yellow);
+	padding: 0.15em 0.6em;
+	text-shadow: none !important;
+	font-weight: 700;
+}
+html[data-site-mode="brick"] .banner-link {
+	border-radius: 4px !important;
+	background: rgb(250 248 245 / 0.85) !important;
+	border: 2px solid var(--brick-blue) !important;
+	color: var(--brick-deep) !important;
+	box-shadow: 1px 1px 0 var(--brick-yellow);
+	backdrop-filter: none !important;
+	-webkit-backdrop-filter: none !important;
+}
+html[data-site-mode="brick"] .banner-link:hover {
+	background: var(--brick-sky) !important;
+	color: #ffffff !important;
+	transform: translate(-1px, -1px);
+	box-shadow: 2px 2px 0 var(--brick-yellow);
+}
+
+/* ---------- 浮动面板 / 下拉：3px 描边 + 6px 硬阴影（关掉毛玻璃），下拉带 0.5deg 微倾 ---------- */
+html[data-site-mode="brick"]:not([data-wallpaper-mode="none"])[data-has-wallpaper] body :is(.dropdown-content, .float-panel),
+html[data-site-mode="brick"] body.wallpaper-transparent :is(.dropdown-content, .float-panel),
+html[data-site-mode="brick"] :is(.dropdown-content, .float-panel) {
+	background: var(--float-panel-bg) !important;
+	border: 3px solid var(--brick-blue) !important;
+	border-radius: 4px !important;
+	box-shadow: 6px 6px 0 var(--brick-blue) !important;
+	backdrop-filter: none !important;
+	-webkit-backdrop-filter: none !important;
+}
+html[data-site-mode="brick"] .dropdown-content {
+	rotate: 0.5deg;
+}
+html[data-site-mode="brick"] .dropdown-item {
+	border-radius: 2px !important;
+	font-weight: 700;
+}
+
+/* ---------- 滚动条：轨用米白、拇指用主色蓝 ---------- */
+html[data-site-mode="brick"] .custom-scrollbar {
+	scrollbar-color: rgb(2 132 199 / 0.55) #fdfbf7;
+}
+html[data-site-mode="brick"] .custom-scrollbar::-webkit-scrollbar-track {
+	background: #fdfbf7;
+}
+html[data-site-mode="brick"] .custom-scrollbar::-webkit-scrollbar-thumb {
+	background: rgb(2 132 199 / 0.55);
+	border-radius: 2px;
+}
+html[data-site-mode="brick"] .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+	background: rgb(2 132 199 / 0.7);
+}
+html.dark[data-site-mode="brick"] .custom-scrollbar {
+	scrollbar-color: rgb(56 189 248 / 0.55) #0f172a;
+}
+html.dark[data-site-mode="brick"] .custom-scrollbar::-webkit-scrollbar-track {
+	background: #0f172a;
+}
+html.dark[data-site-mode="brick"] .custom-scrollbar::-webkit-scrollbar-thumb {
+	background: rgb(56 189 248 / 0.55);
+}

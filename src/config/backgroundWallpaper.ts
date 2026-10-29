@@ -124,6 +124,8 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 		overlay: false,
 	},
 	// 已禁用的壁纸（不参与轮换，保留在上面列表中可随时恢复）。由管理台维护，手动编辑请保持 URL 与上面一致
+	// 顽彩专属壁纸（Alexander Console「图片」页维护）：站点形态「顽彩」下接管壁纸层的单张图
+	brickSrc: "/assets/images/brick/meadow-dogs.jpg",
 	disabled: [],
 	// 横幅壁纸和全屏壁纸共享配置
 	common: {

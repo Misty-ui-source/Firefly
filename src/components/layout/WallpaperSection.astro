@@ -50,11 +50,15 @@ const wallpaperPosition = state.isFullscreenMode
 	? (backgroundWallpaper.fullscreen?.position ??
 		backgroundWallpaper.banner?.position)
 	: backgroundWallpaper.banner?.position;
+/* 顽彩专属壁纸：写成 CSS 变量给 brick-mode.css 用（地址由控制台「图片」页维护，去掉引号防样式串断裂） */
+const brickWallpaperImage = (
+	backgroundWallpaper.brickSrc ?? "/assets/images/brick/meadow-dogs.jpg"
+).replace(/["\\]/g, "");
 ---
 
 <!-- Wallpaper - 如果允许切换则始终渲染，否则只渲染当前模式 -->
 {(state.isWallpaperSwitchable || state.isBannerMode || state.isFullscreenMode || state.isOverlayMode) && (
-<div id="wallpaper-wrapper" class="absolute z-10 w-full overflow-hidden" style="--overlay-opacity: ${backgroundWallpaper.overlay?.opacity ?? 0.8}; --overlay-z-index: ${backgroundWallpaper.overlay?.zIndex ?? -1}; --overlay-blur: ${backgroundWallpaper.overlay?.blur ?? 0}px;">
+<div id="wallpaper-wrapper" class="absolute z-10 w-full overflow-hidden" style={`--overlay-opacity: ${backgroundWallpaper.overlay?.opacity ?? 0.8}; --overlay-z-index: ${backgroundWallpaper.overlay?.zIndex ?? -1}; --overlay-blur: ${backgroundWallpaper.overlay?.blur ?? 0}px; --brick-wallpaper-image: url("${brickWallpaperImage}");`}>
 <!-- 背景图片显示 -->
     {useCarousel ? (
     /* 轮播模式：渲染所有图片为 slide-item */
@@ -234,7 +238,13 @@ const wallpaperPosition = state.isFullscreenMode
             }
 
             function isCarouselEnabled() {
-                // 分模式轮播开关（管理台配置）优先
+                // 访客在调色板里明确开/关过（localStorage 有值）时以访客为准；
+                // 没动过才用管理台的分模式开关 modeCarousel，再回退全局默认。
+                // 旧写法把 modeCarousel 放在最前面，访客开关永远被压死（2026-10-29 报障）。
+                if (switchable) {
+                    var stored = localStorage.getItem('bannerCarouselEnabled');
+                    if (stored !== null) return stored === 'true';
+                }
                 var modesAttr = container.dataset.carouselModes;
                 if (modesAttr) {
                     try {
@@ -243,10 +253,7 @@ const wallpaperPosition = state.isFullscreenMode
                         if (typeof map[m] === 'boolean') return map[m];
                     } catch (e) {}
                 }
-                if (!switchable) return defaultEnabled;
-                var stored = localStorage.getItem('bannerCarouselEnabled');
-                if (stored === null) return defaultEnabled;
-                return stored === 'true';
+                return defaultEnabled;
             }
 
             function isBannerWallpaperMode() {
@@ -331,6 +338,15 @@ const wallpaperPosition = state.isFullscreenMode
                     else if (gm === 'all') shared.push(visible[k]);
                 }
                 return own.length ? own : shared;
+            }
+
+            // 清掉不在当前图组里的 active：.slide-item.active 的 z-index 相同，
+            // 旧图组残留的 active 若排在 DOM 后面会盖住新图组，造成切模式不换图
+            function clearStrayActives(slides) {
+                var all = container.querySelectorAll('.slide-item');
+                for (var i = 0; i < all.length; i++) {
+                    if (slides.indexOf(all[i]) === -1) all[i].classList.remove('active');
+                }
             }
 
             function getCurrentIndex(slides) {
@@ -457,6 +473,9 @@ const wallpaperPosition = state.isFullscreenMode
                 // 新模式轮播关闭时强制回第一张（固定图）：哪怕该组之前随机激活过别的图也纠正过来；
                 // 轮播开启时维持旧行为：没有可用的 active 才激活第一张。
                 var slides = getVisibleSlides();
+                // 先清掉旧图组残留的 active：它和新图组 active 的 z-index 相同，
+                // 旧图组排在 DOM 后面时会一直盖住新图（全屏→覆盖透明不换图的根因）
+                clearStrayActives(slides);
                 if (slides.length) {
                     if (!isCarouselEnabled()) {
                         for (var f = 0; f < slides.length; f++) {
@@ -518,6 +537,7 @@ const wallpaperPosition = state.isFullscreenMode
                 var onBreakpointChange = function () {
                     var s = getVisibleSlides();
                     if (!s.length) return;
+                    clearStrayActives(s);
                     // 轮播关闭时另一侧图组也固定第一张，和当前侧保持一致
                     if (!isCarouselEnabled()) {
                         for (var f = 0; f < s.length; f++) {

@@ -129,6 +129,7 @@ export const ja: Translation = {
 	[Key.siteModeFull]: "華やか",
 	[Key.siteModePure]: "素朴",
 	[Key.siteModeHarmony]: "調和",
+	[Key.siteModeBrick]: "ブリック",
 	[Key.harmonySettings]: "調和専用",
 	[Key.harmonyScheme]: "カラースタイル",
 	[Key.harmonySchemeTonalSpot]: "トーナルスポット",

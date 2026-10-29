@@ -14,6 +14,7 @@ export type BackgroundWallpaperConfig = {
 		fullscreen?: boolean;
 		overlay?: boolean;
 	};
+	brickSrc?: string; // 顽彩专属壁纸（管理台「图片」页维护）：站点形态「顽彩」下接管壁纸层的单张图片地址
 	playerEnable?: boolean; // 是否启用背景视频播放，默认false
 	disabled?: string[]; // 已禁用的壁纸 URL 列表（不参与轮换，保留在 src 中可随时恢复），由管理台维护
 	src:

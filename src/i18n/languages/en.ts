@@ -130,6 +130,7 @@ export const en: Translation = {
 	[Key.siteModeFull]: "Splendid",
 	[Key.siteModePure]: "Minimal",
 	[Key.siteModeHarmony]: "Harmonic",
+	[Key.siteModeBrick]: "Brick",
 	[Key.harmonySettings]: "Harmony Palette",
 	[Key.harmonyScheme]: "Color Style",
 	[Key.harmonySchemeTonalSpot]: "Tonal Spot",

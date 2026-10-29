@@ -282,6 +282,8 @@ routes.images = async (arg) => {
   const wpParsed = parseModeWallpapers(bgText0);
   let wpModeSrc = wpParsed.src;
   let wpModeCarousel = wpParsed.carousel;
+  const brickMatch = bgText0.match(/^\tbrickSrc:\s*"([^"]*)"/m);
+  let wpBrick = brickMatch ? brickMatch[1] : '/assets/images/brick/meadow-dogs.jpg';
   let stickers = splitBraceObjects((extractConfigValue(stickerText0, 'stickers') || { raw: '[]' }).raw)
     .map((o) => ({ src: getStrField(o, 'src'), x: getNumField(o, 'x'), y: getNumField(o, 'y'), size: getNumField(o, 'size') }));
   const albums = [];
@@ -333,6 +335,26 @@ routes.images = async (arg) => {
     const text = buildModeWallpaperText(data.text);
     await saveWithLog(BG_CONFIG, text, data.sha, '更新分模式壁纸 [管理台]', { type: '配置', action: '更新', target: '分模式壁纸' });
     toast('分模式壁纸已保存（构建后生效）');
+  }
+  function buildBrickText(baseText) {
+    const line = `\tbrickSrc: "${escConfigStr(wpBrick)}",`;
+    if (/^\tbrickSrc:.*$/m.test(baseText)) return baseText.replace(/^\tbrickSrc:.*$/m, line);
+    const anchor = baseText.indexOf('\n\tdisabled:');
+    if (anchor >= 0) return baseText.slice(0, anchor + 1) + line + '\n' + baseText.slice(anchor + 1);
+    return baseText + '\n' + line + '\n';
+  }
+  async function saveBrickWallpaper() {
+    if (typeof opQueueEnqueue !== 'function') return saveBrickWallpaperNow();
+    const base = await cfgBaseForQueue(BG_CONFIG);
+    const text = buildBrickText(base.text);
+    opQueueEnqueue({ targetFile: BG_CONFIG, label: '顽彩壁纸', payload: text, baseSha: base.baseSha, op: { type: '配置', action: '更新', target: '顽彩壁纸' } });
+    toast('顽彩壁纸已加入待执行队列（顶栏「📥 待执行」执行后生效）');
+  }
+  async function saveBrickWallpaperNow() {
+    const data = await ghGetFile(BG_CONFIG);
+    const text = buildBrickText(data.text);
+    await saveWithLog(BG_CONFIG, text, data.sha, '更新顽彩壁纸 [管理台]', { type: '配置', action: '更新', target: '顽彩壁纸' });
+    toast('顽彩壁纸已保存（构建后生效）');
   }
   function buildStickerText(baseText) {
     const found = extractConfigValue(baseText, 'stickers');
@@ -524,6 +546,28 @@ routes.images = async (arg) => {
         </div>
         <div class="img-grid wp-picker hidden" data-mode="${mode}" data-dev="mobile"></div>
       </div>`).join('')}
+    </div>
+
+    <div class="card">
+      <h2>🧱 顽彩壁纸 <span class="sub">站点形态「顽彩」专属的单张壁纸（形态在「🎨 主题」页切换）</span></h2>
+      <p class="hint">顽彩下不走共享/分模式图库，只用这一张铺满壁纸层（亮色叠一层米白、暗色叠一层深蓝压暗）。建议横版大图；上传走 R2 自动转 WebP。改动先进待执行队列，急用点「⚡ 立即提交」。</p>
+      <div class="toolbar"><button class="btn btn-small" id="wp-brick-now">⚡ 立即提交顽彩壁纸（不走队列）</button></div>
+      <div class="slot-row">
+        <img class="slot-preview" id="wp-brick-preview" src="${esc(cfgImgPreview(wpBrick))}" alt="当前顽彩壁纸">
+        <div>
+          <p class="hint" id="wp-brick-url">${esc(wpBrick)}</p>
+          <div class="toolbar">
+            <input type="text" id="wp-brick-in" placeholder="粘贴图片 URL">
+            <button class="btn btn-small" id="wp-brick-apply">＋ 用这个 URL</button>
+          </div>
+          <div class="toolbar">
+            <input type="file" id="wp-brick-file" accept="image/*" class="hidden">
+            <button class="btn btn-small" id="wp-brick-up">📤 上传替换</button>
+            <button class="btn btn-small" id="wp-brick-ml">🗂 从媒体库选</button>
+            <button class="btn btn-small" id="wp-brick-reset">↩ 恢复默认小狗图</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -816,9 +860,55 @@ routes.images = async (arg) => {
     });
   }
 
+  function renderBrickWallpaper() {
+    const img = $('#wp-brick-preview');
+    if (img) img.src = cfgImgPreview(wpBrick);
+    const u = $('#wp-brick-url');
+    if (u) u.textContent = wpBrick;
+  }
+  function wireBrickWallpaper() {
+    const apply = $('#wp-brick-apply');
+    if (apply) apply.onclick = async () => {
+      const url = $('#wp-brick-in').value.trim();
+      if (!url) { toast('先粘贴图片 URL', true); return; }
+      wpBrick = url;
+      $('#wp-brick-in').value = '';
+      try { await saveBrickWallpaper(); renderBrickWallpaper(); } catch (e) { toast(e.message, true); }
+    };
+    const up = $('#wp-brick-up');
+    if (up) up.onclick = () => $('#wp-brick-file').click();
+    const fi = $('#wp-brick-file');
+    if (fi) fi.onchange = async (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      toast('上传中…');
+      try {
+        const { urls } = await uploadImages([f], 'admin/wallpaper', 0.72);
+        wpBrick = urls[0];
+        await saveBrickWallpaper();
+        renderBrickWallpaper();
+      } catch (err) { toast(err.message, true); }
+      e.target.value = '';
+    };
+    const ml = $('#wp-brick-ml');
+    if (ml) ml.onclick = () => openMediaPicker(async (url) => {
+      wpBrick = url;
+      try { await saveBrickWallpaper(); renderBrickWallpaper(); } catch (e) { toast(e.message, true); }
+    });
+    const reset = $('#wp-brick-reset');
+    if (reset) reset.onclick = async () => {
+      wpBrick = '/assets/images/brick/meadow-dogs.jpg';
+      try { await saveBrickWallpaper(); renderBrickWallpaper(); } catch (e) { toast(e.message, true); }
+    };
+    const now = $('#wp-brick-now');
+    if (now) now.onclick = async () => { try { await saveBrickWallpaperNow(); renderBrickWallpaper(); } catch (e) { toast(e.message, true); } };
+  }
+
   renderWallpapers();
   renderModeWallpapers();
   wireModeWallpapers();
+  renderBrickWallpaper();
+  wireBrickWallpaper();
   if (arg && arg.startsWith('wp-')) {
     const target = document.getElementById('wp-sec-' + arg.slice(3)) || document.getElementById(arg);
     if (target) {

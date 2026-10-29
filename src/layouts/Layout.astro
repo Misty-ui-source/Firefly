@@ -44,6 +44,7 @@ import "@/styles/main.css";
 import "@/styles/immersive-reading.css";
 import "@/styles/pure-mode.css";
 import "@/styles/harmony-mode.css";
+import "@/styles/brick-mode.css";
 import "@/styles/variables.styl";
 import "@rehype-callouts-theme";
 
@@ -478,7 +479,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
       if (!isSiteModeSwitchable) {
         localStorage.removeItem("siteMode");
       }
-      const resolvedSiteMode = ["full", "pure", "harmony"].includes(siteModeStored)
+      const resolvedSiteMode = ["full", "pure", "harmony", "brick"].includes(siteModeStored)
         ? siteModeStored
         : defaultSiteMode;
       document.documentElement.setAttribute(
@@ -690,6 +691,9 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
 
     <!-- 谐彩背景纹理层：固定全屏、负层级、只在谐彩作用域内被 harmony-mode.css 赋形（图案/透明度），其他形态下是无样式空层 -->
     <div id="harmony-texture-layer" aria-hidden="true"></div>
+
+    <!-- 顽彩圆点网层：固定全屏、负层级、只在顽彩作用域内被 brick-mode.css 赋形（24px 圆点网），其他形态下是无样式空层 -->
+    <div id="brick-dot-layer" aria-hidden="true"></div>
 
     {/* 卡片样式：根据 localStorage 覆盖默认配置 */}
     <script is:inline define:vars={{
