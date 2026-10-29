@@ -82,6 +82,13 @@ export const musicPlayerConfig: MusicPlayerConfig = {
 				cover: "https://img.lanerc.me/admin/music-cover/mvnddikk-c7544097c35eac28cd73d5e85fd0e7f9.webp",
 				lrc: "",
 			},
+			{
+				name: "一輪花 - Ichirinka",
+				artist: "tuki.",
+				url: "https://img.lanerc.me/admin/music/mvt3t0nc-tuki._-_____-_Ichirinka.mp3",
+				cover: "https://img.lanerc.me/admin/music-cover/mvt3qnhh-cover-auto.webp",
+				lrc: "",
+			},
 		],
 	},
 };
