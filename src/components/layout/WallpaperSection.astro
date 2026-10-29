@@ -453,19 +453,29 @@ const wallpaperPosition = state.isFullscreenMode
                 e.detail && e.detail.enabled ? startAutoPlay() : stopAutoPlay();
             });
             window.addEventListener('wallpaperModeChange', function(e) {
-                // 模式变了先把 active 换到新模式的图组上（没有可用的 active 就激活第一张并实例化）
+                // 模式变了先把 active 换到新模式的图组上。
+                // 新模式轮播关闭时强制回第一张（固定图）：哪怕该组之前随机激活过别的图也纠正过来；
+                // 轮播开启时维持旧行为：没有可用的 active 才激活第一张。
                 var slides = getVisibleSlides();
                 if (slides.length) {
-                    var hasActive = false;
-                    for (var i = 0; i < slides.length; i++) {
-                        if (slides[i].classList.contains('active')) { hasActive = true; break; }
-                    }
-                    if (!hasActive) {
-                        var actives = container.querySelectorAll('.slide-item.active');
-                        for (var a = 0; a < actives.length; a++) actives[a].classList.remove('active');
-                        slides[0].classList.add('active');
+                    if (!isCarouselEnabled()) {
+                        for (var f = 0; f < slides.length; f++) {
+                            if (f === 0) slides[f].classList.add('active');
+                            else slides[f].classList.remove('active');
+                        }
                         materialize(slides[0], false);
-                        if (isCarouselEnabled()) materializeAhead(slides, 0);
+                    } else {
+                        var hasActive = false;
+                        for (var i = 0; i < slides.length; i++) {
+                            if (slides[i].classList.contains('active')) { hasActive = true; break; }
+                        }
+                        if (!hasActive) {
+                            var actives = container.querySelectorAll('.slide-item.active');
+                            for (var a = 0; a < actives.length; a++) actives[a].classList.remove('active');
+                            slides[0].classList.add('active');
+                            materialize(slides[0], false);
+                            materializeAhead(slides, 0);
+                        }
                     }
                 }
                 if (e.detail && (e.detail.mode === 'banner' || e.detail.mode === 'fullscreen' || e.detail.mode === 'overlay')) {
@@ -475,14 +485,16 @@ const wallpaperPosition = state.isFullscreenMode
                 }
             });
 
-            // 随机首张：只有被抽中的这一张会真的下载，其余仍留在 <template> 里
+            // 首张选择：轮播开启时随机抽一张（只有被抽中的才会真的下载，其余仍留在 <template> 里）；
+            // 轮播关闭时固定第一张——控制台语义就是「关轮播 = 列表第一张固定显示」。
+            // 旧写法不看轮播开关一律随机，关了轮播每次进页面仍随机换图、把固定的第一张盖掉（2026-10-29 报障）。
             var slides = getVisibleSlides();
             // 清掉其他模式图组在 SSR 时带的 active，只留当前模式图组内的
             var stray = container.querySelectorAll('.slide-item.active');
             for (var s = 0; s < stray.length; s++) {
                 if (slides.indexOf(stray[s]) === -1) stray[s].classList.remove('active');
             }
-            var startIdx = slides.length > 1 ? Math.floor(Math.random() * slides.length) : 0;
+            var startIdx = isCarouselEnabled() && slides.length > 1 ? Math.floor(Math.random() * slides.length) : 0;
             var firstSlide = slides[startIdx];
             // .slide-item 自带 1000ms 的 opacity 过渡，首张不该吃它（它是 LCP 元素）。
             // 必须在下面加 active 之前就关掉，否则过渡已经启动了。
@@ -506,6 +518,15 @@ const wallpaperPosition = state.isFullscreenMode
                 var onBreakpointChange = function () {
                     var s = getVisibleSlides();
                     if (!s.length) return;
+                    // 轮播关闭时另一侧图组也固定第一张，和当前侧保持一致
+                    if (!isCarouselEnabled()) {
+                        for (var f = 0; f < s.length; f++) {
+                            if (f === 0) s[f].classList.add('active');
+                            else s[f].classList.remove('active');
+                        }
+                        materialize(s[0], false);
+                        return;
+                    }
                     var hasActive = false;
                     for (var i = 0; i < s.length; i++) {
                         if (s[i].classList.contains('active')) { hasActive = true; break; }
@@ -513,7 +534,7 @@ const wallpaperPosition = state.isFullscreenMode
                     if (!hasActive) s[0].classList.add('active');
                     var idx = getCurrentIndex(s);
                     materialize(s[idx], false);
-                    if (isCarouselEnabled()) materializeAhead(s, idx);
+                    materializeAhead(s, idx);
                 };
                 if (lgQuery.addEventListener) lgQuery.addEventListener('change', onBreakpointChange);
                 else if (lgQuery.addListener) lgQuery.addListener(onBreakpointChange);

@@ -272,6 +272,13 @@ routes.images = async (arg) => {
     toast('壁纸配置已保存（构建后生效）');
   }
   async function saveModeWallpapers() {
+    // 保存前按 URL 去重（保留首次出现）：历史数据里混进过的重复图在这里清掉，
+    // 否则同一张图占两个位置，「固定第一张」和随机抽图都会被它干扰
+    WP_MODES.forEach((mode) => {
+      ['desktop', 'mobile'].forEach((dev) => {
+        wpModeSrc[mode][dev] = [...new Set(wpModeSrc[mode][dev])];
+      });
+    });
     const data = await ghGetFile(BG_CONFIG);
     let text = data.text;
     text = replaceConfigBlock(text, 'modeSrc', buildModeSrcBlock(wpModeSrc));
@@ -700,9 +707,14 @@ routes.images = async (arg) => {
         toast('上传中…');
         try {
           const { urls } = await uploadImages([f], 'admin/wallpaper', 0.72);
-          wpModeSrc[mode][dev].push(urls[0]);
-          await saveModeWallpapers();
-          renderModeWallpapers();
+          // 与其他三个添加入口对齐：同一 URL 已在列表里就不再重复添加
+          // （旧写法独缺这道检查，同一张图能进列表两次，固定/轮播全乱套）
+          if (wpModeSrc[mode][dev].includes(urls[0])) { toast('这张已经在了', true); }
+          else {
+            wpModeSrc[mode][dev].push(urls[0]);
+            await saveModeWallpapers();
+            renderModeWallpapers();
+          }
         } catch (err) { toast(err.message, true); }
         e.target.value = '';
       };

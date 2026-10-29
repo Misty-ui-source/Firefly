@@ -3658,6 +3658,12 @@ const walineServerUrl = commentConfig.waline?.serverURL ?? "";
 	.analytics-ranking__copy > strong { overflow: hidden; color: var(--analytics-text); font-size: 0.79rem; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
 	.analytics-ranking__copy small, .analytics-ranking__item > strong small { color: var(--analytics-text-faint); font-size: 0.62rem; font-weight: 500; }
 	.analytics-ranking__link > strong { color: var(--analytics-text); font-size: 1rem; font-weight: 820; font-variant-numeric: tabular-nums; letter-spacing: -0.025em; }
+	/* 透明覆盖模式：排行条跟随外层卡片一起透出壁纸。原渐变底用 var(--card-bg) 实色，
+	   外层面板被 .card-base 透明规则透化后，这里还是一条条实白（2026-10-29 朝朝听雨回访反馈「还不是透明的」）。
+	   只在 wallpaper-transparent 下把底色换成 --card-bg-transparent，其他模式视觉不动。 */
+	body.wallpaper-transparent .analytics-ranking__link { background: linear-gradient(100deg, color-mix(in oklab, var(--ranking-accent, var(--analytics-blue)) 4%, var(--card-bg-transparent)), var(--card-bg-transparent) 68%); }
+	body.wallpaper-transparent .analytics-ranking__link:hover, body.wallpaper-transparent .analytics-ranking__link:focus-visible { background: color-mix(in oklab, var(--analytics-blue) 6%, var(--card-bg-transparent)); }
+	body.wallpaper-transparent .analytics-ranking__index { background: color-mix(in oklab, var(--ranking-accent, var(--analytics-blue)) 10%, var(--card-bg-transparent)); }
 	.analytics-panel__footnote { margin: 0 1.45rem; padding: 0.9rem 0 1.2rem; color: var(--analytics-text-faint); font-size: 0.66rem; line-height: 1.55; }
 	.analytics-deployment { position: relative; overflow: hidden; background: var(--card-bg); }
 	/* min-height 原为 9.8rem 给右侧立绘留位，插画撤掉后回归内容高度 */
