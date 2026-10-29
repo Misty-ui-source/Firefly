@@ -146,6 +146,45 @@ html[data-site-mode="brick"] body {
 	font-family: var(--font-fredoka), "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif !important;
 	font-weight: 500;
 }
+
+/* ---------- 顽彩字体覆盖（控制台「字体」页控制，存 siteConfig.brickFont，不进调色板） ----------
+   default 不出规则、用上面的 Fredoka + 系统黑体栈；选了具体字体则整栈换成「该字体 + 通用回落」（字重 500 不变）。 */
+html[data-site-mode="brick"][data-brick-font="system"] body {
+	font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif !important;
+}
+html[data-site-mode="brick"][data-brick-font="maru"] body {
+	font-family: var(--font-zen-maru-gothic), sans-serif !important;
+}
+html[data-site-mode="brick"][data-brick-font="mplus"] body {
+	font-family: var(--font-m-plus-rounded-1c), sans-serif !important;
+}
+html[data-site-mode="brick"][data-brick-font="luoli"] body {
+	font-family: var(--font-luoliti), sans-serif !important;
+}
+html[data-site-mode="brick"][data-brick-font="lxgw"] body {
+	font-family: var(--font-lxgw-wenkai), serif !important;
+}
+html[data-site-mode="brick"][data-brick-font="zhuque"] body {
+	font-family: var(--font-zhuque-fangsong), serif !important;
+}
+html[data-site-mode="brick"][data-brick-font="inter"] body {
+	font-family: var(--font-inter), sans-serif !important;
+}
+html[data-site-mode="brick"][data-brick-font="fredoka"] body {
+	font-family: var(--font-fredoka), sans-serif !important;
+}
+html[data-site-mode="brick"][data-brick-font="jetbrains"] body {
+	font-family: var(--font-jetbrains-mono), monospace !important;
+}
+html[data-site-mode="brick"][data-brick-font="notoserif"] body {
+	font-family: var(--font-noto-serif-sc), serif !important;
+}
+html[data-site-mode="brick"][data-brick-font="greatvibes"] body {
+	font-family: var(--font-greatvibes), sans-serif !important;
+}
+html[data-site-mode="brick"][data-brick-font="xiaomaiti"] body {
+	font-family: var(--font-xiaomaiti), sans-serif !important;
+}
 html[data-site-mode="brick"] h1,
 html[data-site-mode="brick"] h2,
 html[data-site-mode="brick"] h3,

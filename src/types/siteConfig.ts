@@ -102,6 +102,12 @@ export type SiteConfig = {
 	// 素简字体菜单（控制台字体页可管）：有序的 PureFont 键数组，第一项为默认字体；访客自选优先（localStorage pureFont）
 	pureFontMenu?: string[];
 
+	// 谐彩 / 顽彩形态的正文字体（仅控制台字体页可管，不进访客调色板）：
+	// "default" = 形态原生搭配（谐彩三角色栈 / 顽彩 Fredoka+系统黑体）；其余为字体库键（与 PureFont 键一致，另加 fredoka），
+	// 规则见 styles/harmony-mode.css、styles/brick-mode.css 的 [data-harmony-font] / [data-brick-font] 段
+	harmonyFont?: string;
+	brickFont?: string;
+
 	// 页面开关配置
 	pages: {
 		booknav: boolean; // 书签导航页面开关

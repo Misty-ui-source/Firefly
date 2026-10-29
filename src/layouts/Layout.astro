@@ -160,7 +160,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
 ---
 
 <!doctype html>
-<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"} data-navbar-style={siteConfig.navbar.navbarStyle ?? "classic"} data-site-mode={siteConfig.siteMode ?? "full"}>
+<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"} data-navbar-style={siteConfig.navbar.navbarStyle ?? "classic"} data-site-mode={siteConfig.siteMode ?? "full"} data-harmony-font={siteConfig.harmonyFont ?? "default"} data-brick-font={siteConfig.brickFont ?? "default"}>
   <head>
     <meta charset="UTF-8" />
     {commentConfig?.type === "waline" && commentConfig?.waline?.serverURL && (

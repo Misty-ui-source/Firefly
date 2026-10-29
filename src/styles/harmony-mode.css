@@ -458,6 +458,46 @@ html.dark[data-site-mode="harmony"] body.card-follow-theme-hue {
 html[data-site-mode="harmony"] body {
 	font-family: var(--font-inter), var(--font-luoliti), var(--font-m-plus-rounded-1c), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif !important;
 }
+
+/* ---------- 谐彩字体覆盖（控制台「字体」页控制，存 siteConfig.harmonyFont，不进调色板） ----------
+   default 不出规则、用上面的原生三角色栈；选了具体字体则整栈换成「该字体 + 通用回落」，口径同素简的单字体规则。
+   候选字体都在 fontHelper 里常驻加载，切换不新增文件。 */
+html[data-site-mode="harmony"][data-harmony-font="system"] body {
+	font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif !important;
+}
+html[data-site-mode="harmony"][data-harmony-font="maru"] body {
+	font-family: var(--font-zen-maru-gothic), sans-serif !important;
+}
+html[data-site-mode="harmony"][data-harmony-font="mplus"] body {
+	font-family: var(--font-m-plus-rounded-1c), sans-serif !important;
+}
+html[data-site-mode="harmony"][data-harmony-font="luoli"] body {
+	font-family: var(--font-luoliti), sans-serif !important;
+}
+html[data-site-mode="harmony"][data-harmony-font="lxgw"] body {
+	font-family: var(--font-lxgw-wenkai), serif !important;
+}
+html[data-site-mode="harmony"][data-harmony-font="zhuque"] body {
+	font-family: var(--font-zhuque-fangsong), serif !important;
+}
+html[data-site-mode="harmony"][data-harmony-font="inter"] body {
+	font-family: var(--font-inter), sans-serif !important;
+}
+html[data-site-mode="harmony"][data-harmony-font="fredoka"] body {
+	font-family: var(--font-fredoka), sans-serif !important;
+}
+html[data-site-mode="harmony"][data-harmony-font="jetbrains"] body {
+	font-family: var(--font-jetbrains-mono), monospace !important;
+}
+html[data-site-mode="harmony"][data-harmony-font="notoserif"] body {
+	font-family: var(--font-noto-serif-sc), serif !important;
+}
+html[data-site-mode="harmony"][data-harmony-font="greatvibes"] body {
+	font-family: var(--font-greatvibes), sans-serif !important;
+}
+html[data-site-mode="harmony"][data-harmony-font="xiaomaiti"] body {
+	font-family: var(--font-xiaomaiti), sans-serif !important;
+}
 /* 元信息 / 标签类小字走 M3 label 的 500 字重纪律 */
 html[data-site-mode="harmony"] .post-meta,
 html[data-site-mode="harmony"] .post-meta span,

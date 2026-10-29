@@ -6769,6 +6769,14 @@ routes.fonts = async () => {
   const regionOpts = (cur) => `<option value=""${!cur ? ' selected' : ''}>（跟随全局）</option>` +
     fonts.map((f) => `<option value="${esc(f.var)}"${cur === f.var ? ' selected' : ''}>${esc(fontLabel(f))}</option>`).join('');
   const slotField = (id, label, opts) => `<div class="field"><label>${label}</label><select id="${id}">${opts}</select></div>`;
+  /* 谐彩 / 顽彩字体（siteConfig.harmonyFont / brickFont）：只在控制台控制，博客调色板里不出现 */
+  const modeFontCur = { harmony: 'default', brick: 'default' };
+  { const mh = siteSrc.match(/harmonyFont\s*:\s*"([^"]*)"/); if (mh) modeFontCur.harmony = mh[1];
+    const mb = siteSrc.match(/brickFont\s*:\s*"([^"]*)"/); if (mb) modeFontCur.brick = mb[1]; }
+  const MODE_KEY_VAR = { maru: '--font-zen-maru-gothic', mplus: '--font-m-plus-rounded-1c', luoli: '--font-luoliti', lxgw: '--font-lxgw-wenkai', zhuque: '--font-zhuque-fangsong', inter: '--font-inter', fredoka: '--font-fredoka', jetbrains: '--font-jetbrains-mono', notoserif: '--font-noto-serif-sc', greatvibes: '--font-greatvibes', xiaomaiti: '--font-xiaomaiti' };
+  const MODE_FONT_KEYS = ['system', ...Object.keys(MODE_KEY_VAR)];
+  const modeFontLabel = (k) => k === 'system' ? '系统默认' : (FONT_CN[MODE_KEY_VAR[k]] || k);
+  const modeFontOpts = (cur, defLabel) => `<option value="default"${cur === 'default' ? ' selected' : ''}>${defLabel}</option>` + MODE_FONT_KEYS.map((k) => `<option value="${k}"${cur === k ? ' selected' : ''}>${esc(modeFontLabel(k))}</option>`).join('');
 
   view.innerHTML = `
   <div class="toolbar">
@@ -6798,6 +6806,22 @@ routes.fonts = async () => {
       <button class="btn btn-small" id="btn-pure-add">＋ 添加到菜单</button>
       <span class="spacer"></span>
       <button class="btn" id="btn-save-pure-menu">💾 保存素简菜单</button>
+    </div>
+  </div>
+  <div class="card"><h2>🎵 谐彩字体 <span class="sub">形态正文字体 · 只在控制台控制，博客调色板里不出现 · 存 siteConfig.harmonyFont</span></h2>
+    <p class="hint">默认是谐彩的原生三角色搭配（Inter 管西文、中文圆体管中文、M PLUS 兜底）。选了具体字体，谐彩正文整栈换成那一款；想恢复选回「默认」。保存后重新构建网站生效。</p>
+    <div class="toolbar">
+      <select id="font-harmony" style="min-width:240px">${modeFontOpts(modeFontCur.harmony, '默认（原生三角色）')}</select>
+      <span class="spacer"></span>
+      <button class="btn" id="btn-save-harmony-font">💾 保存谐彩字体</button>
+    </div>
+  </div>
+  <div class="card"><h2>🧱 顽彩字体 <span class="sub">形态正文字体 · 只在控制台控制，博客调色板里不出现 · 存 siteConfig.brickFont</span></h2>
+    <p class="hint">默认是 Fredoka 管西文、中文回落系统黑体。选了具体字体，顽彩正文整栈换成那一款（字重保持 500）；想恢复选回「默认」。保存后重新构建网站生效。</p>
+    <div class="toolbar">
+      <select id="font-brick" style="min-width:240px">${modeFontOpts(modeFontCur.brick, '默认（Fredoka + 系统黑体）')}</select>
+      <span class="spacer"></span>
+      <button class="btn" id="btn-save-brick-font">💾 保存顽彩字体</button>
     </div>
   </div>`;
 
@@ -6868,6 +6892,22 @@ routes.fonts = async () => {
       routes.fonts();
     } catch (e) { toast('保存失败：' + e.message); }
   };
+
+  /* 谐彩 / 顽彩字体保存：与素简菜单同一套路（正则替换 siteConfig 字段后整份保存） */
+  const saveModeFont = async (field, selId, label) => {
+    if (!siteSrc) { toast('没读到 siteConfig.ts，刷新页面再试'); return; }
+    const re = new RegExp(field + '\\s*:\\s*"[^"]*"');
+    if (!re.test(siteSrc)) { toast(`siteConfig.ts 里没找到 ${field} 字段`); return; }
+    const newSite = siteSrc.replace(re, `${field}: "${$(selId).value}"`);
+    if (newSite === siteSrc) { toast('没有改动'); return; }
+    try {
+      await saveWithLog('src/config/siteConfig.ts', newSite, siteSha, `修改${label} [管理台]`, { type: '字体', action: '更新', target: label });
+      toast(`${label}已保存，重新构建后生效`);
+      routes.fonts();
+    } catch (e) { toast('保存失败：' + e.message); }
+  };
+  $('#btn-save-harmony-font').onclick = () => saveModeFont('harmonyFont', '#font-harmony', '谐彩字体');
+  $('#btn-save-brick-font').onclick = () => saveModeFont('brickFont', '#font-brick', '顽彩字体');
 };
 
 /* ---------- 启动 ---------- */
