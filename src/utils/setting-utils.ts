@@ -416,7 +416,7 @@ export function setNavbarStyle(style: NavbarStyle): void {
 	applyNavbarStyleToDocument(safe);
 }
 
-const SITE_MODES: SiteMode[] = ["full", "pure"];
+const SITE_MODES: SiteMode[] = ["full", "pure", "harmony"];
 
 export function getDefaultSiteMode(): SiteMode {
 	const v = siteConfig.siteMode ?? "full";
@@ -457,6 +457,283 @@ export function setSiteMode(mode: SiteMode): void {
 		localStorage.setItem("siteMode", safe);
 	}
 	applySiteModeToDocument(safe);
+}
+
+// ─── 谐彩专属调色板 ──────────────────────────────────────
+// 只在站点形态 = 谐彩（harmony）时生效的一组外观选项（对标 Shirone 的动态取色
+// 面板）：独立 harmony* 存储键，与全站 hue、素简 pureFont 等键互不干扰。
+// Layout 首帧脚本同步落位（防闪烁），这里是运行时读写入口；样式全部收在
+// harmony-mode.css 的 html[data-site-mode="harmony"] 作用域里，切回华彩 / 素简
+// 时这些存储值不产生任何效果。机制为静态 CSS 变量组（不引 HCT 算法库）：
+// scheme/spec 只改一组阶梯参数变量，色值由 CSS 公式以 --harmony-hue 为种子推导。
+
+export type HarmonyScheme =
+	| "tonalSpot"
+	| "vibrant"
+	| "expressive"
+	| "fidelity"
+	| "content"
+	| "neutral"
+	| "monochrome"
+	| "rainbow"
+	| "fruitSalad";
+
+export const HARMONY_SCHEMES: HarmonyScheme[] = [
+	"tonalSpot",
+	"vibrant",
+	"expressive",
+	"fidelity",
+	"content",
+	"neutral",
+	"monochrome",
+	"rainbow",
+	"fruitSalad",
+];
+
+export type HarmonySpec = "2021" | "2025";
+export const HARMONY_SPECS: HarmonySpec[] = ["2021", "2025"];
+
+export type HarmonyTexture =
+	| "none"
+	| "starlight"
+	| "cyber-dots"
+	| "topography"
+	| "geometric"
+	| "sakura";
+
+export const HARMONY_TEXTURES: HarmonyTexture[] = [
+	"none",
+	"starlight",
+	"cyber-dots",
+	"topography",
+	"geometric",
+	"sakura",
+];
+
+export const DEFAULT_HARMONY_SCHEME: HarmonyScheme = "tonalSpot";
+export const DEFAULT_HARMONY_SPEC: HarmonySpec = "2025";
+export const DEFAULT_HARMONY_TEXTURE: HarmonyTexture = "starlight";
+export const DEFAULT_HARMONY_TEXTURE_OPACITY = 0.12;
+
+function harmonyStorageGet(key: string): string | null {
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.getItem !== "function"
+	) {
+		return null;
+	}
+	return localStorage.getItem(key);
+}
+
+function harmonyStorageSet(key: string, value: string | null): void {
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.setItem !== "function"
+	) {
+		return;
+	}
+	if (value === null) {
+		localStorage.removeItem(key);
+	} else {
+		localStorage.setItem(key, value);
+	}
+}
+
+// 色相：null = 未单独设置，谐彩种子跟随全站 --hue（CSS 里 --harmony-hue 默认即 var(--hue)）
+export function getStoredHarmonyHue(): number | null {
+	const raw = harmonyStorageGet("harmonyHue");
+	if (raw === null) return null;
+	const parsed = Number.parseFloat(raw);
+	if (Number.isNaN(parsed)) return null;
+	return clampNumber(Math.round(parsed), 0, 360);
+}
+
+export function applyHarmonyHueToDocument(hue: number | null): void {
+	if (typeof document === "undefined") return;
+	if (hue === null) {
+		document.documentElement.style.removeProperty("--harmony-hue");
+	} else {
+		document.documentElement.style.setProperty("--harmony-hue", String(hue));
+	}
+}
+
+export function setHarmonyHue(hue: number | null): void {
+	const safe =
+		hue === null ? null : clampNumber(Math.round(hue), 0, 360);
+	harmonyStorageSet("harmonyHue", safe === null ? null : String(safe));
+	applyHarmonyHueToDocument(safe);
+}
+
+export function getStoredHarmonyScheme(): HarmonyScheme {
+	const stored = harmonyStorageGet("harmonyScheme") as HarmonyScheme | null;
+	return stored && HARMONY_SCHEMES.includes(stored)
+		? stored
+		: DEFAULT_HARMONY_SCHEME;
+}
+
+export function applyHarmonySchemeToDocument(scheme: HarmonyScheme): void {
+	if (typeof document === "undefined") return;
+	document.documentElement.setAttribute("data-harmony-scheme", scheme);
+}
+
+export function setHarmonyScheme(scheme: HarmonyScheme): void {
+	const safe = HARMONY_SCHEMES.includes(scheme)
+		? scheme
+		: DEFAULT_HARMONY_SCHEME;
+	harmonyStorageSet("harmonyScheme", safe);
+	applyHarmonySchemeToDocument(safe);
+}
+
+export function getStoredHarmonySpec(): HarmonySpec {
+	const stored = harmonyStorageGet("harmonySpec") as HarmonySpec | null;
+	return stored && HARMONY_SPECS.includes(stored)
+		? stored
+		: DEFAULT_HARMONY_SPEC;
+}
+
+export function applyHarmonySpecToDocument(spec: HarmonySpec): void {
+	if (typeof document === "undefined") return;
+	document.documentElement.setAttribute("data-harmony-spec", spec);
+}
+
+export function setHarmonySpec(spec: HarmonySpec): void {
+	const safe = HARMONY_SPECS.includes(spec) ? spec : DEFAULT_HARMONY_SPEC;
+	harmonyStorageSet("harmonySpec", safe);
+	applyHarmonySpecToDocument(safe);
+}
+
+export function getStoredHarmonyTexture(): HarmonyTexture {
+	const stored = harmonyStorageGet("harmonyTexture") as HarmonyTexture | null;
+	return stored && HARMONY_TEXTURES.includes(stored)
+		? stored
+		: DEFAULT_HARMONY_TEXTURE;
+}
+
+export function applyHarmonyTextureToDocument(texture: HarmonyTexture): void {
+	if (typeof document === "undefined") return;
+	document.documentElement.setAttribute("data-harmony-texture", texture);
+}
+
+export function setHarmonyTexture(texture: HarmonyTexture): void {
+	const safe = HARMONY_TEXTURES.includes(texture)
+		? texture
+		: DEFAULT_HARMONY_TEXTURE;
+	harmonyStorageSet("harmonyTexture", safe);
+	applyHarmonyTextureToDocument(safe);
+}
+
+export function getStoredHarmonyTextureOpacity(): number {
+	const raw = harmonyStorageGet("harmonyTextureOpacity");
+	if (raw === null) return DEFAULT_HARMONY_TEXTURE_OPACITY;
+	const parsed = Number.parseFloat(raw);
+	if (Number.isNaN(parsed)) return DEFAULT_HARMONY_TEXTURE_OPACITY;
+	return clampNumber(parsed, 0, 1);
+}
+
+export function applyHarmonyTextureOpacityToDocument(opacity: number): void {
+	if (typeof document === "undefined") return;
+	document.documentElement.style.setProperty(
+		"--harmony-texture-opacity",
+		String(clampNumber(opacity, 0, 1)),
+	);
+}
+
+export function setHarmonyTextureOpacity(opacity: number): void {
+	const safe = clampNumber(opacity, 0, 1);
+	harmonyStorageSet("harmonyTextureOpacity", String(safe));
+	applyHarmonyTextureOpacityToDocument(safe);
+}
+
+// 减少动态：true 时 html 上挂 data-harmony-motion="reduced"
+export function getStoredHarmonyMotionReduced(): boolean {
+	return harmonyStorageGet("harmonyMotion") === "reduced";
+}
+
+export function applyHarmonyMotionToDocument(reduced: boolean): void {
+	if (typeof document === "undefined") return;
+	if (reduced) {
+		document.documentElement.setAttribute("data-harmony-motion", "reduced");
+	} else {
+		document.documentElement.removeAttribute("data-harmony-motion");
+	}
+}
+
+export function setHarmonyMotionReduced(reduced: boolean): void {
+	harmonyStorageSet("harmonyMotion", reduced ? "reduced" : "full");
+	applyHarmonyMotionToDocument(reduced);
+}
+
+// Overlay 三项：默认沿用全站 overlay 配置默认值（getDefaultOverlay*），
+// 但存独立键、只经 --harmony-* 变量在谐彩作用域内生效，不动全站 overlay 设置。
+export function getStoredHarmonyOverlayOpacity(): number {
+	const raw = harmonyStorageGet("harmonyOverlayOpacity");
+	if (raw === null) return getDefaultOverlayOpacity();
+	const parsed = Number.parseFloat(raw);
+	return Number.isNaN(parsed)
+		? getDefaultOverlayOpacity()
+		: clampNumber(parsed, 0, 1);
+}
+
+export function applyHarmonyOverlayOpacityToDocument(opacity: number): void {
+	if (typeof document === "undefined") return;
+	document.documentElement.style.setProperty(
+		"--harmony-overlay-opacity",
+		String(clampNumber(opacity, 0, 1)),
+	);
+}
+
+export function setHarmonyOverlayOpacity(opacity: number): void {
+	const safe = clampNumber(opacity, 0, 1);
+	harmonyStorageSet("harmonyOverlayOpacity", String(safe));
+	applyHarmonyOverlayOpacityToDocument(safe);
+}
+
+export function getStoredHarmonyOverlayBlur(): number {
+	const raw = harmonyStorageGet("harmonyOverlayBlur");
+	if (raw === null) return getDefaultOverlayBlur();
+	const parsed = Number.parseFloat(raw);
+	return Number.isNaN(parsed)
+		? getDefaultOverlayBlur()
+		: clampNumber(parsed, 0, 20);
+}
+
+export function applyHarmonyOverlayBlurToDocument(blur: number): void {
+	if (typeof document === "undefined") return;
+	document.documentElement.style.setProperty(
+		"--harmony-overlay-blur",
+		`${clampNumber(blur, 0, 20)}px`,
+	);
+}
+
+export function setHarmonyOverlayBlur(blur: number): void {
+	const safe = clampNumber(blur, 0, 20);
+	harmonyStorageSet("harmonyOverlayBlur", String(safe));
+	applyHarmonyOverlayBlurToDocument(safe);
+}
+
+export function getStoredHarmonyOverlayCardOpacity(): number {
+	const raw = harmonyStorageGet("harmonyOverlayCardOpacity");
+	if (raw === null) return getDefaultOverlayCardOpacity();
+	const parsed = Number.parseFloat(raw);
+	return Number.isNaN(parsed)
+		? getDefaultOverlayCardOpacity()
+		: clampNumber(parsed, 0, 1);
+}
+
+export function applyHarmonyOverlayCardOpacityToDocument(
+	cardOpacity: number,
+): void {
+	if (typeof document === "undefined") return;
+	document.documentElement.style.setProperty(
+		"--harmony-card-opacity",
+		String(clampNumber(cardOpacity, 0, 1)),
+	);
+}
+
+export function setHarmonyOverlayCardOpacity(cardOpacity: number): void {
+	const safe = clampNumber(cardOpacity, 0, 1);
+	harmonyStorageSet("harmonyOverlayCardOpacity", String(safe));
+	applyHarmonyOverlayCardOpacityToDocument(safe);
 }
 
 // ─── 素简字体 ─────────────────────────────────────────────

@@ -43,6 +43,7 @@ import { getCanonicalUrl, url } from "@/utils/url-utils";
 import "@/styles/main.css";
 import "@/styles/immersive-reading.css";
 import "@/styles/pure-mode.css";
+import "@/styles/harmony-mode.css";
 import "@/styles/variables.styl";
 import "@rehype-callouts-theme";
 
@@ -477,13 +478,110 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
       if (!isSiteModeSwitchable) {
         localStorage.removeItem("siteMode");
       }
-      const resolvedSiteMode = ["full", "pure"].includes(siteModeStored)
+      const resolvedSiteMode = ["full", "pure", "harmony"].includes(siteModeStored)
         ? siteModeStored
         : defaultSiteMode;
       document.documentElement.setAttribute(
         "data-site-mode",
         resolvedSiteMode
       );
+
+      // 初始化谐彩专属调色板 - 独立 harmony* 存储键，首帧前落位防闪烁；
+      // 属性与变量只在 html[data-site-mode="harmony"] 作用域内被 harmony-mode.css 消费，
+      // 华彩 / 素简下挂着也不生效。键与默认值同 utils/setting-utils 的谐彩段。
+      (function applyHarmonySettings() {
+        const root = document.documentElement;
+        const hueStored = localStorage.getItem("harmonyHue");
+        if (hueStored !== null) {
+          const hueParsed = parseFloat(hueStored);
+          if (!isNaN(hueParsed)) {
+            root.style.setProperty(
+              "--harmony-hue",
+              String(Math.min(360, Math.max(0, Math.round(hueParsed))))
+            );
+          }
+        }
+        const schemeStored = localStorage.getItem("harmonyScheme");
+        root.setAttribute(
+          "data-harmony-scheme",
+          [
+            "tonalSpot",
+            "vibrant",
+            "expressive",
+            "fidelity",
+            "content",
+            "neutral",
+            "monochrome",
+            "rainbow",
+            "fruitSalad",
+          ].includes(schemeStored)
+            ? schemeStored
+            : "tonalSpot"
+        );
+        root.setAttribute(
+          "data-harmony-spec",
+          localStorage.getItem("harmonySpec") === "2021" ? "2021" : "2025"
+        );
+        const textureStored = localStorage.getItem("harmonyTexture");
+        root.setAttribute(
+          "data-harmony-texture",
+          [
+            "none",
+            "starlight",
+            "cyber-dots",
+            "topography",
+            "geometric",
+            "sakura",
+          ].includes(textureStored)
+            ? textureStored
+            : "starlight"
+        );
+        const textureOpacityStored = localStorage.getItem("harmonyTextureOpacity");
+        if (textureOpacityStored !== null) {
+          const textureOpacityParsed = parseFloat(textureOpacityStored);
+          if (!isNaN(textureOpacityParsed)) {
+            root.style.setProperty(
+              "--harmony-texture-opacity",
+              String(Math.min(1, Math.max(0, textureOpacityParsed)))
+            );
+          }
+        }
+        if (localStorage.getItem("harmonyMotion") === "reduced") {
+          root.setAttribute("data-harmony-motion", "reduced");
+        }
+        const harmonyOverlayOpacity = localStorage.getItem("harmonyOverlayOpacity");
+        if (harmonyOverlayOpacity !== null) {
+          const parsed = parseFloat(harmonyOverlayOpacity);
+          if (!isNaN(parsed)) {
+            root.style.setProperty(
+              "--harmony-overlay-opacity",
+              String(Math.min(1, Math.max(0, parsed)))
+            );
+          }
+        }
+        const harmonyOverlayBlur = localStorage.getItem("harmonyOverlayBlur");
+        if (harmonyOverlayBlur !== null) {
+          const parsed = parseFloat(harmonyOverlayBlur);
+          if (!isNaN(parsed)) {
+            root.style.setProperty(
+              "--harmony-overlay-blur",
+              String(Math.min(20, Math.max(0, parsed))) + "px"
+            );
+          }
+        }
+        const harmonyOverlayCardOpacity = localStorage.getItem(
+          "harmonyOverlayCardOpacity"
+        );
+        if (harmonyOverlayCardOpacity !== null) {
+          const parsed = parseFloat(harmonyOverlayCardOpacity);
+          if (!isNaN(parsed)) {
+            root.style.setProperty(
+              "--harmony-card-opacity",
+              String(Math.min(1, Math.max(0, parsed)))
+            );
+          }
+        }
+      })();
 
       // 初始化素简字体 - 优先 localStorage（调色板里选过、且仍在菜单里时），否则用菜单第一项（控制台字体页可管），首帧前挂到 html 上（仅素简下生效）
       const pureFontStored = localStorage.getItem("pureFont");
@@ -589,6 +687,9 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
     </script>
 
     <div id="progress-bar"></div>
+
+    <!-- 谐彩背景纹理层：固定全屏、负层级、只在谐彩作用域内被 harmony-mode.css 赋形（图案/透明度），其他形态下是无样式空层 -->
+    <div id="harmony-texture-layer" aria-hidden="true"></div>
 
     {/* 卡片样式：根据 localStorage 覆盖默认配置 */}
     <script is:inline define:vars={{

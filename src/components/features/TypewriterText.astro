@@ -52,6 +52,16 @@ const textData = Array.isArray(text) ? JSON.stringify(text) : text;
       this.deleteSpeed = parseInt(element.dataset.deleteSpeed || "50");
       this.pauseTime = parseInt(element.dataset.pauseTime || "2000");
 
+      // 谐彩「减少动态」：不打字，直接静态显示第一条全文（光标动画由 harmony-mode.css 一并停掉）
+      const root = document.documentElement;
+      if (
+        root.getAttribute("data-site-mode") === "harmony" &&
+        root.getAttribute("data-harmony-motion") === "reduced"
+      ) {
+        this.element.textContent = this.texts[0] || "";
+        return;
+      }
+
       // 如果有多条文本且未启用打字机效果，随机显示一条
       if (this.texts.length > 1 && !this.isTypewriterEnabled()) {
         this.showRandomText();

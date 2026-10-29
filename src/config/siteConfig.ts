@@ -145,7 +145,8 @@ export const siteConfig: SiteConfig = {
 	// 站点统计页样式："classic" 现行手搓版 / "azuma" Aemeath 同款版（预览直达 /analytics-azuma/）
 	analyticsStyle: "azuma",
 
-	// 站点形态（全站默认）：full 华彩（全套呈现）/ pure 素简（简洁导航·专注阅读，对标 rainzt.cn 的 Pure 形态）；
+	// 站点形态（全站默认）：full 华彩（全套呈现）/ pure 素简（简洁导航·专注阅读，对标 rainzt.cn 的 Pure 形态）/
+	// harmony 谐彩（Material 3 色阶·柔影，视觉参考 Shirone 主题）；
 	// 控制台主题页可改默认，访客可在显示设置（调色板）里覆盖、存 localStorage
 	siteMode: "full",
 

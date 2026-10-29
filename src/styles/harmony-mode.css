@@ -1,0 +1,839 @@
+/* ============================================================
+ * 站点形态 · 谐彩（harmony）样式
+ * ------------------------------------------------------------
+ * 机制与素简相同：siteConfig.siteMode 为全站默认，访客在显示设置里覆盖后存
+ * localStorage（siteMode），由 Layout 头部脚本在绘制前把结果写到
+ * html[data-site-mode]；本文件全部规则都收在 html[data-site-mode="harmony"]
+ * 下，华彩（full）/ 素简（pure）时整文件不生效。
+ * 视觉参考 Shirone 主题（Material 3 Expressive）的设计系统：色阶梯、
+ * 无边框 + surface 色阶分层 + 极柔阴影、主色竖条母题、Top App Bar、
+ * 舞台横幅、卡片减法。数值按其仓库 DESIGN.md 与 variables.styl 的阶梯
+ * 公式核对（2026-10-29 二期审计），映射到本站现有 CSS 变量体系重写：
+ * 素材（字体 / 波浪 / 图标 / 横幅图与文案数据）全部用站内现成件，
+ * 不引入任何外部文件。
+ *
+ * 二期（谐彩专属调色板）：种子色相、色彩风格、色彩规范、背景纹理、
+ * overlay 三滑杆、减少动态，全部只在谐彩下出现与生效，存储键 harmony*
+ * （utils/setting-utils 谐彩段），Layout 首帧同步落位。
+ * 与 Shirone 的机制差异：对方在浏览器里跑 HCT 算法（material-color-
+ * utilities）按种子实时算出每个角色的具体色值；本站不引算法库，改用
+ * 「阶梯参数变量」静态推导——色阶梯先拆成参数（--hpl/--hpc/--hph 主色
+ * 明度/色度/色相、--hc-* surface 色度、--hsh/--hth 次/三角色色相偏移），
+ * 具体色值由 oklch() 公式以 --harmony-hue 为种子拼出；9 种风格与
+ * 2021/2025 规范各是一组参数覆盖（data-harmony-scheme / data-harmony-spec），
+ * 观感等价、数值近似（其算法的逐 tone 精确值无法静态复刻）。
+ * 变量段刻意不进 @layer：variables.styl 的 :root 定义是无 layer 的，
+ * 只有同为无 layer 且特异性更高（html[data-site-mode] > :root）才压得住；
+ * 组件覆盖段进 @layer components，与 main.css 的卡片粗边框等 layered
+ * !important 规则同层竞争（与 pure-mode.css 同一套打法）。
+ * ============================================================ */
+
+/* ---------- 阶梯参数（tonalSpot / spec 2025 基底），亮色 ---------- */
+html[data-site-mode="harmony"] {
+	/* 种子：默认跟随全站 --hue；访客在谐彩调色板里单独调过后，
+	   Layout 首帧 / setHarmonyHue 以内联属性覆盖本行 */
+	--harmony-hue: var(--hue);
+
+	/* 主角色参数：明度 / 色度 / 色相（色相容器 --hpch 直接引用 --hph，
+	   使 fruitSalad 这类整体转色相的风格只改一处） */
+	--hpl: 0.42;
+	--hpc: 0.16;
+	--hph: var(--harmony-hue);
+	--hpcl: 0.9;
+	--hpcc: 0.06;
+	/* 次角色：tonalSpot 与主色同色相、低色度 */
+	--hsl: 0.52;
+	--hsc: 0.065;
+	--hsh: var(--harmony-hue);
+	--hscl: 0.9;
+	--hscc: 0.03;
+	/* 第三角色：tonalSpot 为主色相 +60 */
+	--htl: 0.5;
+	--htc: 0.09;
+	--hth: calc(var(--harmony-hue) + 60);
+	--htcl: 0.9;
+	--htcc: 0.035;
+	/* 按钮文字（on-surface-variant 角色）的色度：中性系风格里随之压低 */
+	--hbcc: 0.03;
+	/* surface 各层色度（明度见下方各令牌，逐层对齐 Shirone 阶梯） */
+	--hc-surface: 0.01;
+	--hc-card: 0.006;
+	--hc-cont-low: 0.01;
+	--hc-cont: 0.015;
+	--hc-cont-high: 0.02;
+	--hc-cont-highest: 0.025;
+	/* spec 2021 的增量（2025 时为 0；见文末 spec 覆盖组） */
+	--hpc-spec-delta: 0;
+	--hc-spec-delta: 0;
+
+	/* 角色令牌（由上方参数拼出） */
+	--primary: oklch(var(--hpl) calc(var(--hpc) + var(--hpc-spec-delta)) var(--hph));
+	--harmony-secondary: oklch(var(--hsl) var(--hsc) var(--hsh));
+	--harmony-tertiary: oklch(var(--htl) var(--htc) var(--hth));
+	--harmony-primary-container: oklch(var(--hpcl) var(--hpcc) var(--hph));
+	--harmony-secondary-container: oklch(var(--hscl) var(--hscc) var(--hsh));
+	--harmony-tertiary-container: oklch(var(--htcl) var(--htcc) var(--hth));
+
+	/* surface 分层：页面 = surface-container-low、卡片 = container-lowest（最亮） */
+	--page-bg: oklch(0.965 calc(var(--hc-surface) + var(--hc-spec-delta)) var(--harmony-hue));
+	--card-bg: oklch(0.985 var(--hc-card) var(--harmony-hue));
+	--harmony-container-low: oklch(0.965 var(--hc-cont-low) var(--harmony-hue));
+	--harmony-container: oklch(0.94 var(--hc-cont) var(--harmony-hue));
+	--harmony-container-high: oklch(0.92 var(--hc-cont-high) var(--harmony-hue));
+	--harmony-container-highest: oklch(0.9 var(--hc-cont-highest) var(--harmony-hue));
+	--float-panel-bg: var(--harmony-container);
+
+	/* 按钮阶梯 = surface 容器层级（tonal elevation），文字 = on-surface-variant */
+	--btn-content: oklch(0.34 var(--hbcc) var(--harmony-hue));
+	--btn-regular-bg: var(--harmony-container-low);
+	--btn-regular-bg-hover: var(--harmony-container);
+	--btn-regular-bg-active: var(--harmony-container-high);
+
+	--btn-plain-bg-hover: var(--harmony-container-low);
+	--btn-plain-bg-active: var(--harmony-container);
+
+	--btn-card-bg-hover: var(--harmony-container-highest);
+	--btn-card-bg-active: var(--harmony-container-high);
+
+	--enter-btn-bg: var(--btn-regular-bg);
+	--enter-btn-bg-hover: var(--btn-regular-bg-hover);
+	--enter-btn-bg-active: var(--btn-regular-bg-active);
+
+	--deep-text: oklch(0.16 0.02 var(--harmony-hue));
+	--title-active: oklch(calc(var(--hpl) - 0.06) var(--hpc) var(--hph));
+
+	--line-divider: rgba(0, 0, 0, 0.07);
+	--line-color: rgba(0, 0, 0, 0.09);
+	--meta-divider: rgba(0, 0, 0, 0.25);
+	--content-meta: rgba(0, 0, 0, 0.66);
+
+	--inline-code-bg: var(--btn-regular-bg);
+	--inline-code-color: var(--btn-content);
+	--muted: oklch(0.94 0.015 var(--harmony-hue));
+	--selection-bg: var(--harmony-primary-container);
+	--codeblock-bg: oklch(0.97 0.005 var(--harmony-hue));
+	--codeblock-topbar-bg: oklch(0.94 0.01 var(--harmony-hue));
+
+	--license-block-bg: var(--harmony-container);
+
+	--link-underline: var(--harmony-primary-container);
+	--link-hover: oklch(0.94 0.025 var(--harmony-hue));
+	--link-active: var(--harmony-primary-container);
+
+	--toc-badge-bg: oklch(0.9 0.045 var(--harmony-hue));
+	--toc-btn-hover: oklch(0.92 0.04 var(--harmony-hue));
+	--toc-btn-active: oklch(0.9 0.05 var(--harmony-hue));
+	--toc-indicator-bg: oklch(0.94 0.015 var(--harmony-hue));
+	--toc-item-active: var(--primary);
+
+	--l2d-msg-bg: var(--primary);
+
+	/* 横幅舞台高度（banner 壁纸模式下消费 --banner-height-* 的布局规则随之跟随）：
+	   首页 65vh / 内页 35vh，对齐 Shirone 的 BannerStage 比例 */
+	--banner-height-home: 65vh;
+	--banner-height-non-home: max(35vh, 380px);
+	--banner-height: 35vh;
+
+	/* 海拔：M3 elevation 柔影公式（shadow 色低透明叠层），代替边框分层 */
+	--harmony-elev-1: 0 1px 2px rgb(0 0 0 / 0.06);
+	--harmony-elev-2: 0 1px 2px rgb(0 0 0 / 0.08), 0 2px 6px 1px rgb(0 0 0 / 0.06);
+	--harmony-elev-3: 0 2px 4px rgb(0 0 0 / 0.1), 0 4px 12px 2px rgb(0 0 0 / 0.08);
+}
+
+/* ---------- 阶梯参数，暗色 ---------- */
+html.dark[data-site-mode="harmony"] {
+	/* 暗色主色取 .75 而非阶梯原值 .80：站内多处白字压主色（激活态药丸等），.80 时白字对比仅 1.75；.75 与华彩暗色主色同值、白字可读达标（与 Shirone 的 .80 是已知偏差，保本站暗色扫描底线） */
+	--hpl: 0.75;
+	--hpc: 0.14;
+	--hpcl: 0.3;
+	--hpcc: 0.08;
+	--hsl: 0.82;
+	--hsc: 0.05;
+	--hscl: 0.37;
+	--hscc: 0.035;
+	--htl: 0.82;
+	--htc: 0.07;
+	--htcl: 0.37;
+	--htcc: 0.04;
+	--hbcc: 0.03;
+	--hc-surface: 0.013;
+	--hc-card: 0.018;
+	--hc-cont-low: 0.014;
+	--hc-cont: 0.016;
+	--hc-cont-high: 0.018;
+	--hc-cont-highest: 0.02;
+
+	/* surface 分层：页面 = surface、卡片 = container-high（比页面亮一档，浮起感来自色阶） */
+	--page-bg: oklch(0.15 calc(var(--hc-surface) + var(--hc-spec-delta)) var(--harmony-hue));
+	--harmony-container-low: oklch(0.19 var(--hc-cont-low) var(--harmony-hue));
+	--harmony-container: oklch(0.23 var(--hc-cont) var(--harmony-hue));
+	--harmony-container-high: oklch(0.28 var(--hc-cont-high) var(--harmony-hue));
+	--harmony-container-highest: oklch(0.33 var(--hc-cont-highest) var(--harmony-hue));
+	--card-bg: var(--harmony-container-high);
+	--float-panel-bg: var(--harmony-container);
+
+	--btn-content: oklch(0.76 var(--hbcc) var(--harmony-hue));
+	--btn-regular-bg: var(--harmony-container-low);
+	--btn-regular-bg-hover: var(--harmony-container);
+	--btn-regular-bg-active: var(--harmony-container-high);
+
+	--btn-plain-bg-hover: var(--harmony-container);
+	--btn-plain-bg-active: var(--harmony-container-high);
+
+	--btn-card-bg-hover: var(--harmony-container-highest);
+	--btn-card-bg-active: var(--harmony-container-high);
+
+	/* --deep-text 暗色不覆写：基底契约里它恒为深色（.25），暗色下用在主色计数徽章等亮底上（深字压亮底）；覆写成浅色会把徽章字顶成低对比——扫描实测教训 */
+	--title-active: oklch(0.85 0.1 var(--hph));
+
+	--line-divider: rgba(255, 255, 255, 0.08);
+	--line-color: rgba(255, 255, 255, 0.1);
+	--meta-divider: rgba(255, 255, 255, 0.42);
+	--content-meta: rgba(255, 255, 255, 0.62);
+
+	--muted: oklch(0.24 0.015 var(--harmony-hue));
+	--selection-bg: var(--harmony-primary-container);
+	--codeblock-bg: oklch(0.12 0.011 var(--harmony-hue));
+	--codeblock-topbar-bg: oklch(0.19 0.014 var(--harmony-hue));
+
+	--license-block-bg: oklch(0.24 0.02 var(--harmony-hue));
+
+	--link-underline: var(--harmony-primary-container);
+	--link-hover: oklch(0.38 0.08 var(--harmony-hue));
+	--link-active: oklch(0.33 0.07 var(--harmony-hue));
+
+	--toc-badge-bg: var(--btn-regular-bg);
+	--toc-btn-hover: oklch(0.3 0.04 var(--harmony-hue));
+	--toc-btn-active: oklch(0.34 0.05 var(--harmony-hue));
+	--toc-indicator-bg: oklch(0.28 0.03 var(--harmony-hue));
+	--toc-item-active: oklch(0.8 0.12 var(--hph));
+
+	--l2d-msg-bg: oklch(0.35 0.08 var(--harmony-hue));
+}
+
+/* ---------- 色彩风格（scheme）参数组：只改阶梯参数，令牌公式不变 ----------
+ * 参数依据 material-color-utilities 各 Scheme 的调色板构造（主/次/三角色的
+ * 色度与色相偏移、neutral 色度），换算成 oklch 参数；逐 tone 的 HCT 精确值
+ * 无法静态复刻，这里取各风格最可感知的差异（主色色度、点缀色相策略、
+ * surface 中性度）。tonalSpot 即上方基底，无需覆盖组。 */
+html[data-site-mode="harmony"][data-harmony-scheme="vibrant"] {
+	--hpl: 0.44;
+	--hpc: 0.21;
+	--hpcc: 0.1;
+	--hsc: 0.1;
+	--htc: 0.12;
+	--hc-surface: 0.02;
+	--hc-card: 0.018;
+	--hc-cont-low: 0.02;
+	--hc-cont: 0.032;
+	--hc-cont-high: 0.04;
+	--hc-cont-highest: 0.048;
+}
+html.dark[data-site-mode="harmony"][data-harmony-scheme="vibrant"] {
+	--hpl: 0.78;
+	--hpc: 0.17;
+	--hpcc: 0.13;
+	--hsc: 0.08;
+	--htc: 0.1;
+	--hc-surface: 0.022;
+	--hc-card: 0.024;
+	--hc-cont-low: 0.02;
+	--hc-cont: 0.026;
+	--hc-cont-high: 0.03;
+	--hc-cont-highest: 0.036;
+}
+html[data-site-mode="harmony"][data-harmony-scheme="expressive"] {
+	--hpl: 0.43;
+	--hpc: 0.18;
+	--hpcc: 0.08;
+	--hsh: calc(var(--harmony-hue) + 95);
+	--hsc: 0.09;
+	--hth: calc(var(--harmony-hue) + 180);
+	--htc: 0.1;
+	--hc-surface: 0.016;
+	--hc-card: 0.014;
+	--hc-cont-low: 0.016;
+	--hc-cont: 0.026;
+	--hc-cont-high: 0.032;
+	--hc-cont-highest: 0.038;
+}
+html.dark[data-site-mode="harmony"][data-harmony-scheme="expressive"] {
+	--hpl: 0.76;
+	--hpc: 0.15;
+	--hpcc: 0.11;
+	--hsc: 0.07;
+	--htc: 0.08;
+	--hc-surface: 0.018;
+	--hc-card: 0.02;
+	--hc-cont-low: 0.016;
+	--hc-cont: 0.022;
+	--hc-cont-high: 0.026;
+	--hc-cont-highest: 0.03;
+}
+html[data-site-mode="harmony"][data-harmony-scheme="fidelity"] {
+	--hpl: 0.4;
+	--hpc: 0.19;
+	--hpcc: 0.11;
+	--hsc: 0.13;
+	--hth: calc(var(--harmony-hue) + 170);
+	--htc: 0.12;
+	--hc-surface: 0.02;
+	--hc-card: 0.018;
+	--hc-cont-low: 0.02;
+	--hc-cont: 0.034;
+	--hc-cont-high: 0.042;
+	--hc-cont-highest: 0.05;
+}
+html.dark[data-site-mode="harmony"][data-harmony-scheme="fidelity"] {
+	--hpl: 0.74;
+	--hpc: 0.16;
+	--hpcc: 0.13;
+	--hsc: 0.1;
+	--htc: 0.1;
+	--hc-surface: 0.022;
+	--hc-card: 0.024;
+	--hc-cont-low: 0.02;
+	--hc-cont: 0.028;
+	--hc-cont-high: 0.032;
+	--hc-cont-highest: 0.038;
+}
+html[data-site-mode="harmony"][data-harmony-scheme="content"] {
+	--hpl: 0.4;
+	--hpc: 0.19;
+	--hpcc: 0.11;
+	--hsc: 0.13;
+	--hth: calc(var(--harmony-hue) + 180);
+	--htc: 0.13;
+	--hc-surface: 0.016;
+	--hc-card: 0.015;
+	--hc-cont-low: 0.016;
+	--hc-cont: 0.028;
+	--hc-cont-high: 0.034;
+	--hc-cont-highest: 0.04;
+}
+html.dark[data-site-mode="harmony"][data-harmony-scheme="content"] {
+	--hpl: 0.74;
+	--hpc: 0.16;
+	--hpcc: 0.13;
+	--hsc: 0.1;
+	--htc: 0.1;
+	--hc-surface: 0.018;
+	--hc-card: 0.02;
+	--hc-cont-low: 0.016;
+	--hc-cont: 0.022;
+	--hc-cont-high: 0.026;
+	--hc-cont-highest: 0.03;
+}
+html[data-site-mode="harmony"][data-harmony-scheme="neutral"] {
+	--hpc: 0.05;
+	--hpcc: 0.02;
+	--hsc: 0.03;
+	--htc: 0.05;
+	--hscc: 0.012;
+	--htcc: 0.02;
+	--hbcc: 0.015;
+	--hc-surface: 0.004;
+	--hc-card: 0.003;
+	--hc-cont-low: 0.004;
+	--hc-cont: 0.006;
+	--hc-cont-high: 0.008;
+	--hc-cont-highest: 0.01;
+}
+html.dark[data-site-mode="harmony"][data-harmony-scheme="neutral"] {
+	--hpc: 0.04;
+	--hpcc: 0.025;
+	--hsc: 0.025;
+	--htc: 0.04;
+	--hbcc: 0.015;
+	--hc-surface: 0.004;
+	--hc-card: 0.005;
+	--hc-cont-low: 0.004;
+	--hc-cont: 0.005;
+	--hc-cont-high: 0.006;
+	--hc-cont-highest: 0.008;
+}
+html[data-site-mode="harmony"][data-harmony-scheme="monochrome"] {
+	--hpc: 0;
+	--hpcc: 0;
+	--hsc: 0;
+	--htc: 0;
+	--hscc: 0;
+	--htcc: 0;
+	--hbcc: 0;
+	--hc-surface: 0;
+	--hc-card: 0;
+	--hc-cont-low: 0;
+	--hc-cont: 0;
+	--hc-cont-high: 0;
+	--hc-cont-highest: 0;
+}
+html.dark[data-site-mode="harmony"][data-harmony-scheme="monochrome"] {
+	--hpc: 0;
+	--hpcc: 0;
+	--hsc: 0;
+	--htc: 0;
+	--hscc: 0;
+	--htcc: 0;
+	--hbcc: 0;
+	--hc-surface: 0;
+	--hc-card: 0;
+	--hc-cont-low: 0;
+	--hc-cont: 0;
+	--hc-cont-high: 0;
+	--hc-cont-highest: 0;
+}
+html[data-site-mode="harmony"][data-harmony-scheme="rainbow"] {
+	--hpl: 0.43;
+	--hpc: 0.2;
+	--hpcc: 0.1;
+	--hsh: calc(var(--harmony-hue) + 90);
+	--hsc: 0.11;
+	--hth: calc(var(--harmony-hue) + 210);
+	--htc: 0.12;
+	--hc-surface: 0.014;
+	--hc-card: 0.012;
+	--hc-cont-low: 0.014;
+	--hc-cont: 0.024;
+	--hc-cont-high: 0.03;
+	--hc-cont-highest: 0.036;
+}
+html.dark[data-site-mode="harmony"][data-harmony-scheme="rainbow"] {
+	--hpl: 0.77;
+	--hpc: 0.16;
+	--hpcc: 0.12;
+	--hsc: 0.09;
+	--htc: 0.1;
+	--hc-surface: 0.016;
+	--hc-card: 0.018;
+	--hc-cont-low: 0.014;
+	--hc-cont: 0.02;
+	--hc-cont-high: 0.024;
+	--hc-cont-highest: 0.028;
+}
+html[data-site-mode="harmony"][data-harmony-scheme="fruitSalad"] {
+	--hph: calc(var(--harmony-hue) - 50);
+	--hpl: 0.43;
+	--hpc: 0.19;
+	--hpcc: 0.09;
+	--hsh: calc(var(--harmony-hue) - 50);
+	--hsc: 0.08;
+	--hscc: 0.04;
+	--hth: var(--harmony-hue);
+	--htc: 0.09;
+}
+html.dark[data-site-mode="harmony"][data-harmony-scheme="fruitSalad"] {
+	--hpl: 0.76;
+	--hpc: 0.15;
+	--hpcc: 0.11;
+	--hsc: 0.06;
+	--htc: 0.07;
+}
+
+/* ---------- 色彩规范（spec）：2021 阶梯比 2025 略浓（主色色度与 surface 色度增量） ---------- */
+html[data-site-mode="harmony"][data-harmony-spec="2021"] {
+	--hpc-spec-delta: 0.015;
+	--hc-spec-delta: 0.002;
+}
+
+/* 谐彩 overlay：卡片透明度只认谐彩自己的值（覆盖 Layout 按全站配置写入的内联值，
+   仅谐彩作用域内、且只在透明卡片场景被消费） */
+html[data-site-mode="harmony"] {
+	--card-transparent-opacity: var(--harmony-card-opacity, 0.6) !important;
+}
+
+/* 「卡片跟随主题色」开启时 body 上有一条更高优先级的 --card-bg 钉值，这里同位覆盖回色阶梯 */
+html[data-site-mode="harmony"] body.card-follow-theme-hue {
+	--card-bg: oklch(0.985 var(--hc-card) var(--harmony-hue));
+}
+html.dark[data-site-mode="harmony"] body.card-follow-theme-hue {
+	--card-bg: var(--harmony-container-high);
+}
+
+@layer components {
+
+/* ---------- 字体三角色（全部取自站内现有字体库，不新引文件） ----------
+   西文/UI 用 Inter 充当 Outfit 的几何无衬线角色；中文用中文圆体（Luoliti）
+   充当 Yozai 的圆润黑体角色（Yozai 授权未明，不引入）；代码沿用站内既定的
+   JetBrains Mono。三款都已在字体库常驻加载，本文件只改字体栈。 */
+html[data-site-mode="harmony"] body {
+	font-family: var(--font-inter), var(--font-luoliti), var(--font-m-plus-rounded-1c), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif !important;
+}
+/* 元信息 / 标签类小字走 M3 label 的 500 字重纪律 */
+html[data-site-mode="harmony"] .post-meta,
+html[data-site-mode="harmony"] .post-meta span,
+html[data-site-mode="harmony"] .widget-title {
+	font-weight: 500;
+}
+html[data-site-mode="harmony"] .widget-title {
+	font-weight: 700;
+}
+
+/* ---------- 卡片：无边框 + 色阶分层 + 极柔阴影（替代 3px 纯黑粗边） ---------- */
+html[data-site-mode="harmony"] .card-base,
+html[data-site-mode="harmony"] .card-base-transparent {
+	border: none !important;
+	box-shadow: var(--harmony-elev-1) !important;
+}
+html.enable-card-border[data-site-mode="harmony"] .card-base,
+html.enable-card-border[data-site-mode="harmony"] .card-base-transparent,
+html.enable-card-border[data-site-mode="harmony"] .btn-card {
+	border: none !important;
+	box-shadow: var(--harmony-elev-1) !important;
+}
+/* 文章卡悬停：升一级海拔 + on-surface 3% 状态层（Shirone PostCard 的悬停公式），
+   曲线/时长按其动效令牌（250ms emphasized-decelerate / standard） */
+html[data-site-mode="harmony"] .post-card-wrapper {
+	transition: box-shadow 0.25s cubic-bezier(0.05, 0.7, 0.1, 1), background-color 0.25s cubic-bezier(0.2, 0, 0, 1);
+}
+html[data-site-mode="harmony"] .post-card-wrapper:hover {
+	box-shadow: var(--harmony-elev-2) !important;
+	background: color-mix(in oklab, oklch(0.16 0.02 var(--harmony-hue)) 3%, var(--card-bg));
+}
+html.dark[data-site-mode="harmony"] .post-card-wrapper:hover {
+	background: color-mix(in oklab, oklch(0.92 0.015 var(--harmony-hue)) 3%, var(--card-bg));
+}
+/* 悬浮面板（搜索 / 显示设置 / 下拉菜单）：大圆角（shape xl 28px）+ 二级海拔 */
+html[data-site-mode="harmony"] .float-panel {
+	border: none !important;
+	border-radius: 1.75rem !important;
+	box-shadow: var(--harmony-elev-2) !important;
+}
+
+/* ---------- 主色小竖条母题 ---------- */
+/* 导航品牌竖条：默认零尺寸（Navbar 模板里的占位 span），谐彩下赋形，hover 伸长 */
+html[data-site-mode="harmony"] .navbar-brand-accent {
+	display: block;
+	width: 0.25rem;
+	height: 1.25rem;
+	margin-right: 0.625rem;
+	border-radius: 999px;
+	background: var(--primary);
+	transition: height 0.25s cubic-bezier(0.2, 0, 0, 1);
+}
+html[data-site-mode="harmony"] a:hover .navbar-brand-accent {
+	height: 1.75rem;
+}
+/* widget 标题竖条：原版已有同母题，谐彩下加高、加粗、满圆角，与品牌竖条呼应 */
+html[data-site-mode="harmony"] .widget-title::before {
+	width: 0.25rem !important;
+	height: 1.25rem !important;
+	top: 2px !important;
+	border-radius: 999px !important;
+	background: var(--primary) !important;
+}
+
+/* ---------- 导航：Top App Bar（半透 surface-container-low 94% + 毛玻璃 + 柔影，链接居中） ---------- */
+html[data-site-mode="harmony"] #navbar > div,
+html[data-site-mode="harmony"][data-has-wallpaper] body #navbar > div {
+	background: color-mix(in oklab, var(--harmony-container-low) 94%, transparent) !important;
+	--navbar-surface-blur: 12px !important;
+	border: none !important;
+	border-radius: 0 0 1rem 1rem !important;
+	box-shadow: var(--harmony-elev-1) !important;
+}
+html[data-site-mode="harmony"] #navbar .navbar-seg-center {
+	justify-content: center !important;
+}
+html[data-site-mode="harmony"] #navbar .navbar-title-text {
+	font-weight: 800;
+	letter-spacing: 0.01em;
+}
+html[data-site-mode="harmony"] #navbar .dropdown-container > a,
+html[data-site-mode="harmony"] #navbar .dropdown-container > button {
+	font-weight: 500;
+}
+
+/* ---------- 横幅舞台（BannerStage） ---------- */
+/* 文案层：大标题淡入（1.2s）、副标题 500 字重；投影数值对齐 Shirone BannerStage
+   （标题 0 2px 12px / .48、副标题 0 1px 6px / .35） */
+html[data-site-mode="harmony"] .banner-home-text-overlay .banner-title {
+	font-weight: 700;
+	letter-spacing: 0.01em;
+	text-shadow: 0 2px 12px rgb(0 0 0 / 0.48);
+	animation: banner-fadeInUp 1.2s cubic-bezier(0.2, 0, 0, 1) both;
+}
+html[data-site-mode="harmony"] .banner-subtitle {
+	font-weight: 500;
+	text-shadow: 0 1px 6px rgb(0 0 0 / 0.35);
+}
+/* 社交胶囊行：从白色玻璃片改成 surface 色阶胶囊（明暗自适应） */
+html[data-site-mode="harmony"] .banner-link {
+	background: color-mix(in oklab, var(--page-bg) 82%, transparent) !important;
+	border: none !important;
+	color: var(--deep-text) !important;
+	box-shadow: var(--harmony-elev-1);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+}
+html[data-site-mode="harmony"] .banner-link:hover {
+	background: var(--card-bg) !important;
+	color: var(--primary) !important;
+}
+/* 暗色下胶囊是深色玻璃，字色不能用 --deep-text（恒深色），直接给浅色 */
+html.dark[data-site-mode="harmony"] .banner-link {
+	color: oklch(0.92 0.015 var(--harmony-hue)) !important;
+}
+/* overlay 壁纸（本站默认）：全屏壁纸上原本不显示首页文案层，谐彩下把它请回舞台，
+   并把首页内容推到 66vh 之下，第一屏就是舞台（标题/副标题/社交行 + 波浪收尾）。
+   只限首页，且尊重访客关掉横幅标题的设置（data-banner-title-enabled="false" 时不强显） */
+html[data-site-mode="harmony"][data-wallpaper-mode="overlay"]:not([data-banner-title-enabled="false"]) body.is-home #wallpaper-wrapper.wallpaper-overlay .banner-home-text-overlay,
+html[data-site-mode="harmony"][data-wallpaper-mode="fullscreen"] body.is-home .banner-home-text-overlay {
+	display: flex !important;
+	visibility: visible !important;
+}
+html[data-site-mode="harmony"][data-wallpaper-mode="overlay"] body.is-home .content-panel {
+	--content-top: 66vh !important;
+}
+html[data-site-mode="harmony"][data-wallpaper-mode="overlay"] body.is-home .banner-home-text-overlay {
+	transform: translateY(-9vh);
+}
+/* fullscreen 首页本来就是 hero（内容在 100vh 之下），文案层居中即可，不再上移 */
+
+/* ---------- 文章卡片减法 ---------- */
+/* 斜杠纯文字标签：meta 行标签接管（PostCard 已双渲染、非谐彩靠 meta-tags-deferred 隐藏），底部 chip 收起 */
+html[data-site-mode="harmony"] .post-meta.meta-tags-deferred .post-meta-tags {
+	display: flex !important;
+}
+html[data-site-mode="harmony"] .post-card-bottom-tags {
+	display: none !important;
+}
+/* 元信息小图标：统一主色系着色（本站 meta 图标本就是 Material Symbols 同源图标集） */
+html[data-site-mode="harmony"] .post-meta .meta-icon {
+	color: var(--btn-content);
+}
+/* 置顶徽章：primary-container 药丸 */
+html[data-site-mode="harmony"] .post-meta .pinned-btn {
+	background: var(--harmony-primary-container) !important;
+	color: var(--btn-content) !important;
+	border-radius: 999px !important;
+	padding: 0.375rem 0.75rem !important;
+}
+/* 加密锁图标：做成小徽章 */
+html[data-site-mode="harmony"] .post-card-title svg {
+	background: var(--btn-regular-bg);
+	color: var(--btn-content);
+	border-radius: 999px;
+	padding: 3px;
+	box-sizing: content-box;
+}
+/* 网格布局：封面独立成块（整幅置顶），内容区满宽 */
+html[data-site-mode="harmony"] .grid-mode .post-card-wrapper .post-card-image {
+	position: relative !important;
+	inset: auto !important;
+	width: 100% !important;
+	aspect-ratio: 16 / 9 !important;
+	border-radius: 0 !important;
+	flex: none;
+}
+html[data-site-mode="harmony"] .grid-mode .post-card-wrapper .post-card-content {
+	width: 100% !important;
+	padding: 1.25rem 1.5rem 1.5rem !important;
+}
+/* 标题竖条跟随新内边距定位（网格） */
+html[data-site-mode="harmony"] .grid-mode .post-card-title::before {
+	left: 0 !important;
+	top: 1.7rem !important;
+	height: 1.25rem !important;
+	border-radius: 999px !important;
+}
+/* 有封面卡的悬停箭头：谐彩下常驻为右下角主色圆片 */
+html[data-site-mode="harmony"] .post-card-image > div:nth-child(2) {
+	justify-content: flex-end !important;
+	align-items: flex-end !important;
+	padding: 0.75rem;
+}
+html[data-site-mode="harmony"] .post-card-image > div:nth-child(2) svg {
+	opacity: 0.95 !important;
+	transform: scale(0.55) !important;
+	background: var(--primary);
+	border-radius: 999px;
+	padding: 0.3rem;
+	box-sizing: content-box;
+}
+/* 无封面卡的右侧进入条：收成圆形胶囊钮 */
+html[data-site-mode="harmony"] .post-card-enter-btn {
+	top: 50% !important;
+	bottom: auto !important;
+	transform: translateY(-50%);
+	width: 2.75rem !important;
+	height: 2.75rem;
+	right: 1rem !important;
+	border-radius: 999px !important;
+}
+
+/* ---------- 文章页 ---------- */
+/* 代码块跟随明暗：亮色浅底由 EC 的 one-light 主题与 --codeblock-bg 阶梯共同呈现，
+   这里把 EC 框架底色钉到色阶梯上（暗色仍深底）；数值 = Shirone 的
+   surface-container-low / surface-dim 阶梯（顶栏 = container / container-low） */
+html[data-site-mode="harmony"]:not(.dark) .expressive-code {
+	--ec-frm-edBg: oklch(0.97 0.005 var(--harmony-hue));
+	--ec-frm-trmBg: oklch(0.94 0.01 var(--harmony-hue));
+	--ec-frm-frameBoxShadowCssValue: none;
+}
+html.dark[data-site-mode="harmony"] .expressive-code {
+	--ec-frm-edBg: oklch(0.12 0.011 var(--harmony-hue));
+	--ec-frm-trmBg: oklch(0.19 0.014 var(--harmony-hue));
+	--ec-frm-frameBoxShadowCssValue: none;
+}
+/* 引用块：去常规左边框，改色阶底 */
+html[data-site-mode="harmony"] .markdown-content blockquote,
+html[data-site-mode="harmony"] article blockquote {
+	border-left-color: transparent !important;
+	background: var(--btn-regular-bg);
+	border-radius: 0 1rem 1rem 0;
+}
+
+/* ---------- 杂项 ---------- */
+/* chip 类（分类条 / 标签片）：去边框、色阶填充、全圆角 */
+html[data-site-mode="harmony"] .tag-item {
+	border: none !important;
+	background: var(--btn-regular-bg);
+	color: var(--btn-content);
+	border-radius: 999px;
+}
+/* 评论（Waline）：主题色跟随谐彩主色阶梯 */
+html[data-site-mode="harmony"] #waline {
+	--waline-theme-color: var(--primary);
+	--waline-active-color: oklch(calc(var(--hpl) - 0.06) var(--hpc) var(--hph));
+}
+html.dark[data-site-mode="harmony"] #waline {
+	--waline-theme-color: var(--primary);
+	--waline-active-color: oklch(0.85 0.1 var(--hph));
+}
+
+/* ---------- 背景纹理（页面背景层，不进卡片） ----------
+ * 机制对齐 Shirone 的纹理系统：独立固定层（Layout 里的 #harmony-texture-layer，
+ * 负层级、pointer-events none），层背景 = 角色色渐变，图案以 SVG data-URI
+ * 作 mask 镂空，整层透明度由 --harmony-texture-opacity（调色板滑杆）控制。
+ * 图案路径为本站自绘（星芒/圆点阵/等高线/菱形晶体/樱花瓣五种母题，
+ * 瓦片尺寸与动效时长按其 textures.css 的参数：140/48/240/160/180px、
+ * 16s 漂移 / 32s 流动 / 28s 飘落）；mask 图形用白色填充，
+ * 在 alpha 与 luminance 两种 mask 解释下效果一致。 */
+html[data-site-mode="harmony"] #harmony-texture-layer {
+	position: fixed;
+	inset: 0;
+	z-index: -20;
+	pointer-events: none;
+	opacity: var(--harmony-texture-opacity, 0.12);
+	transition: opacity 0.4s cubic-bezier(0.2, 0, 0, 1);
+}
+html[data-site-mode="harmony"][data-harmony-texture="none"] #harmony-texture-layer {
+	display: none;
+}
+html[data-site-mode="harmony"][data-harmony-texture="starlight"] #harmony-texture-layer {
+	background: linear-gradient(135deg, var(--primary) 0%, var(--harmony-secondary) 50%, var(--harmony-tertiary) 100%);
+	-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cpath d='M36 16 Q36 29 23 29 Q36 29 36 42 Q36 29 49 29 Q36 29 36 16 Z' fill='white' opacity='0.9'/%3E%3Cpath d='M106 76 Q106 84 98 84 Q106 84 106 92 Q106 84 114 84 Q106 84 106 76 Z' fill='white' opacity='0.75'/%3E%3Cpath d='M95 26 L95 38 M89 32 L101 32' stroke='white' stroke-width='1.5' stroke-linecap='round' opacity='0.8'/%3E%3Cpath d='M29 96 L29 106 M24 101 L34 101' stroke='white' stroke-width='1.2' stroke-linecap='round' opacity='0.7'/%3E%3Ccircle cx='70' cy='64' r='3.5' fill='white' opacity='0.6'/%3E%3Ccircle cx='121' cy='22' r='2' fill='white' opacity='0.5'/%3E%3Ccircle cx='14' cy='70' r='2' fill='white' opacity='0.5'/%3E%3Ccircle cx='59' cy='124' r='2.5' fill='white' opacity='0.5'/%3E%3C/svg%3E");
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cpath d='M36 16 Q36 29 23 29 Q36 29 36 42 Q36 29 49 29 Q36 29 36 16 Z' fill='white' opacity='0.9'/%3E%3Cpath d='M106 76 Q106 84 98 84 Q106 84 106 92 Q106 84 114 84 Q106 84 106 76 Z' fill='white' opacity='0.75'/%3E%3Cpath d='M95 26 L95 38 M89 32 L101 32' stroke='white' stroke-width='1.5' stroke-linecap='round' opacity='0.8'/%3E%3Cpath d='M29 96 L29 106 M24 101 L34 101' stroke='white' stroke-width='1.2' stroke-linecap='round' opacity='0.7'/%3E%3Ccircle cx='70' cy='64' r='3.5' fill='white' opacity='0.6'/%3E%3Ccircle cx='121' cy='22' r='2' fill='white' opacity='0.5'/%3E%3Ccircle cx='14' cy='70' r='2' fill='white' opacity='0.5'/%3E%3Ccircle cx='59' cy='124' r='2.5' fill='white' opacity='0.5'/%3E%3C/svg%3E");
+	-webkit-mask-size: 140px 140px;
+	mask-size: 140px 140px;
+	-webkit-mask-repeat: repeat;
+	mask-repeat: repeat;
+	animation: harmony-texture-drift 16s ease-in-out infinite;
+}
+html[data-site-mode="harmony"][data-harmony-texture="cyber-dots"] #harmony-texture-layer {
+	background: linear-gradient(135deg, var(--primary), var(--harmony-secondary));
+	-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Ccircle cx='12' cy='12' r='1.2' fill='white'/%3E%3Ccircle cx='36' cy='12' r='1.2' fill='white'/%3E%3Ccircle cx='12' cy='36' r='1.2' fill='white'/%3E%3Ccircle cx='36' cy='36' r='1.2' fill='white'/%3E%3Cpath d='M24 20.5 L24 27.5 M20.5 24 L27.5 24' stroke='white' stroke-width='0.8'/%3E%3Cpath d='M45 3 L40 3 L40 8 M3 45 L8 45 L8 40' stroke='white' stroke-width='0.8' fill='none' opacity='0.6'/%3E%3C/svg%3E");
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Ccircle cx='12' cy='12' r='1.2' fill='white'/%3E%3Ccircle cx='36' cy='12' r='1.2' fill='white'/%3E%3Ccircle cx='12' cy='36' r='1.2' fill='white'/%3E%3Ccircle cx='36' cy='36' r='1.2' fill='white'/%3E%3Cpath d='M24 20.5 L24 27.5 M20.5 24 L27.5 24' stroke='white' stroke-width='0.8'/%3E%3Cpath d='M45 3 L40 3 L40 8 M3 45 L8 45 L8 40' stroke='white' stroke-width='0.8' fill='none' opacity='0.6'/%3E%3C/svg%3E");
+	-webkit-mask-size: 48px 48px;
+	mask-size: 48px 48px;
+	-webkit-mask-repeat: repeat;
+	mask-repeat: repeat;
+}
+html[data-site-mode="harmony"][data-harmony-texture="topography"] #harmony-texture-layer {
+	background: linear-gradient(180deg, var(--harmony-secondary), var(--harmony-tertiary));
+	-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cpath d='M0 36 Q60 8 120 36 T240 36 M0 76 Q60 48 120 76 T240 76 M0 116 Q60 88 120 116 T240 116 M0 156 Q60 128 120 156 T240 156 M0 196 Q60 168 120 196 T240 196' fill='none' stroke='white' stroke-width='1.2' opacity='0.7' stroke-dasharray='4 4'/%3E%3Cpath d='M0 56 Q60 84 120 56 T240 56 M0 96 Q60 124 120 96 T240 96 M0 136 Q60 164 120 136 T240 136 M0 176 Q60 204 120 176 T240 176 M0 216 Q60 244 120 216 T240 216' fill='none' stroke='white' stroke-width='1.2' opacity='0.85'/%3E%3C/svg%3E");
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cpath d='M0 36 Q60 8 120 36 T240 36 M0 76 Q60 48 120 76 T240 76 M0 116 Q60 88 120 116 T240 116 M0 156 Q60 128 120 156 T240 156 M0 196 Q60 168 120 196 T240 196' fill='none' stroke='white' stroke-width='1.2' opacity='0.7' stroke-dasharray='4 4'/%3E%3Cpath d='M0 56 Q60 84 120 56 T240 56 M0 96 Q60 124 120 96 T240 96 M0 136 Q60 164 120 136 T240 136 M0 176 Q60 204 120 176 T240 176 M0 216 Q60 244 120 216 T240 216' fill='none' stroke='white' stroke-width='1.2' opacity='0.85'/%3E%3C/svg%3E");
+	-webkit-mask-size: 240px 240px;
+	mask-size: 240px 240px;
+	-webkit-mask-repeat: repeat;
+	mask-repeat: repeat;
+	animation: harmony-texture-flow 32s linear infinite;
+}
+html[data-site-mode="harmony"][data-harmony-texture="geometric"] #harmony-texture-layer {
+	background: linear-gradient(135deg, var(--primary), var(--harmony-tertiary));
+	-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cpolygon points='80,8 152,80 80,152 8,80' fill='none' stroke='white' stroke-width='1.5' opacity='0.9'/%3E%3Ccircle cx='80' cy='80' r='25' fill='white' opacity='0.4'/%3E%3Cpolygon points='0,0 80,0 0,80' fill='white' opacity='0.25'/%3E%3Cpolygon points='160,0 80,0 160,80' fill='white' opacity='0.25'/%3E%3Cpolygon points='0,160 80,160 0,80' fill='white' opacity='0.25'/%3E%3Cpolygon points='160,160 80,160 160,80' fill='white' opacity='0.25'/%3E%3Ccircle cx='0' cy='80' r='11' fill='none' stroke='white' stroke-width='1.2' opacity='0.6'/%3E%3Ccircle cx='160' cy='80' r='11' fill='none' stroke='white' stroke-width='1.2' opacity='0.6'/%3E%3C/svg%3E");
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cpolygon points='80,8 152,80 80,152 8,80' fill='none' stroke='white' stroke-width='1.5' opacity='0.9'/%3E%3Ccircle cx='80' cy='80' r='25' fill='white' opacity='0.4'/%3E%3Cpolygon points='0,0 80,0 0,80' fill='white' opacity='0.25'/%3E%3Cpolygon points='160,0 80,0 160,80' fill='white' opacity='0.25'/%3E%3Cpolygon points='0,160 80,160 0,80' fill='white' opacity='0.25'/%3E%3Cpolygon points='160,160 80,160 160,80' fill='white' opacity='0.25'/%3E%3Ccircle cx='0' cy='80' r='11' fill='none' stroke='white' stroke-width='1.2' opacity='0.6'/%3E%3Ccircle cx='160' cy='80' r='11' fill='none' stroke='white' stroke-width='1.2' opacity='0.6'/%3E%3C/svg%3E");
+	-webkit-mask-size: 160px 160px;
+	mask-size: 160px 160px;
+	-webkit-mask-repeat: repeat;
+	mask-repeat: repeat;
+}
+html[data-site-mode="harmony"][data-harmony-texture="sakura"] #harmony-texture-layer {
+	background: linear-gradient(135deg, var(--harmony-secondary) 0%, var(--primary) 100%);
+	-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg transform='translate(38,32) rotate(24) scale(0.85)'%3E%3Cpath d='M0 0 C-6 -5 -9 -13 -4.5 -20 C-2.8 -22.8 0 -21.5 0 -19.5 C0 -21.5 2.8 -22.8 4.5 -20 C9 -13 6 -5 0 0 Z' fill='white' opacity='0.85'/%3E%3C/g%3E%3Cg transform='translate(128,48) rotate(-38) scale(0.7)'%3E%3Cpath d='M0 0 C-6 -5 -9 -13 -4.5 -20 C-2.8 -22.8 0 -21.5 0 -19.5 C0 -21.5 2.8 -22.8 4.5 -20 C9 -13 6 -5 0 0 Z' fill='white' opacity='0.7'/%3E%3C/g%3E%3Cg transform='translate(84,112) rotate(68) scale(0.95)'%3E%3Cpath d='M0 0 C-6 -5 -9 -13 -4.5 -20 C-2.8 -22.8 0 -21.5 0 -19.5 C0 -21.5 2.8 -22.8 4.5 -20 C9 -13 6 -5 0 0 Z' fill='white' opacity='0.9'/%3E%3C/g%3E%3Cg transform='translate(152,138) rotate(-14) scale(0.6)'%3E%3Cpath d='M0 0 C-6 -5 -9 -13 -4.5 -20 C-2.8 -22.8 0 -21.5 0 -19.5 C0 -21.5 2.8 -22.8 4.5 -20 C9 -13 6 -5 0 0 Z' fill='white' opacity='0.65'/%3E%3C/g%3E%3Cg transform='translate(28,142) rotate(-72) scale(0.75)'%3E%3Cpath d='M0 0 C-6 -5 -9 -13 -4.5 -20 C-2.8 -22.8 0 -21.5 0 -19.5 C0 -21.5 2.8 -22.8 4.5 -20 C9 -13 6 -5 0 0 Z' fill='white' opacity='0.75'/%3E%3C/g%3E%3Ccircle cx='96' cy='36' r='1.5' fill='white' opacity='0.4'/%3E%3Ccircle cx='138' cy='96' r='1.2' fill='white' opacity='0.4'/%3E%3Ccircle cx='56' cy='88' r='1.5' fill='white' opacity='0.4'/%3E%3C/svg%3E");
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg transform='translate(38,32) rotate(24) scale(0.85)'%3E%3Cpath d='M0 0 C-6 -5 -9 -13 -4.5 -20 C-2.8 -22.8 0 -21.5 0 -19.5 C0 -21.5 2.8 -22.8 4.5 -20 C9 -13 6 -5 0 0 Z' fill='white' opacity='0.85'/%3E%3C/g%3E%3Cg transform='translate(128,48) rotate(-38) scale(0.7)'%3E%3Cpath d='M0 0 C-6 -5 -9 -13 -4.5 -20 C-2.8 -22.8 0 -21.5 0 -19.5 C0 -21.5 2.8 -22.8 4.5 -20 C9 -13 6 -5 0 0 Z' fill='white' opacity='0.7'/%3E%3C/g%3E%3Cg transform='translate(84,112) rotate(68) scale(0.95)'%3E%3Cpath d='M0 0 C-6 -5 -9 -13 -4.5 -20 C-2.8 -22.8 0 -21.5 0 -19.5 C0 -21.5 2.8 -22.8 4.5 -20 C9 -13 6 -5 0 0 Z' fill='white' opacity='0.9'/%3E%3C/g%3E%3Cg transform='translate(152,138) rotate(-14) scale(0.6)'%3E%3Cpath d='M0 0 C-6 -5 -9 -13 -4.5 -20 C-2.8 -22.8 0 -21.5 0 -19.5 C0 -21.5 2.8 -22.8 4.5 -20 C9 -13 6 -5 0 0 Z' fill='white' opacity='0.65'/%3E%3C/g%3E%3Cg transform='translate(28,142) rotate(-72) scale(0.75)'%3E%3Cpath d='M0 0 C-6 -5 -9 -13 -4.5 -20 C-2.8 -22.8 0 -21.5 0 -19.5 C0 -21.5 2.8 -22.8 4.5 -20 C9 -13 6 -5 0 0 Z' fill='white' opacity='0.75'/%3E%3C/g%3E%3Ccircle cx='96' cy='36' r='1.5' fill='white' opacity='0.4'/%3E%3Ccircle cx='138' cy='96' r='1.2' fill='white' opacity='0.4'/%3E%3Ccircle cx='56' cy='88' r='1.5' fill='white' opacity='0.4'/%3E%3C/svg%3E");
+	-webkit-mask-size: 180px 180px;
+	mask-size: 180px 180px;
+	-webkit-mask-repeat: repeat;
+	mask-repeat: repeat;
+	animation: harmony-texture-fall 28s linear infinite;
+}
+@keyframes harmony-texture-drift {
+	0%, 100% {
+		-webkit-mask-position: 0 0;
+		mask-position: 0 0;
+	}
+	50% {
+		-webkit-mask-position: 12px -16px;
+		mask-position: 12px -16px;
+	}
+}
+@keyframes harmony-texture-flow {
+	from {
+		-webkit-mask-position: 0 0;
+		mask-position: 0 0;
+	}
+	to {
+		-webkit-mask-position: 240px 0;
+		mask-position: 240px 0;
+	}
+}
+@keyframes harmony-texture-fall {
+	from {
+		-webkit-mask-position: 0 0;
+		mask-position: 0 0;
+	}
+	to {
+		-webkit-mask-position: 180px 180px;
+		mask-position: 180px 180px;
+	}
+}
+
+/* ---------- 谐彩 overlay 三滑杆的落点 ----------
+ * 只覆写 #wallpaper-wrapper 上的两个变量（其内 #banner-dim-container 等
+ * 沿既有 layout-styles 规则消费）；卡片不透明度在令牌段以 !important 覆写
+ * --card-transparent-opacity。默认值 = 本站 config 的 overlay 默认
+ * （0.8 / 10px / 0.6），访客没动过谐彩滑杆时观感与一期一致；
+ * 全站壁纸页签的 overlay 设置在谐彩下被这组接管、互不干扰。 */
+html[data-site-mode="harmony"][data-wallpaper-mode="overlay"] #wallpaper-wrapper,
+html[data-site-mode="harmony"][data-wallpaper-mode="fullscreen"] #wallpaper-wrapper {
+	--overlay-opacity: var(--harmony-overlay-opacity, 0.8) !important;
+	--overlay-blur: var(--harmony-overlay-blur, 10px) !important;
+}
+
+/* ---------- 减少动态（谐彩专属开关；另对系统偏好做纹理层降级） ----------
+ * 开关命中时：谐彩作用域内全部过渡/动画压到近零时长（保留 animationend
+ * 语义）、纹理层与打字机光标的循环动画直接停；打字机本体由
+ * TypewriterText 的脚本判断改为静态全文。 */
+html[data-site-mode="harmony"][data-harmony-motion="reduced"] *,
+html[data-site-mode="harmony"][data-harmony-motion="reduced"] *::before,
+html[data-site-mode="harmony"][data-harmony-motion="reduced"] *::after {
+	animation-duration: 0.01ms !important;
+	animation-iteration-count: 1 !important;
+	transition-duration: 0.01ms !important;
+	scroll-behavior: auto !important;
+}
+html[data-site-mode="harmony"][data-harmony-motion="reduced"] #harmony-texture-layer {
+	animation: none !important;
+}
+html[data-site-mode="harmony"][data-harmony-motion="reduced"] .typewriter::after {
+	animation: none !important;
+	opacity: 0 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+	html[data-site-mode="harmony"] #harmony-texture-layer {
+		animation: none !important;
+	}
+}
+
+}

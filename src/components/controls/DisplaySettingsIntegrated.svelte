@@ -43,6 +43,19 @@ import {
 	getStoredPureFont,
 	PURE_FONT_LABELS,
 	getStoredSiteMode,
+	getStoredHarmonyHue,
+	getStoredHarmonyScheme,
+	getStoredHarmonySpec,
+	getStoredHarmonyTexture,
+	getStoredHarmonyTextureOpacity,
+	getStoredHarmonyMotionReduced,
+	getStoredHarmonyOverlayOpacity,
+	getStoredHarmonyOverlayBlur,
+	getStoredHarmonyOverlayCardOpacity,
+	DEFAULT_HARMONY_SCHEME,
+	DEFAULT_HARMONY_SPEC,
+	DEFAULT_HARMONY_TEXTURE,
+	DEFAULT_HARMONY_TEXTURE_OPACITY,
 	getStoredGradientEnabled,
 	getStoredOverlayBlur,
 	getStoredOverlayCardOpacity,
@@ -74,6 +87,15 @@ import {
 	setNavbarStyle,
 	setPureFont,
 	setSiteMode,
+	setHarmonyHue,
+	setHarmonyScheme,
+	setHarmonySpec,
+	setHarmonyTexture,
+	setHarmonyTextureOpacity,
+	setHarmonyMotionReduced,
+	setHarmonyOverlayOpacity,
+	setHarmonyOverlayBlur,
+	setHarmonyOverlayCardOpacity,
 	setNotesEnabled,
 	setRainEnabled,
 	setMeteorEnabled,
@@ -123,6 +145,7 @@ const defaultSiteMode = getDefaultSiteMode();
 const siteModeOptions = [
 	{ value: "full", labelKey: I18nKey.siteModeFull },
 	{ value: "pure", labelKey: I18nKey.siteModePure },
+	{ value: "harmony", labelKey: I18nKey.siteModeHarmony },
 ] as const;
 // 素简下调色板精简：只留站点形态（华彩切换）、字体与特效（樱花/萤火虫），壁纸整页签收起；
 // 文章布局（列表/网格）在素简下不出现——素简是单列列表、根本排不了网格（2026-10-28 用户定），原位置改放特效
@@ -133,6 +156,86 @@ const pureFontOptions = getPureFontMenu().map((k) => ({
 	value: k,
 	label: PURE_FONT_LABELS[k],
 }));
+// 谐彩专属调色板（仅 siteMode=harmony 时出现）：种子色相 / 色彩风格 / 色彩规范 /
+// 背景纹理 / overlay 三项 / 减少动态，存储键 harmony*，与全站设置互不干扰
+const isHarmony = $derived(siteMode === "harmony");
+let harmonyHue = $state(getStoredHarmonyHue() ?? getHue());
+let harmonyHueCustom = $state(getStoredHarmonyHue() !== null);
+let harmonyScheme = $state(getStoredHarmonyScheme());
+let harmonySpec = $state(getStoredHarmonySpec());
+let harmonyTexture = $state(getStoredHarmonyTexture());
+let harmonyTextureOpacity = $state(getStoredHarmonyTextureOpacity());
+let harmonyMotionReduced = $state(getStoredHarmonyMotionReduced());
+let harmonyOverlayOpacity = $state(getStoredHarmonyOverlayOpacity());
+let harmonyOverlayBlur = $state(getStoredHarmonyOverlayBlur());
+let harmonyOverlayCardOpacity = $state(getStoredHarmonyOverlayCardOpacity());
+const harmonySchemeOptions = [
+	{ value: "tonalSpot", labelKey: I18nKey.harmonySchemeTonalSpot },
+	{ value: "vibrant", labelKey: I18nKey.harmonySchemeVibrant },
+	{ value: "expressive", labelKey: I18nKey.harmonySchemeExpressive },
+	{ value: "fidelity", labelKey: I18nKey.harmonySchemeFidelity },
+	{ value: "content", labelKey: I18nKey.harmonySchemeContent },
+	{ value: "neutral", labelKey: I18nKey.harmonySchemeNeutral },
+	{ value: "monochrome", labelKey: I18nKey.harmonySchemeMonochrome },
+	{ value: "rainbow", labelKey: I18nKey.harmonySchemeRainbow },
+	{ value: "fruitSalad", labelKey: I18nKey.harmonySchemeFruitSalad },
+] as const;
+const harmonyTextureOptions = [
+	{ value: "none", labelKey: I18nKey.harmonyTextureNone },
+	{ value: "starlight", labelKey: I18nKey.harmonyTextureStarlight },
+	{ value: "cyber-dots", labelKey: I18nKey.harmonyTextureCyberDots },
+	{ value: "topography", labelKey: I18nKey.harmonyTextureTopography },
+	{ value: "geometric", labelKey: I18nKey.harmonyTextureGeometric },
+	{ value: "sakura", labelKey: I18nKey.harmonyTextureSakura },
+] as const;
+// 风格预览圆点：与 harmony-mode.css 参数组同表（主/次/三角色的 明度/色度/色相偏移，亮色口径）
+const HARMONY_SCHEME_PREVIEW: Record<
+	string,
+	{ p: [number, number, number]; s: [number, number, number]; t: [number, number, number] }
+> = {
+	tonalSpot: { p: [0.42, 0.16, 0], s: [0.52, 0.065, 0], t: [0.5, 0.09, 60] },
+	vibrant: { p: [0.44, 0.21, 0], s: [0.55, 0.1, 0], t: [0.55, 0.12, 60] },
+	expressive: { p: [0.43, 0.18, 0], s: [0.55, 0.09, 95], t: [0.52, 0.1, 180] },
+	fidelity: { p: [0.4, 0.19, 0], s: [0.52, 0.13, 0], t: [0.5, 0.12, 170] },
+	content: { p: [0.4, 0.19, 0], s: [0.55, 0.13, 0], t: [0.52, 0.13, 180] },
+	neutral: { p: [0.42, 0.05, 0], s: [0.55, 0.03, 0], t: [0.52, 0.05, 60] },
+	monochrome: { p: [0.42, 0, 0], s: [0.55, 0, 0], t: [0.52, 0, 60] },
+	rainbow: { p: [0.43, 0.2, 0], s: [0.55, 0.11, 90], t: [0.52, 0.12, 210] },
+	fruitSalad: { p: [0.43, 0.19, -50], s: [0.55, 0.08, -50], t: [0.52, 0.09, 0] },
+};
+function harmonyDot(triple: [number, number, number]): string {
+	const h = (((harmonyHue + triple[2]) % 360) + 360) % 360;
+	return `oklch(${triple[0]} ${triple[1]} ${h})`;
+}
+function onHarmonyHueInput(value: number) {
+	harmonyHue = value;
+	harmonyHueCustom = true;
+	setHarmonyHue(value);
+}
+const harmonyIsDefault = $derived(
+	!harmonyHueCustom &&
+		harmonyScheme === DEFAULT_HARMONY_SCHEME &&
+		harmonySpec === DEFAULT_HARMONY_SPEC &&
+		harmonyTexture === DEFAULT_HARMONY_TEXTURE &&
+		harmonyTextureOpacity === DEFAULT_HARMONY_TEXTURE_OPACITY &&
+		!harmonyMotionReduced &&
+		harmonyOverlayOpacity === defaultOverlayOpacity &&
+		harmonyOverlayBlur === defaultOverlayBlur &&
+		harmonyOverlayCardOpacity === defaultOverlayCardOpacity,
+);
+function resetHarmonySettings() {
+	setHarmonyHue(null);
+	harmonyHueCustom = false;
+	harmonyHue = getHue();
+	harmonyScheme = DEFAULT_HARMONY_SCHEME;
+	harmonySpec = DEFAULT_HARMONY_SPEC;
+	harmonyTexture = DEFAULT_HARMONY_TEXTURE;
+	harmonyTextureOpacity = DEFAULT_HARMONY_TEXTURE_OPACITY;
+	harmonyMotionReduced = false;
+	harmonyOverlayOpacity = defaultOverlayOpacity;
+	harmonyOverlayBlur = defaultOverlayBlur;
+	harmonyOverlayCardOpacity = defaultOverlayCardOpacity;
+}
 let wallpaperMode: WALLPAPER_MODE = $state(backgroundWallpaper.mode);
 const defaultWallpaperMode = backgroundWallpaper.mode;
 let fullscreenLayout: FullscreenWallpaperLayout = $state(
@@ -847,6 +950,37 @@ $effect(() => {
 });
 
 $effect(() => {
+	setHarmonyScheme(harmonyScheme);
+});
+
+$effect(() => {
+	setHarmonySpec(harmonySpec);
+});
+
+$effect(() => {
+	setHarmonyTexture(harmonyTexture);
+});
+
+$effect(() => {
+	setHarmonyTextureOpacity(harmonyTextureOpacity);
+});
+
+$effect(() => {
+	setHarmonyMotionReduced(harmonyMotionReduced);
+});
+
+$effect(() => {
+	if (
+		wallpaperMode === WALLPAPER_OVERLAY ||
+		wallpaperMode === WALLPAPER_FULLSCREEN
+	) {
+		setHarmonyOverlayOpacity(harmonyOverlayOpacity);
+		setHarmonyOverlayBlur(harmonyOverlayBlur);
+		setHarmonyOverlayCardOpacity(harmonyOverlayCardOpacity);
+	}
+});
+
+$effect(() => {
 	if (wallpaperMode === WALLPAPER_OVERLAY) {
 		if (isOverlayOpacitySwitchable) {
 			setOverlayOpacity(overlayOpacity);
@@ -898,8 +1032,8 @@ $effect(() => {
 
 	<!-- Appearance Tab: Theme Color + Layout -->
 	{#if activeTab === "appearance"}
-		<!-- Theme Color Section -->
-		{#if showThemeColor && !isPure}
+		<!-- Theme Color Section（谐彩下由专属色相滑杆接管，隐藏全站主题色） -->
+		{#if showThemeColor && !isPure && !isHarmony}
 		<div class="">
 			<div class="section-title">
 				{i18n(I18nKey.themeColor)}
@@ -922,8 +1056,8 @@ $effect(() => {
 		</div>
 		{/if}
 
-		<!-- Navbar Style Section -->
-		{#if showNavbarStyle && !isPure}
+		<!-- Navbar Style Section（谐彩的导航是 Top App Bar 形态，隐藏全站导航样式） -->
+		{#if showNavbarStyle && !isPure && !isHarmony}
 		<div class="">
 			<div class="section-title">
 				{i18n(I18nKey.navbarStyle)}
@@ -969,7 +1103,7 @@ $effect(() => {
 				{#each siteModeOptions as opt}
 				<button
 					aria-label={i18n(opt.labelKey)}
-					class="flex-1 min-w-[45%] btn-regular rounded-md py-2 px-3 flex items-center justify-center gap-2 active:scale-95 transition-all relative overflow-hidden"
+					class="flex-1 min-w-[30%] btn-regular rounded-md py-2 px-3 flex items-center justify-center gap-2 active:scale-95 transition-all relative overflow-hidden"
 					class:opacity-60={siteMode !== opt.value}
 					class:bg-(--btn-regular-bg-hover)={siteMode === opt.value}
 					onclick={() => { siteMode = opt.value; }}
@@ -979,6 +1113,185 @@ $effect(() => {
 				</button>
 				{/each}
 			</div>
+		</div>
+		{/if}
+
+		<!-- Harmony Palette Section（仅谐彩：专属调色板，存储键 harmony*，切回华彩/素简不生效） -->
+		{#if isHarmony}
+		<div class="">
+			<div class="section-title">
+				{i18n(I18nKey.harmonySettings)}
+				<button aria-label="Reset to Default" class="btn-regular rounded-md active:scale-90"
+						class:opacity-0={harmonyIsDefault} class:pointer-events-none={harmonyIsDefault}
+						disabled={harmonyIsDefault} aria-hidden={harmonyIsDefault ? "true" : undefined} onclick={resetHarmonySettings}>
+					<div class="text-(--btn-content)">
+						<Icon icon="fa7-solid:arrow-rotate-left" class="text-[0.75rem]"></Icon>
+					</div>
+				</button>
+				<div class="transition bg-(--btn-regular-bg) rounded-md flex justify-center font-bold items-center text-(--btn-content) ml-auto w-9 h-6 text-xs">
+					{harmonyHue}
+				</div>
+			</div>
+			<!-- 种子色相（未单独设置时跟随全站主题色，拖动后存 harmonyHue） -->
+			<div class="hue-slider-shell w-full h-6 px-1 bg-[oklch(0.80_0.10_0)] dark:bg-[oklch(0.70_0.10_0)] rounded-md select-none">
+				<input aria-label={i18n(I18nKey.themeColor)} type="range" min="0" max="360" step="5" value={harmonyHue}
+					   oninput={(e) => onHarmonyHueInput(Number((e.currentTarget as HTMLInputElement).value))}
+					   class="slider" style="width: 100%">
+			</div>
+
+			<!-- 色彩风格：3×3 色卡（圆点 = 该风格在当前色相下的主/次/三角色） -->
+			<div class="text-xs font-bold text-(--btn-content) opacity-80 mt-3 mb-1.5">{i18n(I18nKey.harmonyScheme)}</div>
+			<div class="grid grid-cols-3 gap-2">
+				{#each harmonySchemeOptions as opt}
+				<button
+					aria-label={i18n(opt.labelKey)}
+					class="btn-regular rounded-md py-2 px-2 flex flex-col items-center justify-center gap-1.5 active:scale-95 transition-all relative overflow-hidden"
+					class:opacity-60={harmonyScheme !== opt.value}
+					class:bg-(--btn-regular-bg-hover)={harmonyScheme === opt.value}
+					onclick={() => { harmonyScheme = opt.value; }}
+					title={i18n(opt.labelKey)}
+				>
+					<span class="flex gap-1">
+						<span class="w-3 h-3 rounded-full" style="background: {harmonyDot(HARMONY_SCHEME_PREVIEW[opt.value].p)}"></span>
+						<span class="w-3 h-3 rounded-full" style="background: {harmonyDot(HARMONY_SCHEME_PREVIEW[opt.value].s)}"></span>
+						<span class="w-3 h-3 rounded-full" style="background: {harmonyDot(HARMONY_SCHEME_PREVIEW[opt.value].t)}"></span>
+					</span>
+					<span class="text-xs font-medium">{i18n(opt.labelKey)}</span>
+				</button>
+				{/each}
+			</div>
+
+			<!-- 色彩规范 -->
+			<div class="text-xs font-bold text-(--btn-content) opacity-80 mt-3 mb-1.5">{i18n(I18nKey.harmonySpec)}</div>
+			<div class="flex gap-2">
+				<button
+					aria-label={i18n(I18nKey.harmonySpec2021)}
+					class="flex-1 btn-regular rounded-md py-2 px-3 flex items-center justify-center gap-2 active:scale-95 transition-all relative overflow-hidden"
+					class:opacity-60={harmonySpec !== "2021"}
+					class:bg-(--btn-regular-bg-hover)={harmonySpec === "2021"}
+					onclick={() => { harmonySpec = "2021"; }}
+					title={i18n(I18nKey.harmonySpec2021)}
+				>
+					<span class="text-xs font-medium">{i18n(I18nKey.harmonySpec2021)}</span>
+				</button>
+				<button
+					aria-label={i18n(I18nKey.harmonySpec2025)}
+					class="flex-1 btn-regular rounded-md py-2 px-3 flex items-center justify-center gap-2 active:scale-95 transition-all relative overflow-hidden"
+					class:opacity-60={harmonySpec !== "2025"}
+					class:bg-(--btn-regular-bg-hover)={harmonySpec === "2025"}
+					onclick={() => { harmonySpec = "2025"; }}
+					title={i18n(I18nKey.harmonySpec2025)}
+				>
+					<span class="text-xs font-medium">{i18n(I18nKey.harmonySpec2025)}</span>
+				</button>
+			</div>
+
+			<!-- 背景纹理 -->
+			<div class="text-xs font-bold text-(--btn-content) opacity-80 mt-3 mb-1.5">{i18n(I18nKey.harmonyTexture)}</div>
+			<div class="grid grid-cols-3 gap-2">
+				{#each harmonyTextureOptions as opt}
+				<button
+					aria-label={i18n(opt.labelKey)}
+					class="btn-regular rounded-md py-2 px-3 flex items-center justify-center gap-2 active:scale-95 transition-all relative overflow-hidden"
+					class:opacity-60={harmonyTexture !== opt.value}
+					class:bg-(--btn-regular-bg-hover)={harmonyTexture === opt.value}
+					onclick={() => { harmonyTexture = opt.value; }}
+					title={i18n(opt.labelKey)}
+				>
+					<span class="text-xs font-medium">{i18n(opt.labelKey)}</span>
+				</button>
+				{/each}
+			</div>
+			<div class="rounded-md bg-(--btn-regular-bg) p-2 mt-2">
+				<div class="flex items-center justify-between mb-1">
+					<span class="text-xs font-medium text-(--btn-content) opacity-80">{i18n(I18nKey.harmonyTextureOpacity)}</span>
+					<span class="text-xs text-(--btn-content)">{Math.round(harmonyTextureOpacity * 100)}%</span>
+				</div>
+				<input
+					aria-label={i18n(I18nKey.harmonyTextureOpacity)}
+					type="range"
+					min="0"
+					max="100"
+					step="1"
+					value={Math.round(harmonyTextureOpacity * 100)}
+					oninput={(e) => { harmonyTextureOpacity = Number((e.currentTarget as HTMLInputElement).value) / 100; }}
+					class="slider w-full"
+				/>
+			</div>
+
+			<!-- Overlay 三项（仅 overlay / 全屏 hero 时出现，与壁纸页签的全站 overlay 设置分开存） -->
+			{#if wallpaperMode === WALLPAPER_OVERLAY || (wallpaperMode === WALLPAPER_FULLSCREEN && fullscreenLayout === "hero")}
+			<div class="text-xs font-bold text-(--btn-content) opacity-80 mt-3 mb-1.5">{i18n(I18nKey.overlaySettings)}</div>
+			<div class="space-y-2">
+				{#if wallpaperMode === WALLPAPER_OVERLAY}
+				<div class="rounded-md bg-(--btn-regular-bg) p-2">
+					<div class="flex items-center justify-between mb-1">
+						<span class="text-xs font-medium text-(--btn-content) opacity-80">{i18n(I18nKey.overlayOpacity)}</span>
+						<span class="text-xs text-(--btn-content)">{Math.round(harmonyOverlayOpacity * 100)}%</span>
+					</div>
+					<input
+						aria-label={i18n(I18nKey.overlayOpacity)}
+						type="range"
+						min="20"
+						max="100"
+						step="1"
+						value={Math.round(harmonyOverlayOpacity * 100)}
+						oninput={(e) => { harmonyOverlayOpacity = Number((e.currentTarget as HTMLInputElement).value) / 100; }}
+						class="slider w-full"
+					/>
+				</div>
+				{/if}
+				<div class="rounded-md bg-(--btn-regular-bg) p-2">
+					<div class="flex items-center justify-between mb-1">
+						<span class="text-xs font-medium text-(--btn-content) opacity-80">{i18n(I18nKey.overlayBlur)}</span>
+						<span class="text-xs text-(--btn-content)">{harmonyOverlayBlur.toFixed(1)}px</span>
+					</div>
+					<input
+						aria-label={i18n(I18nKey.overlayBlur)}
+						type="range"
+						min="0"
+						max="20"
+						step="0.5"
+						value={harmonyOverlayBlur}
+						oninput={(e) => { harmonyOverlayBlur = Number((e.currentTarget as HTMLInputElement).value); }}
+						class="slider w-full"
+					/>
+				</div>
+				<div class="rounded-md bg-(--btn-regular-bg) p-2">
+					<div class="flex items-center justify-between mb-1">
+						<span class="text-xs font-medium text-(--btn-content) opacity-80">{i18n(I18nKey.overlayCardOpacity)}</span>
+						<span class="text-xs text-(--btn-content)">{Math.round(harmonyOverlayCardOpacity * 100)}%</span>
+					</div>
+					<input
+						aria-label={i18n(I18nKey.overlayCardOpacity)}
+						type="range"
+						min="20"
+						max="100"
+						step="1"
+						value={Math.round(harmonyOverlayCardOpacity * 100)}
+						oninput={(e) => { harmonyOverlayCardOpacity = Number((e.currentTarget as HTMLInputElement).value) / 100; }}
+						class="slider w-full"
+					/>
+				</div>
+			</div>
+			{/if}
+
+			<!-- 减少动态 -->
+			<button
+				class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden mt-3"
+				class:bg-(--btn-regular-bg-hover)={harmonyMotionReduced}
+				onclick={() => { harmonyMotionReduced = !harmonyMotionReduced; }}
+			>
+				<Icon icon="material-symbols:motion-photos-off" class="text-[1.25rem] shrink-0"></Icon>
+				<span class="text-sm flex-1">{i18n(I18nKey.harmonyReduceMotion)}</span>
+				<div class="w-10 h-5 rounded-full transition-all duration-200 relative"
+					 class:bg-(--primary)={harmonyMotionReduced}
+					 class:bg-(--btn-regular-bg-active)={!harmonyMotionReduced}>
+					<div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+						 class:left-0.5={!harmonyMotionReduced}
+						 class:left-5={harmonyMotionReduced}></div>
+				</div>
+			</button>
 		</div>
 		{/if}
 

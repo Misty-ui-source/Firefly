@@ -81,7 +81,8 @@ const statsShowReadingTime = statsConfig.showReadingTime ?? true;
 
 // 标签显示位置
 const tagsPosition = siteConfig.postListLayout.tagsPosition ?? "meta";
-const showTagsInMeta = metaShowTags && tagsPosition === "meta";
+// 标签渲染：meta 行与底部二选一由 tagsPosition 决定；谐彩形态改用 meta 行的斜杠纯文字标签，
+// 故 meta 行标签恒渲染、底部模式时打上 meta-tags-deferred 标记，靠 CSS 在非谐彩形态隐藏（视觉与旧行为一致）
 const showTagsAtBottom = metaShowTags && tagsPosition === "bottom";
 // 底部标签样式："chip" 按钮样式，"text" 纯文字无底色
 const bottomTagsAsText =
@@ -149,7 +150,7 @@ const minutes = remarkPluginFrontmatter.minutes;
       tags={tags}
       showPublished={metaShowPublished}
       showCategory={showCategory}
-      showTags={showTagsInMeta}
+      showTags={metaShowTags}
       maxTags={metaTagCount > 0 ? metaTagCount : undefined}
       showNoTags={true}
       hideUpdateDate={true}
@@ -159,7 +160,7 @@ const minutes = remarkPluginFrontmatter.minutes;
       minutes={minutes}
       showWords={metaShowWords}
       showReadingTime={metaShowReadingTime}
-      className="mb-4 post-meta card-header-meta"
+      className={`mb-4 post-meta card-header-meta${showTagsAtBottom ? " meta-tags-deferred" : ""}`}
     />
 
     <!-- description -->
@@ -287,6 +288,11 @@ const minutes = remarkPluginFrontmatter.minutes;
     overflow: hidden;
     -webkit-line-clamp: var(--descriptionClampLines);
     line-clamp: var(--descriptionClampLines);
+  }
+
+  /* 标签在底部时，meta 行的同款标签默认隐藏（与旧渲染行为一致）；谐彩形态在 harmony-mode.css 里反转为显示、并隐藏底部 chip */
+  :global(.post-meta.meta-tags-deferred .post-meta-tags) {
+    display: none;
   }
 
   /* === List Mode Mobile Styles === */
