@@ -505,6 +505,13 @@ function parseFrontmatter(text) {
   }
   return { fm, body: m[2] };
 }
+/* 防误伤：纯数字的字符串值写回 frontmatter 时自动加引号。
+   不加引号 YAML 会把纯数字读成 number，碰上 schema 要求 string 的字段（如日记 password、
+   纯数字标题/标签）直接卡死整站构建（2026-10-30 日记 password 事件）。其他值一律原样。 */
+function fmScalarOut(v) {
+  const s = String(v);
+  return /^\d+$/.test(s) ? `"${s}"` : s;
+}
 function serializeFrontmatter(fm, body) {
   const lines = ['---'];
   for (const [k, v] of Object.entries(fm)) {
@@ -512,9 +519,9 @@ function serializeFrontmatter(fm, body) {
     if (Array.isArray(v)) {
       if (!v.length) continue;
       lines.push(`${k}:`);
-      for (const item of v) lines.push(`  - ${item}`);
+      for (const item of v) lines.push(`  - ${fmScalarOut(item)}`);
     } else {
-      lines.push(`${k}: ${v}`);
+      lines.push(`${k}: ${fmScalarOut(v)}`);
     }
   }
   lines.push('---', '');
