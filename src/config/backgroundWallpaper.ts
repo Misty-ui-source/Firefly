@@ -101,7 +101,7 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	modeCarousel: {
 		banner: true,
 		fullscreen: false,
-		overlay: true,
+		overlay: false,
 	},
 	// 已禁用的壁纸（不参与轮换，保留在上面列表中可随时恢复）。由管理台维护，手动编辑请保持 URL 与上面一致
 	disabled: [
