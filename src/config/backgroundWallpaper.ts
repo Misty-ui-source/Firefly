@@ -56,6 +56,11 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 			"assets/images/DesktopWallpaper/anime-water-spirit.jpg",
 			"assets/images/DesktopWallpaper/anime-sakura.jpg",
 			"assets/images/DesktopWallpaper/anime-lounging.jpg",
+			"https://img.lanerc.me/admin/wallpaper/mvtoa358-5b09c3c3ad966ba2466f0a77576fd1b7_720.webp",
+			"https://img.lanerc.me/admin/wallpaper/mvtoad77-72c07e0a9b5b4dbf2eaf03792a31ba06_720.webp",
+			"https://img.lanerc.me/admin/wallpaper/mvtoaifv-9fdd5689806efe69fdadd52bf7e2e6f2.webp",
+			"https://img.lanerc.me/admin/wallpaper/mvtocdl0-157a8f8e4b29e92fee0efd9f08f9bb19_720.webp",
+			"https://img.lanerc.me/admin/wallpaper/mvtodi9u-1cfecc1ea25c098cf97dfefecc43c08c_720.webp",
 		],
 		// 移动背景图片（支持单张或多张随机）
 		// mobile: "assets/images/MobileWallpaper/m1.avif",
@@ -66,6 +71,9 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 			"assets/images/MobileWallpaper/m4.avif",
 			"assets/images/MobileWallpaper/m5.avif",
 			"assets/images/MobileWallpaper/m6.avif",
+			"https://img.lanerc.me/admin/wallpaper/mvtoascv-6852723ee813846ba8f7f650f15b2f9b_720.webp",
+			"https://img.lanerc.me/admin/wallpaper/mvtoavvi-ea38316c8e7831792eb75ee178c57a62_720.webp",
+			"https://img.lanerc.me/admin/wallpaper/mvtob09w-c20a345f5711d114b130d4c9b806518a_720.webp",
 		],
 		// 背景视频播放地址
 		// 支持单个视频路径（字符串）或多个视频循环（数组，参考上面壁纸配置）
@@ -76,7 +84,12 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	// 分模式专属图片（Alexander Console「图片」页维护）：某模式某端有图用专属图，空着回退上面的共享 src
 	modeSrc: {
 		banner: {
-			desktop: [],
+			desktop: [
+				"https://img.lanerc.me/admin/wallpaper/mvtoaifv-9fdd5689806efe69fdadd52bf7e2e6f2.webp",
+				"assets/images/DesktopWallpaper/anime-underwater.jpg",
+				"assets/images/DesktopWallpaper/anime-water-spirit.jpg",
+				"https://img.lanerc.me/admin/wallpaper/mvtoa358-5b09c3c3ad966ba2466f0a77576fd1b7_720.webp",
+			],
 			mobile: [],
 		},
 		fullscreen: {
@@ -87,15 +100,21 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 				"https://img.lanerc.me/admin/wallpaper/mvnww7i0-1000052860.webp",
 				"https://img.lanerc.me/admin/wallpaper/mvoh3yhq-1000052402.webp",
 			],
-			mobile: [],
+			mobile: [
+				"assets/images/MobileWallpaper/m4.avif",
+				"https://img.lanerc.me/admin/wallpaper/mvtoascv-6852723ee813846ba8f7f650f15b2f9b_720.webp",
+				"assets/images/MobileWallpaper/m1.avif",
+			],
 		},
 		overlay: {
 			desktop: [
 				"https://img.lanerc.me/admin/wallpaper/mvnws0rs-1000052869.webp",
-				"https://img.lanerc.me/admin/wallpaper/mvnws0rs-1000052869.webp",
 				"https://img.lanerc.me/admin/wallpaper/mvnv9mab-275611a41af8b4a9786292fc3d85eed0_720.webp",
 			],
-			mobile: [],
+			mobile: [
+				"https://img.lanerc.me/admin/wallpaper/mvtoascv-6852723ee813846ba8f7f650f15b2f9b_720.webp",
+				"https://img.lanerc.me/admin/wallpaper/mvtoavvi-ea38316c8e7831792eb75ee178c57a62_720.webp",
+			],
 		},
 	},
 	// 分模式轮播开关（Alexander Console「图片」页维护）：删掉某行 = 回退 common.carousel.enable
@@ -105,8 +124,7 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 		overlay: false,
 	},
 	// 已禁用的壁纸（不参与轮换，保留在上面列表中可随时恢复）。由管理台维护，手动编辑请保持 URL 与上面一致
-	disabled: [
-	],
+	disabled: [],
 	// 横幅壁纸和全屏壁纸共享配置
 	common: {
 		// 壁纸遮罩暗度，让横幅文字显示更清晰，0-1之间，值越大越暗
