@@ -444,9 +444,36 @@ export function applySiteModeToDocument(mode: SiteMode): void {
 	if (typeof document === "undefined") return;
 	const safe: SiteMode = SITE_MODES.includes(mode) ? mode : "full";
 	document.documentElement.setAttribute("data-site-mode", safe);
+	syncAstralHomeClass();
 	window.dispatchEvent(
 		new CustomEvent("siteModeChange", { detail: { mode: safe } }),
 	);
+}
+
+// ─── 璨夜覆盖分页页（2026-10-30 站长定调） ─────────────────────
+// 璨夜的 bento 格子全页渲染、只在 body.is-home 时被 astral-mode.css
+// 点亮，原先只有首页（/）带 is-home，翻到 /2/ 就变回原生侧栏——形态
+// 只剩首页一张皮。按素简的全站形态路子：璨夜下把分页页（/ 与 /N/）
+// 都按首页对待。is-home 是服务端按路径渲染的类，这里只在 astral 时
+// 客户端补齐/收起；其他形态一律复原服务端状态（仅 / 带 is-home），
+// 不改变它们任何一页的呈现。
+export function syncAstralHomeClass(): void {
+	if (typeof document === "undefined" || !document.body) return;
+	const p = window.location.pathname;
+	const isListPage = p === "/" || /^\/\d+\/?$/.test(p);
+	const astral =
+		document.documentElement.getAttribute("data-site-mode") === "astral";
+	document.body.classList.toggle("is-home", astral ? isListPage : p === "/");
+}
+
+if (typeof window !== "undefined") {
+	const w = window as unknown as Record<string, unknown>;
+	if (!w.__astralHomeSyncInit) {
+		w.__astralHomeSyncInit = true;
+		document.addEventListener("swup:page:view", () => syncAstralHomeClass());
+		document.addEventListener("astro:after-swap", () => syncAstralHomeClass());
+		document.addEventListener("DOMContentLoaded", () => syncAstralHomeClass());
+	}
 }
 
 export function setSiteMode(mode: SiteMode): void {

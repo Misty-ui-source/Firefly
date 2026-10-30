@@ -490,6 +490,28 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
         resolvedSiteMode
       );
 
+      // 璨夜覆盖分页页：astral 时分页页（/ 与 /N/）同样点亮 bento——
+      // body.is-home 是 astral-mode.css 的点亮开关，服务端只给首页。
+      // 首帧在此同步落位防闪；运行时的形态切换与软导航由
+      // utils/setting-utils 的 syncAstralHomeClass 接管。
+      const syncAstralHome = () => {
+        if (!document.body) return;
+        const p = window.location.pathname;
+        const isList = p === "/" || /^\/\d+\/?$/.test(p);
+        document.body.classList.toggle(
+          "is-home",
+          resolvedSiteMode === "astral" ? isList : p === "/",
+        );
+      };
+      if (document.body) syncAstralHome();
+      else
+        new MutationObserver((_, obs) => {
+          if (document.body) {
+            obs.disconnect();
+            syncAstralHome();
+          }
+        }).observe(document.documentElement, { childList: true });
+
       // 初始化璨夜子主题 - 优先 localStorage（调色板外观页签、站点形态下方改过时），否则用配置默认；
       // 属性只在 html[data-site-mode="astral"] 作用域内被 astral-mode.css 消费，其他形态下挂着不生效
       const astralThemeStored = localStorage.getItem("astralTheme");
