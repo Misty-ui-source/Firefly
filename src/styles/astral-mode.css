@@ -776,6 +776,12 @@ html[data-site-mode="astral"] .l2d-buddy { display: none !important; }
 		/* 必须 !important：日历脚本会给该容器写内联 display 来切换列表显隐 */
 		display: none !important;
 	}
+	/* 日历格内宽封顶：日期格是正方形、随列宽长大，放进 5 列宽的格子后
+	 * 月网格能顶到 700+；按侧栏宽度（约 21.5rem）封顶居中收高 */
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="calendar-widget"] .calendar-container {
+		max-width: 21.5rem;
+		margin-inline: auto;
+	}
 	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="categories"] {
 		grid-column: 1 / span 4;
 		grid-row: 9;
