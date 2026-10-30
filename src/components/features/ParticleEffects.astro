@@ -567,7 +567,13 @@
 		(Object.keys(cfgs) as Kind[]).forEach((kind) => {
 			layers[kind] = new ParticleLayer(kind, cfgs[kind]);
 			const stored = localStorage.getItem(`${kind}Enabled`);
-			const enabled = stored !== null ? stored === "true" : cfgs[kind].enable;
+			let enabled = stored !== null ? stored === "true" : cfgs[kind].enable;
+			// 季节雪：没存过偏好且配置未开时，冬季默认开（与 setting-utils 的
+			// getDefaultSnowEnabled 同口径）
+			if (kind === "snow" && stored === null && !cfgs[kind].enable) {
+				const m = new Date().getMonth();
+				if (m === 11 || m === 0 || m === 1) enabled = true;
+			}
 			if (enabled) layers[kind].start();
 			window.addEventListener(`${kind}Toggle`, (e: Event) => {
 				const detail = (e as CustomEvent<{ enabled: boolean }>).detail;

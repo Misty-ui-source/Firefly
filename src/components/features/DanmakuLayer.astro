@@ -1,0 +1,146 @@
+---
+// 碎碎念弹幕层（第二批）：全屏漂移弹幕，内容源 = thoughtsConfig 碎碎念。
+// 默认仅首页（body.is-home）飘，避免干扰阅读页；开关/密度/速度走
+// localStorage（danmakuEnabled / danmakuDensity / danmakuSpeed），
+// 调色板通过 danmakuToggle / danmakuSettings 事件实时控制（协议同雪花）。
+// 本组件挂在 Layout 的 Swup 容器外，软导航不重建，靠 swup:page:view 重估落位。
+import { thoughtsConfig } from "@/config/thoughtsConfig";
+
+const texts = (thoughtsConfig.items || [])
+	.map((i) => (i.content || i.title || "").trim())
+	.filter(Boolean);
+---
+
+<div id="danmaku-layer" aria-hidden="true"></div>
+<script
+	type="application/json"
+	id="danmaku-data"
+	set:html={JSON.stringify(texts)}
+/>
+
+<style>
+	#danmaku-layer {
+		position: fixed;
+		inset: 0;
+		overflow: hidden;
+		pointer-events: none;
+		z-index: 55;
+	}
+	:global(.danmaku-item) {
+		position: absolute;
+		left: 0;
+		white-space: nowrap;
+		max-width: 72vw;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		padding: 0.32rem 0.8rem;
+		border-radius: 999px;
+		font-size: 0.83rem;
+		line-height: 1.35;
+		color: inherit;
+		background: rgb(128 128 128 / 0.13);
+		border: 1px solid rgb(128 128 128 / 0.16);
+		backdrop-filter: blur(6px);
+		-webkit-backdrop-filter: blur(6px);
+		opacity: 0.92;
+		will-change: transform;
+	}
+</style>
+
+<script>
+	(() => {
+		const layer = document.getElementById("danmaku-layer");
+		const dataEl = document.getElementById("danmaku-data");
+		if (!layer || !dataEl) return;
+		let texts: string[] = [];
+		try {
+			texts = JSON.parse(dataEl.textContent || "[]");
+		} catch {
+			texts = [];
+		}
+		if (!texts.length) return;
+		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+		const DENSITY: Record<string, number> = { low: 4, mid: 8, high: 13 };
+		const SPEED: Record<string, number> = {
+			slow: 34000,
+			mid: 24000,
+			fast: 16000,
+		};
+		const LANES = 9;
+		const LANE_TOP = 84;
+		const LANE_H = 40;
+
+		const setting = (k: string, fallback: string) =>
+			localStorage.getItem(k) ?? fallback;
+		const isEnabled = () => setting("danmakuEnabled", "true") === "true";
+		const onHome = () => document.body.classList.contains("is-home");
+
+		let queue: string[] = [];
+		const nextText = () => {
+			if (!queue.length) {
+				queue = [...texts];
+				for (let i = queue.length - 1; i > 0; i--) {
+					const j = Math.floor(Math.random() * (i + 1));
+					[queue[i], queue[j]] = [queue[j], queue[i]];
+				}
+			}
+			return queue.pop() as string;
+		};
+
+		const active = new Set<HTMLElement>();
+		let timer: number | undefined;
+
+		const spawn = () => {
+			// 内容少时压低同屏上限，避免同一条刷屏（碎碎念条数少时尤其明显）
+			const cap = Math.min(
+				DENSITY[setting("danmakuDensity", "mid")] ?? 8,
+				Math.max(2, texts.length * 2),
+			);
+			if (active.size >= cap || document.hidden) return;
+			const el = document.createElement("span");
+			el.className = "danmaku-item";
+			el.textContent = nextText();
+			const lane = Math.floor(Math.random() * LANES);
+			el.style.top = `${LANE_TOP + lane * LANE_H}px`;
+			layer.appendChild(el);
+			active.add(el);
+			const base = SPEED[setting("danmakuSpeed", "mid")] ?? 24000;
+			const duration = base * (0.85 + Math.random() * 0.3);
+			const anim = el.animate(
+				[
+					{ transform: "translateX(100vw)" },
+					{ transform: `translateX(-${el.offsetWidth + 40}px)` },
+				],
+				{ duration, easing: "linear" },
+			);
+			anim.onfinish = () => {
+				active.delete(el);
+				el.remove();
+			};
+		};
+
+		const start = () => {
+			if (timer !== undefined) return;
+			spawn();
+			timer = window.setInterval(spawn, 1500);
+		};
+		const stop = () => {
+			if (timer !== undefined) {
+				clearInterval(timer);
+				timer = undefined;
+			}
+			active.forEach((el) => el.remove());
+			active.clear();
+		};
+		const evaluate = () => {
+			if (isEnabled() && onHome()) start();
+			else stop();
+		};
+
+		window.addEventListener("danmakuToggle", evaluate);
+		document.addEventListener("swup:page:view", evaluate);
+		document.addEventListener("astro:after-swap", evaluate);
+		evaluate();
+	})();
+</script>

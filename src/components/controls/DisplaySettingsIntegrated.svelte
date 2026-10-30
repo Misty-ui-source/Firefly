@@ -66,6 +66,10 @@ import {
 	getStoredOverlayOpacity,
 	getStoredSakuraEnabled,
 	getStoredSnowEnabled,
+	getDefaultDanmakuEnabled,
+	getStoredDanmakuEnabled,
+	getDanmakuDensity,
+	getDanmakuSpeed,
 	getStoredNotesEnabled,
 	getStoredRainEnabled,
 	getStoredMeteorEnabled,
@@ -89,6 +93,9 @@ import {
 	setOverlayOpacity,
 	setSakuraEnabled,
 	setSnowEnabled,
+	setDanmakuEnabled,
+	setDanmakuDensity,
+	setDanmakuSpeed,
 	setNavbarStyle,
 	setPureFont,
 	setSiteMode,
@@ -297,6 +304,10 @@ let sakuraEnabled = $state(true);
 const defaultSakuraEnabled = getDefaultSakuraEnabled();
 let snowEnabled = $state(true);
 const defaultSnowEnabled = getDefaultSnowEnabled();
+let danmakuEnabled = $state(true);
+const defaultDanmakuEnabled = getDefaultDanmakuEnabled();
+let danmakuDensity = $state<"low" | "mid" | "high">("mid");
+let danmakuSpeed = $state<"slow" | "mid" | "fast">("mid");
 let fireflyEnabled = $state(true);
 const defaultFireflyEnabled = getDefaultFireflyEnabled();
 let starfieldEnabled = $state(true);
@@ -695,6 +706,11 @@ function toggleSnowEnabled() {
 	setSnowEnabled(snowEnabled);
 }
 
+function toggleDanmakuEnabled() {
+	danmakuEnabled = !danmakuEnabled;
+	setDanmakuEnabled(danmakuEnabled);
+}
+
 function toggleFireflyEnabled() {
 	fireflyEnabled = !fireflyEnabled;
 	setFireflyEnabled(fireflyEnabled);
@@ -887,6 +903,9 @@ onMount(() => {
 
 	// 从localStorage读取雪花 / 萤火虫特效状态
 	snowEnabled = getStoredSnowEnabled();
+	danmakuEnabled = getStoredDanmakuEnabled();
+	danmakuDensity = getDanmakuDensity();
+	danmakuSpeed = getDanmakuSpeed();
 	fireflyEnabled = getStoredFireflyEnabled();
 	starfieldEnabled = getStoredStarfieldEnabled();
 	notesEnabled = getStoredNotesEnabled();
@@ -1825,6 +1844,45 @@ $effect(() => {
 					</div>
 				</button>
 				{/if}
+				<div>
+					<button
+						class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
+						class:bg-(--btn-regular-bg-hover)={danmakuEnabled}
+						onclick={toggleDanmakuEnabled}
+					>
+						<Icon icon="mdi:comment-text-multiple-outline" class="text-[1.25rem] shrink-0"></Icon>
+						<span class="text-sm flex-1">{i18n(I18nKey.danmakuEffect)}</span>
+						<div class="w-10 h-5 rounded-full transition-all duration-200 relative"
+							 class:bg-(--primary)={danmakuEnabled}
+							 class:bg-(--btn-regular-bg-active)={!danmakuEnabled}>
+							<div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+								 class:left-0.5={!danmakuEnabled}
+								 class:left-5={danmakuEnabled}></div>
+						</div>
+					</button>
+					{#if danmakuEnabled}
+					<div class="px-3 pt-1.5 flex items-center gap-2">
+						<span class="text-xs opacity-70 w-14 shrink-0">{i18n(I18nKey.danmakuDensity)}</span>
+						<div class="flex gap-1 flex-1">
+							{#each [["low", "少"], ["mid", "中"], ["high", "多"]] as [v, label]}
+							<button class="flex-1 btn-regular rounded-md py-1 text-xs active:scale-95 transition-all"
+								class:bg-(--btn-regular-bg-hover)={danmakuDensity === v}
+								onclick={() => { danmakuDensity = v as "low" | "mid" | "high"; setDanmakuDensity(danmakuDensity); }}>{label}</button>
+							{/each}
+						</div>
+					</div>
+					<div class="px-3 pt-1.5 flex items-center gap-2">
+						<span class="text-xs opacity-70 w-14 shrink-0">{i18n(I18nKey.danmakuSpeed)}</span>
+						<div class="flex gap-1 flex-1">
+							{#each [["slow", "慢"], ["mid", "中"], ["fast", "快"]] as [v, label]}
+							<button class="flex-1 btn-regular rounded-md py-1 text-xs active:scale-95 transition-all"
+								class:bg-(--btn-regular-bg-hover)={danmakuSpeed === v}
+								onclick={() => { danmakuSpeed = v as "slow" | "mid" | "fast"; setDanmakuSpeed(danmakuSpeed); }}>{label}</button>
+							{/each}
+						</div>
+					</div>
+					{/if}
+				</div>
 				{#if isFireflySwitchable}
 				<button
 					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"

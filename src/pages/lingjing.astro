@@ -1,0 +1,373 @@
+---
+// 灵境（第三批）：圆滚滚的肥鱼的家——一页星空水域栖息地。
+// 她在水里游，访客可摸/喂/陪玩；成长经验与悬浮窗肥鱼互通
+// （同一个 localStorage feiyuExpV1），升级解锁姿态与台词。
+import Layout from "@/layouts/Layout.astro";
+
+// 星点（构建时定版伪随机，避免运行时闪烁）
+const stars = Array.from({ length: 70 }, (_, i) => {
+	const x = ((i * 37.7 + 13) % 100).toFixed(2);
+	const y = ((i * 53.3 + 7) % 62).toFixed(2);
+	const s = (0.8 + ((i * 29) % 10) / 6).toFixed(1);
+	const d = (2.4 + ((i * 17) % 30) / 10).toFixed(1);
+	return { x, y, s, d };
+});
+---
+
+<Layout title="灵境">
+	<main class="lj-wrap">
+		<section class="lj-scene" aria-label="灵境 · 肥鱼的水域">
+			{stars.map((st) => (
+				<span class="lj-star" style={`left:${st.x}%;top:${st.y}%;width:${st.s}px;height:${st.s}px;animation-duration:${st.d}s`} />
+			))}
+			<span class="lj-bubble" style="left:22%;animation-delay:0s"></span>
+			<span class="lj-bubble" style="left:58%;animation-delay:2.2s"></span>
+			<span class="lj-bubble" style="left:76%;animation-delay:4.1s"></span>
+			<div class="lj-fishwrap">
+				<img class="lj-fish" data-lj-fish src="/assets/images/fish/main.jpg" alt="圆滚滚的肥鱼" />
+			</div>
+			<div class="lj-say" data-lj-say>呜呼——欢迎来到灵境，这里是我家！</div>
+			<h1 class="lj-title">灵境</h1>
+			<p class="lj-sub">圆滚滚的肥鱼的星空水域 · 她在这里等你来玩</p>
+		</section>
+
+		<section class="lj-panel card-base">
+			<div class="lj-actions">
+				<button type="button" class="lj-btn" data-lj-act="pat">🫳 摸摸头 <small>+3</small></button>
+				<button type="button" class="lj-btn" data-lj-act="feed">🐟 喂小鱼干 <small>+5</small></button>
+				<button type="button" class="lj-btn" data-lj-act="play">🫧 陪她玩 <small>+4</small></button>
+			</div>
+			<div class="lj-status">
+				<div class="lj-status-row">
+					<span class="lj-level" data-lj-level>Lv.1</span>
+					<span class="lj-exp" data-lj-exp>0 经验</span>
+					<span class="lj-next" data-lj-next></span>
+				</div>
+				<div class="lj-bar"><div class="lj-fill" data-lj-fill></div></div>
+				<p class="lj-hint">经验和右下角的肥鱼互通：来访、聊天、听歌、在这里互动都能攒。升级会解锁新姿态和新台词。</p>
+			</div>
+			<ul class="lj-unlocks" data-lj-unlocks></ul>
+		</section>
+	</main>
+</Layout>
+
+<style>
+	.lj-wrap {
+		max-width: 62rem;
+		margin: 0 auto;
+		padding: 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+	.lj-scene {
+		position: relative;
+		overflow: hidden;
+		border-radius: 1.5rem;
+		min-height: 30rem;
+		padding: 2rem 1.5rem;
+		background:
+			radial-gradient(ellipse 80% 55% at 50% -10%, rgb(56 130 246 / 0.35), transparent),
+			linear-gradient(180deg, #0b2447 0%, #123a6b 45%, #0d4f5f 100%);
+		color: #eaf6ff;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: flex-end;
+	}
+	.lj-star {
+		position: absolute;
+		border-radius: 999px;
+		background: #dff3ff;
+		animation: lj-twinkle 3s ease-in-out infinite alternate;
+	}
+	@keyframes lj-twinkle {
+		from { opacity: 0.25; }
+		to { opacity: 0.95; }
+	}
+	.lj-bubble {
+		position: absolute;
+		bottom: -1rem;
+		width: 0.7rem;
+		height: 0.7rem;
+		border-radius: 999px;
+		border: 1.5px solid rgb(220 245 255 / 0.55);
+		animation: lj-rise 7s linear infinite;
+	}
+	@keyframes lj-rise {
+		to { transform: translateY(-26rem); opacity: 0; }
+	}
+	.lj-fishwrap {
+		position: absolute;
+		top: 16%;
+		left: 50%;
+		width: 13.5rem;
+		height: 13.5rem;
+		margin-left: -6.75rem;
+		border-radius: 999px;
+		overflow: hidden;
+		border: 4px solid rgb(190 235 255 / 0.5);
+		box-shadow: 0 18px 44px rgb(0 0 0 / 0.35), inset 0 0 44px rgb(125 211 252 / 0.25);
+		animation: lj-swim 9s ease-in-out infinite;
+	}
+	@keyframes lj-swim {
+		0%, 100% { transform: translate(-16%, 0) rotate(-2deg); }
+		50% { transform: translate(16%, -4%) rotate(2deg); }
+	}
+	.lj-fish {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.lj-say {
+		position: relative;
+		margin-top: 15rem;
+		max-width: 26rem;
+		text-align: center;
+		background: rgb(255 255 255 / 0.92);
+		color: #123;
+		font-size: 0.92rem;
+		line-height: 1.55;
+		padding: 0.6rem 1rem;
+		border-radius: 1rem;
+		box-shadow: 0 8px 22px rgb(0 0 0 / 0.25);
+	}
+	.lj-title {
+		position: relative;
+		margin-top: 1.1rem;
+		font-size: 2rem;
+		font-weight: 800;
+		letter-spacing: 0.35em;
+		text-indent: 0.35em;
+	}
+	.lj-sub {
+		position: relative;
+		font-size: 0.85rem;
+		opacity: 0.8;
+	}
+	.lj-panel {
+		padding: 1.1rem 1.25rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+	.lj-actions {
+		display: flex;
+		gap: 0.6rem;
+		flex-wrap: wrap;
+	}
+	.lj-btn {
+		flex: 1;
+		min-width: 9rem;
+		padding: 0.7rem 0.5rem;
+		border-radius: 0.9rem;
+		font-weight: 700;
+		font-size: 0.95rem;
+		background: rgb(128 128 128 / 0.12);
+		transition: transform 0.15s ease, background 0.15s ease;
+	}
+	.lj-btn:hover {
+		background: rgb(128 128 128 / 0.2);
+		transform: translateY(-1px);
+	}
+	.lj-btn:disabled {
+		opacity: 0.45;
+		transform: none;
+	}
+	.lj-btn small {
+		opacity: 0.6;
+		font-weight: 600;
+	}
+	.lj-status-row {
+		display: flex;
+		align-items: baseline;
+		gap: 0.7rem;
+	}
+	.lj-level {
+		font-size: 1.25rem;
+		font-weight: 800;
+		color: var(--primary);
+	}
+	.lj-exp {
+		font-size: 0.85rem;
+		opacity: 0.75;
+	}
+	.lj-next {
+		font-size: 0.78rem;
+		opacity: 0.55;
+		margin-left: auto;
+	}
+	.lj-bar {
+		margin-top: 0.45rem;
+		height: 0.55rem;
+		border-radius: 999px;
+		background: rgb(128 128 128 / 0.16);
+		overflow: hidden;
+	}
+	.lj-fill {
+		height: 100%;
+		width: 0%;
+		border-radius: 999px;
+		background: var(--primary);
+		transition: width 0.5s ease;
+	}
+	.lj-hint {
+		margin-top: 0.5rem;
+		font-size: 0.8rem;
+		opacity: 0.6;
+	}
+	.lj-unlocks {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+		gap: 0.45rem;
+	}
+	:global(.lj-unlock) {
+		font-size: 0.82rem;
+		padding: 0.5rem 0.7rem;
+		border-radius: 0.7rem;
+		background: rgb(128 128 128 / 0.1);
+	}
+	:global(.lj-unlock--locked) {
+		opacity: 0.5;
+	}
+</style>
+
+<script>
+	(() => {
+		const KEY = "feiyuExpV1";
+		const LEVELS = [0, 30, 80, 160, 280, 450, 700, 1000];
+		const POSES: Record<string, string> = {
+			idle: "/assets/images/fish/main.jpg",
+			wave: "/assets/images/fish/wave.jpg",
+			bubbles: "/assets/images/fish/bubbles.jpg",
+		};
+		const UNLOCKS = [
+			{ lv: 1, text: "待机浮游 · 基础台词" },
+			{ lv: 2, text: "招手姿态 · 开心台词" },
+			{ lv: 3, text: "吐泡泡姿态 · 介绍台词" },
+			{ lv: 4, text: "害羞台词包" },
+			{ lv: 5, text: "小骄傲台词包" },
+			{ lv: 6, text: "晚安台词包" },
+		];
+		const LINES: Record<string, { min: number; text: string }[]> = {
+			pat: [
+				{ min: 1, text: "嘿嘿……摸头会长高高的，继续继续。" },
+				{ min: 1, text: "呜呼，被摸头了，腮帮子都鼓起来了。" },
+				{ min: 4, text: "就、就一下哦……才没有很开心呢。（尾巴摇得飞快）" },
+			],
+			feed: [
+				{ min: 1, text: "嗷呜！小鱼干！你最好了！" },
+				{ min: 1, text: "吧唧吧唧……再来一条也不是不行。" },
+				{ min: 5, text: "本站特供小鱼干，由站长的爱发电烘焙（并没有这种工序）。" },
+			],
+			play: [
+				{ min: 1, text: "追泡泡比赛——我先游为敬！" },
+				{ min: 3, text: "看我的泡泡连环阵，biubiubiu——" },
+				{ min: 6, text: "夜深了还陪我玩……那、那陪你说句晚安，早点睡呀。" },
+			],
+		};
+
+		interface Store { exp: number; day: string; chat: number; music: number; feed?: number }
+		const today = () => new Date().toLocaleDateString("sv");
+		const load = (): Store => {
+			try {
+				const s = JSON.parse(localStorage.getItem(KEY) || "null");
+				if (s && typeof s.exp === "number") return s;
+			} catch {}
+			return { exp: 0, day: today(), chat: 0, music: 0, feed: 0 };
+		};
+		let store = load();
+		if (store.day !== today()) {
+			store = { exp: store.exp, day: today(), chat: 0, music: 0, feed: 0 };
+			localStorage.setItem(KEY, JSON.stringify(store));
+		}
+		const save = () => localStorage.setItem(KEY, JSON.stringify(store));
+		const levelOf = (exp: number) => {
+			let lv = 1;
+			LEVELS.forEach((t, i) => { if (exp >= t) lv = i + 1; });
+			return lv;
+		};
+
+		const fish = document.querySelector("[data-lj-fish]") as HTMLImageElement;
+		const say = document.querySelector("[data-lj-say]") as HTMLElement;
+		const levelEl = document.querySelector("[data-lj-level]") as HTMLElement;
+		const expEl = document.querySelector("[data-lj-exp]") as HTMLElement;
+		const nextEl = document.querySelector("[data-lj-next]") as HTMLElement;
+		const fillEl = document.querySelector("[data-lj-fill]") as HTMLElement;
+		const unlocksEl = document.querySelector("[data-lj-unlocks]") as HTMLElement;
+		if (!fish || !say) return;
+
+		let poseTimer: number | undefined;
+		const pose = (p: string, hold = 3000) => {
+			fish.src = POSES[p] || POSES.idle;
+			if (poseTimer) clearTimeout(poseTimer);
+			if (p !== "idle") poseTimer = window.setTimeout(() => (fish.src = POSES.idle), hold);
+		};
+
+		const render = () => {
+			const lv = levelOf(store.exp);
+			levelEl.textContent = `Lv.${lv}`;
+			expEl.textContent = `${store.exp} 经验`;
+			const cur = LEVELS[lv - 1] ?? 0;
+			const next = LEVELS[lv];
+			nextEl.textContent = next ? `距 Lv.${lv + 1} 还差 ${next - store.exp}` : "已满级，是大肥鱼了";
+			fillEl.style.width = `${next ? Math.min(100, Math.round(((store.exp - cur) / (next - cur)) * 100)) : 100}%`;
+			unlocksEl.innerHTML = "";
+			for (const u of UNLOCKS) {
+				const li = document.createElement("li");
+				li.className = "lj-unlock" + (lv >= u.lv ? "" : " lj-unlock--locked");
+				li.textContent = `${lv >= u.lv ? "✓" : "🔒"} Lv.${u.lv} · ${u.text}`;
+				unlocksEl.appendChild(li);
+			}
+		};
+
+		const cooldowns: Record<string, number> = { pat: 8000, feed: 0, play: 20000 };
+		const gains: Record<string, number> = { pat: 3, feed: 5, play: 4 };
+		const poses: Record<string, string> = { pat: "wave", feed: "bubbles", play: "bubbles" };
+
+		const gain = (amount: number) => {
+			const before = levelOf(store.exp);
+			store.exp += amount;
+			save();
+			render();
+			if (levelOf(store.exp) > before) {
+				pose("wave", 4200);
+				say.textContent = `哇——我升级啦！现在是 Lv.${levelOf(store.exp)}！新台词解锁了哦。`;
+			}
+		};
+
+		document.querySelectorAll("[data-lj-act]").forEach((el) => {
+			el.addEventListener("click", () => {
+				const act = (el as HTMLElement).dataset.ljAct || "pat";
+				if (act === "feed" && (store.feed || 0) >= 3) {
+					say.textContent = "嗝——今天的小鱼干吃满三条啦，明天再喂好不好。";
+					pose("idle");
+					return;
+				}
+				const lv = levelOf(store.exp);
+				const pool = (LINES[act] || []).filter((l) => lv >= l.min);
+				const line = pool[Math.floor(Math.random() * pool.length)];
+				if (line) say.textContent = line.text;
+				pose(poses[act] || "idle");
+				if (act === "feed") store.feed = (store.feed || 0) + 1;
+				gain(gains[act] || 0);
+				const btn = el as HTMLButtonElement;
+				const cd = cooldowns[act] || 0;
+				if (cd > 0) {
+					btn.disabled = true;
+					setTimeout(() => (btn.disabled = false), cd);
+				}
+			});
+		});
+
+		window.addEventListener("fishExp", (e: Event) => {
+			const d = (e as CustomEvent<{ amount: number }>).detail;
+			if (d?.amount) gain(d.amount);
+		});
+
+		render();
+	})();
+</script>

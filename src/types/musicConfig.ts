@@ -39,6 +39,22 @@ export type MusicPlayerConfig = {
 		fallbackApis?: string[];
 	};
 
+	// 全局浮动播放器（第三批）：只做壳 + 整单镜像，音频走外部直链
+	floatingPlayer?: {
+		// 是否启用
+		enabled?: boolean;
+
+		// 歌单列表：每平台一条，id 为空的不显示；platform: wy=网易云 tx=QQ kg=酷狗
+		playlists?: Array<{
+			platform: "wy" | "tx" | "kg";
+			id: string;
+			label: string;
+		}>;
+
+		// 默认音质
+		quality?: string;
+	};
+
 	// 本地音乐配置（当 mode 为 'local' 时使用）
 	local?: {
 		playlist?: Array<{

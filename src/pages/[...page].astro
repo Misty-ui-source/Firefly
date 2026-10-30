@@ -7,6 +7,7 @@ import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import MainGridLayout from "@/layouts/MainGridLayout.astro";
 import DraggableStickers from "@/components/features/DraggableStickers.astro";
+import DailyBriefing from "@/components/features/DailyBriefing.astro";
 import "@/styles/banner-home.css";
 import { getSortedPosts } from "@/utils/content-utils";
 import { url } from "@/utils/url-utils";
@@ -31,6 +32,7 @@ const heading =
 
 <MainGridLayout heading={heading}>
   {page.currentPage === 1 && <DraggableStickers />}
+  {page.currentPage === 1 && <DailyBriefing />}
   <div class="pure-page-info"><span class="pure-page-info-text">第 {page.currentPage} 页 · 本页 {len} 篇，共 {page.total} 篇</span><a href={url("/archive/")}>按年份查看全部文章 →</a></div>
   <PostPage page={page} />
   {

@@ -12,6 +12,9 @@ import MusicManager from "@components/features/MusicManager.astro";
 import MusicPlayerView from "@components/features/MusicPlayerView.astro";
 import SakuraEffect from "@components/features/SakuraEffect.astro";
 import ParticleEffects from "@components/features/ParticleEffects.astro";
+import DanmakuLayer from "@components/features/DanmakuLayer.astro";
+import FloatingPlayer from "@components/features/FloatingPlayer.astro";
+import FloatingFish from "@components/features/FloatingFish.astro";
 import WavesEffect from "@components/features/WavesEffect.astro";
 import ConfigCarrier from "@components/layout/ConfigCarrier.astro";
 
@@ -773,6 +776,13 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
 
     <!-- Particle Effects（雪花 / 萤火虫） -->
     <ParticleEffects />
+
+    <!-- 碎碎念弹幕（第二批，常驻层） -->
+    <DanmakuLayer />
+
+    <!-- 全局浮动播放器 + 肥鱼（第三批，常驻层） -->
+    <FloatingPlayer />
+    <FloatingFish />
 
     <!-- Water Waves Effect -->
     <WavesEffect />

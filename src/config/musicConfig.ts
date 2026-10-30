@@ -98,4 +98,15 @@ export const musicPlayerConfig: MusicPlayerConfig = {
 			},
 		],
 	},
+
+	// 全局浮动播放器（第三批）：整单镜像——站长在平台 App 里管歌单，
+	// 博客打开自动跟随。加 QQ / 酷狗歌单时往 playlists 里各加一条
+	// { platform: "tx", id: "歌单ID", label: "QQ 歌单" } 即可。
+	floatingPlayer: {
+		enabled: true,
+		quality: "320k",
+		playlists: [
+			{ platform: "wy", id: "2804070207", label: "我喜欢的音乐" },
+		],
+	},
 };

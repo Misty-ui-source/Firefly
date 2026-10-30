@@ -241,6 +241,12 @@ html.dark[data-site-mode="astral"] .card-base-transparent {
 		0 8px 10px -6px rgb(0 0 0 / 0.35);
 	color: #f1f5f9;
 }
+/* 暗色下 bento 格同样钉浅色前景：格子是自研 .astral-tile、不是 .card-base，
+   上面的卡片规则盖不到，格内复用的小部件文字（资料名/简介、此刻卡、
+   碎碎念标题、那年今日条）会黑字落暗玻璃（2026-10-30 暗扫增量扫出） */
+html.dark[data-site-mode="astral"] body.is-home .astral-tile {
+	color: #f1f5f9;
+}
 /* 卡片边框开关在璨夜下不改变玻璃语法（形态优先，与谐彩 / 顽彩同理） */
 html.enable-card-border[data-site-mode="astral"] .card-base,
 html.enable-card-border[data-site-mode="astral"] .card-base-transparent,
@@ -1050,4 +1056,29 @@ html[data-site-mode="astral"] body.is-home .astral-tile--now:has(.lrc-drawer[sty
 html[data-site-mode="astral"] body.is-home .astral-tile--now:has(.playlist-drawer[style*="grid-template-rows: 1fr"]),
 html[data-site-mode="astral"] body.is-home .astral-tile--now:has(.lrc-drawer[style*="grid-template-rows: 1fr"]) {
   overflow: hidden;
+}
+
+/* 每日选刊格（第二批）：矩阵尾整行——实面第 10 行 / 星尘第 11 行 */
+@media (min-width: 1280px) {
+  html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid .astral-tile--briefing {
+    display: flex; grid-column: 1 / -1; grid-row: 10;
+  }
+  html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid .astral-tile--briefing {
+    display: flex; grid-column: 1 / -1; grid-row: 11;
+  }
+}
+
+/* 暗色璨夜格内显式黑字点名修复（2026-10-30 暗扫第二轮）：上面给
+   .astral-tile 钉的继承前景盖不住这些自带黑色的类（资料名/简介、
+   此刻卡标题与接下来播放、碎碎念标题、那年今日条），逐个钉浅色 */
+html.dark[data-site-mode="astral"] body.is-home .astral-tile .profile-name,
+html.dark[data-site-mode="astral"] body.is-home .astral-tile .profile-bio,
+html.dark[data-site-mode="astral"] body.is-home .astral-tile .profile-sign,
+html.dark[data-site-mode="astral"] body.is-home .astral-tile .now-title,
+html.dark[data-site-mode="astral"] body.is-home .astral-tile .next-title,
+html.dark[data-site-mode="astral"] body.is-home .astral-tile .next-artist,
+html.dark[data-site-mode="astral"] body.is-home .astral-tile .thoughts-item-title,
+html.dark[data-site-mode="astral"] body.is-home .astral-tile .daystrip-title,
+html.dark[data-site-mode="astral"] body.is-home .astral-tile .daystrip-main b {
+  color: #e2e8f0;
 }

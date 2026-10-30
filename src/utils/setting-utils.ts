@@ -1345,8 +1345,12 @@ export function setSakuraEnabled(enabled: boolean): void {
 }
 
 // Snow effect functions
+// 季节雪（第二批）：配置未开时，冬季（12/1/2 月，按访客本地时间）默认开；
+// 访客在调色板里手动存过 snowEnabled 的，以他的选择为准。
 export function getDefaultSnowEnabled(): boolean {
-	return snowConfig?.enable ?? false;
+	if (snowConfig?.enable) return true;
+	const m = new Date().getMonth();
+	return m === 11 || m === 0 || m === 1;
 }
 
 export function getStoredSnowEnabled(): boolean {
@@ -1829,4 +1833,62 @@ export function setCardFollowThemeEnabled(enabled: boolean): void {
 	} else {
 		document.body.classList.remove("card-follow-theme-hue");
 	}
+}
+// ─── 碎碎念弹幕（第二批） ─────────────────────────────────────
+// 内容源 = thoughtsConfig 碎碎念；开关协议与雪花一致：localStorage 的
+// danmakuEnabled 优先、缺省开；密度/速度存 danmakuDensity / danmakuSpeed。
+// DanmakuLayer 监听 danmakuToggle 实时开关、danmakuSettings 实时改档。
+export function getDefaultDanmakuEnabled(): boolean {
+	return true;
+}
+
+export function getStoredDanmakuEnabled(): boolean {
+	if (typeof localStorage === "undefined") {
+		return getDefaultDanmakuEnabled();
+	}
+	const stored = localStorage.getItem("danmakuEnabled");
+	if (stored === null) {
+		return getDefaultDanmakuEnabled();
+	}
+	return stored === "true";
+}
+
+export function setDanmakuEnabled(enabled: boolean): void {
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.setItem !== "function"
+	) {
+		return;
+	}
+	localStorage.setItem("danmakuEnabled", String(enabled));
+	window.dispatchEvent(
+		new CustomEvent("danmakuToggle", { detail: { enabled } }),
+	);
+}
+
+export type DanmakuDensity = "low" | "mid" | "high";
+export type DanmakuSpeed = "slow" | "mid" | "fast";
+
+export function getDanmakuDensity(): DanmakuDensity {
+	if (typeof localStorage === "undefined") return "mid";
+	const v = localStorage.getItem("danmakuDensity");
+	return v === "low" || v === "high" ? v : "mid";
+}
+
+export function getDanmakuSpeed(): DanmakuSpeed {
+	if (typeof localStorage === "undefined") return "mid";
+	const v = localStorage.getItem("danmakuSpeed");
+	return v === "slow" || v === "fast" ? v : "mid";
+}
+
+export function setDanmakuDensity(v: DanmakuDensity): void {
+	if (typeof localStorage === "undefined") return;
+	localStorage.setItem("danmakuDensity", v);
+	window.dispatchEvent(new CustomEvent("danmakuSettings"));
+}
+
+export function setDanmakuSpeed(v: DanmakuSpeed): void {
+	if (typeof localStorage === "undefined") return;
+	localStorage.setItem("danmakuSpeed", v);
+	window.dispatchEvent(new CustomEvent("danmakuSettings"));
 }

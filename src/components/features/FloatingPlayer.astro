@@ -1,0 +1,386 @@
+---
+// 全局浮动播放器（第三批）：常驻层（挂 Layout 的 Swup 容器外，跨页续播）。
+// 只做壳 + 整单镜像：歌单从 /api/music/playlist 拉（平台公开歌单接口），
+// 点播才调 /api/music/resolve 取外部直链，博客不存任何音频。
+// 歌单配置在 musicPlayerConfig.floatingPlayer（每平台一条，id 空不显示）。
+import { musicPlayerConfig } from "@/config/musicConfig";
+
+const fp = musicPlayerConfig.floatingPlayer;
+const enabled = !!fp?.enabled;
+const playlists = (fp?.playlists || []).filter((p) => p.id);
+const quality = fp?.quality || "320k";
+---
+
+{
+	enabled && playlists.length > 0 && (
+		<div id="floating-player" hidden>
+			<div class="fp-panel" data-fp-panel hidden>
+				<div class="fp-tabs" role="tablist">
+					{playlists.map((p, i) => (
+						<button
+							type="button"
+							class:list={["fp-tab", { "fp-tab--active": i === 0 }]}
+							data-fp-tab={p.platform}
+							role="tab"
+						>
+							{p.label}
+						</button>
+					))}
+					<span class="fp-status" data-fp-status />
+				</div>
+				<ul class="fp-list" data-fp-list>
+					<li class="fp-hint">点一首开始听吧</li>
+				</ul>
+			</div>
+			<div class="fp-bar">
+				<img class="fp-cover" data-fp-cover alt="" hidden />
+				<div class="fp-cover fp-cover--empty" data-fp-cover-empty>♪</div>
+				<div class="fp-meta">
+					<span class="fp-title" data-fp-title>浮动播放器</span>
+					<span class="fp-artist" data-fp-artist>歌单已就绪</span>
+				</div>
+				<button type="button" class="fp-btn" data-fp-prev aria-label="上一首">⏮</button>
+				<button type="button" class="fp-btn fp-btn--main" data-fp-toggle aria-label="播放/暂停">▶</button>
+				<button type="button" class="fp-btn" data-fp-next aria-label="下一首">⏭</button>
+				<button type="button" class="fp-btn" data-fp-expand aria-label="歌单">☰</button>
+				<button type="button" class="fp-btn" data-fp-close aria-label="关闭">✕</button>
+			</div>
+			<audio data-fp-audio preload="none" />
+			<script type="application/json" data-fp-config set:html={JSON.stringify({ playlists, quality })} />
+		</div>
+	)
+}
+
+<style>
+	#floating-player {
+		position: fixed;
+		left: 1rem;
+		bottom: 1rem;
+		z-index: 80;
+		width: min(21rem, calc(100vw - 2rem));
+		color: #1f2430;
+	}
+	:global(html.dark) #floating-player {
+		color: #e9edf5;
+	}
+	.fp-panel {
+		margin-bottom: 0.5rem;
+		border-radius: 1rem;
+		padding: 0.6rem;
+		background: var(--card-bg, rgb(255 255 255 / 0.92));
+		box-shadow: 0 12px 32px rgb(0 0 0 / 0.22);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+	}
+	.fp-tabs {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		flex-wrap: wrap;
+		margin-bottom: 0.45rem;
+	}
+	.fp-tab {
+		font-size: 0.75rem;
+		font-weight: 700;
+		padding: 0.22rem 0.6rem;
+		border-radius: 999px;
+		background: rgb(128 128 128 / 0.14);
+	}
+	.fp-tab--active {
+		background: var(--primary);
+		color: white;
+	}
+	.fp-status {
+		margin-left: auto;
+		font-size: 0.72rem;
+		opacity: 0.6;
+	}
+	.fp-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		max-height: 15rem;
+		overflow-y: auto;
+	}
+	:global(.fp-track) {
+		display: flex;
+		gap: 0.5rem;
+		align-items: baseline;
+		width: 100%;
+		text-align: left;
+		padding: 0.38rem 0.45rem;
+		border-radius: 0.5rem;
+		font-size: 0.83rem;
+	}
+	:global(.fp-track:hover) {
+		background: rgb(128 128 128 / 0.12);
+	}
+	:global(.fp-track--active) {
+		color: var(--primary);
+		font-weight: 700;
+	}
+	:global(.fp-track--failed) {
+		opacity: 0.45;
+	}
+	:global(.fp-track-name) {
+		flex: 1;
+		min-width: 0;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	:global(.fp-track-artist) {
+		flex: none;
+		font-size: 0.72rem;
+		opacity: 0.6;
+		max-width: 7rem;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	:global(.fp-hint) {
+		padding: 0.5rem 0.45rem;
+		font-size: 0.8rem;
+		opacity: 0.6;
+	}
+	.fp-bar {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		border-radius: 999px;
+		padding: 0.4rem 0.55rem;
+		background: var(--card-bg, rgb(255 255 255 / 0.92));
+		box-shadow: 0 12px 32px rgb(0 0 0 / 0.22);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+	}
+	.fp-cover {
+		width: 2.3rem;
+		height: 2.3rem;
+		border-radius: 999px;
+		object-fit: cover;
+		flex: none;
+	}
+	.fp-cover--empty {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgb(128 128 128 / 0.16);
+		font-size: 1rem;
+	}
+	.fp-cover--spin {
+		animation: fp-spin 9s linear infinite;
+	}
+	@keyframes fp-spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+	.fp-meta {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		line-height: 1.25;
+	}
+	.fp-title {
+		font-size: 0.83rem;
+		font-weight: 700;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.fp-artist {
+		font-size: 0.7rem;
+		opacity: 0.6;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.fp-btn {
+		flex: none;
+		width: 1.9rem;
+		height: 1.9rem;
+		border-radius: 999px;
+		font-size: 0.8rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.fp-btn:hover {
+		background: rgb(128 128 128 / 0.14);
+	}
+	.fp-btn--main {
+		background: var(--primary);
+		color: white;
+		width: 2.15rem;
+		height: 2.15rem;
+	}
+</style>
+
+<script>
+	(() => {
+		const root = document.getElementById("floating-player");
+		if (!root) return;
+		if (sessionStorage.getItem("fpClosed") === "1") return;
+		root.hidden = false;
+
+		const cfgEl = root.querySelector("[data-fp-config]");
+		let cfg = { playlists: [] as { platform: string; id: string; label: string }[], quality: "320k" };
+		try {
+			cfg = JSON.parse(cfgEl?.textContent || "{}");
+		} catch {}
+		if (!cfg.playlists?.length) return;
+
+		const $ = (s: string) => root.querySelector(s) as HTMLElement;
+		const audio = root.querySelector("[data-fp-audio]") as HTMLAudioElement;
+		const panel = $("[data-fp-panel]");
+		const listEl = $("[data-fp-list]");
+		const statusEl = $("[data-fp-status]");
+		const titleEl = $("[data-fp-title]");
+		const artistEl = $("[data-fp-artist]");
+		const coverEl = root.querySelector("[data-fp-cover]") as HTMLImageElement;
+		const coverEmpty = $("[data-fp-cover-empty]");
+		const toggleBtn = $("[data-fp-toggle]");
+
+		interface Track { id: string; name: string; artist: string; pic: string }
+		const cache = new Map<string, Track[]>();
+		let platform = cfg.playlists[0].platform;
+		let tracks: Track[] = [];
+		let index = -1;
+		let expPinged = false;
+
+		const setStatus = (t: string) => (statusEl.textContent = t);
+
+		function renderList() {
+			listEl.innerHTML = "";
+			tracks.forEach((t, i) => {
+				const li = document.createElement("li");
+				const btn = document.createElement("button");
+				btn.type = "button";
+				btn.className = "fp-track" + (i === index ? " fp-track--active" : "");
+				btn.innerHTML = "";
+				const name = document.createElement("span");
+				name.className = "fp-track-name";
+				name.textContent = t.name;
+				const artist = document.createElement("span");
+				artist.className = "fp-track-artist";
+				artist.textContent = t.artist;
+				btn.append(name, artist);
+				btn.addEventListener("click", () => play(i));
+				li.appendChild(btn);
+				listEl.appendChild(li);
+			});
+		}
+
+		async function loadPlaylist(p: string) {
+			platform = p;
+			root.querySelectorAll("[data-fp-tab]").forEach((el) =>
+				el.classList.toggle("fp-tab--active", (el as HTMLElement).dataset.fpTab === p),
+			);
+			if (cache.has(p)) {
+				tracks = cache.get(p) as Track[];
+				renderList();
+				setStatus(`${tracks.length} 首`);
+				return;
+			}
+			setStatus("加载歌单…");
+			listEl.innerHTML = '<li class="fp-hint">加载中…</li>';
+			const entry = cfg.playlists.find((x) => x.platform === p);
+			try {
+				const res = await fetch(
+					`/api/music/playlist?platform=${p}&id=${encodeURIComponent(entry?.id || "")}`,
+				);
+				const data = await res.json();
+				if (!res.ok || !Array.isArray(data.tracks)) throw new Error(data.error || "加载失败");
+				tracks = data.tracks;
+				cache.set(p, tracks);
+				renderList();
+				setStatus(`${tracks.length} 首`);
+			} catch (e) {
+				setStatus("歌单加载失败");
+				listEl.innerHTML = '<li class="fp-hint">这个歌单暂时拉不到，换一张试试</li>';
+			}
+		}
+
+		async function play(i: number) {
+			if (i < 0 || i >= tracks.length) return;
+			index = i;
+			const t = tracks[i];
+			titleEl.textContent = t.name;
+			artistEl.textContent = t.artist;
+			if (t.pic) {
+				coverEl.src = t.pic;
+				coverEl.hidden = false;
+				coverEmpty.style.display = "none";
+			} else {
+				coverEl.hidden = true;
+				coverEmpty.style.display = "";
+			}
+			renderList();
+			setStatus("解析直链…");
+			try {
+				const q = new URLSearchParams({
+					platform,
+					id: t.id,
+					name: t.name,
+					singer: t.artist,
+					quality: cfg.quality || "320k",
+				});
+				const res = await fetch(`/api/music/resolve?${q}`);
+				const data = await res.json();
+				if (!res.ok || !data.url) throw new Error(data.error || "解析失败");
+				audio.src = data.url;
+				await audio.play();
+				setStatus("");
+				if (!expPinged) {
+					expPinged = true;
+					window.dispatchEvent(new CustomEvent("fishExp", { detail: { amount: 3, reason: "music" } }));
+				} else {
+					window.dispatchEvent(new CustomEvent("fishExp", { detail: { amount: 1, reason: "music" } }));
+				}
+			} catch (e) {
+				setStatus("这首拿不到直链，跳下一首");
+				const rows = listEl.querySelectorAll(".fp-track");
+				rows[i]?.classList.add("fp-track--failed");
+				setTimeout(() => play((i + 1) % tracks.length), 600);
+			}
+		}
+
+		toggleBtn.addEventListener("click", async () => {
+			if (index === -1) {
+				panel.hidden = false;
+				if (!tracks.length) await loadPlaylist(platform);
+				if (tracks.length) play(0);
+				return;
+			}
+			if (audio.paused) audio.play();
+			else audio.pause();
+		});
+		$("[data-fp-next]").addEventListener("click", () => tracks.length && play((index + 1) % tracks.length));
+		$("[data-fp-prev]").addEventListener("click", () => tracks.length && play((index - 1 + tracks.length) % tracks.length));
+		$("[data-fp-expand]").addEventListener("click", async () => {
+			panel.hidden = !panel.hidden;
+			if (!panel.hidden && !tracks.length) await loadPlaylist(platform);
+		});
+		$("[data-fp-close]").addEventListener("click", () => {
+			audio.pause();
+			root.hidden = true;
+			sessionStorage.setItem("fpClosed", "1");
+		});
+		root.querySelectorAll("[data-fp-tab]").forEach((el) =>
+			el.addEventListener("click", () => loadPlaylist((el as HTMLElement).dataset.fpTab || platform)),
+		);
+		audio.addEventListener("play", () => {
+			toggleBtn.textContent = "⏸";
+			coverEl.classList.add("fp-cover--spin");
+		});
+		audio.addEventListener("pause", () => {
+			toggleBtn.textContent = "▶";
+			coverEl.classList.remove("fp-cover--spin");
+		});
+		audio.addEventListener("ended", () => {
+			if (tracks.length) play((index + 1) % tracks.length);
+		});
+	})();
+</script>

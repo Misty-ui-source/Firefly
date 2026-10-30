@@ -1,0 +1,377 @@
+---
+// 肥鱼上站（第三批）：圆滚滚的肥鱼 · 常驻悬浮窗（挂 Layout 的 Swup 容器外，
+// 五形态常驻）。形象是整幅插画，故用圆形舷窗（鱼缸）呈现，姿态图在窗内切换。
+// 大脑在 /api/fish/chat（Pages Function，DeepSeek 4.1 Flash，key 走环境变量）；
+// 没接上时她装睡。成长经验存 localStorage feiyuExpV1，与灵境 /lingjing/ 互通：
+// 来访/聊天/听歌（浮动播放器 fishExp 事件）攒经验，升级解锁姿态与台词。
+---
+
+<div id="floating-fish" hidden>
+	<div class="ff-panel" data-ff-panel hidden>
+		<header class="ff-head">
+			<div class="ff-head-meta">
+				<span class="ff-name">圆滚滚的肥鱼</span>
+				<span class="ff-level" data-ff-level>Lv.1</span>
+			</div>
+			<div class="ff-expbar"><div class="ff-expfill" data-ff-expfill></div></div>
+			<a class="ff-home" href="/lingjing/">去她的家 →</a>
+			<button type="button" class="ff-x" data-ff-close aria-label="收起">✕</button>
+		</header>
+		<div class="ff-msgs" data-ff-msgs>
+			<div class="ff-msg ff-msg--fish">呜呼——你来啦！我是圆滚滚的肥鱼，住在这个站里。想逛逛、找文章，或者随便聊聊，都可以喊我。</div>
+		</div>
+		<div class="ff-chips">
+			<button type="button" class="ff-chip" data-ff-chip="你好呀，介绍一下你自己">打个招呼</button>
+			<button type="button" class="ff-chip" data-ff-chip="最近有什么新文章？">最近新文</button>
+			<button type="button" class="ff-chip" data-ff-chip="带我逛逛这个站，有什么好玩的页面？">带我逛逛</button>
+		</div>
+		<form class="ff-form" data-ff-form>
+			<input class="ff-input" data-ff-input type="text" maxlength="200" placeholder="跟肥鱼说句话…" autocomplete="off" />
+			<button class="ff-send" type="submit">发送</button>
+		</form>
+	</div>
+	<button type="button" class="ff-fish" data-ff-fish aria-label="圆滚滚的肥鱼">
+		<img class="ff-img" data-ff-img src="/assets/images/fish/idle.jpg" alt="圆滚滚的肥鱼" />
+		<span class="ff-zzz" data-ff-zzz hidden>💤</span>
+		<span class="ff-badge" data-ff-badge>Lv.1</span>
+	</button>
+</div>
+
+<style>
+	#floating-fish {
+		position: fixed;
+		right: 1rem;
+		bottom: 1rem;
+		z-index: 80;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 0.6rem;
+		color: #1f2430;
+	}
+	:global(html.dark) #floating-fish {
+		color: #e9edf5;
+	}
+	.ff-fish {
+		position: relative;
+		width: 5.25rem;
+		height: 5.25rem;
+		border-radius: 999px;
+		overflow: hidden;
+		border: 3px solid var(--primary, #14b8a6);
+		box-shadow: 0 10px 26px rgb(0 0 0 / 0.28);
+		animation: ff-bob 3.6s ease-in-out infinite;
+		flex: none;
+	}
+	@keyframes ff-bob {
+		0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+		50% { transform: translateY(-7px) rotate(1.5deg); }
+	}
+	.ff-img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.ff-zzz {
+		position: absolute;
+		top: 0.2rem;
+		right: 0.45rem;
+		font-size: 1rem;
+	}
+	.ff-badge {
+		position: absolute;
+		left: 50%;
+		bottom: 0.28rem;
+		transform: translateX(-50%);
+		font-size: 0.62rem;
+		font-weight: 800;
+		padding: 0.05rem 0.42rem;
+		border-radius: 999px;
+		background: var(--primary, #14b8a6);
+		color: white;
+		white-space: nowrap;
+	}
+	.ff-panel {
+		width: min(20.5rem, calc(100vw - 2rem));		border-radius: 1.1rem;
+		padding: 0.75rem;
+		background: var(--card-bg, rgb(255 255 255 / 0.94));
+		box-shadow: 0 14px 36px rgb(0 0 0 / 0.25);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+		display: flex;
+		flex-direction: column;
+		gap: 0.55rem;
+	}
+	.ff-panel[hidden] {
+		display: none;
+	}
+	.ff-head {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.ff-head-meta {
+		display: flex;
+		align-items: baseline;
+		gap: 0.4rem;
+	}
+	.ff-name {
+		font-weight: 800;
+		font-size: 0.92rem;
+	}
+	.ff-level {
+		font-size: 0.72rem;
+		font-weight: 700;
+		color: var(--primary);
+	}
+	.ff-expbar {
+		flex: 1;
+		height: 0.36rem;
+		border-radius: 999px;
+		background: rgb(128 128 128 / 0.18);
+		overflow: hidden;
+	}
+	.ff-expfill {
+		height: 100%;
+		width: 0%;
+		border-radius: 999px;
+		background: var(--primary);
+		transition: width 0.5s ease;
+	}
+	.ff-home {
+		font-size: 0.72rem;
+		white-space: nowrap;
+		opacity: 0.75;
+	}
+	.ff-home:hover {
+		opacity: 1;
+		color: var(--primary);
+	}
+	.ff-x {
+		font-size: 0.8rem;
+		opacity: 0.6;
+		padding: 0.15rem 0.3rem;
+	}
+	.ff-msgs {
+		max-height: 15rem;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+		gap: 0.45rem;
+		padding-right: 0.15rem;
+	}
+	:global(.ff-msg) {
+		max-width: 88%;
+		padding: 0.45rem 0.65rem;
+		border-radius: 0.8rem;
+		font-size: 0.83rem;
+		line-height: 1.5;
+		white-space: pre-wrap;
+		word-break: break-word;
+	}
+	:global(.ff-msg--fish) {
+		align-self: flex-start;
+		background: rgb(128 128 128 / 0.13);
+		border-bottom-left-radius: 0.25rem;
+	}
+	:global(.ff-msg--user) {
+		align-self: flex-end;
+		background: var(--primary);
+		color: white;
+		border-bottom-right-radius: 0.25rem;
+	}
+	.ff-chips {
+		display: flex;
+		gap: 0.35rem;
+		flex-wrap: wrap;
+	}
+	.ff-chip {
+		font-size: 0.72rem;
+		padding: 0.22rem 0.55rem;
+		border-radius: 999px;
+		background: rgb(128 128 128 / 0.13);
+	}
+	.ff-chip:hover {
+		background: rgb(128 128 128 / 0.22);
+	}
+	.ff-form {
+		display: flex;
+		gap: 0.4rem;
+	}
+	.ff-input {
+		flex: 1;
+		min-width: 0;
+		font-size: 0.83rem;
+		padding: 0.45rem 0.65rem;
+		border-radius: 0.7rem;
+		background: rgb(128 128 128 / 0.1);
+		outline: none;
+	}
+	.ff-send {
+		font-size: 0.83rem;
+		font-weight: 700;
+		padding: 0.45rem 0.8rem;
+		border-radius: 0.7rem;
+		background: var(--primary);
+		color: white;
+	}
+</style>
+
+<script>
+	(() => {
+		const root = document.getElementById("floating-fish");
+		if (!root) return;
+		root.hidden = false;
+
+		const POSES: Record<string, string> = {
+			idle: "/assets/images/fish/idle.jpg",
+			wave: "/assets/images/fish/wave.jpg",
+			bubbles: "/assets/images/fish/bubbles.jpg",
+			sleepy: "/assets/images/fish/idle.jpg",
+		};
+		const LEVELS = [0, 30, 80, 160, 280, 450, 700, 1000];
+		const KEY = "feiyuExpV1";
+
+		interface Store { exp: number; day: string; chat: number; music: number }
+		const today = () => new Date().toLocaleDateString("sv");
+		const load = (): Store => {
+			try {
+				const s = JSON.parse(localStorage.getItem(KEY) || "null");
+				if (s && typeof s.exp === "number") return s;
+			} catch {}
+			return { exp: 0, day: today(), chat: 0, music: 0 };
+		};
+		let store = load();
+		if (store.day !== today()) {
+			store = { exp: store.exp, day: today(), chat: 0, music: 0 };
+			store.exp += 5; // 每日来访
+			save();
+		}
+		function save() {
+			localStorage.setItem(KEY, JSON.stringify(store));
+		}
+		const levelOf = (exp: number) => {
+			let lv = 1;
+			LEVELS.forEach((t, i) => { if (exp >= t) lv = i + 1; });
+			return lv;
+		};
+
+		const img = root.querySelector("[data-ff-img]") as HTMLImageElement;
+		const zzz = root.querySelector("[data-ff-zzz]") as HTMLElement;
+		const badge = root.querySelector("[data-ff-badge]") as HTMLElement;
+		const levelEl = root.querySelector("[data-ff-level]") as HTMLElement;
+		const fillEl = root.querySelector("[data-ff-expfill]") as HTMLElement;
+		const panel = root.querySelector("[data-ff-panel]") as HTMLElement;
+		const msgs = root.querySelector("[data-ff-msgs]") as HTMLElement;
+		const form = root.querySelector("[data-ff-form]") as HTMLFormElement;
+		const input = root.querySelector("[data-ff-input]") as HTMLInputElement;
+
+		let poseTimer: number | undefined;
+		function pose(act: string, holdMs = 3200) {
+			img.src = POSES[act] || POSES.idle;
+			zzz.hidden = act !== "sleepy";
+			if (poseTimer) clearTimeout(poseTimer);
+			if (act !== "idle") {
+				poseTimer = window.setTimeout(() => {
+					img.src = POSES.idle;
+					zzz.hidden = true;
+				}, holdMs);
+			}
+		}
+
+		function renderExp() {
+			const lv = levelOf(store.exp);
+			badge.textContent = `Lv.${lv}`;
+			levelEl.textContent = `Lv.${lv} · ${store.exp} 经验`;
+			const cur = LEVELS[lv - 1] ?? 0;
+			const next = LEVELS[lv] ?? cur + 300;
+			fillEl.style.width = `${Math.min(100, Math.round(((store.exp - cur) / (next - cur)) * 100))}%`;
+		}
+
+		function addMsg(text: string, who: "fish" | "user") {
+			const div = document.createElement("div");
+			div.className = `ff-msg ff-msg--${who}`;
+			div.textContent = text;
+			msgs.appendChild(div);
+			msgs.scrollTop = msgs.scrollHeight;
+			return div;
+		}
+
+		function gain(amount: number, reason: string) {
+			if (reason === "chat") {
+				const add = Math.min(amount, Math.max(0, 20 - store.chat));
+				store.chat += add;
+				amount = add;
+			}
+			if (reason === "music") {
+				const add = Math.min(amount, Math.max(0, 10 - store.music));
+				store.music += add;
+				amount = add;
+			}
+			if (amount <= 0) return;
+			const before = levelOf(store.exp);
+			store.exp += amount;
+			save();
+			renderExp();
+			const after = levelOf(store.exp);
+			if (after > before) {
+				pose("wave", 4200);
+				addMsg(`哇——我升级啦！现在是 Lv.${after}！谢谢你陪我玩，嘿嘿。`, "fish");
+			}
+		}
+
+		window.addEventListener("fishExp", (e: Event) => {
+			const d = (e as CustomEvent<{ amount: number; reason: string }>).detail;
+			if (d) gain(d.amount || 0, d.reason || "");
+		});
+
+		root.querySelector("[data-ff-fish]")?.addEventListener("click", () => {
+			panel.hidden = !panel.hidden;
+			if (!panel.hidden) input.focus();
+		});
+		root.querySelector("[data-ff-close]")?.addEventListener("click", () => {
+			panel.hidden = true;
+		});
+
+		let busy = false;
+		async function send(text: string) {
+			const msg = text.trim();
+			if (!msg || busy) return;
+			busy = true;
+			addMsg(msg, "user");
+			input.value = "";
+			const pending = addMsg("（鼓起腮帮子想一想……）", "fish");
+			pose("bubbles", 2600);
+			try {
+				const res = await fetch("/api/fish/chat", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ message: msg, path: location.pathname }),
+				});
+				const data = await res.json();
+				pending.textContent = data.say || "（肥鱼没听清，再说一遍好不好）";
+				pose(data.act || "idle");
+				gain(2, "chat");
+			} catch {
+				pending.textContent = "呜……我这边信号断了，等会儿再喊我好不好。";
+				pose("sleepy");
+			} finally {
+				busy = false;
+				msgs.scrollTop = msgs.scrollHeight;
+			}
+		}
+
+		form.addEventListener("submit", (e) => {
+			e.preventDefault();
+			send(input.value);
+		});
+		root.querySelectorAll("[data-ff-chip]").forEach((el) =>
+			el.addEventListener("click", () => {
+				panel.hidden = false;
+				send((el as HTMLElement).dataset.ffChip || "");
+			}),
+		);
+
+		renderExp();
+	})();
+</script>
