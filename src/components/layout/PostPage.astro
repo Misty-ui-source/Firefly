@@ -330,6 +330,88 @@ const coverPositionClass =
     setTimeout(initLayout, 0);
   }
 </script>
+<script is:inline>
+  // 璨夜（astral）专属：文章网格补行——分页每页 10 篇是全局设定，其他形态
+  // 不动；仅在璨夜两套子主题下，把下一页开头的文章提前借进本页网格，
+  // 补齐最后一行，免得一行空一半（2026-10-30 站长点名）。离开璨夜即撤下。
+  (function () {
+    if (window.__astralGridFill) return;
+    window.__astralGridFill = true;
+    var filling = false;
+
+    function isAstral() {
+      return document.documentElement.getAttribute('data-site-mode') === 'astral';
+    }
+    function cleanup(container) {
+      if (!container) container = document.getElementById('post-list-container');
+      if (!container) return;
+      container.querySelectorAll('[data-astral-fill]').forEach(function (el) { el.remove(); });
+    }
+    function nextPageUrl() {
+      var m = location.pathname.match(/^\/(\d+)\/?$/);
+      var cur = m ? parseInt(m[1], 10) : 1;
+      var want = '/' + (cur + 1) + '/';
+      var links = document.querySelectorAll('a[href]');
+      for (var i = 0; i < links.length; i++) {
+        var href = links[i].getAttribute('href');
+        if (href === want || href === want.slice(0, -1)) return want;
+      }
+      return null;
+    }
+    async function fill() {
+      var container = document.getElementById('post-list-container');
+      if (!container) return;
+      if (!isAstral()) { cleanup(container); return; }
+      if (!container.classList.contains('grid-mode')) { cleanup(container); return; }
+      var real = Array.prototype.filter.call(container.children, function (el) {
+        return !el.hasAttribute('data-astral-fill');
+      });
+      if (!real.length) return;
+      if (getComputedStyle(real[0]).position === 'absolute') return;
+      var top0 = real[0].offsetTop;
+      var cols = 0;
+      for (var i = 0; i < real.length; i++) { if (real[i].offsetTop === top0) cols++; else break; }
+      if (cols < 2) return;
+      var need = (cols - (real.length % cols)) % cols;
+      if (container.querySelector('[data-astral-fill]')) {
+        if (!need) cleanup(container);
+        return;
+      }
+      if (!need) return;
+      var url = nextPageUrl();
+      if (!url || filling) return;
+      filling = true;
+      try {
+        var res = await fetch(url, { credentials: 'same-origin' });
+        if (res.ok) {
+          var html = await res.text();
+          var doc = new DOMParser().parseFromString(html, 'text/html');
+          var src = doc.getElementById('post-list-container');
+          if (src) {
+            Array.prototype.slice.call(src.children, 0, need).forEach(function (card) {
+              var clone = document.importNode(card, true);
+              clone.setAttribute('data-astral-fill', '1');
+              container.appendChild(clone);
+            });
+            window.dispatchEvent(new Event('resize'));
+          }
+        }
+      } catch (e) { /* 借不到就保持原样 */ }
+      filling = false;
+    }
+    function schedule() { setTimeout(fill, 350); }
+    document.addEventListener('DOMContentLoaded', schedule);
+    document.addEventListener('swup:page:view', schedule);
+    document.addEventListener('astro:after-swap', schedule);
+    document.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('.post-list-layout-switch')) setTimeout(fill, 450);
+    });
+    new MutationObserver(schedule).observe(document.documentElement, {
+      attributes: true, attributeFilter: ['data-site-mode', 'data-astral-theme']
+    });
+    schedule();
+  })();
+</script>
 
 <style is:global>
   .post-grid-auto {
