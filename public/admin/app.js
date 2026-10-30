@@ -6220,9 +6220,10 @@ routes.theme = async () => {
     const navStyle = getIn(t, nav, /navbarStyle\s*:\s*"(\w+)"/);
     const anaM = t.match(/analyticsStyle\s*:\s*"([\w-]+)"/);
     const modeM = t.match(/siteMode\s*:\s*"(\w+)"/);
+    const astralM = t.match(/astralTheme\s*:\s*"(\w+)"/);
     const mobileMenu = getIn(t, nav, /mobileMenuStyle\s*:\s*"(\w+)"/);
     if (hue === null || border === null || follow === null || layout === null) return null;
-    return { hue: Number(hue), cardBorder: border === 'true', cardFollow: follow === 'true', layout, layoutMobile: layoutM || layout, navbarStyle: navStyle || 'classic', mobileMenuStyle: mobileMenu || 'drawer', analyticsStyle: anaM ? anaM[1] : 'classic', siteMode: modeM ? modeM[1] : 'full' };
+    return { hue: Number(hue), cardBorder: border === 'true', cardFollow: follow === 'true', layout, layoutMobile: layoutM || layout, navbarStyle: navStyle || 'classic', mobileMenuStyle: mobileMenu || 'drawer', analyticsStyle: anaM ? anaM[1] : 'classic', siteMode: modeM ? modeM[1] : 'full', astralTheme: astralM ? astralM[1] : 'solid' };
   }
   function parseBgw(t) {
     const mm = t.match(/^\tmode\s*:\s*"(\w+)"/m);
@@ -6297,6 +6298,7 @@ routes.theme = async () => {
     if (out === null) return null;
     out = out.replace(/analyticsStyle\s*:\s*"[\w-]+"/, `analyticsStyle: "${s.analyticsStyle}"`);
     out = out.replace(/siteMode\s*:\s*"\w+"/, `siteMode: "${s.siteMode}"`);
+    out = out.replace(/astralTheme\s*:\s*"\w+"/, `astralTheme: "${s.astralTheme}"`);
     return out;
   }
   function applyBgw(t, s) {
@@ -6415,6 +6417,8 @@ routes.theme = async () => {
       <div class="field"><label>移动端菜单样式</label><div class="pills">${seg('mobileMenuStyle', 'drawer', '全屏抽屉')}${seg('mobileMenuStyle', 'card', '浮层卡片')}</div></div>
       <div class="field"><label>站点形态（全站默认）</label><div class="pills">${seg('siteMode', 'full', '🌸 华彩')}${seg('siteMode', 'pure', '🍃 素简')}${seg('siteMode', 'harmony', '🎵 谐彩')}${seg('siteMode', 'brick', '🧱 顽彩')}${seg('siteMode', 'astral', '🌌 璨夜')}</div>
       <p class="hint">素简 = 简洁导航 · 专注阅读（对标朝朝听雨的 Pure 形态）：隐藏横幅壁纸、花瓣特效、看板娘与音乐浮动件，侧栏只留个人卡 / 公告 / 最近评论 / 标签，文章页正文单列、右栏只留目录。谐彩 = Material 3 色阶 · 无边框柔影（视觉参考 Shirone 主题）：整站换成色阶分层 + 极柔阴影，导航变半透顶栏，首页横幅成舞台，文章卡片做减法；内容与功能与华彩完全一致，只换气质。访客可以在博客调色板（显示设置）里自己切换形态，那是访客本地的选择，不改这里的全站默认。</p></div>
+      <div class="field"><label>璨夜默认主题</label><div class="pills">${seg('astralTheme', 'solid', '🪨 实面')}${seg('astralTheme', 'starfield', '✨ 星尘')}</div>
+      <p class="hint">只在站点形态 = 璨夜时生效：实面 = 近不透明实面卡（稳定兜底）；星尘 = 按 XinghuisamaBlogs 排版布局的玻璃版（面纱层 + 半透卡片 + 等高行）。访客可以在调色板外观页签、站点形态下方自己切换，那是访客本地的选择，不改这里的全站默认。</p></div>
       <div class="field"><label>站点统计页样式</label><div class="pills">${seg('analyticsStyle', 'classic', '现行版（手搓）')}${seg('analyticsStyle', 'azuma', 'azuma 同款（带插画）')}${seg('analyticsStyle', 'azuma-clean', 'azuma 清爽版（无插画）')}</div>
       <p class="hint">azuma 同款 = 圈子里流传的 Aemeath 统计页（访问脉冲 7/30/90 天切换、推送节奏带贪吃蛇、中国地图、最近评论），数据走本站自己的 Umami / Waline。带插画版的 7 张图已全部压成 webp（原版 5.5MB → 约 0.7MB）。切换前可以先开 /analytics-azuma/ 与 /analytics-azuma-clean/ 两张预览页对比，三套随时互切。</p></div>
     </div>

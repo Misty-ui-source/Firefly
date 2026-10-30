@@ -495,23 +495,202 @@ html[data-site-mode="astral"] .floating-controls-container {
 	opacity: 1 !important;
 }
 
-/* ===== 紧急可读性兜底（2026-10-30 璨夜全屏高糊事故）=====
+/* ===== 实面（solid）子主题定义（原 2026-10-30 紧急可读性兜底，现为实面的正式样式）=====
    先保证看得清：astral 下全局停用 backdrop-filter 与 filter，
    壁纸层强制压到内容之下，玻璃面改近不透明实底。真凶定位后再逐项恢复质感。 */
-html[data-site-mode="astral"] *,
-html[data-site-mode="astral"] *::before,
-html[data-site-mode="astral"] *::after {
+html[data-site-mode="astral"][data-astral-theme="solid"] *,
+html[data-site-mode="astral"][data-astral-theme="solid"] *::before,
+html[data-site-mode="astral"][data-astral-theme="solid"] *::after {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   filter: none !important;
 }
-html[data-site-mode="astral"],
-html[data-site-mode="astral"] body,
-html[data-site-mode="astral"] #wallpaper-wrapper {
+html[data-site-mode="astral"][data-astral-theme="solid"],
+html[data-site-mode="astral"][data-astral-theme="solid"] body,
+html[data-site-mode="astral"][data-astral-theme="solid"] #wallpaper-wrapper {
   filter: none !important;
 }
-html[data-site-mode="astral"] body { opacity: 1 !important; }
-html[data-site-mode="astral"] #wallpaper-wrapper { z-index: -1 !important; }
-html[data-site-mode="astral"] #content-panel { opacity: 1 !important; }
-html[data-site-mode="astral"] .float-panel { background: rgba(8, 12, 28, 0.94) !important; }
-html[data-site-mode="astral"] #navbar > div { background: rgba(8, 12, 28, 0.94) !important; }
+html[data-site-mode="astral"][data-astral-theme="solid"] body { opacity: 1 !important; }
+html[data-site-mode="astral"][data-astral-theme="solid"] #wallpaper-wrapper { z-index: -1 !important; }
+html[data-site-mode="astral"][data-astral-theme="solid"] #content-panel { opacity: 1 !important; }
+html[data-site-mode="astral"][data-astral-theme="solid"] .float-panel { background: rgba(8, 12, 28, 0.94) !important; }
+html[data-site-mode="astral"][data-astral-theme="solid"] #navbar > div { background: rgba(8, 12, 28, 0.94) !important; }
+
+/* ============================================================
+ * 璨夜子主题 · 星尘（starfield）——按 XinghuisamaBlogs 排版布局重做的玻璃版
+ * ------------------------------------------------------------
+ * 与实面（solid）的分工：实面是近不透明实面卡的稳定兜底；星尘是璨夜的正脸。
+ * 架构（学原站的分层法，不走其 backdrop 采样链）：
+ *   壁纸图本体先糊（仅桌面）→ 全屏面纱色层压软 → 半透卡片（全站一套配方）。
+ * 全子主题零 backdrop-filter：模糊只发生在壁纸图本体上（filter 打在 img
+ * 自身，不是采样身后图层的 backdrop），杜绝全屏高糊事故的复现路径。
+ * 布局纪律（对位原站）：同行等高、大格保底高度、移动端同一网格塌成单列同序。
+ * ============================================================ */
+
+/* ---------- 星尘令牌：回到半透玻璃配方（亮 / 暗） ---------- */
+html[data-site-mode="astral"][data-astral-theme="starfield"] {
+	--card-bg: rgb(255 255 255 / 0.42);
+	--card-bg-transparent: rgb(255 255 255 / 0.34);
+	--float-panel-bg: rgb(248 250 252 / 0.82);
+	--btn-regular-bg: rgb(255 255 255 / 0.45);
+	--btn-regular-bg-hover: rgb(255 255 255 / 0.62);
+	--btn-regular-bg-active: rgb(199 210 254 / 0.5);
+	--btn-card-bg-hover: rgb(255 255 255 / 0.5);
+	--btn-card-bg-active: rgb(199 210 254 / 0.45);
+	--license-block-bg: rgb(255 255 255 / 0.38);
+	--muted: rgb(226 232 240 / 0.55);
+}
+html.dark[data-site-mode="astral"][data-astral-theme="starfield"] {
+	--card-bg: rgb(30 41 59 / 0.52);
+	--card-bg-transparent: rgb(30 41 59 / 0.44);
+	--float-panel-bg: rgb(15 23 42 / 0.8);
+	--btn-regular-bg: rgb(51 65 85 / 0.45);
+	--btn-regular-bg-hover: rgb(71 85 105 / 0.5);
+	--btn-card-bg-hover: rgb(51 65 85 / 0.5);
+	--license-block-bg: rgb(30 41 59 / 0.42);
+}
+
+/* ---------- 面纱层：全屏半透色层，把壁纸压成氛围底（内容层级不变） ---------- */
+#astral-veil-layer { display: none; }
+html[data-site-mode="astral"][data-astral-theme="starfield"] #astral-veil-layer {
+	display: block;
+	position: fixed;
+	inset: 0;
+	z-index: 1;
+	pointer-events: none;
+	background: linear-gradient(180deg, rgb(233 238 248 / 0.36), rgb(233 238 248 / 0.24));
+}
+html.dark[data-site-mode="astral"][data-astral-theme="starfield"] #astral-veil-layer {
+	background: linear-gradient(180deg, rgb(2 6 23 / 0.48), rgb(2 6 23 / 0.38));
+}
+
+/* ---------- 壁纸图本体糊化（仅桌面）：糊在图自身，不采样、不连坐内容 ---------- */
+@media (min-width: 1024px) {
+	html[data-site-mode="astral"][data-astral-theme="starfield"] #wallpaper-wrapper img {
+		filter: blur(14px) saturate(1.06) !important;
+		transform: scale(1.08);
+	}
+}
+
+/* ---------- 小面积玻璃面：星尘下一律零 backdrop 采样，靠半透底色 ---------- */
+html[data-site-mode="astral"][data-astral-theme="starfield"] .btn-card,
+html[data-site-mode="astral"][data-astral-theme="starfield"] .btn-regular,
+html[data-site-mode="astral"][data-astral-theme="starfield"] .tag-item,
+html[data-site-mode="astral"][data-astral-theme="starfield"] .float-panel,
+html[data-site-mode="astral"][data-astral-theme="starfield"] #navbar > div,
+html[data-site-mode="astral"][data-astral-theme="starfield"] #nav-menu-panel {
+	backdrop-filter: none !important;
+	-webkit-backdrop-filter: none !important;
+}
+html[data-site-mode="astral"][data-astral-theme="starfield"] #navbar > div {
+	background: rgb(255 255 255 / 0.78) !important;
+}
+html.dark[data-site-mode="astral"][data-astral-theme="starfield"] #navbar > div {
+	background: rgb(2 6 23 / 0.78) !important;
+}
+html[data-site-mode="astral"][data-astral-theme="starfield"] #nav-menu-panel {
+	background: rgb(248 250 252 / 0.88);
+}
+html.dark[data-site-mode="astral"][data-astral-theme="starfield"] #nav-menu-panel {
+	background: rgb(2 6 23 / 0.88);
+}
+
+/* ---------- 首页 bento 行纪律（桌面 ≥1280）：同行等高 + 大格保底高度 ---------- */
+@media (min-width: 1280px) {
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout > .card-base {
+		height: 100%;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid .astral-tile--now {
+		min-height: 300px;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid .astral-tile--poster {
+		min-height: 220px;
+	}
+}
+
+/* ---------- 首页 bento 移动端塌缩（<1280，仅星尘）：同一网格变单列、顺序同桌面 ---------- */
+@media (max-width: 1279.98px) {
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 1.5rem;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid #left-sidebar,
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid #right-sidebar,
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid #left-sidebar > div,
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid #right-sidebar > div {
+		display: contents;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout {
+		grid-column: 1;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid > #content-column {
+		grid-column: 1;
+		grid-row: 4;
+		max-width: none;
+		width: auto;
+		margin-inline: 0;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid #left-sidebar div.card-base {
+		grid-column: 1;
+		grid-row: 1;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid .astral-tile--now {
+		display: flex;
+		grid-column: 1;
+		grid-row: 2;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="announcement"] {
+		grid-row: 3;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id^="music-widget-"] {
+		display: none;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="latest-dynamics"] {
+		grid-row: 5;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="recent-comments"] {
+		grid-row: 6;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="calendar-widget"] {
+		grid-row: 7;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid .astral-tile--poster {
+		display: block;
+		grid-column: 1;
+		grid-row: 8;
+		min-height: 200px;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid .astral-tile--thoughts {
+		display: flex;
+		grid-column: 1;
+		grid-row: 9;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid .astral-tile--gnss {
+		display: flex;
+		grid-column: 1;
+		grid-row: 10;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid .astral-tile--diary {
+		display: block;
+		grid-column: 1;
+		grid-row: 11;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid .astral-tile--daystrip {
+		display: flex;
+		grid-column: 1;
+		grid-row: 12;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="site-stats"] {
+		grid-row: 13;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="categories"] {
+		grid-row: 14;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="tags"] {
+		grid-row: 15;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="site-info"] {
+		grid-row: 16;
+	}
+}

@@ -45,6 +45,8 @@ import {
 	getStoredPureFont,
 	PURE_FONT_LABELS,
 	getStoredSiteMode,
+	getDefaultAstralTheme,
+	getStoredAstralTheme,
 	getStoredHarmonyHue,
 	getStoredHarmonyScheme,
 	getStoredHarmonySpec,
@@ -90,6 +92,7 @@ import {
 	setNavbarStyle,
 	setPureFont,
 	setSiteMode,
+	setAstralTheme,
 	setHarmonyHue,
 	setHarmonyScheme,
 	setHarmonySpec,
@@ -146,6 +149,13 @@ const navbarStyleOptions = [
 ] as const;
 let siteMode = $state(getStoredSiteMode());
 const defaultSiteMode = getDefaultSiteMode();
+// 璨夜子主题（实面 / 星尘）：仅璨夜下出现，在站点形态行下方；控制台定默认、这里是访客覆盖
+let astralTheme = $state(getStoredAstralTheme());
+const defaultAstralTheme = getDefaultAstralTheme();
+const astralThemeOptions = [
+	{ value: "solid", label: "实面" },
+	{ value: "starfield", label: "星尘" },
+] as const;
 const siteModeOptions = [
 	{ value: "full", labelKey: I18nKey.siteModeFull },
 	{ value: "pure", labelKey: I18nKey.siteModePure },
@@ -988,6 +998,10 @@ $effect(() => {
 });
 
 $effect(() => {
+	setAstralTheme(astralTheme);
+});
+
+$effect(() => {
 	setPureFont(pureFont);
 });
 
@@ -1155,6 +1169,25 @@ $effect(() => {
 				</button>
 				{/each}
 			</div>
+			<!-- 璨夜子主题（仅璨夜出现）：站点形态的子选项，实面 = 稳定实面卡，星尘 = 玻璃星空版 -->
+			{#if isAstral}
+			<div class="text-xs font-bold text-(--btn-content) opacity-80 mt-3 mb-1.5">璨夜主题</div>
+			<div class="flex flex-wrap gap-2">
+				{#each astralThemeOptions as opt}
+				<button
+					aria-label={opt.label}
+					class="flex-1 min-w-[45%] btn-regular rounded-md py-2 px-3 flex items-center justify-center gap-2 active:scale-95 transition-all relative overflow-hidden"
+					class:opacity-60={astralTheme !== opt.value}
+					class:bg-(--btn-regular-bg-hover)={astralTheme === opt.value}
+					onclick={() => { astralTheme = opt.value; }}
+					title={opt.label}
+				>
+					<span class="text-xs font-medium">{opt.label}</span>
+				</button>
+				{/each}
+			</div>
+			<div class="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5">实面：近不透明实面卡，稳定优先 · 星尘：毛玻璃星空版（面纱层 + 半透卡片）</div>
+			{/if}
 		</div>
 		{/if}
 

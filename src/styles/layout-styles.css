@@ -663,3 +663,16 @@ html[data-wallpaper-mode="fullscreen"][data-fullscreen-layout="classic"] #wallpa
     }
 }
 
+/* 移动端壁纸图摘滤镜（2026-10-30）：全屏固定大图 + blur 滤镜在弱合成器浏览器
+   （OPPO 浏览器等）上滚动时重栅格化失败，整页白屏且不自恢复、只能刷新碰运气。
+   ≤1023px 一律 filter:none——手机上糊与不糊观感差别不大，稳定性优先。
+   全屏模式的 --fullscreen-blur 由 JS 在移动端同步写 0（blurRamp.enable.mobile=false），此处是 CSS 侧双保险。 */
+@media (max-width: 1023.98px) {
+    #wallpaper-wrapper.wallpaper-fullscreen img,
+    #wallpaper-wrapper.wallpaper-overlay img,
+    html[data-wallpaper-mode="fullscreen"] #wallpaper-wrapper img,
+    html[data-wallpaper-mode="overlay"] #wallpaper-wrapper img {
+        filter: none !important;
+    }
+}
+

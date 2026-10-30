@@ -162,7 +162,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
 ---
 
 <!doctype html>
-<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"} data-navbar-style={siteConfig.navbar.navbarStyle ?? "classic"} data-site-mode={siteConfig.siteMode ?? "full"} data-harmony-font={siteConfig.harmonyFont ?? "default"} data-brick-font={siteConfig.brickFont ?? "default"} data-star-font={siteConfig.starFont ?? "default"}>
+<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"} data-navbar-style={siteConfig.navbar.navbarStyle ?? "classic"} data-site-mode={siteConfig.siteMode ?? "full"} data-harmony-font={siteConfig.harmonyFont ?? "default"} data-brick-font={siteConfig.brickFont ?? "default"} data-star-font={siteConfig.starFont ?? "default"} data-astral-theme={siteConfig.astralTheme ?? "solid"}>
   <head>
     <meta charset="UTF-8" />
     {commentConfig?.type === "waline" && commentConfig?.waline?.serverURL && (
@@ -371,6 +371,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
           displaySettingsConfig.navbarStyleSwitchable,
         defaultSiteMode: siteConfig.siteMode ?? "full",
         isSiteModeSwitchable: displaySettingsConfig.siteModeSwitchable,
+        defaultAstralTheme: siteConfig.astralTheme ?? "solid",
         pureFontMenu: siteConfig.pureFontMenu ?? ["system"],
       }}
     >
@@ -487,6 +488,17 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
       document.documentElement.setAttribute(
         "data-site-mode",
         resolvedSiteMode
+      );
+
+      // 初始化璨夜子主题 - 优先 localStorage（调色板外观页签、站点形态下方改过时），否则用配置默认；
+      // 属性只在 html[data-site-mode="astral"] 作用域内被 astral-mode.css 消费，其他形态下挂着不生效
+      const astralThemeStored = localStorage.getItem("astralTheme");
+      const resolvedAstralTheme = ["solid", "starfield"].includes(astralThemeStored)
+        ? astralThemeStored
+        : defaultAstralTheme;
+      document.documentElement.setAttribute(
+        "data-astral-theme",
+        resolvedAstralTheme
       );
 
       // 初始化谐彩专属调色板 - 独立 harmony* 存储键，首帧前落位防闪烁；
@@ -699,6 +711,9 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
 
     <!-- 璨夜星空层：程序化星点 canvas，只在璨夜作用域内由 AstralStarfield 组件驱动（星空开关可关），其他形态下不渲染 -->
     <AstralStarfield />
+
+    <!-- 璨夜·星尘面纱层：固定全屏、只在璨夜星尘子主题作用域内被 astral-mode.css 赋形（半透色层压软壁纸），其他形态/子主题下是无样式空层 -->
+    <div id="astral-veil-layer" aria-hidden="true"></div>
 
     {/* 卡片样式：根据 localStorage 覆盖默认配置 */}
     <script is:inline define:vars={{

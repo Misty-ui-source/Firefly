@@ -160,6 +160,11 @@ export const siteConfig: SiteConfig = {
 	brickFont: "default",
 	starFont: "default",
 
+	// 璨夜子主题（控制台主题页可改默认）：solid 实面（近不透明实面卡，稳定兜底）/
+	// starfield 星尘（按 XinghuisamaBlogs 排版布局的玻璃版：面纱层 + 半透卡片配方）
+	// 访客在显示设置（调色板）外观页签、站点形态下方可覆盖，存 localStorage astralTheme
+	astralTheme: "solid",
+
 	// 站点开始日期，用于统计运行天数
 	siteStartDate: "2026-10-15",
 

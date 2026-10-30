@@ -284,8 +284,8 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 			enable: {
 				// 桌面端是否启用模糊渐变
 				desktop: true,
-				// 移动端是否启用模糊渐变
-				mobile: true,
+				// 移动端是否启用模糊渐变（2026-10-30 关：全屏滤镜大图在弱合成器浏览器滚动重栅格失败会整页白屏）
+				mobile: false,
 			},
 		},
 	},

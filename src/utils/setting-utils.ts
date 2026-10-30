@@ -460,6 +460,56 @@ export function setSiteMode(mode: SiteMode): void {
 	applySiteModeToDocument(safe);
 }
 
+// ─── 璨夜子主题（实面 / 星尘） ─────────────────────────────────────
+// 只在站点形态 = 璨夜（astral）时生效：solid 实面 = 近不透明实面卡（稳定兜底）；
+// starfield 星尘 = 按 XinghuisamaBlogs 排版布局的玻璃版（面纱层 + 半透卡片配方）。
+// 控制台主题页定全站默认（siteConfig.astralTheme），访客在调色板外观页签、
+// 站点形态下方覆盖，存 localStorage astralTheme；Layout 首帧脚本同步落位防闪烁，
+// 样式全部收在 astral-mode.css 的 [data-astral-theme] 作用域里。
+
+export type AstralTheme = "solid" | "starfield";
+
+const ASTRAL_THEMES: AstralTheme[] = ["solid", "starfield"];
+
+export function getDefaultAstralTheme(): AstralTheme {
+	const v = siteConfig.astralTheme ?? "solid";
+	return ASTRAL_THEMES.includes(v as AstralTheme)
+		? (v as AstralTheme)
+		: "solid";
+}
+
+export function getStoredAstralTheme(): AstralTheme {
+	const defaultTheme = getDefaultAstralTheme();
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.getItem !== "function"
+	) {
+		return defaultTheme;
+	}
+	const stored = localStorage.getItem("astralTheme") as AstralTheme | null;
+	return stored && ASTRAL_THEMES.includes(stored) ? stored : defaultTheme;
+}
+
+export function applyAstralThemeToDocument(theme: AstralTheme): void {
+	if (typeof document === "undefined") return;
+	const safe: AstralTheme = ASTRAL_THEMES.includes(theme) ? theme : "solid";
+	document.documentElement.setAttribute("data-astral-theme", safe);
+	window.dispatchEvent(
+		new CustomEvent("astralThemeChange", { detail: { theme: safe } }),
+	);
+}
+
+export function setAstralTheme(theme: AstralTheme): void {
+	const safe: AstralTheme = ASTRAL_THEMES.includes(theme) ? theme : "solid";
+	if (
+		typeof localStorage !== "undefined" &&
+		typeof localStorage.setItem === "function"
+	) {
+		localStorage.setItem("astralTheme", safe);
+	}
+	applyAstralThemeToDocument(safe);
+}
+
 // ─── 谐彩专属调色板 ──────────────────────────────────────
 // 只在站点形态 = 谐彩（harmony）时生效的一组外观选项（对标 Shirone 的动态取色
 // 面板）：独立 harmony* 存储键，与全站 hue、素简 pureFont 等键互不干扰。
