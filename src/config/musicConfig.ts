@@ -89,6 +89,13 @@ export const musicPlayerConfig: MusicPlayerConfig = {
 				cover: "https://img.lanerc.me/admin/music-cover/mvt3qnhh-cover-auto.webp",
 				lrc: "",
 			},
+			{
+				name: "フレグランス",
+				artist: "茉ひる/RINZO",
+				url: "https://img.lanerc.me/admin/music/mvuyxjy9-_____RINZO_-_______.mp3",
+				cover: "https://img.lanerc.me/admin/music-cover/mvuywgbw-cover-auto.webp",
+				lrc: "",
+			},
 		],
 	},
 };
