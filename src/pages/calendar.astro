@@ -75,19 +75,28 @@ const payload = JSON.stringify({
 			<div class="calendar-countdown" data-cal-countdown></div>
 		</section>
 	</div>
-</MainGridLayout>
 
 <script type="application/json" id="calendar-data" set:html={payload}></script>
 
 <script is:inline data-swup-reload-script>
-	// 必须 is:inline + data-swup-reload-script：@swup/astro 切页时默认不重跑普通
-	// 内联脚本（只有带 data-swup-reload-script 的才在换页后重新执行）。2026-10-28
-	// 曾误以为「内联脚本切页必重跑」只加了 is:inline，没根治——点导航进日历仍是
-	// 空壳、必须刷新（2026-10-30 复发并实测确认），补上 reload 属性才算修完。
+	// 切页机制（2026-10-30 修正）：本脚本与 #calendar-data 必须位于 MainGridLayout
+	// 内部（即 #swup-container 里）——Swup 只换容器内的 HTML，容器外的脚本在软
+	// 导航时根本不会被带进新页面，data-swup-reload-script 也只对容器内脚本生效。
+	// 此前两段脚本都写在 </MainGridLayout> 之后（容器外），所以点导航进日历永远
+	// 是空壳、必须刷新；2960b81a 只加 reload 属性没挪位置，自然无效。挪进容器
+	// 后：整页加载时脚本随解析执行；软导航时 @swup/astro 对带 reload 属性的容
+	// 器内脚本重新执行；文末看门狗再按仓库范式监听导航事件兜底补跑。
 	function __initCalendar() {
 		var RAW = "https://raw.githubusercontent.com/Misty-ui-source/Firefly/main/calendar-data/";
 		var el = document.getElementById("calendar-data");
 		if (!el) return;
+		// 幂等戳记：同一份 DOM 只初始化一次（reload 重跑与看门狗补跑可能撞车，
+		// 重复初始化会让上/下月按钮一次跳两个月、倒计时间隔叠加）
+		var gridStamp = document.querySelector("[data-cal-grid]");
+		if (gridStamp) {
+			if (gridStamp.dataset.calBound === "1") return;
+			gridStamp.dataset.calBound = "1";
+		}
 		var data;
 		try { data = JSON.parse(el.textContent || "{}"); } catch (e) { return; }
 		data.holidays = data.holidays || {};
@@ -351,7 +360,8 @@ const payload = JSON.stringify({
 				render();
 				detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
 			});
-			setInterval(tickCountdown, 1000);
+			if (window.__calCountdownTimer) clearInterval(window.__calCountdownTimer);
+			window.__calCountdownTimer = setInterval(tickCountdown, 1000);
 		}
 
 		render();
@@ -385,14 +395,21 @@ const payload = JSON.stringify({
 		});
 	}
 	__initCalendar();
-	// 看门狗：Swup 切页后若网格在但没渲染（脚本被跳过/抢跑的兜底），补跑一次初始化
+	// 看门狗（仓库范式，同 TypewriterText 的多事件兜底）：监听 Swup 导航事件，
+	// 日历 DOM 在场但网格未渲染时补跑一次；注册只发生一次（window 标记），
+	// __initCalendar 内部另有 DOM 戳记防重复绑定，三层防护互不冲突。
 	if (!window.__calWatchdog) {
 		window.__calWatchdog = true;
-		document.addEventListener("swup:contentReplaced", function () {
+		var calRetry = function () {
 			setTimeout(function () {
 				var g = document.querySelector("[data-cal-grid]");
 				if (g && !g.children.length && document.getElementById("calendar-data")) __initCalendar();
 			}, 60);
-		});
+		};
+		document.addEventListener("swup:contentReplaced", calRetry);
+		document.addEventListener("swup:content:replace", calRetry);
+		document.addEventListener("swup:page:view", calRetry);
 	}
 </script>
+
+</MainGridLayout>

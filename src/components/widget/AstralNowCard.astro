@@ -1,5 +1,7 @@
 ---
 import MusicPlayer from "@/components/features/MusicPlayer.astro";
+import { siteConfig } from "@/config";
+import { musicPlayerConfig } from "@/config/musicConfig";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 
@@ -8,10 +10,17 @@ import { i18n } from "@/i18n/translation";
 // MusicPlayerView 脚本会把页面上所有 .music-player-widget 一并初始化、
 // 状态互通），合卡只是把侧栏那份在 bento 里的落位收进本卡（侧栏原格在
 // astral-mode.css 里于同作用域隐藏，避免同页出现两份可见播放器）。
-// 下半是设备在线：运行时拉 /api/device-status（Pages Function 中转
-// Komari 探针公开数据，只透名字/在线/运行时长），接口异常显示中性兜底。
-// 原下半的 Steam 格因站长很少玩 Steam、记录常年不动而撤下；/steam/ 页
-// 与导航入口不受影响。显隐与落位见 astral-mode.css。
+// 下半是「接下来播放」歌单预览：与播放器同一份歌单数据——本地模式直接
+// 服务端渲染歌单前四首；Meting 模式运行时拉歌单接口（主接口 + 备用接口
+// 依次回退），拉不到就保留一言兜底文案，不留空白。
+// 原下半的设备在线已删除：/api/device-status 线上被探针以 403 拒绝、格里
+// 常年只显示「设备状态未知」，站长拍板直接删（函数本体 functions/api/
+// device-status.js 随本批一并删除）。显隐与落位见 astral-mode.css。
+
+const isLocal = musicPlayerConfig.mode === "local";
+const nextTracks = isLocal
+	? (musicPlayerConfig.local?.playlist ?? []).slice(0, 4)
+	: [];
 ---
 
 <div class="card-base astral-tile astral-tile--now">
@@ -24,11 +33,23 @@ import { i18n } from "@/i18n/translation";
 
 	<div class="now-divider" role="separator"></div>
 
-	<div class="now-devices" data-device-panel>
-		<span class="devices-eyebrow">设备 · 在线状态</span>
-		<span class="devices-summary" data-device-summary>正在读取设备状态…</span>
-		<span class="devices-dots" data-device-dots></span>
-		<span class="devices-names" data-device-names></span>
+	<div class="now-next" data-next-panel>
+		<span class="next-eyebrow">接下来播放</span>
+		{isLocal ? (
+			<ol class="next-list">
+				{nextTracks.map((t) => (
+					<li>
+						<span class="next-title">{t.name}</span>
+						<span class="next-artist">{t.artist}</span>
+					</li>
+				))}
+			</ol>
+		) : (
+			<>
+				<p class="next-fallback" data-next-fallback>{siteConfig.subtitle}</p>
+				<ol class="next-list" data-next-list hidden></ol>
+			</>
+		)}
 	</div>
 </div>
 
@@ -37,6 +58,13 @@ import { i18n } from "@/i18n/translation";
 		flex-direction: column;
 		padding: 1rem 1rem 1.1rem;
 		color: inherit;
+	}
+	.now-music {
+		flex: 1 1 0;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
 	}
 	.now-head {
 		margin: 0.25rem 0 0.5rem 0.75rem;
@@ -63,148 +91,139 @@ import { i18n } from "@/i18n/translation";
 		margin: 0.85rem 0.25rem;
 		background: rgb(148 163 184 / 0.28);
 	}
-	.now-devices {
+	.now-next {
+		flex: 1 1 0;
+		min-height: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 0.35rem;
+		justify-content: center;
+		gap: 0.45rem;
 		padding: 0 0.25rem;
-		margin-top: auto;
 	}
-	.devices-eyebrow {
+	.next-eyebrow {
 		font-size: 0.72rem;
 		font-weight: 700;
 		letter-spacing: 0.22em;
 		color: var(--primary);
 	}
-	.devices-summary {
-		font-size: 1.12rem;
-		font-weight: 700;
-		line-height: 1.35;
-	}
-	.devices-dots {
+	.next-list {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 0.45rem;
-		margin-top: 0.15rem;
-		min-height: 0.625rem;
+		flex-direction: column;
+		gap: 0.32rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
 	}
-	.device-dot {
-		width: 0.625rem;
-		height: 0.625rem;
-		border-radius: 9999px;
-		background: rgb(148 163 184 / 0.45);
+	.next-list li {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		min-width: 0;
+		font-size: 0.92rem;
+		line-height: 1.45;
 	}
-	.device-dot.is-online {
-		background: #22c55e;
-	}
-	@media (prefers-reduced-motion: no-preference) {
-		.device-dot.is-online {
-			animation: device-pulse 2.4s ease-in-out infinite;
-		}
-	}
-	@keyframes device-pulse {
-		0%,
-		100% {
-			box-shadow: 0 0 0 0 rgb(34 197 94 / 0.35);
-		}
-		50% {
-			box-shadow: 0 0 0 0.3rem rgb(34 197 94 / 0);
-		}
-	}
-	.devices-names {
-		font-size: 0.83rem;
-		color: var(--content-meta);
-		line-height: 1.5;
-		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		-webkit-box-orient: vertical;
+	.next-title {
+		font-weight: 600;
+		white-space: nowrap;
 		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.next-artist {
+		opacity: 0.55;
+		font-size: 0.82rem;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.next-fallback {
+		font-size: 0.92rem;
+		opacity: 0.6;
 	}
 </style>
 
-<script>
-	// 设备在线拉取：仅在本卡真正可见（璨夜 + 首页 + 桌面 bento）时拉一次；
-	// 形态切进璨夜时经 siteModeChange 再检查一次。IIFE + window 标记防
-	// 重复（节点在 Swup 容器外、跨页存活）。失败/超时一律走中性兜底文案。
-	(() => {
-		const w = window as unknown as Record<string, unknown>;
-		if (w.__astralDevicesInit) return;
-		const panel = document.querySelector<HTMLElement>("[data-device-panel]");
-		if (!panel) return;
-		w.__astralDevicesInit = true;
+{!isLocal && (
+	<script>
+		import { musicPlayerConfig } from "@/config/musicConfig";
 
-		const summary = panel.querySelector<HTMLElement>("[data-device-summary]");
-		const dotsBox = panel.querySelector<HTMLElement>("[data-device-dots]");
-		const namesBox = panel.querySelector<HTMLElement>("[data-device-names]");
-		if (!summary || !dotsBox || !namesBox) return;
+		// 歌单预览拉取：仅在本卡真正可见（璨夜 + 首页 + 桌面 bento）时拉一次；
+		// 形态切进璨夜时经 siteModeChange 再检查一次。IIFE + window 标记防
+		// 重复（节点在 Swup 容器外、跨页存活）。主接口失败依次换备用接口，
+		// 全部失败保留服务端的一言兜底，不留空白高个。
+		(() => {
+			const w = window as unknown as Record<string, unknown>;
+			if (w.__astralNextInit) return;
+			const panel = document.querySelector<HTMLElement>("[data-next-panel]");
+			if (!panel) return;
+			w.__astralNextInit = true;
 
-		let started = false;
+			const list = panel.querySelector<HTMLOListElement>("[data-next-list]");
+			const fallback = panel.querySelector<HTMLElement>("[data-next-fallback]");
+			if (!list) return;
 
-		function fmtUptime(sec: number): string {
-			const d = Math.floor(sec / 86400);
-			if (d >= 1) return `已运行 ${d} 天`;
-			const h = Math.floor(sec / 3600);
-			if (h >= 1) return `已运行 ${h} 小时`;
-			return `已运行 ${Math.max(1, Math.floor(sec / 60))} 分钟`;
-		}
+			let started = false;
+			const m = musicPlayerConfig.meting;
+			const build = (tpl: string) =>
+				tpl
+					.replace(":server", m.server)
+					.replace(":type", m.type)
+					.replace(":id", m.id)
+					.replace(":r", String(Math.random()));
 
-		function fallback() {
-			summary.textContent = "设备状态未知";
-			dotsBox.replaceChildren();
-			namesBox.replaceChildren();
-		}
-
-		interface DeviceInfo {
-			name: string;
-			online: boolean;
-			uptime: number | null;
-		}
-
-		function render(devices: DeviceInfo[], onlineCount: number) {
-			summary.textContent = `${onlineCount}/${devices.length} 台在线`;
-			dotsBox.replaceChildren(
-				...devices.map((d) => {
-					const dot = document.createElement("span");
-					dot.className = d.online ? "device-dot is-online" : "device-dot";
-					dot.title = d.online
-						? `${d.name} · 在线${typeof d.uptime === "number" ? ` · ${fmtUptime(d.uptime)}` : ""}`
-						: `${d.name} · 离线`;
-					return dot;
-				}),
-			);
-			const onlineNames = devices.filter((d) => d.online).map((d) => d.name);
-			namesBox.textContent = onlineNames.join(" · ");
-		}
-
-		async function load() {
-			const ctrl = new AbortController();
-			const timer = window.setTimeout(() => ctrl.abort(), 8000);
-			try {
-				const res = await fetch("/api/device-status", { signal: ctrl.signal });
-				if (!res.ok) throw new Error(`http ${res.status}`);
-				const data = (await res.json()) as {
-					ok?: boolean;
-					online?: number;
-					devices?: DeviceInfo[];
-				};
-				if (!data.ok || !Array.isArray(data.devices)) throw new Error("bad payload");
-				render(data.devices, typeof data.online === "number" ? data.online : 0);
-			} catch {
-				fallback();
-			} finally {
-				window.clearTimeout(timer);
+			interface Track {
+				title?: string;
+				author?: string;
 			}
-		}
 
-		function maybeStart() {
-			if (started) return;
-			if (document.documentElement.dataset.siteMode !== "astral") return;
-			if (panel.offsetParent === null) return;
-			started = true;
-			void load();
-		}
+			function render(tracks: Track[]) {
+				const items = tracks.slice(0, 4);
+				if (!items.length) return;
+				list.replaceChildren(
+					...items.map((t) => {
+						const li = document.createElement("li");
+						const title = document.createElement("span");
+						title.className = "next-title";
+						title.textContent = t.title || "";
+						const artist = document.createElement("span");
+						artist.className = "next-artist";
+						artist.textContent = t.author || "";
+						li.append(title, artist);
+						return li;
+					}),
+				);
+				list.hidden = false;
+				if (fallback) fallback.hidden = true;
+			}
 
-		maybeStart();
-		window.addEventListener("siteModeChange", maybeStart);
-	})();
-</script>
+			async function load() {
+				const apis = [m.api, ...(m.fallbackApis ?? [])];
+				for (const tpl of apis) {
+					try {
+						const ctrl = new AbortController();
+						const timer = window.setTimeout(() => ctrl.abort(), 8000);
+						const res = await fetch(build(tpl), { signal: ctrl.signal });
+						window.clearTimeout(timer);
+						if (!res.ok) continue;
+						const data = (await res.json()) as Track[];
+						if (Array.isArray(data) && data.length) {
+							render(data);
+							return;
+						}
+					} catch {
+						// 换下一个接口
+					}
+				}
+			}
+
+			function maybeStart() {
+				if (started) return;
+				if (document.documentElement.dataset.siteMode !== "astral") return;
+				if (panel.offsetParent === null) return;
+				started = true;
+				void load();
+			}
+
+			maybeStart();
+			window.addEventListener("siteModeChange", maybeStart);
+		})();
+	</script>
+)}

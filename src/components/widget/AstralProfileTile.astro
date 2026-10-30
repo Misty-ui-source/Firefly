@@ -1,0 +1,164 @@
+---
+import { Icon } from "astro-icon/components";
+import { profileConfig, siteConfig } from "@/config";
+import { getSortedPosts } from "@/utils/content-utils";
+import { encodeMailto, MAILTO_ONCLICK_SCRIPT } from "@/utils/email-utils";
+import { url } from "@/utils/url-utils";
+
+// 璨夜 bento 格位 · 资料紧凑横卡（第一行左格）：替代侧栏原资料卡在 bento
+// 矩阵里的落位——原卡是全幅角色图竖卡，在 7 列宽的格子里按自然比例撑高、
+// 把第一行和跨行此刻卡一起拉爆（2026-10-30 站长真机报障）。本格改成紧凑
+// 横卡：左侧圆形站点头像（profileConfig.avatar，对外固定地址那张）带
+// indigo→青绿双色环，右侧站名 / bio / 社交图标排，下方一行签名 + 数据
+// 芯片（文章数、运行天数，取现成数据：getSortedPosts 与 siteStartDate，
+// 与 SiteStats 同口径；运行天数构建时计算、随每日构建刷新）。
+// 侧栏原资料卡只在 bento 矩阵里被 astral-mode.css 隐藏，其他形态与非首页
+// 照常显示，不受影响。显隐与落位见 astral-mode.css。
+
+const posts = await getSortedPosts();
+const postCount = posts.length;
+
+const startDate = new Date(siteConfig.siteStartDate || "2026-10-15");
+const runningDays = Math.max(
+	1,
+	Math.floor((Date.now() - startDate.getTime()) / 86400000) + 1,
+);
+
+const links = profileConfig.links || [];
+---
+
+<div class="card-base astral-tile astral-tile--profile">
+	<div class="profile-main">
+		<a href={url("/about/")} class="profile-avatar-ring" aria-label="关于我">
+			<img src={profileConfig.avatar} alt="站点头像" loading="eager" />
+		</a>
+		<div class="profile-info">
+			<a href={url("/about/")} class="profile-name">{siteConfig.title}</a>
+			<p class="profile-bio">{profileConfig.bio}</p>
+			<div class="profile-links">
+				{links.map((item) =>
+					item.url.startsWith("mailto:") ? (
+						<a
+							rel="me"
+							aria-label={item.name}
+							href="#"
+							data-encoded-email={encodeMailto(item.url)}
+							onclick={MAILTO_ONCLICK_SCRIPT}
+							class="btn-regular rounded-lg h-9 w-9 active:scale-90"
+						>
+							<Icon name={item.icon} class="text-[1.35rem]" />
+						</a>
+					) : (
+						<a
+							rel="me"
+							aria-label={item.name}
+							href={item.url}
+							target={item.url.startsWith("http") ? "_blank" : undefined}
+							class="btn-regular rounded-lg h-9 w-9 active:scale-90"
+						>
+							<Icon name={item.icon} class="text-[1.35rem]" />
+						</a>
+					),
+				)}
+			</div>
+		</div>
+	</div>
+	<div class="profile-foot">
+		<span class="profile-sign">{siteConfig.subtitle}</span>
+		<span class="profile-chips">
+			<span class="profile-chip">文章 {postCount}</span>
+			<span class="profile-chip">已运行 {runningDays} 天</span>
+		</span>
+	</div>
+</div>
+
+<style>
+	.astral-tile--profile {
+		flex-direction: column;
+		gap: 0.9rem;
+		padding: 1.1rem 1.25rem;
+		height: 100%;
+		color: inherit;
+	}
+	.profile-main {
+		display: flex;
+		align-items: center;
+		gap: 1.1rem;
+		min-width: 0;
+	}
+	.profile-avatar-ring {
+		flex: 0 0 auto;
+		width: 6.5rem;
+		height: 6.5rem;
+		border-radius: 9999px;
+		padding: 3px;
+		background: conic-gradient(from 210deg, #6366f1, #2dd4bf, #818cf8, #6366f1);
+	}
+	.profile-avatar-ring img {
+		width: 100%;
+		height: 100%;
+		border-radius: 9999px;
+		object-fit: cover;
+		display: block;
+	}
+	.profile-info {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+	.profile-name {
+		display: inline-block;
+		font-size: 1.45rem;
+		font-weight: 700;
+		line-height: 1.25;
+		margin-bottom: 0.3rem;
+	}
+	.profile-bio {
+		font-size: 0.9rem;
+		line-height: 1.55;
+		opacity: 0.75;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		margin-bottom: 0.6rem;
+	}
+	.profile-links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+	.profile-links a {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.profile-foot {
+		margin-top: auto;
+		padding-top: 0.8rem;
+		border-top: 1px solid rgb(148 163 184 / 0.25);
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+	.profile-sign {
+		font-size: 0.88rem;
+		opacity: 0.65;
+		letter-spacing: 0.02em;
+	}
+	.profile-chips {
+		display: inline-flex;
+		gap: 0.45rem;
+		flex-wrap: wrap;
+	}
+	.profile-chip {
+		font-size: 0.78rem;
+		font-weight: 600;
+		padding: 0.22rem 0.6rem;
+		border-radius: 9999px;
+		background: rgb(99 102 241 / 0.14);
+		color: var(--primary);
+		white-space: nowrap;
+	}
+</style>
