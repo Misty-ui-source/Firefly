@@ -26,8 +26,11 @@ html[data-site-mode="astral"] {
 
 	--primary: #6366f1;
 	--page-bg: #e9eef8;
-	--card-bg: rgb(255 255 255 / 0.4);
-	--card-bg-transparent: rgb(255 255 255 / 0.32);
+	/* 热修（2026-10-30）：卡片底由 40% 半透提至近不透明实面——真机上全站
+	 * 卡片毛玻璃（backdrop-filter 采样固定壁纸）糊成一片、文字看不清；
+	 * 玻璃感只保留在顶栏 / 浮动面板 / 按钮等小面积表面。 */
+	--card-bg: rgb(255 255 255 / 0.9);
+	--card-bg-transparent: rgb(255 255 255 / 0.85);
 
 	--btn-content: #4f46e5;
 	--btn-regular-bg: rgb(255 255 255 / 0.5);
@@ -60,7 +63,7 @@ html[data-site-mode="astral"] {
 	--codeblock-topbar-bg: #1e293b;
 
 	--license-block-bg: rgb(255 255 255 / 0.45);
-	--float-panel-bg: rgb(248 250 252 / 0.78);
+	--float-panel-bg: rgb(248 250 252 / 0.94);
 
 	--link-underline: rgb(99 102 241 / 0.35);
 	--link-hover: rgb(99 102 241 / 0.12);
@@ -91,8 +94,9 @@ html[data-site-mode="astral"] {
 html.dark[data-site-mode="astral"] {
 	--primary: #818cf8;
 	--page-bg: #020617;
-	--card-bg: rgb(30 41 59 / 0.5);
-	--card-bg-transparent: rgb(30 41 59 / 0.42);
+	/* 热修（2026-10-30）：同亮色，卡片底提至近不透明实面 */
+	--card-bg: rgb(30 41 59 / 0.92);
+	--card-bg-transparent: rgb(30 41 59 / 0.86);
 
 	--btn-content: #c7d2fe;
 	--btn-regular-bg: rgb(51 65 85 / 0.5);
@@ -120,7 +124,7 @@ html.dark[data-site-mode="astral"] {
 	--codeblock-topbar-bg: #0f172a;
 
 	--license-block-bg: rgb(30 41 59 / 0.5);
-	--float-panel-bg: rgb(15 23 42 / 0.75);
+	--float-panel-bg: rgb(15 23 42 / 0.92);
 
 	--link-underline: rgb(129 140 248 / 0.4);
 	--link-hover: rgb(129 140 248 / 0.16);
@@ -218,11 +222,12 @@ html[data-site-mode="astral"] .float-panel {
 	}
 }
 
-/* ---------- 毛玻璃卡片：全站一套配方（blur 12px + 白边 + 24px 圆角 + shadow-xl） ---------- */
+/* ---------- 卡片表面：白边 + 24px 圆角 + shadow-xl（底色为上方令牌的近不透明实面） ----------
+ * 热修（2026-10-30）：原配方给每张卡都挂 backdrop-filter: blur(12px) 采样
+ * 身后固定壁纸，真机（Edge + overlay 壁纸）上整页糊成一片、内容看不清。
+ * 大面积内容面一律撤掉 backdrop 采样，玻璃只留小面积表面（顶栏/面板/按钮）。 */
 html[data-site-mode="astral"] .card-base,
 html[data-site-mode="astral"] .card-base-transparent {
-	-webkit-backdrop-filter: blur(12px) saturate(150%);
-	backdrop-filter: blur(12px) saturate(150%);
 	border: 1px solid rgb(255 255 255 / 0.4);
 	box-shadow:
 		0 20px 25px -5px rgb(2 6 23 / 0.12),
@@ -327,14 +332,14 @@ html.dark[data-site-mode="astral"] .float-panel .text-neutral-500 {
 
 /* ---------- 顶栏：blur 24px 的玻璃配方（四种导航样式共用同一表面） ---------- */
 html[data-site-mode="astral"] #navbar > div {
-	background: rgb(255 255 255 / 0.4) !important;
+	background: rgb(255 255 255 / 0.85) !important;
 	-webkit-backdrop-filter: blur(24px) saturate(160%);
 	backdrop-filter: blur(24px) saturate(160%);
 	border-bottom: 1px solid rgb(255 255 255 / 0.2);
 	box-shadow: 0 1px 2px rgb(2 6 23 / 0.05);
 }
 html.dark[data-site-mode="astral"] #navbar > div {
-	background: rgb(2 6 23 / 0.5) !important;
+	background: rgb(2 6 23 / 0.88) !important;
 	border-bottom-color: rgb(255 255 255 / 0.05);
 	box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
 }
@@ -479,4 +484,13 @@ html[data-site-mode="astral"] .l2d-buddy { display: none !important; }
 		grid-column: 9 / span 4;
 		grid-row: 10;
 	}
+}
+
+/* ---------- 切换入口保险（2026-10-30 热修立规） ----------
+ * 调色板（在顶栏里）与右下角悬浮控件是访客切出当前形态的唯一出口：
+ * 璨夜下二者恒可见，不许被任何效果糊掉 / 藏掉。 */
+html[data-site-mode="astral"] #top-row,
+html[data-site-mode="astral"] .floating-controls-container {
+	visibility: visible !important;
+	opacity: 1 !important;
 }

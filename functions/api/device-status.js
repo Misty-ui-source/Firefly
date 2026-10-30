@@ -81,8 +81,16 @@ export async function onRequestGet(context) {
 			online: devices.filter((d) => d.online).length,
 			devices,
 		};
-	} catch {
-		payload = { ok: false, total: 0, online: 0, devices: [] };
+	} catch (e) {
+		// 诊断（2026-10-30）：只回错误类别，不带上游地址——区分探针拒绝(http 状态)、
+		// 超时(防火墙丢弃)与连接失败(CF 侧/网络)，供定位边缘不可达问题。
+		const msg = String((e && e.message) || e);
+		const kind = msg.startsWith("upstream ")
+			? msg
+			: /abort|timeout|timed out/i.test(msg)
+				? "timeout"
+				: "fetch_failed";
+		payload = { ok: false, total: 0, online: 0, devices: [], err: kind };
 	}
 
 	const response = Response.json(payload, {
