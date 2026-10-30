@@ -117,6 +117,11 @@ export const isHomePage = (pathname: string): boolean => {
 	if (pathname === baseUrlNoSlash) return true;
 	if (pathname === "/") return true;
 
+	// 璨夜专属分页（/astral/、/astral/N/）就是璨夜下的首页：
+	// bento 矩阵与 is-home 作用域的样式都按首页对待
+	if (pathname === "/astral" || pathname === "/astral/") return true;
+	if (/^\/astral\/\d+\/?$/.test(pathname)) return true;
+
 	return false;
 };
 
