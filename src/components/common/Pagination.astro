@@ -48,18 +48,14 @@ if (r < page.lastPage - 2) pages.push(HIDDEN);
 if (r === page.lastPage - 2) pages.push(page.lastPage - 1);
 if (r < page.lastPage) pages.push(page.lastPage);
 
-// 璨夜专属分页路由下，页码链接留在 /astral/ 宇宙内（与 paginate 的
-// page.url 前后页保持一致）；其他路由维持原样
-const astralBase = Astro.url.pathname.startsWith("/astral") ? "/astral" : "";
-
 const getPageUrl = (p: number) => {
-	if (p === 1) return `${astralBase}/`;
-	return `${astralBase}/${p}/`;
+	if (p === 1) return "/";
+	return `/${p}/`;
 };
 
 // 传给 PageJump island 的跳转模板。函数没法跨 island 边界传，只能给字符串
-const jumpHrefTemplate = url(`${astralBase}/{page}/`);
-const jumpHrefFirst = url(`${astralBase}/`);
+const jumpHrefTemplate = url("/{page}/");
+const jumpHrefFirst = url("/");
 ---
 
 <div class:list={[className, "pagination-wrapper flex flex-col gap-4 items-center"]} style={style}>

@@ -782,6 +782,7 @@ html[data-site-mode="astral"] .l2d-buddy { display: none !important; }
 		max-width: 21.5rem;
 		margin-inline: auto;
 	}
+
 	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="categories"] {
 		grid-column: 1 / span 4;
 		grid-row: 9;

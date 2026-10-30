@@ -330,44 +330,6 @@ const coverPositionClass =
     setTimeout(initLayout, 0);
   }
 </script>
-<script is:inline>
-  // 璨夜专属分页：璨夜有自己的一套分页地址（/astral/…，每页 12 篇，
-  // 网格行天然排满、零重复）；其他形态用全局分页（每页 10 篇）。
-  // 本脚本只在文章分页页运行：切到璨夜时跳到对应页的璨夜版，离开
-  // 璨夜时跳回普通版；页码按「本页首篇序号」换算，不串篇不丢篇。
-  (function () {
-    if (window.__astralPageSync) return;
-    window.__astralPageSync = true;
-    var STD_SIZE = 10, ASTRAL_SIZE = 12;
-    function isAstral() { return document.documentElement.getAttribute('data-site-mode') === 'astral'; }
-    function inAstral() { return location.pathname.indexOf('/astral') === 0; }
-    function curPage() {
-      var p = location.pathname.replace(/^\/astral/, '');
-      var m = p.match(/^\/(\d+)\/?$/);
-      return m ? parseInt(m[1], 10) : 1;
-    }
-    function targetFor(toAstral) {
-      var first = (curPage() - 1) * (toAstral ? STD_SIZE : ASTRAL_SIZE);
-      var page = Math.floor(first / (toAstral ? ASTRAL_SIZE : STD_SIZE)) + 1;
-      var base = toAstral ? '/astral' : '';
-      return page <= 1 ? (base + '/') : (base + '/' + page + '/');
-    }
-    function sync() {
-      var astral = isAstral();
-      if (astral === inAstral()) return;
-      var url = targetFor(astral);
-      if (window.swup && typeof window.swup.navigate === 'function') window.swup.navigate(url);
-      else location.assign(url);
-    }
-    document.addEventListener('DOMContentLoaded', sync);
-    document.addEventListener('swup:page:view', sync);
-    document.addEventListener('astro:after-swap', sync);
-    new MutationObserver(sync).observe(document.documentElement, {
-      attributes: true, attributeFilter: ['data-site-mode']
-    });
-  })();
-</script>
-
 <style is:global>
   .post-grid-auto {
     display: grid;
