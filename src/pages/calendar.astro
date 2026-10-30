@@ -79,9 +79,11 @@ const payload = JSON.stringify({
 
 <script type="application/json" id="calendar-data" set:html={payload}></script>
 
-<script is:inline>
-	// 必须 is:inline：打包成外部 module 后，Swup 切页时脚本可能被跳过执行，
-	// 表现为日历只剩空壳、要手动刷新才出来（2026-10-28 报障）。内联脚本切页必重跑。
+<script is:inline data-swup-reload-script>
+	// 必须 is:inline + data-swup-reload-script：@swup/astro 切页时默认不重跑普通
+	// 内联脚本（只有带 data-swup-reload-script 的才在换页后重新执行）。2026-10-28
+	// 曾误以为「内联脚本切页必重跑」只加了 is:inline，没根治——点导航进日历仍是
+	// 空壳、必须刷新（2026-10-30 复发并实测确认），补上 reload 属性才算修完。
 	function __initCalendar() {
 		var RAW = "https://raw.githubusercontent.com/Misty-ui-source/Firefly/main/calendar-data/";
 		var el = document.getElementById("calendar-data");
