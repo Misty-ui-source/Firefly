@@ -439,7 +439,7 @@ html[data-site-mode="astral"] .l2d-buddy { display: none !important; }
 		grid-column: 1 / span 7;
 		grid-row: 1;
 		min-height: 280px;
-		padding: 2rem;
+		padding: 1.4rem;
 	}
 	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid .astral-tile--profile .profile-avatar-ring {
 		width: 6rem;
@@ -450,10 +450,35 @@ html[data-site-mode="astral"] .l2d-buddy { display: none !important; }
 		grid-column: 8 / span 5;
 		grid-row: 1;
 	}
+	/* 实面此刻卡收紧凑（2026-10-30 站长点名「音乐有点超」）：两半不再均分
+	 * 撑高、歌单预览只留 3 首、行距压小，第一行高度回到 300px 上下 */
+	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid .astral-tile--now {
+		padding: 0.8rem 0.9rem 0.9rem;
+	}
+	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid .astral-tile--now .now-music,
+	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid .astral-tile--now .now-next {
+		flex: none;
+	}
+	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid .astral-tile--now .now-divider {
+		margin: 0.5rem 0.25rem;
+	}
+	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid .astral-tile--now .next-list {
+		gap: 0.22rem;
+	}
+	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid .astral-tile--now .next-list li:nth-child(n + 4) {
+		display: none;
+	}
 	/* 第二行：公告细条整行（LyricBar 位） */
 	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid widget-layout[data-id="announcement"] {
 		grid-column: 1 / -1;
 		grid-row: 2;
+		align-self: start;
+	}
+	/* 公告细条收紧凑：卡高随内容、上下内边距压到细条量级（LyricBar 位本意） */
+	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid widget-layout[data-id="announcement"] > .card-base {
+		height: auto;
+		padding-top: 0.7rem;
+		padding-bottom: 0.7rem;
 	}
 	/* 第三至五行：文章区 8 列 + 右列纵列（海报 / 碎碎念 / 日历） */
 	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid > #content-column {
@@ -470,10 +495,19 @@ html[data-site-mode="astral"] .l2d-buddy { display: none !important; }
 		display: flex;
 		grid-column: 9 / span 4;
 		grid-row: 4;
+		/* 不许被文章列的行高拉伸：卡高随内容（仓库说说位 min-h 200 兜底），
+		 * 否则一条碎碎念能拉出大半屏空白（2026-10-30 站长真机点名） */
+		align-self: start;
+		height: auto;
+		min-height: 200px;
 	}
 	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid widget-layout[data-id="calendar-widget"] {
 		grid-column: 9 / span 4;
 		grid-row: 5;
+		align-self: start;
+	}
+	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid widget-layout[data-id="calendar-widget"] > .card-base {
+		height: auto;
 	}
 	/* 第六行：动态 / 最新评论双列 */
 	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid widget-layout[data-id="latest-dynamics"] {
@@ -728,7 +762,8 @@ html[data-site-mode="astral"][data-astral-theme="solid"] #wallpaper-wrapper {
 html[data-site-mode="astral"][data-astral-theme="solid"] body { opacity: 1 !important; }
 html[data-site-mode="astral"][data-astral-theme="solid"] #wallpaper-wrapper { z-index: -1 !important; }
 html[data-site-mode="astral"][data-astral-theme="solid"] #content-panel { opacity: 1 !important; }
-html[data-site-mode="astral"][data-astral-theme="solid"] .float-panel { background: rgba(8, 12, 28, 0.94) !important; }
+html[data-site-mode="astral"][data-astral-theme="solid"] .float-panel { background: rgb(255 255 255 / 0.94) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html.dark[data-site-mode="astral"][data-astral-theme="solid"] .float-panel { background: rgba(8, 12, 28, 0.94) !important; }
 html[data-site-mode="astral"][data-astral-theme="solid"] #navbar > div { background: rgb(255 255 255 / 0.92) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 html.dark[data-site-mode="astral"][data-astral-theme="solid"] #navbar > div { background: rgba(8, 12, 28, 0.94) !important; }
 
