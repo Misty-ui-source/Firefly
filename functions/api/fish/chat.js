@@ -364,6 +364,12 @@ export async function onRequestPost(context) {
 			]);
 		}
 		if (!out.say.trim()) {
+			// 2026-10-31 二分实测：空白由历史里肥鱼自己的某条回复触发（平台侧静默过滤，
+			// finish_reason=stop、正文为空）。第三档：丢掉全部历史只带当前问题重试，
+			// 实测无历史时同问题必答。
+			out = await ask([baseMessages[0], { role: "user", content: message }]);
+		}
+		if (!out.say.trim()) {
 			// 仍空白就给兜底句，绝不让访客看到空气泡；debug 带两次原始输出供定位
 			return json({
 				say: "咕噜……本肥鱼刚刚走神啦，你再喊我一声好不好。",
