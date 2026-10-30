@@ -333,9 +333,9 @@ export async function onRequestPost(context) {
 				const a = ["idle", "wave", "bubbles", "sleepy"].includes(pj.act)
 					? pj.act
 					: "idle";
-				return { say: String(pj.say || "").slice(0, 300), act: a };
+				return { say: String(pj.say || "").slice(0, 300), act: a, raw: c };
 			} catch {
-				return { say: c.slice(0, 300), act: "idle" };
+				return { say: c.slice(0, 300), act: "idle", raw: c };
 			}
 		};
 		const baseMessages = [
@@ -347,6 +347,7 @@ export async function onRequestPost(context) {
 			{ role: "user", content: message },
 		];
 		let out = await ask(baseMessages);
+		const raw1 = out.raw || "";
 		if (!out.say.trim()) {
 			// 模型偶发只回空白（2026-10-31 实测复现）：带提醒重试一次
 			out = await ask([
@@ -359,13 +360,16 @@ export async function onRequestPost(context) {
 			]);
 		}
 		if (!out.say.trim()) {
-			// 仍空白就给兜底句，绝不让访客看到空气泡
-			out = {
+			// 仍空白就给兜底句，绝不让访客看到空气泡；debug 带两次原始输出供定位
+			return json({
 				say: "咕噜……本肥鱼刚刚走神啦，你再喊我一声好不好。",
 				act: "bubbles",
-			};
+				debug: (
+					"b1:" + raw1.slice(0, 90) + " | b2:" + (out.raw || "").slice(0, 90)
+				).replace(/\s+/g, " "),
+			});
 		}
-		return json(out);
+		return json({ say: out.say, act: out.act });
 	} catch (e) {
 		return json({
 			say: "呜……脑子那边没信号，等会儿再喊我好不好。",
