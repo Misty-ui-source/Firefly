@@ -234,6 +234,17 @@ const quality = fp?.quality || "320k";
 
 		const $ = (s: string) => root.querySelector(s) as HTMLElement;
 		const audio = root.querySelector("[data-fp-audio]") as HTMLAudioElement;
+
+		// 形态门（站长 2026-10-31 定版）：浮动播放器只在璨夜出现；
+		// 切走形态时藏起并暂停，切回璨夜再现身。总闸另在 featuresConfig。
+		const applyModeGate = () => {
+			const ok =
+				document.documentElement.getAttribute("data-site-mode") === "astral";
+			root.hidden = !ok;
+			if (!ok && !audio.paused) audio.pause();
+		};
+		applyModeGate();
+		window.addEventListener("siteModeChange", applyModeGate);
 		const panel = $("[data-fp-panel]");
 		const listEl = $("[data-fp-list]");
 		const statusEl = $("[data-fp-status]");

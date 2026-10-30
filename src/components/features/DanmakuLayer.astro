@@ -21,8 +21,13 @@ const texts = (thoughtsConfig.items || [])
 
 <style>
 	#danmaku-layer {
-		position: fixed;
-		inset: 0;
+		/* 站长定版（2026-10-31）：只在页面顶部壁纸带里飘，绝不进正文阅读区；
+		   absolute 定位于页面顶端，滚动时随壁纸一起走 */
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: min(460px, 52vh);
 		overflow: hidden;
 		pointer-events: none;
 		z-index: 55;
@@ -68,9 +73,9 @@ const texts = (thoughtsConfig.items || [])
 			mid: 24000,
 			fast: 16000,
 		};
-		const LANES = 9;
-		const LANE_TOP = 84;
-		const LANE_H = 40;
+		const LANES = 8;
+		const LANE_TOP = 76;
+		const LANE_H = 38;
 
 		const setting = (k: string, fallback: string) =>
 			localStorage.getItem(k) ?? fallback;
