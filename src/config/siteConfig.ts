@@ -155,9 +155,10 @@ export const siteConfig: SiteConfig = {
 	// 访客在显示设置（调色板）里选过的存 localStorage pureFont，优先于这里的默认
 	pureFontMenu: ["system", "maru", "mplus", "luoli", "lxgw", "zhuque"],
 
-	// 谐彩 / 顽彩字体（控制台字体页可改）：default = 形态原生搭配；其余可选 system 与字体库各款键名
+	// 谐彩 / 顽彩 / 璨夜字体（控制台字体页可改）：default = 形态原生搭配；其余可选 system 与字体库各款键名
 	harmonyFont: "default",
 	brickFont: "default",
+	starFont: "default",
 
 	// 站点开始日期，用于统计运行天数
 	siteStartDate: "2026-10-15",

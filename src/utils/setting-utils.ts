@@ -30,6 +30,7 @@ import {
 	sakuraConfig,
 	siteConfig,
 	snowConfig,
+	starfieldConfig,
 } from "../config";
 import { isHomePage as checkIsHomePage } from "./layout-utils";
 
@@ -416,7 +417,7 @@ export function setNavbarStyle(style: NavbarStyle): void {
 	applyNavbarStyleToDocument(safe);
 }
 
-const SITE_MODES: SiteMode[] = ["full", "pure", "harmony", "brick"];
+const SITE_MODES: SiteMode[] = ["full", "pure", "harmony", "brick", "astral"];
 
 export function getDefaultSiteMode(): SiteMode {
 	const v = siteConfig.siteMode ?? "full";
@@ -1325,6 +1326,41 @@ export function setFireflyEnabled(enabled: boolean): void {
 	// 实时切换萤火虫特效
 	window.dispatchEvent(
 		new CustomEvent("fireflyToggle", { detail: { enabled } }),
+	);
+}
+
+// Starfield effect functions（璨夜形态的程序化星空层，组件 AstralStarfield.astro 消费；
+// 存储键 starfieldEnabled、事件 starfieldToggle，与萤火虫同一套协议；只在 astral 形态下真正渲染）
+export function getDefaultStarfieldEnabled(): boolean {
+	return starfieldConfig?.enable ?? true;
+}
+
+export function getStoredStarfieldEnabled(): boolean {
+	if (typeof localStorage === "undefined") {
+		return getDefaultStarfieldEnabled();
+	}
+	const stored = localStorage.getItem("starfieldEnabled");
+	if (stored === null) {
+		return getDefaultStarfieldEnabled();
+	}
+	return stored === "true";
+}
+
+export function setStarfieldEnabled(enabled: boolean): void {
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.setItem !== "function"
+	) {
+		return;
+	}
+	localStorage.setItem("starfieldEnabled", String(enabled));
+	document.documentElement.setAttribute(
+		"data-starfield-enabled",
+		String(enabled),
+	);
+	// 实时切换星空层
+	window.dispatchEvent(
+		new CustomEvent("starfieldToggle", { detail: { enabled } }),
 	);
 }
 

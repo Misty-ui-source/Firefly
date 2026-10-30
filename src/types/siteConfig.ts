@@ -32,8 +32,8 @@ export type NavbarMode = "static" | "fixed" | "dynamic";
 // 导航栏样式：classic 通栏（默认）/ float 悬浮卡片 / capsule 悬浮胶囊 / segment 三段胶囊（下滑收拢）
 export type NavbarStyle = "classic" | "float" | "capsule" | "segment";
 
-// 站点形态：full 华彩（默认，全套呈现）/ pure 素简（简洁导航·专注阅读）/ harmony 谐彩（Material 3 色阶·柔影，视觉参考 Shirone 主题）/ brick 顽彩（玩具积木粗野主义：蓝描边·硬阴影·小圆角，视觉参考 xuhome）；与 utils/setting-utils.ts 的 SITE_MODES 保持一致
-export type SiteMode = "full" | "pure" | "harmony" | "brick";
+// 站点形态：full 华彩（默认，全套呈现）/ pure 素简（简洁导航·专注阅读）/ harmony 谐彩（Material 3 色阶·柔影，视觉参考 Shirone 主题）/ brick 顽彩（玩具积木粗野主义：蓝描边·硬阴影·小圆角，视觉参考 xuhome）/ astral 璨夜（深蓝星空·毛玻璃·衬线主场，视觉参考 XinghuisamaBlogs）；与 utils/setting-utils.ts 的 SITE_MODES 保持一致
+export type SiteMode = "full" | "pure" | "harmony" | "brick" | "astral";
 
 export type SiteConfig = {
 	title: string;
@@ -95,18 +95,19 @@ export type SiteConfig = {
 	// 站点统计页样式："classic" 现行手搓版（默认）/ "azuma" Aemeath 同款版；控制台主题页可切换
 	analyticsStyle?: "classic" | "azuma" | "azuma-clean";
 
-	// 站点形态（全站默认）：full 华彩（全套呈现）/ pure 素简（简洁导航·专注阅读）/ harmony 谐彩（Material 3 色阶·柔影）/ brick 顽彩（玩具积木粗野主义）；
-	// 控制台主题页可改默认，访客可在显示设置里覆盖（localStorage siteMode），样式见 styles/pure-mode.css、styles/harmony-mode.css 与 styles/brick-mode.css
+	// 站点形态（全站默认）：full 华彩（全套呈现）/ pure 素简（简洁导航·专注阅读）/ harmony 谐彩（Material 3 色阶·柔影）/ brick 顽彩（玩具积木粗野主义）/ astral 璨夜（深蓝星空·毛玻璃）；
+	// 控制台主题页可改默认，访客可在显示设置里覆盖（localStorage siteMode），样式见 styles/pure-mode.css、styles/harmony-mode.css、styles/brick-mode.css 与 styles/astral-mode.css
 	siteMode?: SiteMode;
 
 	// 素简字体菜单（控制台字体页可管）：有序的 PureFont 键数组，第一项为默认字体；访客自选优先（localStorage pureFont）
 	pureFontMenu?: string[];
 
-	// 谐彩 / 顽彩形态的正文字体（仅控制台字体页可管，不进访客调色板）：
-	// "default" = 形态原生搭配（谐彩三角色栈 / 顽彩 Fredoka+系统黑体）；其余为字体库键（与 PureFont 键一致，另加 fredoka），
-	// 规则见 styles/harmony-mode.css、styles/brick-mode.css 的 [data-harmony-font] / [data-brick-font] 段
+	// 谐彩 / 顽彩 / 璨夜形态的正文字体（仅控制台字体页可管，不进访客调色板）：
+	// "default" = 形态原生搭配（谐彩三角色栈 / 顽彩 Fredoka+系统黑体 / 璨夜衬线主场：思源宋体+朱雀仿宋）；其余为字体库键（与 PureFont 键一致，另加 fredoka），
+	// 规则见 styles/harmony-mode.css、styles/brick-mode.css、styles/astral-mode.css 的 [data-harmony-font] / [data-brick-font] / [data-star-font] 段
 	harmonyFont?: string;
 	brickFont?: string;
+	starFont?: string;
 
 	// 页面开关配置
 	pages: {

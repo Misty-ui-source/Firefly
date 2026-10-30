@@ -1,0 +1,116 @@
+---
+import { galleryConfig } from "@/config";
+import { getAlbumCover, scanAlbumPhotos } from "@/utils/gallery-utils";
+import { url } from "@/utils/url-utils";
+
+// 璨夜 bento 格位 · 相册海报格：结构与数值参照原站 XinghuisamaBlogs 首页的
+// 照片墙大海报卡（app/page.tsx）——整幅图 object-cover + opacity 0.9、悬停
+// 放大 1.05/700ms；压暗层黑 30%（暗色 50%）、悬停降到 10%/500ms；整卡悬停
+// 放大 1.02/700ms；圆角 24px、玻璃边框与 shadow-xl；标题左下角 text-3xl
+// 粗体白字 + 下划线，描述白色 90% 一行截断。咱们的取舍：下划线颜色从原站
+// 的粉色换成站内青绿（hue 174 家族），图源换成自家相册最新一本（优先未
+// 加密者）的自动封面。代码自写、不搬原文。显隐与落位见 astral-mode.css。
+
+const albums = [...(galleryConfig.albums || [])].sort((a, b) =>
+	(b.date || "").localeCompare(a.date || ""),
+);
+const album = albums.find((a) => !a.password) || albums[0];
+const cover = album ? getAlbumCover(album, scanAlbumPhotos(album.id)) : "";
+const href = album ? url(`/gallery/${album.id}/`) : url("/gallery/");
+---
+
+{album && (
+	<a href={href} class="astral-tile astral-tile--poster" aria-label={`相册：${album.name}`}>
+		{cover ? (
+			<img src={cover} alt={album.name} loading="lazy" class="poster-img" />
+		) : (
+			<span class="poster-fallback" aria-hidden="true"></span>
+		)}
+		<span class="poster-shade" aria-hidden="true"></span>
+		<span class="poster-caption">
+			<span class="poster-title">{album.name}</span>
+			{album.description && <span class="poster-desc">{album.description}</span>}
+		</span>
+	</a>
+)}
+
+<style>
+	.astral-tile--poster {
+		position: relative;
+		overflow: hidden;
+		border-radius: 1.5rem;
+		min-height: 220px;
+		text-decoration: none;
+		border: 1px solid rgb(255 255 255 / 0.4);
+		box-shadow:
+			0 20px 25px -5px rgb(2 6 23 / 0.12),
+			0 8px 10px -6px rgb(2 6 23 / 0.08);
+		transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	:global(html.dark) .astral-tile--poster {
+		border-color: rgb(255 255 255 / 0.1);
+		box-shadow:
+			0 20px 25px -5px rgb(0 0 0 / 0.45),
+			0 8px 10px -6px rgb(0 0 0 / 0.35);
+	}
+	.astral-tile--poster:hover {
+		transform: scale(1.02);
+	}
+	.poster-img,
+	.poster-fallback {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+	}
+	.poster-img {
+		object-fit: cover;
+		opacity: 0.9;
+		transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	.astral-tile--poster:hover .poster-img {
+		transform: scale(1.05);
+	}
+	.poster-fallback {
+		background: linear-gradient(150deg, #1e3a8a 0%, #0f2050 55%, #134e4a 100%);
+	}
+	.poster-shade {
+		position: absolute;
+		inset: 0;
+		background: rgb(0 0 0 / 0.3);
+		transition: background-color 0.5s ease;
+	}
+	:global(html.dark) .poster-shade {
+		background: rgb(0 0 0 / 0.5);
+	}
+	.astral-tile--poster:hover .poster-shade {
+		background: rgb(0 0 0 / 0.1);
+	}
+	.poster-caption {
+		position: absolute;
+		left: 1.5rem;
+		right: 1.5rem;
+		bottom: 1.5rem;
+		display: block;
+	}
+	.poster-title {
+		display: block;
+		font-size: 1.875rem;
+		line-height: 1.25;
+		font-weight: 700;
+		color: #fff;
+		text-decoration: underline;
+		text-decoration-color: #2dd4bf;
+		text-decoration-thickness: 2px;
+		text-underline-offset: 6px;
+		margin-bottom: 0.5rem;
+	}
+	.poster-desc {
+		display: -webkit-box;
+		-webkit-line-clamp: 1;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		font-size: 1.125rem;
+		color: rgb(255 255 255 / 0.9);
+	}
+</style>

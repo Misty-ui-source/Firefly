@@ -1,0 +1,141 @@
+---
+import { Icon } from "astro-icon/components";
+import { getCollection } from "astro:content";
+import { dateKeyOf } from "@/utils/calendar-data";
+import { url } from "@/utils/url-utils";
+
+// 璨夜 bento 格位 · 日记格：取最新一篇日记（非草稿）的元信息。
+// 加密篇目（frontmatter 有 password）只露日期 + 锁 + 「已加密」，正文与标题
+// 一律不进这个格子（连 DOM 都不渲染标题）；未加密才显示标题。加密态视觉 =
+// 玻璃再糊一层：底下放几条假文字条，再盖一层加重 backdrop-blur。
+// 本地 src/content/diary/ 可能为空（条目在用户机器/远端）——空时显示无日期
+// 的通用加密占位，不报错。整格点进该篇（/diary/<id>/），空时点进 /diary/。
+// 显隐与落位见 astral-mode.css。
+
+const entries = (await getCollection("diary", ({ data }) => !data.draft)).sort(
+	(a, b) => b.data.published.getTime() - a.data.published.getTime(),
+);
+const latest = entries[0];
+const encrypted = !latest || Boolean(latest.data.password);
+const dateLabel = latest ? dateKeyOf(latest.data.published) : "";
+const href = latest ? url(`/diary/${latest.id}/`) : url("/diary/");
+---
+
+<a href={href} class="card-base astral-tile astral-tile--diary" aria-label={encrypted ? "最新日记（已加密），点开看日记页" : `最新日记：${latest?.data.title || "无题"}`}>
+	{encrypted ? (
+		<>
+			<span class="diary-ghost" aria-hidden="true">
+				<span class="diary-ghost-line" style="width: 72%"></span>
+				<span class="diary-ghost-line" style="width: 91%"></span>
+				<span class="diary-ghost-line" style="width: 58%"></span>
+				<span class="diary-ghost-line" style="width: 84%"></span>
+			</span>
+			<span class="diary-frost" aria-hidden="true"></span>
+			<span class="diary-lockwrap">
+				<Icon name="material-symbols:shield-lock" class="diary-lock" />
+				<span class="diary-state">已加密</span>
+				{dateLabel && <span class="diary-date">{dateLabel}</span>}
+			</span>
+		</>
+	) : (
+		<span class="diary-open">
+			<span class="diary-label">最新日记</span>
+			<span class="diary-title">{latest?.data.title || "无题"}</span>
+			<span class="diary-meta">
+				{dateLabel}
+				{latest?.data.location && <span> · {latest.data.location}</span>}
+			</span>
+		</span>
+	)}
+</a>
+
+<style>
+	.astral-tile--diary {
+		position: relative;
+		overflow: hidden;
+		text-decoration: none;
+		color: inherit;
+		min-height: 100%;
+	}
+	/* 假文字条：在磨砂层底下，只剩影子 */
+	.diary-ghost {
+		position: absolute;
+		inset: 0;
+		padding: 1.3rem 1.25rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+	}
+	.diary-ghost-line {
+		display: block;
+		height: 0.72rem;
+		border-radius: 999px;
+		background: currentColor;
+		opacity: 0.28;
+	}
+	/* 玻璃再糊一层：璨夜卡片本体 blur 12px，这里再叠 18px + 压一层色 */
+	.diary-frost {
+		position: absolute;
+		inset: 0;
+		backdrop-filter: blur(18px) saturate(130%);
+		-webkit-backdrop-filter: blur(18px) saturate(130%);
+		background: rgb(226 236 255 / 0.18);
+	}
+	:global(html.dark) .diary-frost {
+		background: rgb(10 18 40 / 0.28);
+	}
+	.diary-lockwrap {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.45rem;
+		width: 100%;
+		height: 100%;
+		min-height: 168px;
+		padding: 1.25rem;
+		text-align: center;
+	}
+	.diary-lock {
+		font-size: 2.6rem;
+		color: var(--primary);
+	}
+	.diary-state {
+		font-weight: 700;
+		font-size: 1.05rem;
+		letter-spacing: 0.12em;
+	}
+	.diary-date {
+		font-size: 0.85rem;
+		color: var(--content-meta);
+	}
+	.diary-open {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		justify-content: center;
+		height: 100%;
+		min-height: 168px;
+		padding: 1.25rem 1.4rem;
+	}
+	.diary-label {
+		font-size: 0.8rem;
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		color: var(--primary);
+	}
+	.diary-title {
+		font-size: 1.35rem;
+		font-weight: 700;
+		line-height: 1.4;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+	.diary-meta {
+		font-size: 0.85rem;
+		color: var(--content-meta);
+	}
+</style>

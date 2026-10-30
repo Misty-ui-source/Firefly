@@ -2,6 +2,8 @@ import { getCollection } from "astro:content";
 import holidays2026 from "../../calendar-data/holidays-2026.json";
 import personalRecordsSeed from "../../calendar-data/personal-records.json";
 import seuCalendar from "../../calendar-data/seu-calendar.json";
+import { lunarFestival, solarToLunar } from "./lunar";
+import { SOLAR_TERMS } from "./solar-terms-data";
 import { getPostUrlBySlug } from "./url-utils";
 
 // 日历页数据层（构建时）：文章/动态/日记按发布日期归日；节假日、东南大学校历、
@@ -144,4 +146,53 @@ export async function getOnThisDayMap(): Promise<
 		list.sort((a, b) => b.year - a.year);
 	}
 	return map;
+}
+
+// 近在眼前（首页条用）：从今天起往后 60 天，找最近的一个值得倒计时的日子。
+// 扫描口径与日历页前端倒计时一致（同日内的先后：节气 → 农历节日 → 假期首日
+// → 校历起始日 → 个人记录），只取第一条。日期语义全程在「上海日历日」空间里
+// 用键字符串 + UTC 零点推算，避免构建机时区带来的漂移。
+export interface NextCountdown {
+	name: string;
+	tag: "节气" | "农历" | "假期" | "校历" | "记录";
+	date: string; // YYYY-MM-DD
+	daysLeft: number; // 0 = 今天
+}
+
+export function getNextCountdown(): NextCountdown | null {
+	const layers = getBundledCalendarLayers();
+	const todayKey = dateKeyOf(new Date());
+	const [ty, tm, td] = todayKey.split("-").map(Number);
+	const baseMs = Date.UTC(ty, tm - 1, td);
+	const seenHoliday = new Set<string>();
+
+	for (let off = 0; off <= 60; off++) {
+		const cur = new Date(baseMs + off * 86400000);
+		const y = cur.getUTCFullYear();
+		const m = cur.getUTCMonth() + 1;
+		const d = cur.getUTCDate();
+		const k = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+		const term = SOLAR_TERMS[k];
+		if (term) return { name: term, tag: "节气", date: k, daysLeft: off };
+
+		const fest = lunarFestival(solarToLunar(y, m, d));
+		if (fest) return { name: fest, tag: "农历", date: k, daysLeft: off };
+
+		for (const h of layers.holidays[String(y)] || []) {
+			if (h.date === k && h.type !== "workday" && !seenHoliday.has(h.name)) {
+				seenHoliday.add(h.name);
+				return { name: h.name, tag: "假期", date: k, daysLeft: off };
+			}
+		}
+		for (const s of layers.seu) {
+			if (s.start === k)
+				return { name: s.title, tag: "校历", date: k, daysLeft: off };
+		}
+		for (const r of layers.records) {
+			if (r.date === k)
+				return { name: r.title, tag: "记录", date: k, daysLeft: off };
+		}
+	}
+	return null;
 }

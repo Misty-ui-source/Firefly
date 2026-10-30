@@ -1,0 +1,482 @@
+/* ============================================================
+ * 站点形态 · 璨夜（astral）样式
+ * ------------------------------------------------------------
+ * 机制与素简 / 谐彩 / 顽彩相同：siteConfig.siteMode 为全站默认，访客在
+ * 显示设置里覆盖后存 localStorage（siteMode），由 Layout 头部脚本在绘制
+ * 前把结果写到 html[data-site-mode]；本文件全部规则都收在
+ * html[data-site-mode="astral"] 下，其余四形态时整文件不生效。
+ * 视觉参考 XinghuisamaBlogs 的深蓝星空 + 毛玻璃体系（布局结构与功能
+ * 数值参考其仓库审计，代码与素材全部自研，见 blog-build 调研文档）：
+ * slate-950 深蓝底 + 程序化星空层（AstralStarfield）+ 全站一套毛玻璃
+ * 配方（卡片 bg 白 40% / 暗 slate-800 50%、blur 12px、白边 40% / 10%、
+ * 圆角 24px、shadow-xl；顶栏 blur 24px）+ 全站衬线主场 + indigo 主色，
+ * 星光点缀向站内 hue 174 青绿微调。首页在桌面端重排为 bento 内容矩阵
+ * （纯 CSS grid 落位，见文末无 layer 段），是本形态的结构层差异。
+ * 变量段刻意不进 @layer（与 brick / harmony 同理：只有同为无 layer 且
+ * 特异性更高才压得住 variables.styl 的 :root）；组件覆盖进
+ * @layer components；导航 / 首页 bento 等要压过 utilities 层与布局层
+ * 规则的部分放文末无 layer 段。
+ * ============================================================ */
+
+/* ---------- 令牌（亮色：浅色玻璃，底为淡蓝灰，衬线深蓝字） ---------- */
+html[data-site-mode="astral"] {
+	--astral-indigo: #6366f1;
+	--astral-indigo-deep: #4f46e5;
+	--astral-teal: #2dd4bf;
+
+	--primary: #6366f1;
+	--page-bg: #e9eef8;
+	--card-bg: rgb(255 255 255 / 0.4);
+	--card-bg-transparent: rgb(255 255 255 / 0.32);
+
+	--btn-content: #4f46e5;
+	--btn-regular-bg: rgb(255 255 255 / 0.5);
+	--btn-regular-bg-hover: rgb(255 255 255 / 0.68);
+	--btn-regular-bg-active: rgb(199 210 254 / 0.55);
+
+	--btn-plain-bg-hover: rgb(99 102 241 / 0.1);
+	--btn-plain-bg-active: rgb(99 102 241 / 0.16);
+
+	--btn-card-bg-hover: rgb(255 255 255 / 0.55);
+	--btn-card-bg-active: rgb(199 210 254 / 0.5);
+
+	--enter-btn-bg: var(--btn-regular-bg);
+	--enter-btn-bg-hover: var(--btn-regular-bg-hover);
+	--enter-btn-bg-active: var(--btn-regular-bg-active);
+
+	--deep-text: #1e1b4b;
+	--title-active: #4f46e5;
+
+	--line-divider: rgb(100 116 139 / 0.22);
+	--line-color: rgb(100 116 139 / 0.35);
+	--meta-divider: rgb(100 116 139 / 0.4);
+	--content-meta: rgb(51 65 85 / 0.75);
+
+	--inline-code-bg: rgb(99 102 241 / 0.12);
+	--inline-code-color: #4338ca;
+	--muted: rgb(226 232 240 / 0.7);
+	--selection-bg: rgb(165 180 252 / 0.5);
+	--codeblock-bg: #111c33;
+	--codeblock-topbar-bg: #1e293b;
+
+	--license-block-bg: rgb(255 255 255 / 0.45);
+	--float-panel-bg: rgb(248 250 252 / 0.78);
+
+	--link-underline: rgb(99 102 241 / 0.35);
+	--link-hover: rgb(99 102 241 / 0.12);
+	--link-active: rgb(99 102 241 / 0.2);
+
+	--toc-badge-bg: rgb(199 210 254 / 0.6);
+	--toc-btn-hover: rgb(99 102 241 / 0.12);
+	--toc-btn-active: rgb(99 102 241 / 0.2);
+	--toc-indicator-bg: #6366f1;
+	--toc-item-active: #4f46e5;
+
+	--l2d-msg-bg: #6366f1;
+
+	--scrollbar-bg: rgb(99 102 241 / 0.3);
+	--scrollbar-bg-hover: rgb(99 102 241 / 0.55);
+	--scrollbar-bg-active: rgb(99 102 241 / 0.8);
+
+	/* 卡片标准圆角 24px（rounded-3xl），是玻璃配方的签名尺寸 */
+	--radius-large: 1.5rem;
+
+	/* 页面底的两团柔光（indigo 左上 / 青绿右下），垫在星空层之下 */
+	background-image:
+		radial-gradient(60rem 34rem at 12% -8%, rgb(99 102 241 / 0.14), transparent 60%),
+		radial-gradient(52rem 30rem at 88% 108%, rgb(45 212 191 / 0.1), transparent 60%);
+}
+
+/* ---------- 令牌（暗色：设计原点，slate-950 深蓝底 + slate-800 玻璃） ---------- */
+html.dark[data-site-mode="astral"] {
+	--primary: #818cf8;
+	--page-bg: #020617;
+	--card-bg: rgb(30 41 59 / 0.5);
+	--card-bg-transparent: rgb(30 41 59 / 0.42);
+
+	--btn-content: #c7d2fe;
+	--btn-regular-bg: rgb(51 65 85 / 0.5);
+	--btn-regular-bg-hover: rgb(71 85 105 / 0.55);
+	--btn-regular-bg-active: rgb(99 102 241 / 0.35);
+
+	--btn-plain-bg-hover: rgb(129 140 248 / 0.14);
+	--btn-plain-bg-active: rgb(129 140 248 / 0.22);
+
+	--btn-card-bg-hover: rgb(51 65 85 / 0.55);
+	--btn-card-bg-active: rgb(71 85 105 / 0.6);
+
+	--title-active: #a5b4fc;
+
+	--line-divider: rgb(255 255 255 / 0.1);
+	--line-color: rgb(148 163 184 / 0.3);
+	--meta-divider: rgb(148 163 184 / 0.4);
+	--content-meta: rgb(203 213 225 / 0.72);
+
+	--inline-code-bg: rgb(129 140 248 / 0.16);
+	--inline-code-color: #c7d2fe;
+	--muted: #1e293b;
+	--selection-bg: rgb(99 102 241 / 0.45);
+	--codeblock-bg: #020617;
+	--codeblock-topbar-bg: #0f172a;
+
+	--license-block-bg: rgb(30 41 59 / 0.5);
+	--float-panel-bg: rgb(15 23 42 / 0.75);
+
+	--link-underline: rgb(129 140 248 / 0.4);
+	--link-hover: rgb(129 140 248 / 0.16);
+	--link-active: rgb(129 140 248 / 0.26);
+
+	--toc-badge-bg: rgb(51 65 85 / 0.8);
+	--toc-btn-hover: rgb(129 140 248 / 0.16);
+	--toc-btn-active: rgb(129 140 248 / 0.26);
+	--toc-indicator-bg: #818cf8;
+	--toc-item-active: #a5b4fc;
+
+	--l2d-msg-bg: #4f46e5;
+
+	--scrollbar-bg: rgb(129 140 248 / 0.35);
+	--scrollbar-bg-hover: rgb(129 140 248 / 0.6);
+	--scrollbar-bg-active: rgb(129 140 248 / 0.85);
+
+	background-image:
+		radial-gradient(60rem 34rem at 12% -8%, rgb(99 102 241 / 0.16), transparent 60%),
+		radial-gradient(52rem 30rem at 88% 108%, rgb(45 212 191 / 0.08), transparent 60%);
+}
+
+@layer components {
+
+/* ---------- 字体：衬线主场（思源宋体打头、朱雀仿宋垫后），标题 900 ---------- */
+html[data-site-mode="astral"] body {
+	font-family: var(--font-noto-serif-sc), var(--font-zhuque-fangsong), "Source Han Serif SC", "Songti SC", "STSong", SimSun, serif !important;
+}
+html[data-site-mode="astral"] h1,
+html[data-site-mode="astral"] h2 {
+	font-weight: 900;
+	letter-spacing: -0.02em;
+}
+html[data-site-mode="astral"] h3,
+html[data-site-mode="astral"] h4 {
+	font-weight: 700;
+}
+
+/* ---------- 璨夜字体覆盖（控制台「字体」页控制，存 siteConfig.starFont，不进调色板） ----------
+   default 不出规则、用上面的衬线主场栈；选了具体字体则整栈换成「该字体 + 通用回落」。 */
+html[data-site-mode="astral"][data-star-font="system"] body {
+	font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif !important;
+}
+html[data-site-mode="astral"][data-star-font="maru"] body {
+	font-family: var(--font-zen-maru-gothic), sans-serif !important;
+}
+html[data-site-mode="astral"][data-star-font="mplus"] body {
+	font-family: var(--font-m-plus-rounded-1c), sans-serif !important;
+}
+html[data-site-mode="astral"][data-star-font="luoli"] body {
+	font-family: var(--font-luoliti), sans-serif !important;
+}
+html[data-site-mode="astral"][data-star-font="lxgw"] body {
+	font-family: var(--font-lxgw-wenkai), serif !important;
+}
+html[data-site-mode="astral"][data-star-font="zhuque"] body {
+	font-family: var(--font-zhuque-fangsong), serif !important;
+}
+html[data-site-mode="astral"][data-star-font="inter"] body {
+	font-family: var(--font-inter), sans-serif !important;
+}
+html[data-site-mode="astral"][data-star-font="fredoka"] body {
+	font-family: var(--font-fredoka), sans-serif !important;
+}
+html[data-site-mode="astral"][data-star-font="jetbrains"] body {
+	font-family: var(--font-jetbrains-mono), monospace !important;
+}
+html[data-site-mode="astral"][data-star-font="notoserif"] body {
+	font-family: var(--font-noto-serif-sc), serif !important;
+}
+html[data-site-mode="astral"][data-star-font="greatvibes"] body {
+	font-family: var(--font-greatvibes), sans-serif !important;
+}
+html[data-site-mode="astral"][data-star-font="xiaomaiti"] body {
+	font-family: var(--font-xiaomaiti), sans-serif !important;
+}
+
+/* ---------- 明暗切换 1 秒全局色彩淡变（本形态签名仪式感，仅颜色类属性） ---------- */
+html[data-site-mode="astral"],
+html[data-site-mode="astral"] body,
+html[data-site-mode="astral"] .card-base,
+html[data-site-mode="astral"] .card-base-transparent,
+html[data-site-mode="astral"] .float-panel {
+	transition-property: background-color, border-color, color, fill, stroke;
+	transition-duration: 1s;
+	transition-timing-function: ease;
+}
+@media (prefers-reduced-motion: reduce) {
+	html[data-site-mode="astral"],
+	html[data-site-mode="astral"] body,
+	html[data-site-mode="astral"] .card-base,
+	html[data-site-mode="astral"] .card-base-transparent,
+	html[data-site-mode="astral"] .float-panel {
+		transition-duration: 0.01ms;
+	}
+}
+
+/* ---------- 毛玻璃卡片：全站一套配方（blur 12px + 白边 + 24px 圆角 + shadow-xl） ---------- */
+html[data-site-mode="astral"] .card-base,
+html[data-site-mode="astral"] .card-base-transparent {
+	-webkit-backdrop-filter: blur(12px) saturate(150%);
+	backdrop-filter: blur(12px) saturate(150%);
+	border: 1px solid rgb(255 255 255 / 0.4);
+	box-shadow:
+		0 20px 25px -5px rgb(2 6 23 / 0.12),
+		0 8px 10px -6px rgb(2 6 23 / 0.08);
+}
+html.dark[data-site-mode="astral"] .card-base,
+html.dark[data-site-mode="astral"] .card-base-transparent {
+	border-color: rgb(255 255 255 / 0.1);
+	box-shadow:
+		0 20px 25px -5px rgb(0 0 0 / 0.45),
+		0 8px 10px -6px rgb(0 0 0 / 0.35);
+	color: #f1f5f9;
+}
+/* 卡片边框开关在璨夜下不改变玻璃语法（形态优先，与谐彩 / 顽彩同理） */
+html.enable-card-border[data-site-mode="astral"] .card-base,
+html.enable-card-border[data-site-mode="astral"] .card-base-transparent,
+html.enable-card-border[data-site-mode="astral"] .btn-card {
+	border: 1px solid rgb(255 255 255 / 0.4) !important;
+	box-shadow:
+		0 20px 25px -5px rgb(2 6 23 / 0.12),
+		0 8px 10px -6px rgb(2 6 23 / 0.08) !important;
+}
+html.dark.enable-card-border[data-site-mode="astral"] .card-base,
+html.dark.enable-card-border[data-site-mode="astral"] .card-base-transparent,
+html.dark.enable-card-border[data-site-mode="astral"] .btn-card {
+	border-color: rgb(255 255 255 / 0.1) !important;
+}
+
+/* ---------- 玻璃按钮 / 卡片按钮 / 标签芯片 ---------- */
+html[data-site-mode="astral"] .btn-card {
+	-webkit-backdrop-filter: blur(12px) saturate(150%);
+	backdrop-filter: blur(12px) saturate(150%);
+	border: 1px solid rgb(255 255 255 / 0.4) !important;
+	border-radius: 1rem !important;
+	transition: transform 0.7s cubic-bezier(0.2, 0, 0, 1), background-color 0.3s ease, box-shadow 0.3s ease;
+}
+html.dark[data-site-mode="astral"] .btn-card {
+	border-color: rgb(255 255 255 / 0.1);
+}
+html[data-site-mode="astral"] .btn-card:hover {
+	transform: scale(1.01);
+	box-shadow:
+		0 20px 25px -5px rgb(2 6 23 / 0.14),
+		0 8px 10px -6px rgb(2 6 23 / 0.1);
+}
+html[data-site-mode="astral"] .btn-regular {
+	border: 1px solid rgb(255 255 255 / 0.35) !important;
+	-webkit-backdrop-filter: blur(12px);
+	backdrop-filter: blur(12px);
+}
+html.dark[data-site-mode="astral"] .btn-regular {
+	border-color: rgb(255 255 255 / 0.1);
+}
+html[data-site-mode="astral"] .tag-item {
+	background: rgb(255 255 255 / 0.5) !important;
+	border: 1px solid rgb(255 255 255 / 0.4) !important;
+	-webkit-backdrop-filter: blur(12px);
+	backdrop-filter: blur(12px);
+}
+html.dark[data-site-mode="astral"] .tag-item {
+	background: rgb(51 65 85 / 0.5);
+	border-color: rgb(255 255 255 / 0.1);
+}
+
+/* ---------- 浮动面板（调色板 / 搜索 / 菜单）：更深一档的玻璃 blur 24px ---------- */
+html[data-site-mode="astral"] .float-panel {
+	-webkit-backdrop-filter: blur(24px) saturate(160%);
+	backdrop-filter: blur(24px) saturate(160%);
+	border: 1px solid rgb(255 255 255 / 0.4);
+	box-shadow: 0 25px 50px -12px rgb(2 6 23 / 0.25);
+}
+html.dark[data-site-mode="astral"] .float-panel {
+	border-color: rgb(255 255 255 / 0.1);
+}
+
+/* ---------- 资料卡头像环：indigo → 青绿（hue 174）双色环，替代对方的 indigo→purple ----------
+   环加在头像链接（卡片的直系 a）上——图片本身被 overflow-hidden 裁切，影加在图上看不见 */
+html[data-site-mode="astral"] #left-sidebar div.card-base > a {
+	box-shadow:
+		0 0 0 3px rgb(99 102 241 / 0.55),
+		0 0 0 6px rgb(45 212 191 / 0.28),
+		0 10px 24px -8px rgb(2 6 23 / 0.35);
+}
+
+/* ---------- 正文小字与元信息：暗色玻璃上把 neutral 小字提亮一档，保证对比 ----------
+   （守门扫描实测：text-neutral-400 落在半透玻璃上会擦线，故 400→slate-300、500→slate-400；
+   覆盖卡片与浮动面板两处玻璃表面——导航音乐面板的歌词占位字也在这条路上） */
+html.dark[data-site-mode="astral"] .card-base .text-neutral-400,
+html.dark[data-site-mode="astral"] .float-panel .text-neutral-400 {
+	color: #cbd5e1 !important;
+}
+html.dark[data-site-mode="astral"] .card-base .text-neutral-500,
+html.dark[data-site-mode="astral"] .float-panel .text-neutral-500 {
+	color: #94a3b8 !important;
+}
+
+} /* @layer components */
+
+/* ============================================================
+ * 无 layer 段：导航玻璃 + 首页 bento（要压过 utilities 层 / 布局层）
+ * ============================================================ */
+
+/* ---------- 顶栏：blur 24px 的玻璃配方（四种导航样式共用同一表面） ---------- */
+html[data-site-mode="astral"] #navbar > div {
+	background: rgb(255 255 255 / 0.4) !important;
+	-webkit-backdrop-filter: blur(24px) saturate(160%);
+	backdrop-filter: blur(24px) saturate(160%);
+	border-bottom: 1px solid rgb(255 255 255 / 0.2);
+	box-shadow: 0 1px 2px rgb(2 6 23 / 0.05);
+}
+html.dark[data-site-mode="astral"] #navbar > div {
+	background: rgb(2 6 23 / 0.5) !important;
+	border-bottom-color: rgb(255 255 255 / 0.05);
+	box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+}
+/* 移动端导航面板同配方 */
+html[data-site-mode="astral"] #nav-menu-panel {
+	background: rgb(248 250 252 / 0.82);
+	-webkit-backdrop-filter: blur(24px) saturate(160%);
+	backdrop-filter: blur(24px) saturate(160%);
+}
+html.dark[data-site-mode="astral"] #nav-menu-panel {
+	background: rgb(2 6 23 / 0.82);
+}
+
+/* 璨夜专属 bento 六格（AstralDayStrip / AstralAlbumPoster / AstralGnssTile /
+ * AstralDiaryTile / AstralThoughtsTile / AstralNowCard）的跨形态开关：
+ * 六格全页渲染为 #main-grid 的子元素，默认一律不显示；只在下方 bento 介质
+ * 查询里（astral + body.is-home + ≥1280px）逐格点亮并落位。其他四种形态
+ * （含璨夜手机端与非首页）下 display:none，对布局与网格零影响。此规则
+ * 保持无作用域，且特异性低于 bento 段的点亮规则。 */
+#main-grid .astral-tile { display: none; }
+
+/* 璨夜下撤看板娘：主 Live2D 与小伙伴的根节点在初始化时被打上标记类
+ * （l2d-main-root / l2d-buddy），这里只负责隐藏；「璨夜下连模型都不加载、
+ * 切走再补启」的守卫在 Live2DWidget / Live2DBuddies 两个组件脚本里。
+ * 其他四种形态下本规则不生效，看板娘保持原样。 */
+html[data-site-mode="astral"] .l2d-main-root,
+html[data-site-mode="astral"] .l2d-buddy { display: none !important; }
+
+/* ---------- 首页 bento 内容矩阵（仅桌面 ≥1280px、仅首页、仅璨夜） ----------
+ * 机制：#main-grid 改 12 列；左右侧栏及其分组层 display:contents 摊平，
+ * 每个小部件直接成为 grid item 按 §2.7/§8.1 的格位显式落位。DOM 与其余
+ * 形态共用一份，访客切形态纯靠本段作用域开关，不依赖构建期渲染。
+ * 格位对应（第二批已补满）：资料卡 7 + 「此刻」合并卡 5（第一、二行右
+ * 列整卡：上半音乐、下半设备在线）/ 公告细条 7（第二行）/ 文章 8 + 右
+ * 列动态·评论·日历三格（第三至五行）/ 相册海报 8 + 碎碎念 4（第六行）/
+ * GNSS 星图 6 + 日记 6（第七行）/ 那年今日 + 倒计时整行细条（第八行）/
+ * 站点统计整行（第九行）/ 分类·标签·站点信息三小格（第十行）。六个新
+ * 格是 MainGridLayout 里全页渲染的 Astral* 组件，本段外默认 display:
+ * none（见上方跨形态开关），只在这里点亮。 */
+@media (min-width: 1280px) {
+	html[data-site-mode="astral"] body.is-home #main-grid {
+		grid-template-columns: repeat(12, minmax(0, 1fr));
+		gap: 1.5rem;
+	}
+	html[data-site-mode="astral"] body.is-home #main-grid #left-sidebar,
+	html[data-site-mode="astral"] body.is-home #main-grid #right-sidebar,
+	html[data-site-mode="astral"] body.is-home #main-grid #left-sidebar > div,
+	html[data-site-mode="astral"] body.is-home #main-grid #right-sidebar > div {
+		display: contents;
+	}
+	/* 兜底：未显式落位的部件整行排在矩阵之后 */
+	html[data-site-mode="astral"] body.is-home #main-grid #content-column,
+	html[data-site-mode="astral"] body.is-home #main-grid widget-layout,
+	html[data-site-mode="astral"] body.is-home #main-grid #left-sidebar div.card-base {
+		grid-column: 1 / -1;
+	}
+	html[data-site-mode="astral"] body.is-home #main-grid > #content-column {
+		max-width: none;
+		width: auto;
+		margin-inline: 0;
+	}
+	/* 第一行：资料卡大格 7 列；右列是「此刻」合并卡，整卡跨第一、二行 */
+	html[data-site-mode="astral"] body.is-home #main-grid #left-sidebar div.card-base {
+		grid-column: 1 / span 7;
+		grid-row: 1;
+	}
+	html[data-site-mode="astral"] body.is-home #main-grid .astral-tile--now {
+		display: flex;
+		grid-column: 8 / span 5;
+		grid-row: 1 / span 2;
+	}
+	/* 侧栏原装音乐格在本矩阵里隐藏：播放器已收进「此刻」卡上半（同一
+	 * 播放器的另一个视图、状态互通），避免同页出现两份可见播放器。 */
+	html[data-site-mode="astral"] body.is-home #main-grid widget-layout[data-id^="music-widget-"] {
+		display: none;
+	}
+	/* 第二行：公告细条 7 列（右列被「此刻」卡跨行占满） */
+	html[data-site-mode="astral"] body.is-home #main-grid widget-layout[data-id="announcement"] {
+		grid-column: 1 / span 7;
+		grid-row: 2;
+	}
+	/* 文章区 8 列跨三行，右列依次动态 / 最新评论 / 日历 */
+	html[data-site-mode="astral"] body.is-home #main-grid > #content-column {
+		grid-column: 1 / span 8;
+		grid-row: 3 / span 3;
+	}
+	html[data-site-mode="astral"] body.is-home #main-grid widget-layout[data-id="latest-dynamics"] {
+		grid-column: 9 / span 4;
+		grid-row: 3;
+	}
+	html[data-site-mode="astral"] body.is-home #main-grid widget-layout[data-id="recent-comments"] {
+		grid-column: 9 / span 4;
+		grid-row: 4;
+	}
+	html[data-site-mode="astral"] body.is-home #main-grid widget-layout[data-id="calendar-widget"] {
+		grid-column: 9 / span 4;
+		grid-row: 5;
+	}
+	/* 第六行：相册海报 8 列 + 碎碎念 4 列 */
+	html[data-site-mode="astral"] body.is-home #main-grid .astral-tile--poster {
+		display: block;
+		grid-column: 1 / span 8;
+		grid-row: 6;
+	}
+	html[data-site-mode="astral"] body.is-home #main-grid .astral-tile--thoughts {
+		display: flex;
+		grid-column: 9 / span 4;
+		grid-row: 6;
+	}
+	/* 第七行：GNSS 星图 6 列 + 日记 6 列 */
+	html[data-site-mode="astral"] body.is-home #main-grid .astral-tile--gnss {
+		display: flex;
+		grid-column: 1 / span 6;
+		grid-row: 7;
+	}
+	html[data-site-mode="astral"] body.is-home #main-grid .astral-tile--diary {
+		display: block;
+		grid-column: 7 / span 6;
+		grid-row: 7;
+	}
+	/* 第八行：那年今日 + 倒计时整行细条 */
+	html[data-site-mode="astral"] body.is-home #main-grid .astral-tile--daystrip {
+		display: flex;
+		grid-column: 1 / -1;
+		grid-row: 8;
+	}
+	/* 底部数据面板整行（SiteDashboard 对位） */
+	html[data-site-mode="astral"] body.is-home #main-grid widget-layout[data-id="site-stats"] {
+		grid-column: 1 / -1;
+		grid-row: 9;
+	}
+	/* 尾行三小格：分类 / 标签 / 站点信息 */
+	html[data-site-mode="astral"] body.is-home #main-grid widget-layout[data-id="categories"] {
+		grid-column: 1 / span 4;
+		grid-row: 10;
+	}
+	html[data-site-mode="astral"] body.is-home #main-grid widget-layout[data-id="tags"] {
+		grid-column: 5 / span 4;
+		grid-row: 10;
+	}
+	html[data-site-mode="astral"] body.is-home #main-grid widget-layout[data-id="site-info"] {
+		grid-column: 9 / span 4;
+		grid-row: 10;
+	}
+}

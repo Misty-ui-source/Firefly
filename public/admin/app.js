@@ -6413,7 +6413,7 @@ routes.theme = async () => {
       <div class="field"><label>导航栏样式（全站默认）</label><div class="pills">${seg('navbarStyle', 'classic', '▬ 通栏')}${seg('navbarStyle', 'float', '▭ 悬浮卡片')}${seg('navbarStyle', 'capsule', '💊 悬浮胶囊')}${seg('navbarStyle', 'segment', '💊💊💊 三段胶囊')}</div>
       <p class="hint">三段胶囊：导航栏拆成左站名 / 中菜单 / 右控件三颗胶囊，向下滚动时左右两段收成圆形，右段汉堡打开快捷面板。访客可以在博客调色板（显示设置）里自己切换样式，那是访客本地的选择，不改这里的全站默认。</p></div>
       <div class="field"><label>移动端菜单样式</label><div class="pills">${seg('mobileMenuStyle', 'drawer', '全屏抽屉')}${seg('mobileMenuStyle', 'card', '浮层卡片')}</div></div>
-      <div class="field"><label>站点形态（全站默认）</label><div class="pills">${seg('siteMode', 'full', '🌸 华彩')}${seg('siteMode', 'pure', '🍃 素简')}${seg('siteMode', 'harmony', '🎵 谐彩')}${seg('siteMode', 'brick', '🧱 顽彩')}</div>
+      <div class="field"><label>站点形态（全站默认）</label><div class="pills">${seg('siteMode', 'full', '🌸 华彩')}${seg('siteMode', 'pure', '🍃 素简')}${seg('siteMode', 'harmony', '🎵 谐彩')}${seg('siteMode', 'brick', '🧱 顽彩')}${seg('siteMode', 'astral', '🌌 璨夜')}</div>
       <p class="hint">素简 = 简洁导航 · 专注阅读（对标朝朝听雨的 Pure 形态）：隐藏横幅壁纸、花瓣特效、看板娘与音乐浮动件，侧栏只留个人卡 / 公告 / 最近评论 / 标签，文章页正文单列、右栏只留目录。谐彩 = Material 3 色阶 · 无边框柔影（视觉参考 Shirone 主题）：整站换成色阶分层 + 极柔阴影，导航变半透顶栏，首页横幅成舞台，文章卡片做减法；内容与功能与华彩完全一致，只换气质。访客可以在博客调色板（显示设置）里自己切换形态，那是访客本地的选择，不改这里的全站默认。</p></div>
       <div class="field"><label>站点统计页样式</label><div class="pills">${seg('analyticsStyle', 'classic', '现行版（手搓）')}${seg('analyticsStyle', 'azuma', 'azuma 同款（带插画）')}${seg('analyticsStyle', 'azuma-clean', 'azuma 清爽版（无插画）')}</div>
       <p class="hint">azuma 同款 = 圈子里流传的 Aemeath 统计页（访问脉冲 7/30/90 天切换、推送节奏带贪吃蛇、中国地图、最近评论），数据走本站自己的 Umami / Waline。带插画版的 7 张图已全部压成 webp（原版 5.5MB → 约 0.7MB）。切换前可以先开 /analytics-azuma/ 与 /analytics-azuma-clean/ 两张预览页对比，三套随时互切。</p></div>
@@ -6769,10 +6769,11 @@ routes.fonts = async () => {
   const regionOpts = (cur) => `<option value=""${!cur ? ' selected' : ''}>（跟随全局）</option>` +
     fonts.map((f) => `<option value="${esc(f.var)}"${cur === f.var ? ' selected' : ''}>${esc(fontLabel(f))}</option>`).join('');
   const slotField = (id, label, opts) => `<div class="field"><label>${label}</label><select id="${id}">${opts}</select></div>`;
-  /* 谐彩 / 顽彩字体（siteConfig.harmonyFont / brickFont）：只在控制台控制，博客调色板里不出现 */
-  const modeFontCur = { harmony: 'default', brick: 'default' };
+  /* 谐彩 / 顽彩 / 璨夜字体（siteConfig.harmonyFont / brickFont / starFont）：只在控制台控制，博客调色板里不出现 */
+  const modeFontCur = { harmony: 'default', brick: 'default', astral: 'default' };
   { const mh = siteSrc.match(/harmonyFont\s*:\s*"([^"]*)"/); if (mh) modeFontCur.harmony = mh[1];
-    const mb = siteSrc.match(/brickFont\s*:\s*"([^"]*)"/); if (mb) modeFontCur.brick = mb[1]; }
+    const mb = siteSrc.match(/brickFont\s*:\s*"([^"]*)"/); if (mb) modeFontCur.brick = mb[1];
+    const ma = siteSrc.match(/starFont\s*:\s*"([^"]*)"/); if (ma) modeFontCur.astral = ma[1]; }
   const MODE_KEY_VAR = { maru: '--font-zen-maru-gothic', mplus: '--font-m-plus-rounded-1c', luoli: '--font-luoliti', lxgw: '--font-lxgw-wenkai', zhuque: '--font-zhuque-fangsong', inter: '--font-inter', fredoka: '--font-fredoka', jetbrains: '--font-jetbrains-mono', notoserif: '--font-noto-serif-sc', greatvibes: '--font-greatvibes', xiaomaiti: '--font-xiaomaiti' };
   const MODE_FONT_KEYS = ['system', ...Object.keys(MODE_KEY_VAR)];
   const modeFontLabel = (k) => k === 'system' ? '系统默认' : (FONT_CN[MODE_KEY_VAR[k]] || k);
@@ -6822,6 +6823,14 @@ routes.fonts = async () => {
       <select id="font-brick" style="min-width:240px">${modeFontOpts(modeFontCur.brick, '默认（Fredoka + 系统黑体）')}</select>
       <span class="spacer"></span>
       <button class="btn" id="btn-save-brick-font">💾 保存顽彩字体</button>
+    </div>
+  </div>
+  <div class="card"><h2>🌌 璨夜字体 <span class="sub">形态正文字体 · 只在控制台控制，博客调色板里不出现 · 存 siteConfig.starFont</span></h2>
+    <p class="hint">默认是璨夜的衬线主场（思源宋体打头、朱雀仿宋垫后）。选了具体字体，璨夜正文整栈换成那一款；想恢复选回「默认」。保存后重新构建网站生效。</p>
+    <div class="toolbar">
+      <select id="font-astral" style="min-width:240px">${modeFontOpts(modeFontCur.astral, '默认（衬线主场）')}</select>
+      <span class="spacer"></span>
+      <button class="btn" id="btn-save-astral-font">💾 保存璨夜字体</button>
     </div>
   </div>`;
 
@@ -6908,6 +6917,7 @@ routes.fonts = async () => {
   };
   $('#btn-save-harmony-font').onclick = () => saveModeFont('harmonyFont', '#font-harmony', '谐彩字体');
   $('#btn-save-brick-font').onclick = () => saveModeFont('brickFont', '#font-brick', '顽彩字体');
+  $('#btn-save-astral-font').onclick = () => saveModeFont('starFont', '#font-astral', '璨夜字体');
 };
 
 /* ---------- 启动 ---------- */

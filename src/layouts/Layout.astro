@@ -3,6 +3,7 @@ import GoogleAnalytics from "@components/analytics/GoogleAnalytics.astro";
 import La51Analytics from "@components/analytics/La51Analytics.astro";
 import MicrosoftClarity from "@components/analytics/MicrosoftClarity.astro";
 import UmamiAnalytics from "@components/analytics/UmamiAnalytics.astro";
+import AstralStarfield from "@components/features/AstralStarfield.astro";
 import CodeGroupManager from "@components/features/CodeGroupManager.astro";
 import FancyboxManager from "@components/features/FancyboxManager.astro";
 import FontSetup from "@components/features/FontSetup.astro";
@@ -45,6 +46,7 @@ import "@/styles/immersive-reading.css";
 import "@/styles/pure-mode.css";
 import "@/styles/harmony-mode.css";
 import "@/styles/brick-mode.css";
+import "@/styles/astral-mode.css";
 import "@/styles/variables.styl";
 import "@rehype-callouts-theme";
 
@@ -160,7 +162,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
 ---
 
 <!doctype html>
-<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"} data-navbar-style={siteConfig.navbar.navbarStyle ?? "classic"} data-site-mode={siteConfig.siteMode ?? "full"} data-harmony-font={siteConfig.harmonyFont ?? "default"} data-brick-font={siteConfig.brickFont ?? "default"}>
+<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"} data-navbar-style={siteConfig.navbar.navbarStyle ?? "classic"} data-site-mode={siteConfig.siteMode ?? "full"} data-harmony-font={siteConfig.harmonyFont ?? "default"} data-brick-font={siteConfig.brickFont ?? "default"} data-star-font={siteConfig.starFont ?? "default"}>
   <head>
     <meta charset="UTF-8" />
     {commentConfig?.type === "waline" && commentConfig?.waline?.serverURL && (
@@ -479,7 +481,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
       if (!isSiteModeSwitchable) {
         localStorage.removeItem("siteMode");
       }
-      const resolvedSiteMode = ["full", "pure", "harmony", "brick"].includes(siteModeStored)
+      const resolvedSiteMode = ["full", "pure", "harmony", "brick", "astral"].includes(siteModeStored)
         ? siteModeStored
         : defaultSiteMode;
       document.documentElement.setAttribute(
@@ -694,6 +696,9 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
 
     <!-- 顽彩圆点网层：固定全屏、负层级、只在顽彩作用域内被 brick-mode.css 赋形（24px 圆点网），其他形态下是无样式空层 -->
     <div id="brick-dot-layer" aria-hidden="true"></div>
+
+    <!-- 璨夜星空层：程序化星点 canvas，只在璨夜作用域内由 AstralStarfield 组件驱动（星空开关可关），其他形态下不渲染 -->
+    <AstralStarfield />
 
     {/* 卡片样式：根据 localStorage 覆盖默认配置 */}
     <script is:inline define:vars={{

@@ -1,0 +1,136 @@
+---
+import { Icon } from "astro-icon/components";
+import {
+	dateKeyOf,
+	getNextCountdown,
+	getOnThisDayMap,
+} from "@/utils/calendar-data";
+import { url } from "@/utils/url-utils";
+
+// 璨夜 bento 格位 · 那年今日 + 倒计时条（对位 XinghuisamaBlogs 的每日选刊整行）：
+// 左半往年今日一则（数据与 /calendar/ 侧栏「那年今日」同源，构建时取今天这格），
+// 右半接下来 60 天里最近的一个倒计时（口径见 utils/calendar-data 的 getNextCountdown）。
+// 整条点进 /calendar/。显隐与落位全在 astral-mode.css（默认 display:none）。
+
+const now = new Date();
+const todayKey = dateKeyOf(now);
+const todayMd = todayKey.slice(5);
+const yearNow = Number(todayKey.slice(0, 4));
+
+const map = await getOnThisDayMap();
+const otd = (map[todayMd] || []).find((i) => i.year < yearNow) || null;
+
+const cd = getNextCountdown();
+const cdDateLabel = cd
+	? `${Number(cd.date.slice(5, 7))}月${Number(cd.date.slice(8, 10))}日`
+	: "";
+const cdLeftLabel = cd
+	? cd.daysLeft === 0
+		? "就是今天"
+		: cd.daysLeft === 1
+			? "就在明天"
+			: `还有 ${cd.daysLeft} 天`
+	: "";
+
+const KIND_LABEL: Record<string, string> = {
+	post: "文章",
+	dynamic: "动态",
+	diary: "日记",
+	record: "记录",
+};
+---
+
+<a href={url("/calendar/")} class="card-base astral-tile astral-tile--daystrip" aria-label="那年今日与近期倒计时，点开看日历页">
+	<span class="daystrip-half">
+		<span class="daystrip-label">
+			<Icon name="material-symbols:calendar-month-rounded" class="daystrip-icon" />
+			那年今日
+		</span>
+		{otd ? (
+			<span class="daystrip-main">
+				<b>{otd.year}</b>
+				<em>{KIND_LABEL[otd.kind] || ""}</em>
+				<span class="daystrip-title">{otd.title}</span>
+			</span>
+		) : (
+			<span class="daystrip-main daystrip-empty">往年的今天还没有记录</span>
+		)}
+	</span>
+	<span class="daystrip-half daystrip-half--right">
+		{cd ? (
+			<>
+				<span class="daystrip-main">
+					<em>{cd.tag}</em>
+					<span class="daystrip-title">{cd.name}</span>
+				</span>
+				<span class="daystrip-meta">{cdDateLabel} · {cdLeftLabel}</span>
+			</>
+		) : (
+			<span class="daystrip-main daystrip-empty">接下来 60 天还没有排上的日子</span>
+		)}
+	</span>
+</a>
+
+<style>
+	.astral-tile--daystrip {
+		align-items: center;
+		gap: 1rem 2rem;
+		padding: 0.85rem 1.25rem;
+		text-decoration: none;
+		color: inherit;
+	}
+	.daystrip-half {
+		display: flex;
+		align-items: center;
+		gap: 0.9rem;
+		min-width: 0;
+	}
+	.daystrip-half--right {
+		margin-left: auto;
+		text-align: right;
+	}
+	.daystrip-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-weight: 700;
+		font-size: 0.9rem;
+		white-space: nowrap;
+		color: var(--primary);
+	}
+	.daystrip-icon {
+		font-size: 1.15rem;
+	}
+	.daystrip-main {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 0.55rem;
+		min-width: 0;
+		font-size: 0.95rem;
+	}
+	.daystrip-main b {
+		font-weight: 900;
+	}
+	.daystrip-main em {
+		font-style: normal;
+		font-size: 0.7rem;
+		color: var(--content-meta);
+		border: 1px solid var(--line-divider);
+		border-radius: 999px;
+		padding: 0.05rem 0.45rem;
+		white-space: nowrap;
+	}
+	.daystrip-title {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.daystrip-empty {
+		color: var(--content-meta);
+	}
+	.daystrip-meta {
+		font-size: 0.85rem;
+		color: var(--content-meta);
+		white-space: nowrap;
+	}
+</style>

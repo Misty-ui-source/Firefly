@@ -142,7 +142,38 @@ function serializeMenus(menus: Props["config"]["menus"]) {
 		},
 	};
 
+	// 璨夜（astral）形态下不设看板娘：初始化守卫跳过 createWidget（模型不加载、
+	// 零开销），从璨夜切到其他形态时由 siteModeChange 监听懒补初始化；已经
+	// 初始化过的，切进璨夜靠根节点标记类 l2d-main-root 在 astral-mode.css
+	// 里隐藏（形态切换是实时改 data-site-mode、不刷新页面，两条路都要有）。
+	const isAstralMode = () =>
+		document.documentElement.dataset.siteMode === "astral";
+	let widgetInitialized = false;
+
+	// 找出 createWidget 新挂到 body 的根节点（fixed 定位且内含 canvas 的 div，
+	// 识别法同 Live2DBuddies），给它打上 l2d-main-root 标记类供璨夜隐藏。
+	function tagWidgetRoot(known: Set<HTMLElement>) {
+		let tries = 0;
+		const timer = setInterval(() => {
+			tries++;
+			const fresh = (
+				Array.prototype.slice.call(
+					document.body.querySelectorAll('div[style*="fixed"]'),
+				) as HTMLElement[]
+			).filter((el) => el.querySelector("canvas") && !known.has(el));
+			for (const el of fresh) {
+				known.add(el);
+				el.classList.add("l2d-main-root");
+			}
+			// 不在第一批新节点就停：全程轮询约 12 秒，确保主根节点（挂载时机
+			// 不定）一定被打上标记；快照已排除星空层 / Spine 等既有根节点
+			if (tries > 60) clearInterval(timer);
+		}, 200);
+	}
+
 	function initWidget() {
+		if (widgetInitialized) return;
+		if (isAstralMode()) return;
 		const container = document.getElementById("l2d-widget-container");
 		if (!container) return;
 
@@ -225,11 +256,25 @@ function serializeMenus(menus: Props["config"]["menus"]) {
 				}
 			}
 
+			const knownRoots = new Set<HTMLElement>(
+				(
+					Array.prototype.slice.call(
+						document.body.querySelectorAll('div[style*="fixed"]'),
+					) as HTMLElement[]
+				).filter((el) => el.querySelector("canvas")),
+			);
 			createWidget(options);
+			widgetInitialized = true;
+			tagWidgetRoot(knownRoots);
 		} catch (e) {
 			console.error("Failed to initialize Live2D widget:", e);
 		}
 	}
+
+	// 璨夜 → 其他形态：补上被守卫跳过的初始化（切回璨夜的隐藏走 CSS 标记类）
+	window.addEventListener("siteModeChange", () => {
+		if (!isAstralMode()) initWidget();
+	});
 
 	// 确保只初始化一次
 	if (document.readyState === "loading") {

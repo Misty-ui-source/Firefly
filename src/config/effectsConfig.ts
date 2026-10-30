@@ -150,6 +150,19 @@ export const leavesConfig: ParticleEffectConfig = {
 	zIndex: 100,
 };
 
+// 星空特效（璨夜形态专属：程序化星点层 AstralStarfield.astro，不走 ParticleEffects 引擎；
+// 默认开——它是璨夜的签名背景，访客可在调色板特效页签关掉，存 localStorage starfieldEnabled）
+export const starfieldConfig: ParticleEffectConfig = {
+	// 是否启用星空特效
+	enable: true,
+
+	// 星点数量（桌面端基准，移动端由组件按宽度自动降密度）
+	count: 170,
+
+	// 层级（组件实际用负层级固定层，此值仅作记录）
+	zIndex: -10,
+};
+
 // 点击特效（轻量粒子引擎，共用 ParticleEffects.astro）
 export const clickConfig: ParticleEffectConfig = {
 	// 是否启用点击特效

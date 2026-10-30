@@ -11,6 +11,12 @@ import type { MarkdownHeading } from "astro";
 import FloatingControls from "@/components/controls/FloatingControls.astro";
 import CategoryBar from "@/components/layout/CategoryBar.astro";
 import SidebarColumn from "@/components/layout/SidebarColumn.astro";
+import AstralAlbumPoster from "@/components/widget/AstralAlbumPoster.astro";
+import AstralDayStrip from "@/components/widget/AstralDayStrip.astro";
+import AstralDiaryTile from "@/components/widget/AstralDiaryTile.astro";
+import AstralGnssTile from "@/components/widget/AstralGnssTile.astro";
+import AstralNowCard from "@/components/widget/AstralNowCard.astro";
+import AstralThoughtsTile from "@/components/widget/AstralThoughtsTile.astro";
 import WallpaperSection from "@/components/layout/WallpaperSection.astro";
 import {
 	live2dWidgetConfig,
@@ -162,6 +168,17 @@ const {
                 headings={headings}
                 encrypted={encrypted}
             />
+
+            {/* 璨夜专属 bento 六格：全页渲染、纯 CSS 显隐——默认 display:none，
+                只有 astral + 首页 + ≥1280px 时在 astral-mode.css 里逐个点亮并落位；
+                其他四种形态下对 DOM 网格零影响。「此刻」合并卡（音乐 + 设备
+                在线）也在此列，跨第一、二行右列。 */}
+            <AstralDayStrip />
+            <AstralAlbumPoster />
+            <AstralGnssTile />
+            <AstralDiaryTile />
+            <AstralThoughtsTile />
+            <AstralNowCard />
 
         </div>
 

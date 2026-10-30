@@ -46,9 +46,17 @@
 		});
 	}
 
+	let buddiesStarted = false;
+
 	async function startBuddies() {
+		if (buddiesStarted) return;
+		// 璨夜（astral）形态下不设看板娘：连同主 widget 一起撤，初始化跳过；
+		// 从璨夜切到其他形态时由下方 siteModeChange 监听补启。已初始化的，
+		// 切进璨夜靠 .l2d-buddy 标记类在 astral-mode.css 里隐藏。
+		if (document.documentElement.dataset.siteMode === "astral") return;
 		// 移动端直接不初始化
 		if (window.innerWidth <= 768) return;
+		buddiesStarted = true;
 		try {
 			const known = new Set<HTMLElement>(widgetRoots());
 			for (const b of buddies) {
@@ -83,4 +91,10 @@
 	} else {
 		setTimeout(startBuddies, 1500);
 	}
+
+	// 璨夜 → 其他形态：补上被守卫跳过的初始化
+	window.addEventListener("siteModeChange", (e) => {
+		const mode = (e as CustomEvent).detail?.mode;
+		if (mode && mode !== "astral") setTimeout(startBuddies, 1500);
+	});
 </script>

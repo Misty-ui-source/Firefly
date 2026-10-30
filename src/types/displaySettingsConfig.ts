@@ -70,6 +70,9 @@ export type DisplaySettingsConfig = {
 	// 萤火虫特效开关
 	fireflySwitchable: boolean;
 
+	// 星空特效开关（璨夜形态专属星空层）
+	starfieldSwitchable: boolean;
+
 	// 音符特效开关
 	notesSwitchable: boolean;
 

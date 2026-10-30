@@ -13,6 +13,7 @@ import {
 	getDefaultCardBorderEnabled,
 	getDefaultCardFollowThemeEnabled,
 	getDefaultFireflyEnabled,
+	getDefaultStarfieldEnabled,
 	getDefaultFullscreenLayout,
 	getDefaultGradientEnabled,
 	getDefaultHue,
@@ -37,6 +38,7 @@ import {
 	getStoredCardBorderEnabled,
 	getStoredCardFollowThemeEnabled,
 	getStoredFireflyEnabled,
+	getStoredStarfieldEnabled,
 	getStoredFullscreenLayout,
 	getStoredNavbarStyle,
 	getPureFontMenu,
@@ -76,6 +78,7 @@ import {
 	setCardBorderEnabled,
 	setCardFollowThemeEnabled,
 	setFireflyEnabled,
+	setStarfieldEnabled,
 	setFullscreenLayout,
 	setGradientEnabled,
 	setHue,
@@ -148,6 +151,7 @@ const siteModeOptions = [
 	{ value: "pure", labelKey: I18nKey.siteModePure },
 	{ value: "harmony", labelKey: I18nKey.siteModeHarmony },
 	{ value: "brick", labelKey: I18nKey.siteModeBrick },
+	{ value: "astral", labelKey: I18nKey.siteModeAstral },
 ] as const;
 // 素简下调色板精简：只留站点形态（华彩切换）、字体与特效（樱花/萤火虫），壁纸整页签收起；
 // 文章布局（列表/网格）在素简下不出现——素简是单列列表、根本排不了网格（2026-10-28 用户定），原位置改放特效
@@ -163,6 +167,8 @@ const pureFontOptions = getPureFontMenu().map((k) => ({
 const isHarmony = $derived(siteMode === "harmony");
 // 顽彩：配色与导航形态由 brick-mode.css 固定（蓝描边 + 硬阴影 + 顶栏），全站主题色/导航样式两段隐藏
 const isBrick = $derived(siteMode === "brick");
+// 璨夜：深蓝星空 + 毛玻璃由 astral-mode.css 接管，特效页签多一个星空开关（仅本形态出现）
+const isAstral = $derived(siteMode === "astral");
 let harmonyHue = $state(getStoredHarmonyHue() ?? getHue());
 let harmonyHueCustom = $state(getStoredHarmonyHue() !== null);
 let harmonyScheme = $state(getStoredHarmonyScheme());
@@ -283,6 +289,8 @@ let snowEnabled = $state(true);
 const defaultSnowEnabled = getDefaultSnowEnabled();
 let fireflyEnabled = $state(true);
 const defaultFireflyEnabled = getDefaultFireflyEnabled();
+let starfieldEnabled = $state(true);
+const defaultStarfieldEnabled = getDefaultStarfieldEnabled();
 let notesEnabled = $state(true);
 const defaultNotesEnabled = getDefaultNotesEnabled();
 let rainEnabled = $state(true);
@@ -334,6 +342,7 @@ const isBannerCarouselSwitchable =
 const isSakuraSwitchable = displaySettingsConfig.sakuraSwitchable;
 const isSnowSwitchable = displaySettingsConfig.snowSwitchable;
 const isFireflySwitchable = displaySettingsConfig.fireflySwitchable;
+const isStarfieldSwitchable = displaySettingsConfig.starfieldSwitchable;
 const isNotesSwitchable = displaySettingsConfig.notesSwitchable;
 const isRainSwitchable = displaySettingsConfig.rainSwitchable;
 const isMeteorSwitchable = displaySettingsConfig.meteorSwitchable;
@@ -430,6 +439,7 @@ const hasEffectsTab = $derived(
 	isSakuraSwitchable ||
 		isSnowSwitchable ||
 		isFireflySwitchable ||
+		isStarfieldSwitchable ||
 		isNotesSwitchable ||
 		isRainSwitchable ||
 		isMeteorSwitchable ||
@@ -442,6 +452,7 @@ const effectsIsDefault = $derived(
 	sakuraEnabled === defaultSakuraEnabled &&
 		snowEnabled === defaultSnowEnabled &&
 		fireflyEnabled === defaultFireflyEnabled &&
+		starfieldEnabled === defaultStarfieldEnabled &&
 		notesEnabled === defaultNotesEnabled &&
 		rainEnabled === defaultRainEnabled &&
 		meteorEnabled === defaultMeteorEnabled &&
@@ -679,6 +690,11 @@ function toggleFireflyEnabled() {
 	setFireflyEnabled(fireflyEnabled);
 }
 
+function toggleStarfieldEnabled() {
+	starfieldEnabled = !starfieldEnabled;
+	setStarfieldEnabled(starfieldEnabled);
+}
+
 function toggleNotesEnabled() {
 	notesEnabled = !notesEnabled;
 	setNotesEnabled(notesEnabled);
@@ -722,6 +738,8 @@ function resetEffects() {
 	setSnowEnabled(defaultSnowEnabled);
 	fireflyEnabled = defaultFireflyEnabled;
 	setFireflyEnabled(defaultFireflyEnabled);
+	starfieldEnabled = defaultStarfieldEnabled;
+	setStarfieldEnabled(defaultStarfieldEnabled);
 	notesEnabled = defaultNotesEnabled;
 	setNotesEnabled(defaultNotesEnabled);
 	rainEnabled = defaultRainEnabled;
@@ -860,6 +878,7 @@ onMount(() => {
 	// 从localStorage读取雪花 / 萤火虫特效状态
 	snowEnabled = getStoredSnowEnabled();
 	fireflyEnabled = getStoredFireflyEnabled();
+	starfieldEnabled = getStoredStarfieldEnabled();
 	notesEnabled = getStoredNotesEnabled();
 	rainEnabled = getStoredRainEnabled();
 	meteorEnabled = getStoredMeteorEnabled();
@@ -1056,7 +1075,7 @@ $effect(() => {
 	<!-- Appearance Tab: Theme Color + Layout -->
 	{#if activeTab === "appearance"}
 		<!-- Theme Color Section（谐彩下由专属色相滑杆接管、顽彩配色固定，隐藏全站主题色） -->
-		{#if showThemeColor && !isPure && !isHarmony && !isBrick}
+		{#if showThemeColor && !isPure && !isHarmony && !isBrick && !isAstral}
 		<div class="">
 			<div class="section-title">
 				{i18n(I18nKey.themeColor)}
@@ -1080,7 +1099,7 @@ $effect(() => {
 		{/if}
 
 		<!-- Navbar Style Section（谐彩的导航是 Top App Bar 形态、顽彩是积木顶栏，隐藏全站导航样式） -->
-		{#if showNavbarStyle && !isPure && !isHarmony && !isBrick}
+		{#if showNavbarStyle && !isPure && !isHarmony && !isBrick && !isAstral}
 		<div class="">
 			<div class="section-title">
 				{i18n(I18nKey.navbarStyle)}
@@ -1708,7 +1727,7 @@ $effect(() => {
 
 	<!-- Effects Tab: Sakura / Snow / Firefly -->
 	{#if activeTab === "effects"}
-		{#if isSakuraSwitchable || isSnowSwitchable || isFireflySwitchable}
+		{#if isSakuraSwitchable || isSnowSwitchable || isFireflySwitchable || isStarfieldSwitchable}
 		<div class="">
 			<div class="section-title">
 				{i18n(I18nKey.effectsSettings)}
@@ -1722,6 +1741,23 @@ $effect(() => {
 				</button>
 			</div>
 			<div class="space-y-1">
+				{#if isAstral && isStarfieldSwitchable}
+				<button
+					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
+					class:bg-(--btn-regular-bg-hover)={starfieldEnabled}
+					onclick={toggleStarfieldEnabled}
+				>
+					<Icon icon="mdi:star-four-points" class="text-[1.25rem] shrink-0"></Icon>
+					<span class="text-sm flex-1">{i18n(I18nKey.starfieldEffect)}</span>
+					<div class="w-10 h-5 rounded-full transition-all duration-200 relative"
+						 class:bg-(--primary)={starfieldEnabled}
+						 class:bg-(--btn-regular-bg-active)={!starfieldEnabled}>
+						<div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+							 class:left-0.5={!starfieldEnabled}
+							 class:left-5={starfieldEnabled}></div>
+					</div>
+				</button>
+				{/if}
 				{#if isSakuraSwitchable}
 				<button
 					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"

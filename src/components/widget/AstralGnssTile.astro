@@ -1,0 +1,193 @@
+---
+import { Icon } from "astro-icon/components";
+import { dateKeyOf } from "@/utils/calendar-data";
+import { url } from "@/utils/url-utils";
+
+// 璨夜 bento 格位 · GNSS 星图格：轻量视觉格。一块独立的「夜空小窗」——深蓝底、
+// 几十颗星慢闪烁、几颗「卫星」拖着短尾巴匀速飘过。绘制思路借顶栏外
+// AstralStarfield（星点分色 + 光晕），但这是本格自己的小画布与实例，不共用
+// 状态、不跑任何解算；卫星轨迹是装饰性的示意直线，不代表真实轨道。
+// 整格点进 /gnss/。显隐与落位见 astral-mode.css。
+
+const todayKey = dateKeyOf(new Date());
+const dateLabel = `${Number(todayKey.slice(5, 7))}月${Number(todayKey.slice(8, 10))}日`;
+---
+
+<a href={url("/gnss/")} class="card-base astral-tile astral-tile--gnss" aria-label="今晚头顶的星空，点开看 GNSS 卫星星图">
+	<span class="gnss-sky">
+		<canvas data-gnss-mini aria-hidden="true"></canvas>
+	</span>
+	<span class="gnss-body">
+		<span class="gnss-title">
+			<Icon name="material-symbols:satellite-alt-rounded" class="gnss-icon" />
+			今晚头顶的星空
+		</span>
+		<span class="gnss-meta">{dateLabel} · GNSS 卫星星图，点开看今晚头顶飞过什么</span>
+	</span>
+</a>
+
+<style>
+	.astral-tile--gnss {
+		flex-direction: column;
+		gap: 0.85rem;
+		padding: 1rem 1.1rem 1.1rem;
+		text-decoration: none;
+		color: inherit;
+	}
+	.gnss-sky {
+		position: relative;
+		display: block;
+		height: 118px;
+		border-radius: 1rem;
+		overflow: hidden;
+		background: linear-gradient(165deg, #0a142e 0%, #12245c 58%, #0b3f3a 130%);
+	}
+	.gnss-sky canvas {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+	}
+	.gnss-body {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
+	.gnss-title {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		font-weight: 700;
+		font-size: 1.05rem;
+	}
+	.gnss-icon {
+		color: var(--primary);
+		font-size: 1.3rem;
+	}
+	.gnss-meta {
+		font-size: 0.85rem;
+		color: var(--content-meta);
+	}
+</style>
+
+<script>
+	// 格内小星空：星点慢闪 + 卫星拖尾飘移。仅在璨夜形态下且格子可见时动；
+	// reduced-motion 只画一帧静态图。IIFE + window 标记防重复初始化
+	// （做法同 AstralStarfield；节点在 Swup 容器外，切页不重建）。
+	(() => {
+		const w = window as unknown as Record<string, unknown>;
+		if (w.__astralGnssMiniInit) return;
+		const canvas = document.querySelector<HTMLCanvasElement>("[data-gnss-mini]");
+		if (!canvas) return;
+		w.__astralGnssMiniInit = true;
+		const ctx = canvas.getContext("2d");
+		if (!ctx) return;
+
+		interface Star { x: number; y: number; r: number; phase: number; speed: number; color: string }
+		interface Sat { x: number; y: number; vx: number; vy: number; color: string }
+		let stars: Star[] = [];
+		let sats: Sat[] = [];
+		let W = 0;
+		let H = 0;
+
+		const COLORS = ["#eef3ff", "#dbe7ff", "#c7d2fe", "#99f6e4"];
+		function seed() {
+			const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+			const rect = canvas.getBoundingClientRect();
+			W = Math.max(2, Math.round(rect.width));
+			H = Math.max(2, Math.round(rect.height));
+			canvas.width = Math.round(W * dpr);
+			canvas.height = Math.round(H * dpr);
+			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+			const n = 46;
+			stars = Array.from({ length: n }, () => ({
+				x: Math.random() * W,
+				y: Math.random() * H,
+				r: 0.6 + Math.random() * 1.1,
+				phase: Math.random() * Math.PI * 2,
+				speed: 0.4 + Math.random() * 0.9,
+				color: COLORS[Math.floor(Math.random() * COLORS.length)],
+			}));
+			sats = Array.from({ length: 4 }, (_, i) => {
+				const y = 14 + Math.random() * (H - 28);
+				return {
+					x: Math.random() * W,
+					y,
+					vx: 7 + Math.random() * 6 + i * 1.5,
+					vy: (Math.random() - 0.5) * 2.4,
+					color: i % 2 ? "#99f6e4" : "#c7d2fe",
+				};
+			});
+		}
+
+		function draw(t: number, animate: boolean) {
+			ctx.clearRect(0, 0, W, H);
+			for (const s of stars) {
+				const tw = animate ? 0.55 + 0.45 * Math.sin(s.phase + t * 0.001 * s.speed) : 0.85;
+				ctx.globalAlpha = Math.max(0.15, tw);
+				ctx.fillStyle = s.color;
+				ctx.beginPath();
+				ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+				ctx.fill();
+			}
+			for (const sat of sats) {
+				// 短尾巴：沿速度反方向渐隐线段
+				const tail = 26;
+				const grad = ctx.createLinearGradient(sat.x, sat.y, sat.x - sat.vx * (tail / 10), sat.y - sat.vy * (tail / 10));
+				grad.addColorStop(0, sat.color);
+				grad.addColorStop(1, "rgba(199,210,254,0)");
+				ctx.globalAlpha = 0.55;
+				ctx.strokeStyle = grad;
+				ctx.lineWidth = 1.2;
+				ctx.beginPath();
+				ctx.moveTo(sat.x, sat.y);
+				ctx.lineTo(sat.x - sat.vx * (tail / 10), sat.y - sat.vy * (tail / 10));
+				ctx.stroke();
+				ctx.globalAlpha = 1;
+				ctx.fillStyle = sat.color;
+				ctx.beginPath();
+				ctx.arc(sat.x, sat.y, 2.1, 0, Math.PI * 2);
+				ctx.fill();
+				ctx.globalAlpha = 0.35;
+				ctx.beginPath();
+				ctx.arc(sat.x, sat.y, 5, 0, Math.PI * 2);
+				ctx.fill();
+				ctx.globalAlpha = 1;
+			}
+		}
+
+		const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		let last = performance.now();
+		function frame(now: number) {
+			requestAnimationFrame(frame);
+			if (document.hidden) return;
+			if (document.documentElement.dataset.siteMode !== "astral") return;
+			if (canvas.offsetParent === null) return;
+			const dt = Math.min(0.05, (now - last) / 1000);
+			last = now;
+			for (const sat of sats) {
+				sat.x += sat.vx * dt;
+				sat.y += sat.vy * dt;
+				if (sat.x > W + 30) { sat.x = -30; sat.y = 14 + Math.random() * (H - 28); }
+				if (sat.y < -10) sat.y = H + 6;
+				if (sat.y > H + 10) sat.y = -6;
+			}
+			draw(now, true);
+		}
+
+		seed();
+		if (reduced) {
+			draw(1200, false);
+		} else {
+			requestAnimationFrame(frame);
+		}
+		let resizeTimer: number | undefined;
+		window.addEventListener("resize", () => {
+			window.clearTimeout(resizeTimer);
+			resizeTimer = window.setTimeout(() => {
+				seed();
+				if (reduced) draw(1200, false);
+			}, 200);
+		});
+	})();
+</script>

@@ -1,0 +1,117 @@
+---
+import { Icon } from "astro-icon/components";
+import { thoughtsConfig } from "@/config/thoughtsConfig";
+import { url } from "@/utils/url-utils";
+
+// 璨夜 bento 格位 · 碎碎念格：取 thoughtsConfig 最新 5 条，前端每 5 秒淡入
+// 淡出轮换一条；系统开了减动效（prefers-reduced-motion）时不轮换、静态显示
+// 第一条。服务端先把第一条渲染为激活态，无 JS 时也是这个样子。
+// 整格点进 /gallery/thoughts/。显隐与落位见 astral-mode.css。
+
+const items = [...(thoughtsConfig.items || [])]
+	.sort(
+		(a, b) =>
+			new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+	)
+	.slice(0, 5);
+---
+
+<a href={url("/gallery/thoughts/")} class="card-base astral-tile astral-tile--thoughts" aria-label="碎碎念，点开看碎碎念页">
+	<span class="thoughts-head">
+		<Icon name="material-symbols:chat-bubble-outline-rounded" class="thoughts-icon" />
+		碎碎念
+	</span>
+	<span class="thoughts-rotator" data-thoughts-rotator>
+		{items.length ? items.map((it, idx) => (
+			<span class:list={["thoughts-item", idx === 0 && "is-active"]}>
+				{it.title && <b class="thoughts-item-title">{it.title}</b>}
+				<span class="thoughts-item-text">{it.content}</span>
+				<span class="thoughts-item-date">{(it.createdAt || "").slice(0, 10)}</span>
+			</span>
+		)) : (
+			<span class="thoughts-item is-active">
+				<span class="thoughts-item-text">还没有碎碎念。</span>
+			</span>
+		)}
+	</span>
+</a>
+
+<style>
+	.astral-tile--thoughts {
+		flex-direction: column;
+		gap: 0.7rem;
+		padding: 1.1rem 1.25rem;
+		text-decoration: none;
+		color: inherit;
+	}
+	.thoughts-head {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		font-weight: 700;
+		font-size: 0.95rem;
+		color: var(--primary);
+	}
+	.thoughts-icon {
+		font-size: 1.2rem;
+	}
+	.thoughts-rotator {
+		position: relative;
+		display: block;
+		flex: 1;
+		min-height: 5.2rem;
+	}
+	.thoughts-item {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		opacity: 0;
+		transition: opacity 0.9s ease;
+		pointer-events: none;
+	}
+	.thoughts-item.is-active {
+		opacity: 1;
+	}
+	.thoughts-item-title {
+		font-size: 1rem;
+	}
+	.thoughts-item-text {
+		font-size: 0.92rem;
+		line-height: 1.6;
+		display: -webkit-box;
+		-webkit-line-clamp: 3;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+	.thoughts-item-date {
+		margin-top: auto;
+		font-size: 0.78rem;
+		color: var(--content-meta);
+	}
+</style>
+
+<script>
+	// 碎碎念轮换：仅在璨夜形态 + 格子可见时推进；减动效直接不启动。
+	// IIFE + window 标记防重复（节点在 Swup 容器外）。
+	(() => {
+		const w = window as unknown as Record<string, unknown>;
+		if (w.__astralThoughtsInit) return;
+		const rotator = document.querySelector<HTMLElement>("[data-thoughts-rotator]");
+		if (!rotator) return;
+		w.__astralThoughtsInit = true;
+		const items = Array.from(rotator.querySelectorAll<HTMLElement>(".thoughts-item"));
+		if (items.length < 2) return;
+		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+		let idx = 0;
+		window.setInterval(() => {
+			if (document.hidden) return;
+			if (document.documentElement.dataset.siteMode !== "astral") return;
+			if (rotator.offsetParent === null) return;
+			items[idx].classList.remove("is-active");
+			idx = (idx + 1) % items.length;
+			items[idx].classList.add("is-active");
+		}, 5000);
+	})();
+</script>

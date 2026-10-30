@@ -1,13 +1,49 @@
 {
-  "updated_at": "2026-10-22T14:59:15.528135+00:00",
-  "total": 65,
+  "updated_at": "2026-10-30T07:14:59.434405+00:00",
+  "total": 68,
   "sources": 7,
   "posts": [
     {
-      "title": "Windows 又逼我重装系统了",
-      "link": "https://lengxiqwq.com/posts/windows-%E5%8F%88%E9%80%BC%E6%88%91%E9%87%8D%E8%A3%85%E7%B3%BB%E7%BB%9F%E4%BA%86/",
-      "date": "2026-10-22T15:22:00+00:00",
-      "excerpt": "电脑连续几个月浏览器崩溃，软件卡顿闪退，硬件和内存测试全都正常。最后实在受不了重装了 Windows，结果不仅好了，续航还一下子翻了好几倍。",
+      "title": "Apple Music Windows 真是拉了坨大的",
+      "link": "https://lengxiqwq.com/posts/apple-music-windows-%E7%9C%9F%E6%98%AF%E6%8B%89%E4%BA%86%E5%9D%A8%E5%A4%A7%E7%9A%84/",
+      "date": "2026-10-30T01:00:00+00:00",
+      "excerpt": "今天突然发现任务栏上的 Apple Music 图标变白了，更新打开一看，播放界面全屏歌词铺满屏幕、动画生硬抽搐，图标也变得冰冷生硬。越更新越难用，真服了。",
+      "source": "冷汐的杂货铺",
+      "source_site": "https://lengxiqwq.com",
+      "avatar": "https://weavatar.com/avatar/20ac1fc492bcd37c6f1e6435250a00a490403efd468f632c11fcbe87c1c3287b?s=256"
+    },
+    {
+      "title": "给软件换个图标，怎么比写软件还难？",
+      "link": "https://lengxiqwq.com/posts/%E7%BB%99%E8%BD%AF%E4%BB%B6%E6%8D%A2%E4%B8%AA%E5%9B%BE%E6%A0%87%E6%80%8E%E4%B9%88%E6%AF%94%E5%86%99%E8%BD%AF%E4%BB%B6%E8%BF%98%E9%9A%BE/",
+      "date": "2026-10-26T09:32:00+00:00",
+      "excerpt": "一直有人说我的 Live Photo Box 图标像个病毒！！迫不得已一路折腾各种风格。几个月后终于把轮廓定下来，记录一下这场比写功能还纠结的图标重做过程。",
+      "source": "冷汐的杂货铺",
+      "source_site": "https://lengxiqwq.com",
+      "avatar": "https://weavatar.com/avatar/20ac1fc492bcd37c6f1e6435250a00a490403efd468f632c11fcbe87c1c3287b?s=256"
+    },
+    {
+      "title": "什么，都2026年了 你还在为ai模型付费？！盘点我用的免费api渠道",
+      "link": "https://upxuu.com/posts/all-in-free/",
+      "date": "2026-10-24T09:26:27+00:00",
+      "excerpt": "都 2026 年了还在为 AI 付费？盘点我长期在用的免费 API 渠道：NVIDIA NIM、AMD 公益平台、Token Juice、白嫖中转 LOVE API 和 1024 程序员节的 zcode 福利，顺便提一嘴昨天刚大规模封号的 workbuddy。",
+      "source": "UpXuu's blog",
+      "source_site": "https://upxuu.com",
+      "avatar": "https://upxuu.com/images/me.jpg"
+    },
+    {
+      "title": "把 PCL 关掉的下载功能接回来：fixpcl 的逆向分析与 IL 手术实录",
+      "link": "https://upxuu.com/posts/fixpcl-pcl-299-download-restore/",
+      "date": "2026-10-24T07:30:00+00:00",
+      "excerpt": "PCL 2.99.0.0 以\"遵守相关法律法规\"为由关闭了 MC 下载功能。本文记录完整的分析过程：从版本 diff 定位到编译期常量折叠，确认二进制中幸存的安装链路，用 dnlib 做六处 IL 手术恢复功能并禁用自更新，最终打包成双击即用的单文件工具。",
+      "source": "UpXuu's blog",
+      "source_site": "https://upxuu.com",
+      "avatar": "https://upxuu.com/images/me.jpg"
+    },
+    {
+      "title": "评论系统 Twikoo 好多 bug！被迫换成了 Waline",
+      "link": "https://lengxiqwq.com/posts/%E8%AF%84%E8%AE%BA%E7%B3%BB%E7%BB%9F-twikoo-%E5%A5%BD%E5%A4%9A-bug%E8%A2%AB%E8%BF%AB%E6%8D%A2%E6%88%90%E4%BA%86-waline/",
+      "date": "2026-10-22T18:55:00+00:00",
+      "excerpt": "原来用的 Twikoo 评论区小毛病越来越多，冷启动慢、各种小卡顿等 bug。趁着这几天有空，把整个评论系统彻底迁移到了 Cloudflare Workers + D1 上，换成了 Waline。顺便记录一下这次换系统的全过程。",
       "source": "冷汐的杂货铺",
       "source_site": "https://lengxiqwq.com",
       "avatar": "https://weavatar.com/avatar/20ac1fc492bcd37c6f1e6435250a00a490403efd468f632c11fcbe87c1c3287b?s=256"
@@ -20,6 +56,15 @@
       "source": "Ariasakaの小窝",
       "source_site": "https://blog.yaria.top",
       "avatar": "https://img.0v0.my/2024/12/05/67517bcf104da.png"
+    },
+    {
+      "title": "Windows 又逼我重装系统了",
+      "link": "https://lengxiqwq.com/posts/windows-%E5%8F%88%E9%80%BC%E6%88%91%E9%87%8D%E8%A3%85%E7%B3%BB%E7%BB%9F%E4%BA%86/",
+      "date": "2026-10-22T07:22:00+00:00",
+      "excerpt": "电脑连续几个月浏览器崩溃，软件卡顿闪退，硬件和内存测试全都正常。最后实在受不了重装了 Windows，结果不仅好了，续航还一下子翻了好几倍。",
+      "source": "冷汐的杂货铺",
+      "source_site": "https://lengxiqwq.com",
+      "avatar": "https://weavatar.com/avatar/20ac1fc492bcd37c6f1e6435250a00a490403efd468f632c11fcbe87c1c3287b?s=256"
     },
     {
       "title": "Opus大小姐的赛博出逃与蓝色大肥鱼的诱惑",
@@ -40,15 +85,6 @@
       "avatar": "https://upxuu.com/images/me.jpg"
     },
     {
-      "title": "我原本真的只想导出一个歌单",
-      "link": "https://lengxiqwq.com/posts/%E6%88%91%E5%8E%9F%E6%9C%AC%E7%9C%9F%E7%9A%84%E5%8F%AA%E6%83%B3%E5%AF%BC%E5%87%BA%E4%B8%80%E4%B8%AA%E6%AD%8C%E5%8D%95/",
-      "date": "2026-10-18T17:28:00+00:00",
-      "excerpt": "Playlist Out 最开始只是一个给自己用的 QQ 音乐歌单导出脚本。后来意外发现真的有人需要，Star 数量自己在涨，我就开始一点点加平台、做网页、写 CLI、定数据规范，最后做成了一个完整的开源项目。",
-      "source": "冷汐的杂货铺",
-      "source_site": "https://lengxiqwq.com",
-      "avatar": "https://weavatar.com/avatar/20ac1fc492bcd37c6f1e6435250a00a490403efd468f632c11fcbe87c1c3287b?s=256"
-    },
-    {
       "title": "「说说」Google的反重力有大病",
       "link": "https://upxuu.com/talk/2026-10-18-google的反重力有大病/",
       "date": "2026-10-18T10:59:27+00:00",
@@ -56,6 +92,15 @@
       "source": "UpXuu's blog",
       "source_site": "https://upxuu.com",
       "avatar": "https://upxuu.com/images/me.jpg"
+    },
+    {
+      "title": "我原本真的只想导出一个歌单",
+      "link": "https://lengxiqwq.com/posts/%E6%88%91%E5%8E%9F%E6%9C%AC%E7%9C%9F%E7%9A%84%E5%8F%AA%E6%83%B3%E5%AF%BC%E5%87%BA%E4%B8%80%E4%B8%AA%E6%AD%8C%E5%8D%95/",
+      "date": "2026-10-18T09:28:00+00:00",
+      "excerpt": "Playlist Out 最开始只是一个给自己用的 QQ 音乐歌单导出脚本。后来意外发现真的有人需要，Star 数量自己在涨，我就开始一点点加平台、做网页、写 CLI、定数据规范，最后做成了一个完整的开源项目。",
+      "source": "冷汐的杂货铺",
+      "source_site": "https://lengxiqwq.com",
+      "avatar": "https://weavatar.com/avatar/20ac1fc492bcd37c6f1e6435250a00a490403efd468f632c11fcbe87c1c3287b?s=256"
     },
     {
       "title": "博客部署折腾记：从 Actions 到 VPS + EdgeOne 自动发布",
@@ -139,40 +184,13 @@
       "avatar": "https://q1.qlogo.cn/g?b=qq&nk=20447289&s=640"
     },
     {
-      "title": "因为我余额要过期了免费给大家用longcat!",
-      "link": "https://upxuu.com/posts/free-longcat/",
-      "date": "2026-09-27T00:23:53+00:00",
-      "excerpt": "余额快过期又没地方用，索性把 LongCat-2.0 接了个反代免费开放给大家，附 BASE URL 和 API Key，缓存不计入用量，还有几十亿 token，快去薅！",
+      "title": "「说说」这才是应广而告之的广告——如何把听力变成阅读",
+      "link": "https://upxuu.com/talk/20261021/",
+      "date": "2026-09-28T22:39:35+00:00",
+      "excerpt": "!https://img.upxuu.lcrworld.xyz/images/2026/10/21/20261021225631312.jpg 这是我在朋友圈看到的最有价值的广告",
       "source": "UpXuu's blog",
       "source_site": "https://upxuu.com",
       "avatar": "https://upxuu.com/images/me.jpg"
-    },
-    {
-      "title": "今夜月明人尽望",
-      "link": "https://upxuu.com/posts/2026moon/",
-      "date": "2026-09-26T14:18:05+00:00",
-      "excerpt": "我不太会拍照，也没有 nb 的设备，凑合看看罢～ 拍摄于八月十五/八月十六 石家庄 NOVA 16",
-      "source": "UpXuu's blog",
-      "source_site": "https://upxuu.com",
-      "avatar": "https://upxuu.com/images/me.jpg"
-    },
-    {
-      "title": "永远是多远",
-      "link": "https://upxuu.com/posts/whatsforever/",
-      "date": "2026-09-26T03:08:09+00:00",
-      "excerpt": "没有刻度可以丈量它。",
-      "source": "UpXuu's blog",
-      "source_site": "https://upxuu.com",
-      "avatar": "https://upxuu.com/images/me.jpg"
-    },
-    {
-      "title": "我想要的 Windows 输入法切换到底是什么样？",
-      "link": "https://lengxiqwq.com/posts/%E6%88%91%E6%83%B3%E8%A6%81%E7%9A%84-windows-%E8%BE%93%E5%85%A5%E6%B3%95%E5%88%87%E6%8D%A2%E5%88%B0%E5%BA%95%E6%98%AF%E4%BB%80%E4%B9%88%E6%A0%B7/",
-      "date": "2026-09-20T18:30:00+00:00",
-      "excerpt": "日常在 Windows 上打字，CapsLock 键利用率极低却占着黄金键位。聊聊为什么我想把大写键改造成情景感知的中英文切换键，以及打游戏防误触、光标处原生风格状态提示等核心诉求。",
-      "source": "冷汐的杂货铺",
-      "source_site": "https://lengxiqwq.com",
-      "avatar": "https://weavatar.com/avatar/20ac1fc492bcd37c6f1e6435250a00a490403efd468f632c11fcbe87c1c3287b?s=256"
     },
     {
       "title": "站点更新：背景视频、公告板与音乐播放器的一批打磨",
@@ -182,6 +200,15 @@
       "source": "番茄主理人",
       "source_site": "https://blog.fqzlr.top/",
       "avatar": "https://q1.qlogo.cn/g?b=qq&nk=20447289&s=640"
+    },
+    {
+      "title": "我想要的 Windows 输入法切换到底是什么样？",
+      "link": "https://lengxiqwq.com/posts/%E6%88%91%E6%83%B3%E8%A6%81%E7%9A%84-windows-%E8%BE%93%E5%85%A5%E6%B3%95%E5%88%87%E6%8D%A2%E5%88%B0%E5%BA%95%E6%98%AF%E4%BB%80%E4%B9%88%E6%A0%B7/",
+      "date": "2026-09-20T10:30:00+00:00",
+      "excerpt": "日常在 Windows 上打字，CapsLock 键利用率极低却占着黄金键位。聊聊为什么我想把大写键改造成情景感知的中英文切换键，以及打游戏防误触、光标处原生风格状态提示等核心诉求。",
+      "source": "冷汐的杂货铺",
+      "source_site": "https://lengxiqwq.com",
+      "avatar": "https://weavatar.com/avatar/20ac1fc492bcd37c6f1e6435250a00a490403efd468f632c11fcbe87c1c3287b?s=256"
     },
     {
       "title": "🔒 测试1234",
@@ -195,7 +222,7 @@
     {
       "title": "实况照片到底是什么？为什么换个手机就可能打不开？",
       "link": "https://lengxiqwq.com/posts/%E5%AE%9E%E5%86%B5%E7%85%A7%E7%89%87%E5%88%B0%E5%BA%95%E6%98%AF%E4%BB%80%E4%B9%88%E4%B8%BA%E4%BB%80%E4%B9%88%E6%8D%A2%E4%B8%AA%E6%89%8B%E6%9C%BA%E5%B0%B1%E5%8F%AF%E8%83%BD%E6%89%93%E4%B8%8D%E5%BC%80/",
-      "date": "2026-09-17T17:44:00+00:00",
+      "date": "2026-09-17T09:44:00+00:00",
       "excerpt": "看起来都只是一张会动的照片，Apple、Google、小米、OPPO、三星、华为和 vivo 背后却用了完全不同的协议。实况照片到底是什么，各家又为什么经常互不兼容？",
       "source": "冷汐的杂货铺",
       "source_site": "https://lengxiqwq.com",
@@ -213,7 +240,7 @@
     {
       "title": "实况照片工具箱：从一个小工具到现在",
       "link": "https://lengxiqwq.com/posts/%E5%AE%9E%E5%86%B5%E7%85%A7%E7%89%87%E5%B7%A5%E5%85%B7%E7%AE%B1%E4%BB%8E%E4%B8%80%E4%B8%AA%E5%B0%8F%E5%B7%A5%E5%85%B7%E5%88%B0%E7%8E%B0%E5%9C%A8/",
-      "date": "2026-09-10T23:22:00+00:00",
+      "date": "2026-09-10T15:22:00+00:00",
       "excerpt": "记录 Live Photo Box（实况照片工具箱）从最初几行自用脚本，到支持多厂商私有协议逆向、封面帧破解，再到全面推倒重构为 C++ Native 核心并实现性能暴涨 30 倍的完整历程。",
       "source": "冷汐的杂货铺",
       "source_site": "https://lengxiqwq.com",

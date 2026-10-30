@@ -1,0 +1,190 @@
+---
+// 璨夜（astral）形态专属：程序化星空层
+// 自研 canvas 星点（随机分布 + 正弦微闪烁 + 少量带光晕的漂移光点），只在
+// html[data-site-mode="astral"] 且星空开关开启时运行；开关协议与萤火虫一致：
+// localStorage starfieldEnabled 优先、缺省回退 effectsConfig.starfieldConfig.enable，
+// 面板通过 starfieldToggle 事件实时切换（见 utils/setting-utils 的 setStarfieldEnabled）。
+// 形态切换走 siteModeChange 事件（applySiteModeToDocument 派发），切走即停、切回即启。
+// 移动端按宽度自动降密度；prefers-reduced-motion 时完全不启动。
+import { starfieldConfig } from "@/config";
+
+const baseCount = starfieldConfig?.count ?? 170;
+const defaultEnabled = starfieldConfig?.enable ?? true;
+---
+
+<canvas
+	id="astral-star-layer"
+	aria-hidden="true"
+	data-base-count={baseCount}
+	data-default-enabled={String(defaultEnabled)}
+	style="position: fixed; inset: 0; z-index: 2; pointer-events: none; display: none;"
+></canvas>
+
+<script>
+	(function setupAstralStarfield() {
+		const w = window as unknown as Record<string, unknown>;
+		if (w.__astralStarfieldInit) return;
+		w.__astralStarfieldInit = true;
+		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+		const canvas = document.getElementById(
+			"astral-star-layer",
+		) as HTMLCanvasElement | null;
+		if (!canvas) return;
+		const ctx = canvas.getContext("2d");
+		if (!ctx) return;
+
+		const baseCount = Number(canvas.dataset.baseCount || 170);
+		const defaultEnabled = canvas.dataset.defaultEnabled !== "false";
+		const rand = (min: number, max: number) =>
+			min + Math.random() * (max - min);
+		// 星光色：以冷白蓝为主，掺站内 hue 174 的青绿与少量 indigo
+		const STAR_COLORS = ["#e2ecff", "#ffffff", "#dbeafe", "#99f6e4", "#c7d2fe"];
+
+		interface Star {
+			x: number;
+			y: number;
+			r: number;
+			alpha: number;
+			phase: number;
+			speed: number;
+			color: string;
+			glow: boolean;
+			vx: number;
+			vy: number;
+		}
+
+		let stars: Star[] = [];
+		let rafId: number | null = null;
+		let running = false;
+		let sprite: HTMLCanvasElement | null = null;
+
+		function makeGlowSprite(): HTMLCanvasElement {
+			const c = document.createElement("canvas");
+			c.width = 64;
+			c.height = 64;
+			const g = c.getContext("2d");
+			if (g) {
+				const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+				grad.addColorStop(0, "rgba(190, 242, 225, 0.9)");
+				grad.addColorStop(0.3, "rgba(94, 234, 212, 0.35)");
+				grad.addColorStop(1, "rgba(94, 234, 212, 0)");
+				g.fillStyle = grad;
+				g.fillRect(0, 0, 64, 64);
+			}
+			return c;
+		}
+
+		function buildStars() {
+			if (!canvas) return;
+			const vw = window.innerWidth;
+			const vh = window.innerHeight;
+			// 移动端降密度（调研纪律：粒子层在窄屏先砍数量）
+			const density = vw < 768 ? 0.45 : vw < 1280 ? 0.7 : 1;
+			const count = Math.round(baseCount * density);
+			stars = Array.from({ length: count }, () => {
+				const glow = Math.random() < 0.09;
+				return {
+					x: rand(0, vw),
+					y: rand(0, vh),
+					r: glow ? rand(1.8, 2.8) : rand(0.4, 1.5),
+					alpha: rand(0.35, 1),
+					phase: rand(0, Math.PI * 2),
+					speed: rand(0.004, 0.016),
+					color: STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)],
+					glow,
+					vx: glow ? rand(-0.05, 0.05) : 0,
+					vy: glow ? rand(-0.03, 0.03) : 0,
+				};
+			});
+		}
+
+		function resize() {
+			if (!canvas) return;
+			const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+			canvas.width = Math.round(window.innerWidth * dpr);
+			canvas.height = Math.round(window.innerHeight * dpr);
+			canvas.style.width = `${window.innerWidth}px`;
+			canvas.style.height = `${window.innerHeight}px`;
+			ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
+			buildStars();
+		}
+
+		function step() {
+			if (!ctx || !canvas) return;
+			const vw = window.innerWidth;
+			const vh = window.innerHeight;
+			ctx.clearRect(0, 0, vw, vh);
+			for (const s of stars) {
+				s.phase += s.speed;
+				const tw = 0.55 + 0.45 * Math.sin(s.phase);
+				if (s.glow) {
+					s.x += s.vx;
+					s.y += s.vy;
+					if (s.x < -10) s.x = vw + 10;
+					if (s.x > vw + 10) s.x = -10;
+					if (s.y < -10) s.y = vh + 10;
+					if (s.y > vh + 10) s.y = -10;
+					if (sprite) {
+						const size = s.r * 10;
+						ctx.globalAlpha = s.alpha * tw * 0.8;
+						ctx.drawImage(sprite, s.x - size / 2, s.y - size / 2, size, size);
+					}
+				}
+				ctx.globalAlpha = s.alpha * tw;
+				ctx.beginPath();
+				ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+				ctx.fillStyle = s.color;
+				ctx.fill();
+			}
+			ctx.globalAlpha = 1;
+		}
+
+		function tick() {
+			if (!running) return;
+			rafId = requestAnimationFrame(tick);
+			if (document.hidden) return;
+			step();
+		}
+
+		function start() {
+			if (running || !canvas) return;
+			running = true;
+			if (!sprite) sprite = makeGlowSprite();
+			resize();
+			canvas.style.display = "block";
+			rafId = requestAnimationFrame(tick);
+		}
+
+		function stop() {
+			running = false;
+			if (rafId !== null) {
+				cancelAnimationFrame(rafId);
+				rafId = null;
+			}
+			if (canvas) canvas.style.display = "none";
+		}
+
+		function isEnabled(): boolean {
+			const stored = localStorage.getItem("starfieldEnabled");
+			return stored !== null ? stored === "true" : defaultEnabled;
+		}
+
+		function sync() {
+			const isAstral =
+				document.documentElement.getAttribute("data-site-mode") === "astral";
+			if (isAstral && isEnabled()) start();
+			else stop();
+		}
+
+		let resizeTimer: number | null = null;
+		window.addEventListener("resize", () => {
+			if (!running) return;
+			if (resizeTimer !== null) window.clearTimeout(resizeTimer);
+			resizeTimer = window.setTimeout(resize, 200);
+		});
+		window.addEventListener("siteModeChange", sync);
+		window.addEventListener("starfieldToggle", sync);
+		sync();
+	})();
+</script>
