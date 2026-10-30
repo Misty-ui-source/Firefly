@@ -319,7 +319,7 @@ export async function onRequestPost(context) {
 					model: env.FISH_MODEL || "deepseek-flash",
 					temperature: 0.85,
 					thinking: { type: "disabled" },
-					max_tokens: 320,
+					max_tokens: 1500, // 320 会被模型内部推理吃光导致正文为空（2026-10-31 实测），放宽上限
 					response_format: { type: "json_object" },
 					messages: msgs,
 				}),
@@ -327,15 +327,19 @@ export async function onRequestPost(context) {
 			});
 			if (!r.ok) throw new Error("deepseek " + r.status);
 			const d = await r.json();
-			const c = d?.choices?.[0]?.message?.content || "";
+			const msg0 = d?.choices?.[0]?.message || {};
+			const c = msg0.content || "";
+			const meta =
+				"fr:" + (d?.choices?.[0]?.finish_reason || "?") +
+				" rc:" + (msg0.reasoning_content ? msg0.reasoning_content.length : 0);
 			try {
 				const pj = JSON.parse(c);
 				const a = ["idle", "wave", "bubbles", "sleepy"].includes(pj.act)
 					? pj.act
 					: "idle";
-				return { say: String(pj.say || "").slice(0, 300), act: a, raw: c };
+				return { say: String(pj.say || "").slice(0, 300), act: a, raw: c, meta };
 			} catch {
-				return { say: c.slice(0, 300), act: "idle", raw: c };
+				return { say: c.slice(0, 300), act: "idle", raw: c, meta };
 			}
 		};
 		const baseMessages = [
@@ -365,7 +369,8 @@ export async function onRequestPost(context) {
 				say: "咕噜……本肥鱼刚刚走神啦，你再喊我一声好不好。",
 				act: "bubbles",
 				debug: (
-					"b1:" + raw1.slice(0, 90) + " | b2:" + (out.raw || "").slice(0, 90)
+					(out.meta || "") +
+					" b1:" + raw1.slice(0, 90) + " | b2:" + (out.raw || "").slice(0, 90)
 				).replace(/\s+/g, " "),
 			});
 		}
