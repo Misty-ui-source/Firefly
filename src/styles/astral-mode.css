@@ -442,7 +442,7 @@ html[data-site-mode="astral"] .l2d-buddy { display: none !important; }
 		display: flex;
 		grid-column: 1 / span 7;
 		grid-row: 1;
-		min-height: 248px;
+		min-height: 0;
 		padding: 1.4rem;
 		/* 不陪此刻卡等高拉伸：卡高随内容，否则内部两端对齐会把中间拉空 */
 		align-self: start;
@@ -773,7 +773,8 @@ html[data-site-mode="astral"] .l2d-buddy { display: none !important; }
 	 * 空地）：在本矩阵里藏掉它的文章列表（文章区就在上方，列表是重复
 	 * 信息），只留月历 + 热力图，高度收回 430px 上下与统计卡接近 */
 	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="calendar-widget"] #calendar-posts {
-		display: none;
+		/* 必须 !important：日历脚本会给该容器写内联 display 来切换列表显隐 */
+		display: none !important;
 	}
 	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="categories"] {
 		grid-column: 1 / span 4;
