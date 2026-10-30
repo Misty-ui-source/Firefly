@@ -33,6 +33,7 @@ import {
 	starfieldConfig,
 } from "../config";
 import { isHomePage as checkIsHomePage } from "./layout-utils";
+import { featuresConfig } from "@/config/featuresConfig";
 
 // Declare global functions
 declare global {
@@ -419,6 +420,27 @@ export function setNavbarStyle(style: NavbarStyle): void {
 
 const SITE_MODES: SiteMode[] = ["full", "pure", "harmony", "brick", "astral"];
 
+// ─── 形态切换全局淡变 ─────────────────────────────────────────
+// 切换站点形态 / 璨夜子主题时，先给 html 挂 .mode-fade 再改属性：
+// transition.css 里 .mode-fade 只过渡颜色类属性（背景/文字/边框/填充），
+// 1s 后摘除，避免常驻 transition 拖慢日常交互。不给 * 挂过渡，只点名高频表面元素。
+// prefers-reduced-motion 时直接不挂（CSS 侧另有兜底关停）。
+let modeFadeTimer: number | undefined;
+
+export function beginModeFade(): void {
+	if (typeof document === "undefined" || typeof window === "undefined") return;
+	if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+	const root = document.documentElement;
+	root.classList.add("mode-fade");
+	// 强制回流，确保过渡在随后的属性变更上生效
+	void root.offsetWidth;
+	if (modeFadeTimer !== undefined) window.clearTimeout(modeFadeTimer);
+	modeFadeTimer = window.setTimeout(() => {
+		root.classList.remove("mode-fade");
+		modeFadeTimer = undefined;
+	}, 1100);
+}
+
 export function getDefaultSiteMode(): SiteMode {
 	const v = siteConfig.siteMode ?? "full";
 	return SITE_MODES.includes(v) ? v : "full";
@@ -443,37 +465,11 @@ export function getStoredSiteMode(): SiteMode {
 export function applySiteModeToDocument(mode: SiteMode): void {
 	if (typeof document === "undefined") return;
 	const safe: SiteMode = SITE_MODES.includes(mode) ? mode : "full";
+	beginModeFade();
 	document.documentElement.setAttribute("data-site-mode", safe);
-	syncAstralHomeClass();
 	window.dispatchEvent(
 		new CustomEvent("siteModeChange", { detail: { mode: safe } }),
 	);
-}
-
-// ─── 璨夜覆盖分页页（2026-10-30 站长定调） ─────────────────────
-// 璨夜的 bento 格子全页渲染、只在 body.is-home 时被 astral-mode.css
-// 点亮，原先只有首页（/）带 is-home，翻到 /2/ 就变回原生侧栏——形态
-// 只剩首页一张皮。按素简的全站形态路子：璨夜下把分页页（/ 与 /N/）
-// 都按首页对待。is-home 是服务端按路径渲染的类，这里只在 astral 时
-// 客户端补齐/收起；其他形态一律复原服务端状态（仅 / 带 is-home），
-// 不改变它们任何一页的呈现。
-export function syncAstralHomeClass(): void {
-	if (typeof document === "undefined" || !document.body) return;
-	const p = window.location.pathname;
-	const isListPage = p === "/" || /^\/\d+\/?$/.test(p);
-	const astral =
-		document.documentElement.getAttribute("data-site-mode") === "astral";
-	document.body.classList.toggle("is-home", astral ? isListPage : p === "/");
-}
-
-if (typeof window !== "undefined") {
-	const w = window as unknown as Record<string, unknown>;
-	if (!w.__astralHomeSyncInit) {
-		w.__astralHomeSyncInit = true;
-		document.addEventListener("swup:page:view", () => syncAstralHomeClass());
-		document.addEventListener("astro:after-swap", () => syncAstralHomeClass());
-		document.addEventListener("DOMContentLoaded", () => syncAstralHomeClass());
-	}
 }
 
 export function setSiteMode(mode: SiteMode): void {
@@ -520,6 +516,7 @@ export function getStoredAstralTheme(): AstralTheme {
 export function applyAstralThemeToDocument(theme: AstralTheme): void {
 	if (typeof document === "undefined") return;
 	const safe: AstralTheme = ASTRAL_THEMES.includes(theme) ? theme : "solid";
+	beginModeFade();
 	document.documentElement.setAttribute("data-astral-theme", safe);
 	window.dispatchEvent(
 		new CustomEvent("astralThemeChange", { detail: { theme: safe } }),
@@ -1348,6 +1345,7 @@ export function setSakuraEnabled(enabled: boolean): void {
 // 季节雪（第二批）：配置未开时，冬季（12/1/2 月，按访客本地时间）默认开；
 // 访客在调色板里手动存过 snowEnabled 的，以他的选择为准。
 export function getDefaultSnowEnabled(): boolean {
+	if (!featuresConfig.seasonalSnow) return false;
 	if (snowConfig?.enable) return true;
 	const m = new Date().getMonth();
 	return m === 11 || m === 0 || m === 1;
@@ -1834,12 +1832,14 @@ export function setCardFollowThemeEnabled(enabled: boolean): void {
 		document.body.classList.remove("card-follow-theme-hue");
 	}
 }
+
 // ─── 碎碎念弹幕（第二批） ─────────────────────────────────────
 // 内容源 = thoughtsConfig 碎碎念；开关协议与雪花一致：localStorage 的
 // danmakuEnabled 优先、缺省开；密度/速度存 danmakuDensity / danmakuSpeed。
 // DanmakuLayer 监听 danmakuToggle 实时开关、danmakuSettings 实时改档。
 export function getDefaultDanmakuEnabled(): boolean {
-	return true;
+	// 2026-10-31 站长定版：默认关，访客在璨夜的调色板里手动开（全形态共用一个值）
+	return false;
 }
 
 export function getStoredDanmakuEnabled(): boolean {

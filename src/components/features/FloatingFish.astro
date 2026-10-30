@@ -31,7 +31,7 @@
 		</form>
 	</div>
 	<button type="button" class="ff-fish" data-ff-fish aria-label="圆滚滚的肥鱼">
-		<img class="ff-img" data-ff-img src="/assets/images/fish/idle.jpg" alt="圆滚滚的肥鱼" />
+		<img class="ff-img" data-ff-img src="/assets/images/fish/idle.webp" alt="圆滚滚的肥鱼" />
 		<span class="ff-zzz" data-ff-zzz hidden>💤</span>
 		<span class="ff-badge" data-ff-badge>Lv.1</span>
 	</button>
@@ -41,7 +41,7 @@
 	#floating-fish {
 		position: fixed;
 		right: 1rem;
-		bottom: 1rem;
+		bottom: 26vh;
 		z-index: 80;
 		display: flex;
 		flex-direction: column;
@@ -54,14 +54,18 @@
 	}
 	.ff-fish {
 		position: relative;
-		width: 5.25rem;
-		height: 5.25rem;
-		border-radius: 999px;
-		overflow: hidden;
-		border: 3px solid var(--primary, #14b8a6);
-		box-shadow: 0 10px 26px rgb(0 0 0 / 0.28);
+		width: 4.9rem;
+		background: transparent;
+		border: none;
+		padding: 0;
+		cursor: grab;
+		touch-action: none;
+		filter: drop-shadow(0 10px 14px rgb(0 0 0 / 0.3));
 		animation: ff-bob 3.6s ease-in-out infinite;
 		flex: none;
+	}
+	.ff-fish:active {
+		cursor: grabbing;
 	}
 	@keyframes ff-bob {
 		0%, 100% { transform: translateY(0) rotate(-1.5deg); }
@@ -69,8 +73,9 @@
 	}
 	.ff-img {
 		width: 100%;
-		height: 100%;
-		object-fit: cover;
+		height: auto;
+		display: block;
+		pointer-events: none;
 	}
 	.ff-zzz {
 		position: absolute;
@@ -80,9 +85,8 @@
 	}
 	.ff-badge {
 		position: absolute;
-		left: 50%;
-		bottom: 0.28rem;
-		transform: translateX(-50%);
+		left: 0.15rem;
+		top: 0.3rem;
 		font-size: 0.62rem;
 		font-weight: 800;
 		padding: 0.05rem 0.42rem;
@@ -92,6 +96,9 @@
 		white-space: nowrap;
 	}
 	.ff-panel {
+		position: absolute;
+		right: 0;
+		bottom: calc(100% + 0.6rem);
 		width: min(20.5rem, calc(100vw - 2rem));		border-radius: 1.1rem;
 		padding: 0.75rem;
 		background: var(--card-bg, rgb(255 255 255 / 0.94));
@@ -224,10 +231,10 @@
 		root.hidden = false;
 
 		const POSES: Record<string, string> = {
-			idle: "/assets/images/fish/idle.jpg",
-			wave: "/assets/images/fish/wave.jpg",
-			bubbles: "/assets/images/fish/bubbles.jpg",
-			sleepy: "/assets/images/fish/idle.jpg",
+			idle: "/assets/images/fish/idle.webp",
+			wave: "/assets/images/fish/wave.webp",
+			bubbles: "/assets/images/fish/bubbles.webp",
+			sleepy: "/assets/images/fish/idle.webp",
 		};
 		const LEVELS = [0, 30, 80, 160, 280, 450, 700, 1000];
 		const KEY = "feiyuExpV1";
@@ -326,11 +333,63 @@
 		});
 
 		root.querySelector("[data-ff-fish]")?.addEventListener("click", () => {
+			if (suppressClick) return;
 			panel.hidden = !panel.hidden;
 			if (!panel.hidden) input.focus();
 		});
 		root.querySelector("[data-ff-close]")?.addEventListener("click", () => {
 			panel.hidden = true;
+		});
+
+		const convo: { role: string; text: string }[] = [
+			{
+				role: "fish",
+				text: "呜呼——你来啦！我是圆滚滚的肥鱼，住在这个站里。想逛逛、找文章，或者随便聊聊，都可以喊我。",
+			},
+		];
+
+		// 拖动（站长 2026-10-31）：按住拖走、轻点开面板（位移 6px 内算点按），
+		// 位置存 ffPosV1，下次来还在原地。
+		const fishBtn = root.querySelector("[data-ff-fish]") as HTMLElement;
+		let suppressClick = false;
+		try {
+			const p = JSON.parse(localStorage.getItem("ffPosV1") || "null");
+			if (p && typeof p.x === "number" && typeof p.y === "number") {
+				root.style.left = `${p.x}px`;
+				root.style.top = `${p.y}px`;
+				root.style.right = "auto";
+				root.style.bottom = "auto";
+			}
+		} catch {}
+		let dragState: {
+			dx: number; dy: number; sx: number; sy: number; moved: boolean;
+		} | null = null;
+		fishBtn?.addEventListener("pointerdown", (e) => {
+			const r = root.getBoundingClientRect();
+			dragState = { dx: e.clientX - r.left, dy: e.clientY - r.top, sx: e.clientX, sy: e.clientY, moved: false };
+		});
+		window.addEventListener("pointermove", (e) => {
+			if (!dragState) return;
+			if (!dragState.moved && Math.hypot(e.clientX - dragState.sx, e.clientY - dragState.sy) < 6) return;
+			dragState.moved = true;
+			const x = Math.min(Math.max(4, e.clientX - dragState.dx), window.innerWidth - root.offsetWidth - 4);
+			const y = Math.min(Math.max(4, e.clientY - dragState.dy), window.innerHeight - root.offsetHeight - 4);
+			root.style.left = `${x}px`;
+			root.style.top = `${y}px`;
+			root.style.right = "auto";
+			root.style.bottom = "auto";
+		});
+		window.addEventListener("pointerup", () => {
+			if (!dragState) return;
+			if (dragState.moved) {
+				const r = root.getBoundingClientRect();
+				try {
+					localStorage.setItem("ffPosV1", JSON.stringify({ x: Math.round(r.left), y: Math.round(r.top) }));
+				} catch {}
+				suppressClick = true;
+				window.setTimeout(() => { suppressClick = false; }, 80);
+			}
+			dragState = null;
 		});
 
 		let busy = false;
@@ -339,6 +398,7 @@
 			if (!msg || busy) return;
 			busy = true;
 			addMsg(msg, "user");
+			convo.push({ role: "user", text: msg });
 			input.value = "";
 			const pending = addMsg("（鼓起腮帮子想一想……）", "fish");
 			pose("bubbles", 2600);
@@ -346,10 +406,16 @@
 				const res = await fetch("/api/fish/chat", {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ message: msg, path: location.pathname }),
+					body: JSON.stringify({
+						message: msg,
+						path: location.pathname,
+						title: document.title,
+						history: convo.slice(-6),
+					}),
 				});
 				const data = await res.json();
 				pending.textContent = data.say || "（肥鱼没听清，再说一遍好不好）";
+				convo.push({ role: "fish", text: pending.textContent });
 				pose(data.act || "idle");
 				gain(2, "chat");
 			} catch {

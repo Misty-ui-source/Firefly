@@ -1844,6 +1844,7 @@ $effect(() => {
 					</div>
 				</button>
 				{/if}
+				{#if siteMode === "astral"}
 				<div>
 					<button
 						class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"
@@ -1883,6 +1884,7 @@ $effect(() => {
 					</div>
 					{/if}
 				</div>
+				{/if}
 				{#if isFireflySwitchable}
 				<button
 					class="w-full btn-regular rounded-md py-2 px-3 flex items-center gap-3 text-left active:scale-95 transition-all relative overflow-hidden"

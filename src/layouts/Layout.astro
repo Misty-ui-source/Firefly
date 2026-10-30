@@ -15,6 +15,7 @@ import ParticleEffects from "@components/features/ParticleEffects.astro";
 import DanmakuLayer from "@components/features/DanmakuLayer.astro";
 import FloatingPlayer from "@components/features/FloatingPlayer.astro";
 import FloatingFish from "@components/features/FloatingFish.astro";
+import { featuresConfig } from "@/config/featuresConfig";
 import WavesEffect from "@components/features/WavesEffect.astro";
 import ConfigCarrier from "@components/layout/ConfigCarrier.astro";
 
@@ -493,28 +494,6 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
         resolvedSiteMode
       );
 
-      // 璨夜覆盖分页页：astral 时分页页（/ 与 /N/）同样点亮 bento——
-      // body.is-home 是 astral-mode.css 的点亮开关，服务端只给首页。
-      // 首帧在此同步落位防闪；运行时的形态切换与软导航由
-      // utils/setting-utils 的 syncAstralHomeClass 接管。
-      const syncAstralHome = () => {
-        if (!document.body) return;
-        const p = window.location.pathname;
-        const isList = p === "/" || /^\/\d+\/?$/.test(p);
-        document.body.classList.toggle(
-          "is-home",
-          resolvedSiteMode === "astral" ? isList : p === "/",
-        );
-      };
-      if (document.body) syncAstralHome();
-      else
-        new MutationObserver((_, obs) => {
-          if (document.body) {
-            obs.disconnect();
-            syncAstralHome();
-          }
-        }).observe(document.documentElement, { childList: true });
-
       // 初始化璨夜子主题 - 优先 localStorage（调色板外观页签、站点形态下方改过时），否则用配置默认；
       // 属性只在 html[data-site-mode="astral"] 作用域内被 astral-mode.css 消费，其他形态下挂着不生效
       const astralThemeStored = localStorage.getItem("astralTheme");
@@ -728,6 +707,58 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
 
     <div id="progress-bar"></div>
 
+    {/* 会话级开屏：每会话只播一次。判定脚本紧跟标记同步执行（sessionStorage splashSeen），
+         已播 / 减动效时当场移除节点，不闪内容；控制台主题页关掉 splashEnabled 时整块不渲染。
+         背景与文字色跟随当前形态（--page-bg / --deep-text），样式在 styles/transition.css 第 6 节 */}
+    {siteConfig.splashEnabled !== false && (
+      <>
+        <div id="splash-screen" hidden role="presentation">
+          <img
+            src="/assets/images/splash/feiyu.webp"
+            alt=""
+            class="splash-fish"
+            onerror="this.remove()"
+          />
+          <div class="splash-name">Alexanderの小站</div>
+          <div class="splash-hi">你好呀，我是圆滚滚的肥鱼 🐟</div>
+        </div>
+        <script is:inline>
+          (function () {
+            var el = document.getElementById("splash-screen");
+            if (!el) return;
+            var seen = false;
+            try {
+              seen = sessionStorage.getItem("splashSeen") === "1";
+            } catch (e) {}
+            if (
+              seen ||
+              window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            ) {
+              el.remove();
+              return;
+            }
+            try {
+              sessionStorage.setItem("splashSeen", "1");
+            } catch (e) {}
+            el.hidden = false;
+            document.documentElement.classList.add("splash-open");
+            var done = false;
+            function dismiss() {
+              if (done) return;
+              done = true;
+              el.classList.add("splash-out");
+              document.documentElement.classList.remove("splash-open");
+              setTimeout(function () {
+                el.remove();
+              }, 420);
+            }
+            el.addEventListener("pointerdown", dismiss);
+            setTimeout(dismiss, 1900);
+          })();
+        </script>
+      </>
+    )}
+
     <!-- 谐彩背景纹理层：固定全屏、负层级、只在谐彩作用域内被 harmony-mode.css 赋形（图案/透明度），其他形态下是无样式空层 -->
     <div id="harmony-texture-layer" aria-hidden="true"></div>
 
@@ -780,9 +811,9 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
     <!-- 碎碎念弹幕（第二批，常驻层） -->
     <DanmakuLayer />
 
-    <!-- 全局浮动播放器 + 肥鱼（第三批，常驻层） -->
-    <FloatingPlayer />
-    <FloatingFish />
+    <!-- 全局浮动播放器 + 肥鱼（第三批，常驻层；总闸在 featuresConfig） -->
+    {featuresConfig.floatingPlayer && <FloatingPlayer />}
+    {featuresConfig.fish && <FloatingFish />}
 
     <!-- Water Waves Effect -->
     <WavesEffect />

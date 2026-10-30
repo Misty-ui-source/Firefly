@@ -24,7 +24,7 @@ const stars = Array.from({ length: 70 }, (_, i) => {
 			<span class="lj-bubble" style="left:58%;animation-delay:2.2s"></span>
 			<span class="lj-bubble" style="left:76%;animation-delay:4.1s"></span>
 			<div class="lj-fishwrap">
-				<img class="lj-fish" data-lj-fish src="/assets/images/fish/main.jpg" alt="圆滚滚的肥鱼" />
+				<img class="lj-fish" data-lj-fish src="/assets/images/fish/main.webp" alt="圆滚滚的肥鱼" />
 			</div>
 			<div class="lj-say" data-lj-say>呜呼——欢迎来到灵境，这里是我家！</div>
 			<h1 class="lj-title">灵境</h1>
@@ -99,15 +99,11 @@ const stars = Array.from({ length: 70 }, (_, i) => {
 	}
 	.lj-fishwrap {
 		position: absolute;
-		top: 16%;
+		top: 12%;
 		left: 50%;
-		width: 13.5rem;
-		height: 13.5rem;
-		margin-left: -6.75rem;
-		border-radius: 999px;
-		overflow: hidden;
-		border: 4px solid rgb(190 235 255 / 0.5);
-		box-shadow: 0 18px 44px rgb(0 0 0 / 0.35), inset 0 0 44px rgb(125 211 252 / 0.25);
+		width: 9.5rem;
+		margin-left: -4.75rem;
+		filter: drop-shadow(0 18px 22px rgb(0 0 0 / 0.4));
 		animation: lj-swim 9s ease-in-out infinite;
 	}
 	@keyframes lj-swim {
@@ -116,12 +112,12 @@ const stars = Array.from({ length: 70 }, (_, i) => {
 	}
 	.lj-fish {
 		width: 100%;
-		height: 100%;
-		object-fit: cover;
+		height: auto;
+		display: block;
 	}
 	.lj-say {
 		position: relative;
-		margin-top: 15rem;
+		margin-top: 17.5rem;
 		max-width: 26rem;
 		text-align: center;
 		background: rgb(255 255 255 / 0.92);
@@ -240,9 +236,9 @@ const stars = Array.from({ length: 70 }, (_, i) => {
 		const KEY = "feiyuExpV1";
 		const LEVELS = [0, 30, 80, 160, 280, 450, 700, 1000];
 		const POSES: Record<string, string> = {
-			idle: "/assets/images/fish/main.jpg",
-			wave: "/assets/images/fish/wave.jpg",
-			bubbles: "/assets/images/fish/bubbles.jpg",
+			idle: "/assets/images/fish/main.webp",
+			wave: "/assets/images/fish/wave.webp",
+			bubbles: "/assets/images/fish/bubbles.webp",
 		};
 		const UNLOCKS = [
 			{ lv: 1, text: "待机浮游 · 基础台词" },

@@ -20,16 +20,39 @@ async function playlistNetease(id) {
 	);
 	const data = JSON.parse(text);
 	const pl = data?.playlist;
-	if (!pl || !Array.isArray(pl.tracks)) throw new Error("网易云歌单解析失败");
-	return {
-		name: pl.name || "",
-		tracks: pl.tracks.map((t) => ({
+	if (!pl) throw new Error("网易云歌单解析失败");
+	// detail 接口的 tracks 只给前几首（实测 321 首的单只回 6 首），全单 ID
+	// 在 trackIds 里，缺的详情按每批 100 个去 song/detail 补齐再按原序拼。
+	const byId = new Map();
+	for (const t of pl.tracks || []) byId.set(String(t.id), t);
+	const ids = (pl.trackIds || [])
+		.map((x) => String(x?.id ?? x))
+		.filter((x) => x && x !== "undefined");
+	const orderedIds = ids.length ? ids : [...byId.keys()];
+	const missing = orderedIds.filter((x) => !byId.has(x));
+	for (let i = 0; i < missing.length; i += 100) {
+		const batch = missing.slice(i, i + 100);
+		const c = encodeURIComponent(
+			JSON.stringify(batch.map((x) => ({ id: Number(x) || x }))),
+		);
+		const t2 = await fetchText(
+			`https://music.163.com/api/v3/song/detail?c=${c}`,
+			{ Referer: "https://music.163.com/" },
+		);
+		const d2 = JSON.parse(t2);
+		for (const song of d2?.songs || []) byId.set(String(song.id), song);
+	}
+	const tracks = orderedIds
+		.map((x) => byId.get(x))
+		.filter(Boolean)
+		.map((t) => ({
 			id: String(t.id),
 			name: t.name || "",
 			artist: (t.ar || []).map((a) => a.name).join(" / "),
 			pic: t.al?.picUrl || "",
-		})),
-	};
+		}));
+	if (!tracks.length) throw new Error("网易云歌单为空");
+	return { name: pl.name || "", tracks };
 }
 
 async function playlistTencent(id) {

@@ -1799,6 +1799,85 @@ async function mountResumeSection() {
   } catch (e) { box.innerHTML = '<p class="hint">读不到 src/config/resumeConfig.ts（可能还没上线这个文件）。</p>'; }
 }
 
+
+/* 🎛 功能开关（2026-10-31）：新功能站长总闸，读写 src/config/featuresConfig.ts
+ * 与 src/config/dailyBriefingConfig.ts（选刊开关 + 置顶），一次保存一个 commit。 */
+async function mountFeaturesSection() {
+  if ($('#features-sec')) return;
+  const anchor = $('#resume-sec') || $('#gnss-sec') || document.querySelector('#diary-list')?.closest('.card') || $('#list');
+  if (!anchor) return;
+  const sec = document.createElement('div');
+  sec.className = 'card';
+  sec.id = 'features-sec';
+  sec.innerHTML = `<h2>🎛 功能开关</h2>
+    <p class="hint">这批新功能的站长总闸：关掉就全站不上（重新构建后生效）。弹幕另有两层——只在璨夜出现、访客默认关，这里关掉是彻底关。每日选刊只在璨夜瓷砖行显现，置顶填了就顶在选刊第一条。</p>
+    <div id="features-form"><p class="hint">读取中…</p></div>`;
+  anchor.after(sec);
+  const box = sec.querySelector('#features-form');
+  const FPATH = 'src/config/featuresConfig.ts';
+  const BPATH = 'src/config/dailyBriefingConfig.ts';
+  try {
+    const [ff, bf] = await Promise.all([ghGetFile(FPATH), ghGetFile(BPATH)]);
+    const pickB = (t, key, dft) => { const m = t.match(new RegExp(key + '\\s*:\\s*(true|false)')); return m ? m[1] === 'true' : dft; };
+    const pickS = (t, key, dft) => { const m = t.match(new RegExp(key + '\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"')); try { return m ? JSON.parse('"' + m[1] + '"') : dft; } catch (e) { return dft; } };
+    const ft = ff.text, bt = bf.text;
+    const pinNull = /pin\s*:\s*null/.test(bt);
+    const cur = {
+      danmaku: pickB(ft, 'danmaku', true),
+      floatingPlayer: pickB(ft, 'floatingPlayer', true),
+      fish: pickB(ft, 'fish', true),
+      seasonalSnow: pickB(ft, 'seasonalSnow', true),
+      briefing: pickB(bt, 'enabled', true),
+      pinTitle: pinNull ? '' : pickS(bt, 'title', ''),
+      pinUrl: pinNull ? '' : pickS(bt, 'url', ''),
+      pinSource: pinNull ? '' : pickS(bt, 'source', '站长置顶'),
+    };
+    const chk = (id, on, label, hint) => `<div class="field"><label><input type="checkbox" id="${id}" ${on ? 'checked' : ''}> ${label}</label><p class="hint">${hint}</p></div>`;
+    box.innerHTML = `
+      ${chk('ft-danmaku', cur.danmaku, '碎碎念弹幕（总闸）', '开：璨夜里访客可手动打开（默认关）；关：全站无弹幕。')}
+      ${chk('ft-player', cur.floatingPlayer, '浮动播放器', '左下角常驻播放器是否上站。')}
+      ${chk('ft-fish', cur.fish, '肥鱼', '右下角肥鱼是否上站（灵境页本体不受影响）。')}
+      ${chk('ft-snow', cur.seasonalSnow, '季节雪', '冬季（12/1/2 月）自动下雪的总闸；访客个人开关照常。')}
+      ${chk('ft-briefing', cur.briefing, '每日选刊', '只在璨夜瓷砖行显现。')}
+      <div class="field"><label>选刊置顶 · 标题</label><input type="text" id="ft-pin-title" value="${esc(cur.pinTitle)}" placeholder="不置顶就留空"></div>
+      <div class="field"><label>选刊置顶 · 链接</label><input type="text" id="ft-pin-url" value="${esc(cur.pinUrl)}" placeholder="/posts/…/ 或 https://…"></div>
+      <div class="field"><label>选刊置顶 · 来源名</label><input type="text" id="ft-pin-source" value="${esc(cur.pinSource)}"></div>
+      <button class="btn" id="ft-save">💾 保存功能开关</button>`;
+    box.querySelector('#ft-save').onclick = async () => {
+      const on = (id) => box.querySelector(id).checked;
+      const fText = 'import type { FeaturesConfig } from "../types/featuresConfig";\n\n'
+        + '// 功能总开关（第三批补全）：站长在 Alexander Console「功能开关」卡里维护，\n'
+        + '// 保存即重写本文件。默认值按 2026-10-31 站长定版。\n'
+        + 'export const featuresConfig: FeaturesConfig = {\n'
+        + `\tdanmaku: ${on('#ft-danmaku')},\n`
+        + `\tfloatingPlayer: ${on('#ft-player')},\n`
+        + `\tfish: ${on('#ft-fish')},\n`
+        + `\tseasonalSnow: ${on('#ft-snow')},\n`
+        + '};\n';
+      const pinT = box.querySelector('#ft-pin-title').value.trim();
+      const pinU = box.querySelector('#ft-pin-url').value.trim();
+      const pinS = box.querySelector('#ft-pin-source').value.trim() || '站长置顶';
+      const pin = pinT && pinU ? `{ title: ${JSON.stringify(pinT)}, url: ${JSON.stringify(pinU)}, source: ${JSON.stringify(pinS)} }` : 'null';
+      const bText = 'import type { DailyBriefingConfig } from "../types/dailyBriefingConfig";\n\n'
+        + '// 每日选刊配置（第二批）：自动拼规则见 utils/daily-briefing.ts——\n'
+        + '// 本站新文（5 天内，最多 2 篇）+ 友链新文（7 天内，最多 3 篇），\n'
+        + '// 不够数时用最新文章回填。站长要顶一条时把 pin 填上即可，\n'
+        + '// 例：pin: { title: "…", url: "/posts/…/", source: "站长置顶" }\n'
+        + 'export const dailyBriefingConfig: DailyBriefingConfig = {\n'
+        + `\tenabled: ${on('#ft-briefing')},\n`
+        + `\tpin: ${pin},\n`
+        + '};\n';
+      try {
+        await ghCommitMulti([
+          { path: FPATH, content: fText, encoding: 'utf-8' },
+          { path: BPATH, content: bText, encoding: 'utf-8' },
+        ], '功能开关更新 [管理台]');
+        toast('功能开关已保存，重新构建后生效');
+      } catch (e) { toast(e.message, true); }
+    };
+  } catch (e) { box.innerHTML = '<p class="hint">读不到功能开关配置（featuresConfig / dailyBriefingConfig 可能还没上线）。</p>'; }
+}
+
 /* 🗓 日历个人记录：读写仓库 calendar-data/personal-records.json（日期 + 标题 + 备注）。
  * 博客 /calendar/ 页打开时会拉仓库最新版，所以这里保存完立刻生效、不用等构建。 */
 async function mountCalendarRecordsSection() {
@@ -2316,7 +2395,7 @@ function listRoute(key) {
       </div><div id="list"></div>`;
     $('#btn-new').onclick = () => { location.hash = `#/edit/${key}/__new__`; };
     if (key === 'posts') mountLinkCardButton();
-    if (key === 'spec') { mountSpecCommentCard(); mountDiarySection(); mountGnssSection(); mountResumeSection(); mountCalendarRecordsSection(); mountPicbedSection(); }
+    if (key === 'spec') { mountSpecCommentCard(); mountDiarySection(); mountGnssSection(); mountResumeSection(); mountFeaturesSection(); mountCalendarRecordsSection(); mountPicbedSection(); }
     const listEl = $('#list');
     /* 文章列表排序：默认文件名倒序，点按钮切到发布时间倒序（日期回填完会自动按当前模式重排） */
     let rowsRef = null;
@@ -6221,9 +6300,10 @@ routes.theme = async () => {
     const anaM = t.match(/analyticsStyle\s*:\s*"([\w-]+)"/);
     const modeM = t.match(/siteMode\s*:\s*"(\w+)"/);
     const astralM = t.match(/astralTheme\s*:\s*"(\w+)"/);
+    const splashM = t.match(/splashEnabled\s*:\s*(true|false)/);
     const mobileMenu = getIn(t, nav, /mobileMenuStyle\s*:\s*"(\w+)"/);
     if (hue === null || border === null || follow === null || layout === null) return null;
-    return { hue: Number(hue), cardBorder: border === 'true', cardFollow: follow === 'true', layout, layoutMobile: layoutM || layout, navbarStyle: navStyle || 'classic', mobileMenuStyle: mobileMenu || 'drawer', analyticsStyle: anaM ? anaM[1] : 'classic', siteMode: modeM ? modeM[1] : 'full', astralTheme: astralM ? astralM[1] : 'solid' };
+    return { hue: Number(hue), cardBorder: border === 'true', cardFollow: follow === 'true', layout, layoutMobile: layoutM || layout, navbarStyle: navStyle || 'classic', mobileMenuStyle: mobileMenu || 'drawer', analyticsStyle: anaM ? anaM[1] : 'classic', siteMode: modeM ? modeM[1] : 'full', astralTheme: astralM ? astralM[1] : 'solid', splashEnabled: splashM ? splashM[1] === 'true' : true };
   }
   function parseBgw(t) {
     const mm = t.match(/^\tmode\s*:\s*"(\w+)"/m);
@@ -6299,6 +6379,7 @@ routes.theme = async () => {
     out = out.replace(/analyticsStyle\s*:\s*"[\w-]+"/, `analyticsStyle: "${s.analyticsStyle}"`);
     out = out.replace(/siteMode\s*:\s*"\w+"/, `siteMode: "${s.siteMode}"`);
     out = out.replace(/astralTheme\s*:\s*"\w+"/, `astralTheme: "${s.astralTheme}"`);
+    out = out.replace(/splashEnabled\s*:\s*(?:true|false)/, `splashEnabled: ${s.splashEnabled}`);
     return out;
   }
   function applyBgw(t, s) {
@@ -6419,6 +6500,8 @@ routes.theme = async () => {
       <p class="hint">素简 = 简洁导航 · 专注阅读（对标朝朝听雨的 Pure 形态）：隐藏横幅壁纸、花瓣特效、看板娘与音乐浮动件，侧栏只留个人卡 / 公告 / 最近评论 / 标签，文章页正文单列、右栏只留目录。谐彩 = Material 3 色阶 · 无边框柔影（视觉参考 Shirone 主题）：整站换成色阶分层 + 极柔阴影，导航变半透顶栏，首页横幅成舞台，文章卡片做减法；内容与功能与华彩完全一致，只换气质。访客可以在博客调色板（显示设置）里自己切换形态，那是访客本地的选择，不改这里的全站默认。</p></div>
       <div class="field"><label>璨夜默认主题</label><div class="pills">${seg('astralTheme', 'solid', '🪨 实面')}${seg('astralTheme', 'starfield', '✨ 星尘')}</div>
       <p class="hint">只在站点形态 = 璨夜时生效：实面 = 近不透明实面卡（稳定兜底）；星尘 = 按 XinghuisamaBlogs 排版布局的玻璃版（面纱层 + 半透卡片 + 等高行）。访客可以在调色板外观页签、站点形态下方自己切换，那是访客本地的选择，不改这里的全站默认。</p></div>
+      <div class="field"><label>会话级开屏</label><div class="pills">${pill('splashEnabled', '开屏动画（博客名 + 肥鱼）')}</div>
+      <p class="hint">每个会话第一次打开博客时先播一次：博客名 + 圆滚滚的肥鱼打招呼，约 1.9 秒自动散去、点任意处可跳过；同一个会话内不再重复。关掉后整站不再播。</p></div>
       <div class="field"><label>站点统计页样式</label><div class="pills">${seg('analyticsStyle', 'classic', '现行版（手搓）')}${seg('analyticsStyle', 'azuma', 'azuma 同款（带插画）')}${seg('analyticsStyle', 'azuma-clean', 'azuma 清爽版（无插画）')}</div>
       <p class="hint">azuma 同款 = 圈子里流传的 Aemeath 统计页（访问脉冲 7/30/90 天切换、推送节奏带贪吃蛇、中国地图、最近评论），数据走本站自己的 Umami / Waline。带插画版的 7 张图已全部压成 webp（原版 5.5MB → 约 0.7MB）。切换前可以先开 /analytics-azuma/ 与 /analytics-azuma-clean/ 两张预览页对比，三套随时互切。</p></div>
     </div>

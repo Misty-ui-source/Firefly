@@ -10,8 +10,7 @@
 const CACHE_TTL_MS = 21600000;
 const HTTP_URL_REGEX = /^https?:\/\//i;
 
-const XINGHAI_MAIN_API =
-	"https://music-api.gdstudio.xyz/api.php?use_xbridge3=true&loader_name=forest&need_sec_link=1&sec_link_scene=im&theme=light";
+const XINGHAI_MAIN_API = "https://music-api.gdstudio.xyz/api.php";
 const SUYIN_QQ_API = "https://oiapi.net/api/QQ_Music";
 const SUYIN_QQ_KEY = "oiapi-ef6133b7-ac2f-dc7d-878c-d3e207a82575";
 const SUYIN_163_API = "https://oiapi.net/api/Music_163";
@@ -324,6 +323,32 @@ function validateUrl(url, sourceName) {
 	return url;
 }
 
+// 验活：真去摸一下候选地址，跟随跳转后必须是 200/206 且像音频才算数，
+// 返回最终地址。模板源（长青/念心）是同步拼地址、原样返回必“成功”，
+// 2026-10-31 线上实测长青 wy 已 404 却被抢先递给了播放器——从此所有
+// 候选一律先验活再返回，死地址在这里就被拦下。
+async function probeUrl(url) {
+	const res = await fetch(url, {
+		method: "GET",
+		headers: { Range: "bytes=0-0", "User-Agent": "Mozilla/5.0" },
+		signal: AbortSignal.timeout(4500),
+	});
+	const finalUrl = res.url || url;
+	if (res.status !== 200 && res.status !== 206) {
+		throw new Error("验活失败 HTTP " + res.status);
+	}
+	const ct = (res.headers.get("content-type") || "").toLowerCase();
+	const okType =
+		ct.startsWith("audio/") ||
+		ct.includes("octet-stream") ||
+		/\.(mp3|flac|m4a|aac|ogg)(\?|$)/i.test(finalUrl);
+	if (!okType) throw new Error("验活失败 类型 " + (ct || "未知"));
+	try {
+		await res.body?.cancel();
+	} catch {}
+	return finalUrl;
+}
+
 async function xinghaiMainGetUrl(platform, songId, quality, songInfo) {
 	const source = PLATFORM_TO_XINGHAI[platform];
 	if (!source) throw new Error("星海主API不支持该平台");
@@ -340,7 +365,7 @@ async function xinghaiMainGetUrl(platform, songId, quality, songInfo) {
 	if (!br) throw new Error("星海主API音质映射失败");
 	const url =
 		XINGHAI_MAIN_API +
-		"&types=url&source=" +
+		"?types=url&source=" +
 		source +
 		"&id=" +
 		encodeURIComponent(id) +
@@ -571,23 +596,7 @@ async function getUrlWithFallback(platform, songInfo, quality) {
 	const songId = getHashOrMid(songInfo);
 	const chain = buildSourceChain(platform);
 	const errors = [];
-	try {
-		const url = await Promise.any(
-			chain.slice(0, 3).map(async (handler) => {
-				const result = await handler.fn(
-					platform,
-					songId,
-					selectedQuality,
-					songInfo,
-				);
-				return validateUrl(result, handler.name);
-			}),
-		);
-		if (url) return url;
-	} catch (e) {
-		if (e.errors) e.errors.forEach((err) => errors.push(err.message));
-	}
-	for (const handler of chain.slice(3)) {
+	for (const handler of chain) {
 		try {
 			const result = await handler.fn(
 				platform,
@@ -595,9 +604,10 @@ async function getUrlWithFallback(platform, songInfo, quality) {
 				selectedQuality,
 				songInfo,
 			);
-			return validateUrl(result, handler.name);
+			const candidate = validateUrl(result, handler.name);
+			return await probeUrl(candidate);
 		} catch (e) {
-			errors.push(handler.name + ": " + e.message);
+			errors.push(handler.name + ": " + (e?.message || e));
 		}
 	}
 	throw new Error("所有源均失败: " + errors.join("; "));

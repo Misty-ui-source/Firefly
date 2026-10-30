@@ -5,13 +5,14 @@
 // 调色板通过 danmakuToggle / danmakuSettings 事件实时控制（协议同雪花）。
 // 本组件挂在 Layout 的 Swup 容器外，软导航不重建，靠 swup:page:view 重估落位。
 import { thoughtsConfig } from "@/config/thoughtsConfig";
+import { featuresConfig } from "@/config/featuresConfig";
 
 const texts = (thoughtsConfig.items || [])
 	.map((i) => (i.content || i.title || "").trim())
 	.filter(Boolean);
 ---
 
-<div id="danmaku-layer" aria-hidden="true"></div>
+<div id="danmaku-layer" aria-hidden="true" data-master={String(featuresConfig.danmaku)}></div>
 <script
 	type="application/json"
 	id="danmaku-data"
@@ -73,7 +74,10 @@ const texts = (thoughtsConfig.items || [])
 
 		const setting = (k: string, fallback: string) =>
 			localStorage.getItem(k) ?? fallback;
-		const isEnabled = () => setting("danmakuEnabled", "true") === "true";
+		const isEnabled = () => setting("danmakuEnabled", "false") === "true";
+		const masterOn = () => layer.dataset.master !== "false";
+		const isAstral = () =>
+			document.documentElement.getAttribute("data-site-mode") === "astral";
 		const onHome = () => document.body.classList.contains("is-home");
 
 		let queue: string[] = [];
@@ -134,11 +138,13 @@ const texts = (thoughtsConfig.items || [])
 			active.clear();
 		};
 		const evaluate = () => {
-			if (isEnabled() && onHome()) start();
+			// 站长定版（2026-10-31）：总闸开 + 访客手动开 + 璨夜形态 + 首页，四样齐才飘
+			if (masterOn() && isEnabled() && isAstral() && onHome()) start();
 			else stop();
 		};
 
 		window.addEventListener("danmakuToggle", evaluate);
+		window.addEventListener("siteModeChange", evaluate);
 		document.addEventListener("swup:page:view", evaluate);
 		document.addEventListener("astro:after-swap", evaluate);
 		evaluate();
