@@ -553,6 +553,17 @@ html[data-site-mode="astral"] .l2d-buddy { display: none !important; }
 		grid-column: 9 / span 4;
 		grid-row: 10;
 	}
+	/* 第十行三小格同理：卡高随内容，不互相拉伸 */
+	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid widget-layout[data-id="categories"],
+	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid widget-layout[data-id="tags"],
+	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid widget-layout[data-id="site-info"] {
+		align-self: start;
+	}
+	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid widget-layout[data-id="categories"] > .card-base,
+	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid widget-layout[data-id="tags"] > .card-base,
+	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid widget-layout[data-id="site-info"] > .card-base {
+		height: auto;
+	}
 	/* 侧栏原装音乐格在本矩阵里隐藏：播放器已收进「此刻」卡（同一播放器
 	 * 的另一个视图、状态互通），避免同页出现两份可见播放器。 */
 	html[data-site-mode="astral"][data-astral-theme="solid"] body.is-home #main-grid widget-layout[data-id^="music-widget-"] {
@@ -663,13 +674,14 @@ html[data-site-mode="astral"] .l2d-buddy { display: none !important; }
 		grid-column: 1 / -1;
 		grid-row: 4;
 	}
-	/* 第五至七行：文章区整行宽，内部两列大卡 */
+	/* 第五至七行：文章区整行宽，内部四列紧凑卡（2026-10-30 站长点名：
+	 * 两列大卡在大屏上纯浪费，一行至少装四张，尺寸照常规博客卡收） */
 	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid > #content-column {
 		grid-column: 1 / -1;
 		grid-row: 5 / span 3;
 	}
 	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid #post-list-container.grid-mode {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
+		grid-template-columns: repeat(4, minmax(0, 1fr));
 		align-items: stretch;
 	}
 	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid #post-list-container.grid-mode .post-card-wrapper {
@@ -706,6 +718,10 @@ html[data-site-mode="astral"] .l2d-buddy { display: none !important; }
 		display: flex;
 		grid-column: 9 / span 4;
 		grid-row: 9;
+		/* 同实面纪律：卡高随内容，不被同行日记格拉伸出空白 */
+		align-self: start;
+		height: auto;
+		min-height: 200px;
 	}
 	/* 第十行：日历 / 分类 / 标签 / 站点信息四小格 */
 	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="calendar-widget"] {
@@ -723,6 +739,20 @@ html[data-site-mode="astral"] .l2d-buddy { display: none !important; }
 	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="site-info"] {
 		grid-column: 10 / span 3;
 		grid-row: 10;
+	}
+	/* 第十行四小格不许互相拉伸（2026-10-30 站长真机点名）：日历格内容
+	 * 本来就高，其余三格卡高随自身内容，不陪它撑满整行留大片空白 */
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="calendar-widget"],
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="categories"],
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="tags"],
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="site-info"] {
+		align-self: start;
+	}
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="calendar-widget"] > .card-base,
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="categories"] > .card-base,
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="tags"] > .card-base,
+	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="site-info"] > .card-base {
+		height: auto;
 	}
 	/* 第十一行：站点统计整行垫底 */
 	html[data-site-mode="astral"][data-astral-theme="starfield"] body.is-home #main-grid widget-layout[data-id="site-stats"] {
