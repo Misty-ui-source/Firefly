@@ -1028,3 +1028,26 @@ html.dark[data-site-mode="astral"][data-astral-theme="starfield"] #nav-menu-pane
 		grid-row: 16;
 	}
 }
+
+/* ——— 此刻卡抽屉让位（2026-10-30 站长点头开修）———
+   歌单/歌词抽屉在 bento 格里展开时，原 .now-music 是 flex:1 1 0 +
+   min-height:0：内容不撑格、直接漫到「接下来播放」面板与下方格子上
+   （星尘 image-47 实拍）。开抽屉（抽屉内联 grid-template-rows:1fr）时：
+   下半「接下来播放」与分隔线让位收起；音乐区改按内容高，格子随之
+   长高、页面顺流；格内 overflow 裁剪兜底动画帧。关抽屉全数复原。
+   只作用于璨夜格内的播放器，侧栏原播放器不受影响。 */
+html[data-site-mode="astral"] body.is-home .astral-tile--now:has(.playlist-drawer[style*="grid-template-rows: 1fr"]) .now-next,
+html[data-site-mode="astral"] body.is-home .astral-tile--now:has(.lrc-drawer[style*="grid-template-rows: 1fr"]) .now-next,
+html[data-site-mode="astral"] body.is-home .astral-tile--now:has(.playlist-drawer[style*="grid-template-rows: 1fr"]) .now-divider,
+html[data-site-mode="astral"] body.is-home .astral-tile--now:has(.lrc-drawer[style*="grid-template-rows: 1fr"]) .now-divider {
+  display: none;
+}
+html[data-site-mode="astral"] body.is-home .astral-tile--now:has(.playlist-drawer[style*="grid-template-rows: 1fr"]) .now-music,
+html[data-site-mode="astral"] body.is-home .astral-tile--now:has(.lrc-drawer[style*="grid-template-rows: 1fr"]) .now-music {
+  flex: 0 1 auto;
+  justify-content: flex-start;
+}
+html[data-site-mode="astral"] body.is-home .astral-tile--now:has(.playlist-drawer[style*="grid-template-rows: 1fr"]),
+html[data-site-mode="astral"] body.is-home .astral-tile--now:has(.lrc-drawer[style*="grid-template-rows: 1fr"]) {
+  overflow: hidden;
+}
