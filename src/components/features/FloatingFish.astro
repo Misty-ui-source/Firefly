@@ -228,7 +228,13 @@
 	(() => {
 		const root = document.getElementById("floating-fish");
 		if (!root) return;
-		root.hidden = false;
+		// 素简门（站长 2026-10-31 定版）：素简形态默认不显示肥鱼，切走再回来
+		const applyPureGate = () => {
+			root.hidden =
+				document.documentElement.getAttribute("data-site-mode") === "pure";
+		};
+		applyPureGate();
+		window.addEventListener("siteModeChange", applyPureGate);
 
 		const POSES: Record<string, string> = {
 			idle: "/assets/images/fish/idle.webp",
@@ -414,7 +420,8 @@
 					}),
 				});
 				const data = await res.json();
-				pending.textContent = data.say || "（肥鱼没听清，再说一遍好不好）";
+				pending.textContent =
+					(data.say && data.say.trim()) || "（肥鱼没听清，再说一遍好不好）";
 				convo.push({ role: "fish", text: pending.textContent });
 				pose(data.act || "idle");
 				gain(2, "chat");

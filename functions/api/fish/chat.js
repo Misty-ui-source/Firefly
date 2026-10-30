@@ -282,7 +282,7 @@ export async function onRequestPost(context) {
 					role: h?.role === "fish" ? "assistant" : "user",
 					content: String(h?.text || "").slice(0, 200),
 				}))
-				.filter((h) => h.content);
+				.filter((h) => h.content.trim());
 		}
 	} catch {}
 	if (!message) return json({ say: "（肥鱼歪头）你想说啥呀？", act: "bubbles" });
@@ -308,9 +308,8 @@ export async function onRequestPost(context) {
 
 	try {
 		const apiBase = (env.FISH_API_BASE || "https://api.deepseek.com").replace(/\/+$/, "");
-		const res = await fetch(
-			`${apiBase}/chat/completions`,
-			{
+		const ask = async (msgs) => {
+			const r = await fetch(`${apiBase}/chat/completions`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -322,30 +321,51 @@ export async function onRequestPost(context) {
 					thinking: { type: "disabled" },
 					max_tokens: 320,
 					response_format: { type: "json_object" },
-					messages: [
-						{
-							role: "system",
-							content: `${MANUAL}\n${contextLines}\n只输出 JSON：{"say":"…","act":"idle|wave|bubbles|sleepy"}；act 含义：idle 平常 / wave 开心打招呼或庆祝 / bubbles 思考或认真介绍 / sleepy 困了、答不上来或想结束话题`,
-						},
-						...history,
-						{ role: "user", content: message },
-					],
+					messages: msgs,
 				}),
 				signal: AbortSignal.timeout(15000),
+			});
+			if (!r.ok) throw new Error("deepseek " + r.status);
+			const d = await r.json();
+			const c = d?.choices?.[0]?.message?.content || "";
+			try {
+				const pj = JSON.parse(c);
+				const a = ["idle", "wave", "bubbles", "sleepy"].includes(pj.act)
+					? pj.act
+					: "idle";
+				return { say: String(pj.say || "").slice(0, 300), act: a };
+			} catch {
+				return { say: c.slice(0, 300), act: "idle" };
+			}
+		};
+		const baseMessages = [
+			{
+				role: "system",
+				content: `${MANUAL}\n${contextLines}\n只输出 JSON：{"say":"…","act":"idle|wave|bubbles|sleepy"}；act 含义：idle 平常 / wave 开心打招呼或庆祝 / bubbles 思考或认真介绍 / sleepy 困了、答不上来或想结束话题`,
 			},
-		);
-		if (!res.ok) throw new Error("deepseek " + res.status);
-		const data = await res.json();
-		const content = data?.choices?.[0]?.message?.content || "";
-		try {
-			const parsed = JSON.parse(content);
-			const act = ["idle", "wave", "bubbles", "sleepy"].includes(parsed.act)
-				? parsed.act
-				: "idle";
-			return json({ say: String(parsed.say || "（肥鱼眨眨眼）").slice(0, 300), act });
-		} catch {
-			return json({ say: content.slice(0, 300) || "（肥鱼眨眨眼）", act: "idle" });
+			...history,
+			{ role: "user", content: message },
+		];
+		let out = await ask(baseMessages);
+		if (!out.say.trim()) {
+			// 模型偶发只回空白（2026-10-31 实测复现）：带提醒重试一次
+			out = await ask([
+				...baseMessages,
+				{
+					role: "user",
+					content:
+						"（系统提醒：你刚才只回了空白，请用一两句完整的话回答我刚才的问题）",
+				},
+			]);
 		}
+		if (!out.say.trim()) {
+			// 仍空白就给兜底句，绝不让访客看到空气泡
+			out = {
+				say: "咕噜……本肥鱼刚刚走神啦，你再喊我一声好不好。",
+				act: "bubbles",
+			};
+		}
+		return json(out);
 	} catch (e) {
 		return json({
 			say: "呜……脑子那边没信号，等会儿再喊我好不好。",
