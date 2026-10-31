@@ -655,44 +655,50 @@ async function xinghaiSearchSwap(targetPlatform, songInfo, quality, deadline) {
 }
 
 async function getUrlWithSwap(platform, songInfo, quality) {
-	// 并发竞速（2026-10-31 二改）：本平台链与酷我/咪咕按名搜索链同时起跑，
-	// 谁先出活链谁赢——串行等本平台整链失败再换源太慢，线上长链容易中途死。
-	// 第二梯队（星海搜索 tx/wy/kg）只在三路全灭时才串行补试，受总截止约束。
-	const infoSearch = { ...songInfo, id: "", songmid: "", hash: "" };
-	const racers = [
-		getUrlWithFallback(platform, songInfo, quality).then((url) => ({
-			url, servedPlatform: platform, swapped: false,
-		})),
-	];
-	if (songInfo?.name) {
-		// 换源选手晚 1.2 秒起跑：本平台能痛快出链时不抢（保住本平台音质），
-		// 本平台卡住（多半 VIP）换源链再接手竞速。
-		const delayedSwap = async (p) => {
-			await new Promise((r) => setTimeout(r, 1200));
-			const url = await getUrlWithFallback(p, infoSearch, quality);
-			return { url, servedPlatform: p, swapped: true };
-		};
-		for (const p of ["kw", "mg"]) {
-			if (p === platform) continue;
-			racers.push(delayedSwap(p));
-		}
-	}
+	// 顺序+预算（2026-10-31 三改）：先给本平台链 6 秒——能出链就用本平台的
+	// （音质优先，实测并发竞速会被酷我低码率链抢跑）；6 秒没出或整链失败，
+	// 再让酷我/咪咕按名链竞速换源；最后星海搜索补试。串行等全链失败太慢、
+	// 纯竞速伤音质，这是折中。
+	const withBudget = (promise, ms, label) =>
+		Promise.race([
+			promise,
+			new Promise((_, rej) => setTimeout(() => rej(new Error(label)), ms)),
+		]);
 	try {
-		return await Promise.any(racers);
-	} catch (agg) {
-		const attempts = (agg?.errors || []).map((e) => e?.message || String(e));
-		if (!songInfo?.name) throw new Error(attempts.join(" | ") || String(agg));
-		const deadline = Date.now() + SWAP_DEADLINE_MS;
-		for (const p of ["tx", "wy", "kg"]) {
-			if (p === platform || Date.now() > deadline) continue;
-			try {
-				const url = await xinghaiSearchSwap(p, songInfo, quality, deadline);
-				return { url, servedPlatform: p, swapped: true };
-			} catch (e) {
-				attempts.push(SWAP_LABELS[p] + ": " + (e?.message || e));
+		const url = await withBudget(
+			getUrlWithFallback(platform, songInfo, quality),
+			6000,
+			"本平台链 6 秒未出链",
+		);
+		return { url, servedPlatform: platform, swapped: false };
+	} catch (nativeErr) {
+		if (!songInfo?.name) throw nativeErr;
+		const infoSearch = { ...songInfo, id: "", songmid: "", hash: "" };
+		const swappers = ["kw", "mg"]
+			.filter((p) => p !== platform)
+			.map((p) =>
+				getUrlWithFallback(p, infoSearch, quality).then((url) => ({
+					url, servedPlatform: p, swapped: true,
+				})),
+			);
+		try {
+			return await withBudget(Promise.any(swappers), 12000, "换源链 12 秒未出链");
+		} catch (agg) {
+			const attempts = [nativeErr?.message || String(nativeErr)];
+			for (const e of agg?.errors || []) attempts.push(e?.message || String(e));
+			if (agg?.message && !agg?.errors) attempts.push(agg.message);
+			const deadline = Date.now() + SWAP_DEADLINE_MS;
+			for (const p of ["tx", "wy", "kg"]) {
+				if (p === platform || Date.now() > deadline) continue;
+				try {
+					const url = await xinghaiSearchSwap(p, songInfo, quality, deadline);
+					return { url, servedPlatform: p, swapped: true };
+				} catch (e) {
+					attempts.push(SWAP_LABELS[p] + ": " + (e?.message || e));
+				}
 			}
+			throw new Error(attempts.join(" | ") + " | 换源也失败");
 		}
-		throw new Error(attempts.join(" | ") + " | 换源也失败");
 	}
 }
 
