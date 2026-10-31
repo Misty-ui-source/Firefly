@@ -49,6 +49,9 @@ import {
 	getDefaultAstralLayout,
 	getStoredAstralTheme,
 	getStoredAstralLayout,
+	getDefaultPaperTheme,
+	getStoredPaperTheme,
+	getStoredPaperHue,
 	getStoredHarmonyHue,
 	getStoredHarmonyScheme,
 	getStoredHarmonySpec,
@@ -103,6 +106,8 @@ import {
 	setSiteMode,
 	setAstralTheme,
 	setAstralLayout,
+	setPaperTheme,
+	setPaperHue,
 	setHarmonyHue,
 	setHarmonyScheme,
 	setHarmonySpec,
@@ -172,16 +177,35 @@ const astralLayoutOptions = [
 	{ value: "classic", label: "经典布局" },
 	{ value: "bento", label: "璨夜布局" },
 ] as const;
+// 纸舟子主题（纸面 / 手册）：仅纸舟下出现，在站点形态行下方；两套是独立主题、借住纸舟槽位；控制台定默认、这里是访客覆盖
+let paperTheme = $state(getStoredPaperTheme());
+const defaultPaperTheme = getDefaultPaperTheme();
+const paperThemeOptions = [
+	{ value: "ink", label: "纸面" },
+	{ value: "manual", label: "手册" },
+] as const;
+// 纸面主题色（独立色相，仅纸面）：默认 177 墨绿；预设是几支常用墨色，滑杆任意选
+let paperHue = $state(getStoredPaperHue());
+const paperHuePresets = [
+	{ value: 177, label: "墨绿" },
+	{ value: 230, label: "藏青" },
+	{ value: 262, label: "靛蓝" },
+	{ value: 305, label: "黛紫" },
+	{ value: 25, label: "朱砂" },
+	{ value: 48, label: "赭石" },
+] as const;
 const siteModeOptions = [
 	{ value: "full", labelKey: I18nKey.siteModeFull },
 	{ value: "pure", labelKey: I18nKey.siteModePure },
 	{ value: "harmony", labelKey: I18nKey.siteModeHarmony },
 	{ value: "brick", labelKey: I18nKey.siteModeBrick },
 	{ value: "astral", labelKey: I18nKey.siteModeAstral },
+	{ value: "paper", labelKey: I18nKey.siteModePaper },
 ] as const;
 // 素简下调色板精简：只留站点形态（华彩切换）、字体与特效（樱花/萤火虫），壁纸整页签收起；
 // 文章布局（列表/网格）在素简下不出现——素简是单列列表、根本排不了网格（2026-10-28 用户定），原位置改放特效
 const isPure = $derived(siteMode === "pure");
+const isPaper = $derived(siteMode === "paper");
 let pureFont = $state(getStoredPureFont());
 // 选项来自 siteConfig.pureFontMenu（控制台字体页可管：放哪几款、什么顺序，第一项即默认）
 const pureFontOptions = getPureFontMenu().map((k) => ({
@@ -500,13 +524,13 @@ let visibleTabs = $derived.by(() => {
 			icon: "material-symbols:palette",
 			label: i18n(I18nKey.settingsTabAppearance),
 		});
-	if (hasWallpaperTab && !isPure)
+	if (hasWallpaperTab && !isPure && !isPaper)
 		tabs.push({
 			key: "wallpaper",
 			icon: "material-symbols:wallpaper",
 			label: i18n(I18nKey.settingsTabWallpaper),
 		});
-	if (hasEffectsTab && !isPure)
+	if (hasEffectsTab && !isPure && !isPaper)
 		tabs.push({
 			key: "effects",
 			icon: "mdi:flower-poppy",
@@ -1034,6 +1058,14 @@ $effect(() => {
 });
 
 $effect(() => {
+	setPaperTheme(paperTheme);
+});
+
+$effect(() => {
+	setPaperHue(paperHue);
+});
+
+$effect(() => {
 	setPureFont(pureFont);
 });
 
@@ -1121,7 +1153,7 @@ $effect(() => {
 	<!-- Appearance Tab: Theme Color + Layout -->
 	{#if activeTab === "appearance"}
 		<!-- Theme Color Section（谐彩下由专属色相滑杆接管、顽彩配色固定，隐藏全站主题色） -->
-		{#if showThemeColor && !isPure && !isHarmony && !isBrick && !isAstral}
+		{#if showThemeColor && !isPure && !isHarmony && !isBrick && !isAstral && !isPaper}
 		<div class="">
 			<div class="section-title">
 				{i18n(I18nKey.themeColor)}
@@ -1145,7 +1177,7 @@ $effect(() => {
 		{/if}
 
 		<!-- Navbar Style Section（谐彩的导航是 Top App Bar 形态、顽彩是积木顶栏，隐藏全站导航样式） -->
-		{#if showNavbarStyle && !isPure && !isHarmony && !isBrick && !isAstral}
+		{#if showNavbarStyle && !isPure && !isHarmony && !isBrick && !isAstral && !isPaper}
 		<div class="">
 			<div class="section-title">
 				{i18n(I18nKey.navbarStyle)}
@@ -1238,6 +1270,54 @@ $effect(() => {
 				{/each}
 			</div>
 			<div class="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5">经典：Firefly 经典版式（横幅 + 侧栏 + 文章流），保留璨夜皮肤 · 璨夜：现行首页瓷砖矩阵</div>
+			{/if}
+			<!-- 纸舟子主题（仅纸舟出现）：纸面 = 轻笑纸底墨线，手册 = 终末地工业手册风；两套独立主题借住纸舟 -->
+			{#if isPaper}
+			<div class="text-xs font-bold text-(--btn-content) opacity-80 mt-3 mb-1.5">纸舟主题</div>
+			<div class="flex flex-wrap gap-2">
+				{#each paperThemeOptions as opt}
+				<button
+					aria-label={opt.label}
+					class="flex-1 min-w-[45%] btn-regular rounded-md py-2 px-3 flex items-center justify-center gap-2 active:scale-95 transition-all relative overflow-hidden"
+					class:opacity-60={paperTheme !== opt.value}
+					class:bg-(--btn-regular-bg-hover)={paperTheme === opt.value}
+					onclick={() => { paperTheme = opt.value; }}
+					title={opt.label}
+				>
+					<span class="text-xs font-medium">{opt.label}</span>
+				</button>
+				{/each}
+			</div>
+			<div class="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5">纸面：纸底墨线、墨绿点缀、三栏阅读 · 手册：工业手册风、高亮黄、切角、去图化</div>
+			{#if paperTheme === "ink"}
+			<div class="flex items-center mt-3 mb-1.5">
+				<div class="text-xs font-bold text-(--btn-content) opacity-80">纸面主题色</div>
+				<div class="transition bg-(--btn-regular-bg) rounded-md flex justify-center font-bold items-center text-(--btn-content) ml-auto w-9 h-6 text-xs">
+					{paperHue}
+				</div>
+			</div>
+			<div class="hue-slider-shell w-full h-6 px-1 bg-[oklch(0.80_0.10_0)] dark:bg-[oklch(0.70_0.10_0)] rounded-md select-none">
+				<input aria-label="纸面主题色" type="range" min="0" max="360" step="1" value={paperHue}
+					   oninput={(e) => { paperHue = Number((e.currentTarget as HTMLInputElement).value); }}
+					   class="slider" style="width: 100%">
+			</div>
+			<div class="flex flex-wrap gap-1.5 mt-2">
+				{#each paperHuePresets as preset}
+				<button
+					aria-label={preset.label}
+					title={preset.label}
+					class="w-6 h-6 rounded-full active:scale-90 transition-all"
+					class:ring-2={paperHue === preset.value}
+					class:ring-offset-2={paperHue === preset.value}
+					class:ring-neutral-400={paperHue === preset.value}
+					style="background: oklch(0.55 0.11 {preset.value})"
+					onclick={() => { paperHue = preset.value; }}
+				></button>
+				{/each}
+				<span class="text-xs text-neutral-500 dark:text-neutral-400 self-center ml-1">墨绿 / 藏青 / 靛蓝 / 黛紫 / 朱砂 / 赭石</span>
+			</div>
+			<div class="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5">纸面自己的主题色，不跟全站主色相；默认 177 墨绿</div>
+			{/if}
 			{/if}
 		</div>
 		{/if}

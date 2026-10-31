@@ -418,7 +418,7 @@ export function setNavbarStyle(style: NavbarStyle): void {
 	applyNavbarStyleToDocument(safe);
 }
 
-const SITE_MODES: SiteMode[] = ["full", "pure", "harmony", "brick", "astral"];
+const SITE_MODES: SiteMode[] = ["full", "pure", "harmony", "brick", "astral", "paper"];
 
 // ─── 形态切换全局淡变 ─────────────────────────────────────────
 // 切换站点形态 / 璨夜子主题时，先给 html 挂 .mode-fade 再改属性：
@@ -543,6 +543,103 @@ export function setAstralTheme(theme: AstralTheme): void {
 		localStorage.setItem("astralTheme", safe);
 	}
 	applyAstralThemeToDocument(safe);
+}
+
+// ─── 纸舟子主题（纸面 / 手册） ────────────────────────────────────────
+// 只在站点形态 = 纸舟（paper）时生效：ink 纸面 = 轻笑Chuckle 纸底墨线（纸白/墨字/墨绿）；
+// manual 手册 = 终末地工业手册风（纸白/墨字/高亮黄、切角、去图化）。两套是独立主题，
+// 仅借住纸舟一个形态槽位。控制台主题页定全站默认（siteConfig.paperTheme），访客在
+// 调色板外观页签、站点形态下方覆盖，存 localStorage paperTheme；Layout 首帧脚本同步
+// 落位防闪烁，样式全部收在 paper-mode.css 的 [data-paper-theme] 作用域里。
+
+export type PaperTheme = "ink" | "manual";
+
+const PAPER_THEMES: PaperTheme[] = ["ink", "manual"];
+
+export function getDefaultPaperTheme(): PaperTheme {
+	const v = siteConfig.paperTheme ?? "ink";
+	return PAPER_THEMES.includes(v as PaperTheme) ? (v as PaperTheme) : "ink";
+}
+
+export function getStoredPaperTheme(): PaperTheme {
+	const defaultTheme = getDefaultPaperTheme();
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.getItem !== "function"
+	) {
+		return defaultTheme;
+	}
+	const stored = localStorage.getItem("paperTheme") as PaperTheme | null;
+	return stored && PAPER_THEMES.includes(stored) ? stored : defaultTheme;
+}
+
+export function applyPaperThemeToDocument(theme: PaperTheme): void {
+	if (typeof document === "undefined") return;
+	const safe: PaperTheme = PAPER_THEMES.includes(theme) ? theme : "ink";
+	beginModeFade();
+	document.documentElement.setAttribute("data-paper-theme", safe);
+	window.dispatchEvent(
+		new CustomEvent("paperThemeChange", { detail: { theme: safe } }),
+	);
+}
+
+export function setPaperTheme(theme: PaperTheme): void {
+	const safe: PaperTheme = PAPER_THEMES.includes(theme) ? theme : "ink";
+	if (
+		typeof localStorage !== "undefined" &&
+		typeof localStorage.setItem === "function"
+	) {
+		localStorage.setItem("paperTheme", safe);
+	}
+	applyPaperThemeToDocument(safe);
+}
+
+// ─── 纸面主题色（独立色相） ──────────────────────────────────────────
+// 只作用于纸面（ink）：墨色令牌由 --paper-hue 派生（paper-mode.css），不跟全站 --hue。
+// 默认 177 = 纸面墨绿（按 qcqx 原值 #17695a 的 oklch 色相校准）。控制台主题页定全站
+// 默认（siteConfig.paperHue），访客在调色板纸舟段覆盖，存 localStorage paperHue；
+// Layout 首帧脚本同步落位防闪烁。
+
+export function getDefaultPaperHue(): number {
+	const v = siteConfig.paperHue ?? 177;
+	return typeof v === "number" && !Number.isNaN(v)
+		? clampNumber(Math.round(v), 0, 360)
+		: 177;
+}
+
+export function getStoredPaperHue(): number {
+	const fallback = getDefaultPaperHue();
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.getItem !== "function"
+	) {
+		return fallback;
+	}
+	const raw = localStorage.getItem("paperHue");
+	if (raw === null) return fallback;
+	const parsed = Number.parseFloat(raw);
+	return Number.isNaN(parsed)
+		? fallback
+		: clampNumber(Math.round(parsed), 0, 360);
+}
+
+export function applyPaperHueToDocument(hue: number): void {
+	if (typeof document === "undefined") return;
+	document.documentElement.style.setProperty(
+		"--paper-hue",
+		String(clampNumber(Math.round(hue), 0, 360)),
+	);
+}
+
+export function setPaperHue(hue: number): void {
+	const safe = clampNumber(Math.round(hue), 0, 360);
+	if (
+		typeof localStorage !== "undefined" &&
+		typeof localStorage.setItem === "function"
+	) {
+		localStorage.setItem("paperHue", String(safe));
+	}
+	applyPaperHueToDocument(safe);
 }
 
 // ─── 璨夜主题布局（璨夜 bento / 经典） ─────────────────────────────────

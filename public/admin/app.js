@@ -6345,10 +6345,12 @@ routes.theme = async () => {
     const modeM = t.match(/siteMode\s*:\s*"(\w+)"/);
     const astralM = t.match(/astralTheme\s*:\s*"(\w+)"/);
     const astralLayoutM = t.match(/astralLayout\s*:\s*"(\w+)"/);
+    const paperM = t.match(/paperTheme\s*:\s*"(\w+)"/);
+    const paperHueM = t.match(/paperHue\s*:\s*(\d+)/);
     const splashM = t.match(/splashEnabled\s*:\s*(true|false)/);
     const mobileMenu = getIn(t, nav, /mobileMenuStyle\s*:\s*"(\w+)"/);
     if (hue === null || border === null || follow === null || layout === null) return null;
-    return { hue: Number(hue), cardBorder: border === 'true', cardFollow: follow === 'true', layout, layoutMobile: layoutM || layout, navbarStyle: navStyle || 'classic', mobileMenuStyle: mobileMenu || 'drawer', analyticsStyle: anaM ? anaM[1] : 'classic', siteMode: modeM ? modeM[1] : 'full', astralTheme: astralM ? astralM[1] : 'solid', astralLayout: astralLayoutM ? astralLayoutM[1] : 'bento', splashEnabled: splashM ? splashM[1] === 'true' : true };
+    return { hue: Number(hue), cardBorder: border === 'true', cardFollow: follow === 'true', layout, layoutMobile: layoutM || layout, navbarStyle: navStyle || 'classic', mobileMenuStyle: mobileMenu || 'drawer', analyticsStyle: anaM ? anaM[1] : 'classic', siteMode: modeM ? modeM[1] : 'full', astralTheme: astralM ? astralM[1] : 'solid', astralLayout: astralLayoutM ? astralLayoutM[1] : 'bento', paperTheme: paperM ? paperM[1] : 'ink', paperHue: paperHueM ? Number(paperHueM[1]) : 177, splashEnabled: splashM ? splashM[1] === 'true' : true };
   }
   function parseBgw(t) {
     const mm = t.match(/^\tmode\s*:\s*"(\w+)"/m);
@@ -6425,6 +6427,8 @@ routes.theme = async () => {
     out = out.replace(/siteMode\s*:\s*"\w+"/, `siteMode: "${s.siteMode}"`);
     out = out.replace(/astralTheme\s*:\s*"\w+"/, `astralTheme: "${s.astralTheme}"`);
     out = out.replace(/astralLayout\s*:\s*"\w+"/, `astralLayout: "${s.astralLayout}"`);
+    out = out.replace(/paperTheme\s*:\s*"\w+"/, `paperTheme: "${s.paperTheme}"`);
+    out = out.replace(/paperHue\s*:\s*\d+/, `paperHue: ${s.paperHue}`);
     out = out.replace(/splashEnabled\s*:\s*(?:true|false)/, `splashEnabled: ${s.splashEnabled}`);
     return out;
   }
@@ -6542,12 +6546,19 @@ routes.theme = async () => {
       <div class="field"><label>导航栏样式（全站默认）</label><div class="pills">${seg('navbarStyle', 'classic', '▬ 通栏')}${seg('navbarStyle', 'float', '▭ 悬浮卡片')}${seg('navbarStyle', 'capsule', '💊 悬浮胶囊')}${seg('navbarStyle', 'segment', '💊💊💊 三段胶囊')}</div>
       <p class="hint">三段胶囊：导航栏拆成左站名 / 中菜单 / 右控件三颗胶囊，向下滚动时左右两段收成圆形，右段汉堡打开快捷面板。访客可以在博客调色板（显示设置）里自己切换样式，那是访客本地的选择，不改这里的全站默认。</p></div>
       <div class="field"><label>移动端菜单样式</label><div class="pills">${seg('mobileMenuStyle', 'drawer', '全屏抽屉')}${seg('mobileMenuStyle', 'card', '浮层卡片')}</div></div>
-      <div class="field"><label>站点形态（全站默认）</label><div class="pills">${seg('siteMode', 'full', '🌸 华彩')}${seg('siteMode', 'pure', '🍃 素简')}${seg('siteMode', 'harmony', '🎵 谐彩')}${seg('siteMode', 'brick', '🧱 顽彩')}${seg('siteMode', 'astral', '🌌 璨夜')}</div>
+      <div class="field"><label>站点形态（全站默认）</label><div class="pills">${seg('siteMode', 'full', '🌸 华彩')}${seg('siteMode', 'pure', '🍃 素简')}${seg('siteMode', 'harmony', '🎵 谐彩')}${seg('siteMode', 'brick', '🧱 顽彩')}${seg('siteMode', 'astral', '🌌 璨夜')}${seg('siteMode', 'paper', '⛵ 纸舟')}</div>
       <p class="hint">素简 = 简洁导航 · 专注阅读（对标朝朝听雨的 Pure 形态）：隐藏横幅壁纸、花瓣特效、看板娘与音乐浮动件，侧栏只留个人卡 / 公告 / 最近评论 / 标签，文章页正文单列、右栏只留目录。谐彩 = Material 3 色阶 · 无边框柔影（视觉参考 Shirone 主题）：整站换成色阶分层 + 极柔阴影，导航变半透顶栏，首页横幅成舞台，文章卡片做减法；内容与功能与华彩完全一致，只换气质。访客可以在博客调色板（显示设置）里自己切换形态，那是访客本地的选择，不改这里的全站默认。</p></div>
       <div class="field"><label>璨夜默认主题</label><div class="pills">${seg('astralTheme', 'solid', '🪨 实面')}${seg('astralTheme', 'starfield', '✨ 星尘')}</div>
       <p class="hint">只在站点形态 = 璨夜时生效：实面 = 近不透明实面卡（稳定兜底）；星尘 = 按 XinghuisamaBlogs 排版布局的玻璃版（面纱层 + 半透卡片 + 等高行）。访客可以在调色板外观页签、站点形态下方自己切换，那是访客本地的选择，不改这里的全站默认。</p></div>
       <div class="field"><label>璨夜默认布局</label><div class="pills">${seg('astralLayout', 'bento', '🧩 璨夜')}${seg('astralLayout', 'classic', '🏛 经典')}</div>
       <p class="hint">只在站点形态 = 璨夜时生效：璨夜 = 现行首页瓷砖矩阵（bento）；经典 = Firefly 经典版式（横幅 + 侧栏 + 文章流），只保留璨夜皮肤。访客可以在调色板外观页签、璨夜主题下方自己切换，那是访客本地的选择，不改这里的全站默认。</p></div>
+      <div class="field"><label>纸舟默认主题</label><div class="pills">${seg('paperTheme', 'ink', '📄 纸面')}${seg('paperTheme', 'manual', '📐 手册')}</div>
+      <p class="hint">只在站点形态 = 纸舟时生效：纸舟里装着两套独立主题——纸面 = 轻笑Chuckle 的纸底墨线（纸白 / 墨字 / 墨绿）；手册 = 终末地工业手册风（高亮黄 / 切角 / 去图化）。访客可以在调色板外观页签、站点形态下方自己切换，那是访客本地的选择，不改这里的全站默认。</p></div>
+      <div class="field"><label id="th-paper-hue-label">纸面默认主题色（色相 0–360，现在 ${st.paperHue}）</label>
+        <div class="hue-bar"></div>
+        <div class="toolbar"><input type="range" id="th-paper-hue" min="0" max="360" step="1" value="${st.paperHue}" style="flex:1">
+        <input type="number" id="th-paper-hue-num" min="0" max="360" value="${st.paperHue}" style="width:84px"></div>
+      <p class="hint">只在站点形态 = 纸舟 · 纸面时生效：纸面自己的主题色（墨色），不跟上面的全站主题色相走。默认 177 = 墨绿；藏青 230 / 靛蓝 262 / 黛紫 305 / 朱砂 25 / 赭石 48 都是稳妥的墨色。访客可以在调色板纸舟段自己改，那是访客本地的选择，不改这里的全站默认。</p></div>
       <div class="field"><label>会话级开屏</label><div class="pills">${pill('splashEnabled', '开屏动画（博客名 + 肥鱼）')}</div>
       <p class="hint">每个会话第一次打开博客时先播一次：博客名 + 圆滚滚的肥鱼打招呼，约 1.9 秒自动散去、点任意处可跳过；同一个会话内不再重复。关掉后整站不再播。</p></div>
       <div class="field"><label>站点统计页样式</label><div class="pills">${seg('analyticsStyle', 'classic', '现行版（手搓）')}${seg('analyticsStyle', 'azuma', 'azuma 同款（带插画）')}${seg('analyticsStyle', 'azuma-clean', 'azuma 清爽版（无插画）')}</div>
@@ -6654,6 +6665,18 @@ routes.theme = async () => {
     };
     if (hueR) hueR.oninput = () => syncHue(hueR.value);
     if (hueN) hueN.onchange = () => syncHue(hueN.value);
+    const pHueR = $('#th-paper-hue'), pHueN = $('#th-paper-hue-num');
+    const syncPaperHue = (v) => {
+      st.paperHue = Math.max(0, Math.min(360, Number(v) || 0));
+      if (pHueR) pHueR.value = st.paperHue;
+      if (pHueN) pHueN.value = st.paperHue;
+      const sb = $('#theme-save');
+      if (sb) sb.disabled = !dirty();
+      const lbl = $('#th-paper-hue-label');
+      if (lbl) lbl.textContent = `纸面默认主题色（色相 0–360，现在 ${st.paperHue}）`;
+    };
+    if (pHueR) pHueR.oninput = () => syncPaperHue(pHueR.value);
+    if (pHueN) pHueN.onchange = () => syncPaperHue(pHueN.value);
     const saveBtn = $('#theme-save');
     if (saveBtn) saveBtn.onclick = async () => {
       saveBtn.disabled = true;

@@ -107,6 +107,7 @@ enum I18nKey {
 	siteModeHarmony = "siteModeHarmony",
 	siteModeBrick = "siteModeBrick",
 	siteModeAstral = "siteModeAstral",
+	siteModePaper = "siteModePaper",
 	harmonySettings = "harmonySettings",
 	harmonyScheme = "harmonyScheme",
 	harmonySchemeTonalSpot = "harmonySchemeTonalSpot",

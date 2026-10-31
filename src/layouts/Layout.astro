@@ -54,6 +54,7 @@ import pureModeCssUrl from "@/styles/pure-mode.css?url";
 import harmonyModeCssUrl from "@/styles/harmony-mode.css?url";
 import brickModeCssUrl from "@/styles/brick-mode.css?url";
 import astralModeCssUrl from "@/styles/astral-mode.css?url";
+import paperModeCssUrl from "@/styles/paper-mode.css?url";
 import "@/styles/variables.styl";
 import "@rehype-callouts-theme";
 
@@ -169,7 +170,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
 ---
 
 <!doctype html>
-<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"} data-navbar-style={siteConfig.navbar.navbarStyle ?? "classic"} data-site-mode={siteConfig.siteMode ?? "full"} data-harmony-font={siteConfig.harmonyFont ?? "default"} data-brick-font={siteConfig.brickFont ?? "default"} data-star-font={siteConfig.starFont ?? "default"} data-astral-theme={siteConfig.astralTheme ?? "solid"} data-astral-layout={siteConfig.astralLayout ?? "bento"}>
+<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"} data-navbar-style={siteConfig.navbar.navbarStyle ?? "classic"} data-site-mode={siteConfig.siteMode ?? "full"} data-harmony-font={siteConfig.harmonyFont ?? "default"} data-brick-font={siteConfig.brickFont ?? "default"} data-star-font={siteConfig.starFont ?? "default"} data-astral-theme={siteConfig.astralTheme ?? "solid"} data-paper-theme={siteConfig.paperTheme ?? "ink"} data-astral-layout={siteConfig.astralLayout ?? "bento"}>
   <head>
     <meta charset="UTF-8" />
     {commentConfig?.type === "waline" && commentConfig?.waline?.serverURL && (
@@ -379,6 +380,8 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
         defaultSiteMode: siteConfig.siteMode ?? "full",
         isSiteModeSwitchable: displaySettingsConfig.siteModeSwitchable,
         defaultAstralTheme: siteConfig.astralTheme ?? "solid",
+        defaultPaperTheme: siteConfig.paperTheme ?? "ink",
+        defaultPaperHue: siteConfig.paperHue ?? 177,
         defaultAstralLayout: siteConfig.astralLayout ?? "bento",
         pureFontMenu: siteConfig.pureFontMenu ?? ["system"],
       }}
@@ -490,7 +493,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
       if (!isSiteModeSwitchable) {
         localStorage.removeItem("siteMode");
       }
-      const resolvedSiteMode = ["full", "pure", "harmony", "brick", "astral"].includes(siteModeStored)
+      const resolvedSiteMode = ["full", "pure", "harmony", "brick", "astral", "paper"].includes(siteModeStored)
         ? siteModeStored
         : defaultSiteMode;
       document.documentElement.setAttribute(
@@ -518,6 +521,30 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
       document.documentElement.setAttribute(
         "data-astral-layout",
         resolvedAstralLayout
+      );
+
+      // 初始化纸舟子主题 - 优先 localStorage（调色板外观页签、站点形态下方改过时），否则用配置默认；
+      // 属性只在 html[data-site-mode="paper"] 作用域内被 paper-mode.css 消费，其他形态下挂着不生效
+      const paperThemeStored = localStorage.getItem("paperTheme");
+      const resolvedPaperTheme = ["ink", "manual"].includes(paperThemeStored)
+        ? paperThemeStored
+        : defaultPaperTheme;
+      document.documentElement.setAttribute(
+        "data-paper-theme",
+        resolvedPaperTheme
+      );
+
+      // 初始化纸面主题色（独立色相）- 优先 localStorage paperHue，否则配置默认；
+      // 经 --paper-hue 喂 paper-mode.css 的墨色令牌，其他形态/主题下挂着不生效
+      const paperHueStored = localStorage.getItem("paperHue");
+      const paperHueParsed =
+        paperHueStored === null ? NaN : parseFloat(paperHueStored);
+      const resolvedPaperHue = Number.isNaN(paperHueParsed)
+        ? defaultPaperHue
+        : Math.min(360, Math.max(0, Math.round(paperHueParsed)));
+      document.documentElement.style.setProperty(
+        "--paper-hue",
+        String(resolvedPaperHue)
       );
 
       // 初始化谐彩专属调色板 - 独立 harmony* 存储键，首帧前落位防闪烁；
@@ -675,6 +702,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
     <link rel="stylesheet" href={harmonyModeCssUrl} />
     <link rel="stylesheet" href={brickModeCssUrl} />
     <link rel="stylesheet" href={astralModeCssUrl} />
+    <link rel="stylesheet" href={paperModeCssUrl} />
     <script is:inline>
       // 样式已静态就位：setting-utils 切换时调用的确保钩子直接放行（立即翻属性）
       window.__ensureSiteModeCss = function () {

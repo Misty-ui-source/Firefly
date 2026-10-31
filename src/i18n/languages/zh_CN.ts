@@ -129,6 +129,7 @@ export const zh_CN: Translation = {
 	[Key.siteModeHarmony]: "谐彩",
 	[Key.siteModeBrick]: "顽彩",
 	[Key.siteModeAstral]: "璨夜",
+	[Key.siteModePaper]: "纸舟",
 	[Key.harmonySettings]: "谐彩专属",
 	[Key.harmonyScheme]: "色彩风格",
 	[Key.harmonySchemeTonalSpot]: "柔调",

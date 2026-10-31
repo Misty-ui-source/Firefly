@@ -1,0 +1,824 @@
+/* ============================================================
+ * 站点形态 · 纸舟（paper）样式
+ * ------------------------------------------------------------
+ * 纸舟一个形态槽位里装两套独立主题，靠 data-paper-theme 分作用域：
+ *   ink 纸面    = 轻笑Chuckle 的 qcqx.cn「纸底墨线」（线上 CSS 实测
+ *                 令牌存档 refs/qcqx-live/）：纸白、墨字、发丝线、
+ *                 墨绿 accent、半去图化、三栏 rail。
+ *   manual 手册 = 年华の博客「终末地」工业手册风（后续单独成段）。
+ * 只拆令牌数值与结构思路自研，不搬其代码/素材，公开口径只写「参考」。
+ * 机制同素简/璨夜子主题：siteConfig 定默认（控制台可改），访客覆盖
+ * 存 localStorage，Layout 头部脚本绘制前写好 data-site-mode 与
+ * data-paper-theme；本文件由 Layout 以真实 <link> 静态加载。
+ * 反璨夜原则（设计文档写死）：零专属 DOM——rail 就是既有左右侧栏，
+ * 靠变量与网格重排实现；落位只认首帧属性与静态 DOM 结构，不用 JS
+ * 做布局、不盯运行时内联样式；形态专属元素的隐藏守卫放主包常加载。
+ * 整文件 @layer components（与 main.css 同层靠特异性竞争）；变量
+ * 重定义例外放在 layer 外（html 属性选择器特异性高于 :root）。
+ * ============================================================ */
+
+/* ---------- 纸面令牌（layer 外：需压过 Layout 内联 :root 变量） ---------- */
+html[data-site-mode="paper"][data-paper-theme="ink"] {
+	--pz-bg: #fafafa;
+	--pz-elevated: #ffffff;
+	--pz-subtle: #f2f3f1;
+	--pz-hover: #eaecea;
+	--pz-fg: #111214;
+	--pz-fg-soft: #454a4e;
+	--pz-muted: #676d6b;
+	--pz-border: #e3e4e1;
+	--pz-border-strong: #cfd2cd;
+	--pz-accent: oklch(0.469 0.079 var(--paper-hue, 177));
+	--pz-accent-hover: oklch(0.409 0.068 var(--paper-hue, 177));
+	--pz-accent-soft: oklch(0.947 0.014 var(--paper-hue, 177));
+	--pz-code-bg: #f6f7f4;
+	--pz-code-head: #eceeeb;
+	--primary: var(--pz-accent);
+	/* TOC 徽章/状态走纸面令牌（toc.css 读这些变量，各形态各一份） */
+	--toc-badge-bg: var(--pz-subtle);
+	--toc-btn-hover: var(--pz-hover);
+	--toc-btn-active: var(--pz-accent-soft);
+	--toc-indicator-bg: var(--pz-accent-soft);
+	/* 按钮系变量换纸面口径（侧栏播放钮、代码徽章等都读这组） */
+	--btn-regular-bg: var(--pz-accent-soft);
+	--btn-regular-bg-hover: oklch(0.915 0.02 var(--paper-hue, 177));
+	--btn-content: var(--pz-accent);
+	--btn-plain-bg-hover: var(--pz-subtle);
+	/* 页底色与纸面统一：基座 --page-bg 是 #f8f8f8，与纸面 #fafafa
+	   只差两阶，在壳外露边成一道圆角描边，令牌层直接对齐 */
+	--page-bg: #fafafa;
+}
+html.dark[data-site-mode="paper"][data-paper-theme="ink"] {
+	--pz-bg: #1c1c1c;
+	--pz-elevated: #262626;
+	--pz-subtle: #303030;
+	--pz-hover: #383838;
+	--pz-fg: #f2f2f2;
+	--pz-fg-soft: #d2d2d2;
+	--pz-muted: #acacac;
+	--pz-border: #464646;
+	--pz-border-strong: #636363;
+	--pz-accent: oklch(0.748 0.083 var(--paper-hue, 177));
+	--pz-accent-hover: oklch(0.804 0.073 var(--paper-hue, 177));
+	--pz-accent-soft: oklch(0.299 0.016 var(--paper-hue, 177));
+	--pz-code-bg: #242424;
+	--pz-code-head: #303030;
+	--primary: var(--pz-accent);
+	--btn-regular-bg: var(--pz-accent-soft);
+	--btn-regular-bg-hover: oklch(0.335 0.022 var(--paper-hue, 177));
+	--btn-content: var(--pz-accent);
+	--btn-plain-bg-hover: var(--pz-subtle);
+	--page-bg: #1c1c1c;
+}
+
+@layer components {
+
+/* ================================================================
+ * 两套共用：纸面底、去横幅/装饰、内容落位
+ * ================================================================ */
+html[data-site-mode="paper"] {
+	background: var(--pz-bg, #fafafa) !important;
+	scroll-padding-top: 4.5rem;
+}
+html[data-site-mode="paper"] body {
+	background: var(--pz-bg, #fafafa) !important;
+	color: var(--pz-fg, #111214);
+	line-height: 1.65;
+}
+/* 字体：纸面用系统无衬线栈（参考站原口径）——基座正文字体是霞鹜文楷，
+   不压住的话整页气质全偏软；!important 压过字体选择规则，全页继承 */
+html[data-site-mode="paper"][data-paper-theme="ink"] body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+		"Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial,
+		sans-serif !important;
+}
+
+/* 横幅 / 壁纸 / 装饰层整体隐藏（纸舟两套都无横幅） */
+html[data-site-mode="paper"] #wallpaper-wrapper,
+html[data-site-mode="paper"] #header-waves,
+html[data-site-mode="paper"] #wallpaper-gradient,
+html[data-site-mode="paper"] #banner-images-container,
+html[data-site-mode="paper"] #banner-overlay-container,
+html[data-site-mode="paper"] #banner-dim-container,
+html[data-site-mode="paper"] canvas[id^="canvas_"],
+html[data-site-mode="paper"] #bg-player,
+html[data-site-mode="paper"] .l2d-buddy,
+html[data-site-mode="paper"] #l2d-widget-container,
+html[data-site-mode="paper"] #spine-model-container,
+html[data-site-mode="paper"] #draggable-stickers,
+html[data-site-mode="paper"] #floating-fish,
+html[data-site-mode="paper"] .floating-fish {
+	display: none !important;
+	visibility: hidden !important;
+}
+html[data-site-mode="paper"] body > div[style*="z-index: 9999"]:has(> canvas) {
+	display: none !important;
+	visibility: hidden !important;
+}
+
+/* 壁纸没了，内容顶回扁平顶栏之下：顶栏 3.25rem + 页顶距 */
+html[data-site-mode="paper"] .content-panel {
+	--content-top: 5.25rem !important;
+}
+/* 内容大面板在纸舟里不存在：拆掉它的面/边/圆角（否则顶栏下方会
+   浮出一圈圆角描边，是全屏壁纸布局遗留的面板壳） */
+html[data-site-mode="paper"] .content-panel,
+html[data-site-mode="paper"] #content-panel-inner {
+	background: transparent !important;
+	border: none !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+	backdrop-filter: none !important;
+}
+
+/* 切页过渡关掉位移/透明动画（同素简，避免残留状态） */
+html[data-site-mode="paper"] #swup-container {
+	transform: none !important;
+}
+html[data-site-mode="paper"] #content-wrapper {
+	animation: none !important;
+	opacity: 1 !important;
+	transform: none !important;
+}
+
+/* ================================================================
+ * 纸面（ink）：卡面基线——白面、发丝线、无影、小圆角
+ * ================================================================ */
+html[data-site-mode="paper"][data-paper-theme="ink"] .card-base,
+html[data-site-mode="paper"][data-paper-theme="ink"] .card-base-transparent {
+	background-color: var(--pz-elevated) !important;
+	backdrop-filter: none !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .card-base {
+	border: 1px solid var(--pz-border) !important;
+	border-radius: 8px !important;
+	box-shadow: none !important;
+}
+
+/* ================================================================
+ * 纸面 · 顶栏：扁平 3.25rem、绿点站名、导航药丸、左端传送门
+ * ================================================================ */
+html[data-site-mode="paper"][data-paper-theme="ink"] #navbar {
+	background: var(--pz-bg) !important;
+	border-bottom: 1px solid var(--pz-border);
+	box-shadow: none !important;
+	backdrop-filter: none !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #navbar > div,
+html[data-site-mode="paper"][data-paper-theme="ink"] #navbar .card-base {
+	background: transparent !important;
+	border: none !important;
+	box-shadow: none !important;
+	backdrop-filter: none !important;
+	border-radius: 0 !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-bar {
+	height: 3.25rem !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-segments {
+	max-width: 107.5rem !important;
+	padding-inline: clamp(1rem, 3vw, 2.5rem);
+}
+/* 站名：藏掉图标/图，换绿点 + 粗墨字 */
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-logo {
+	display: none !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-seg-left a > div::before {
+	content: "";
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: 50%;
+	background: var(--pz-accent);
+	margin-right: 0.55rem;
+	flex: none;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-title-text {
+	color: var(--pz-fg) !important;
+	font-weight: 700;
+	font-size: 1rem;
+	letter-spacing: 0.01em;
+}
+/* 传送门：汉堡钮搬到顶栏最左，图标换九宫格点阵（它打开的全站菜单
+   正好收着咱们比参考站多出来的全部功能页） */
+html[data-site-mode="paper"][data-paper-theme="ink"] #navbar {
+	position: relative;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #nav-menu-switch {
+	display: flex !important;
+	align-items: center;
+	justify-content: center;
+	position: absolute;
+	left: clamp(0.4rem, 1.5vw, 1.4rem);
+	top: 50%;
+	transform: translateY(-50%);
+	z-index: 30;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #nav-menu-switch svg {
+	display: none !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #nav-menu-switch::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	margin: auto;
+	width: 21px;
+	height: 21px;
+	background-image: radial-gradient(circle at center, var(--pz-muted) 1.6px, transparent 1.7px);
+	background-size: 7px 7px;
+	background-position: center;
+	pointer-events: none;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-seg-left {
+	padding-left: 2.6rem;
+}
+/* 顶栏本体再压一次：无边框无圆角无影（内层容器在某些样式下自带卡面） */
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-bar {
+	background: transparent !important;
+	border: none !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+}
+/* 药丸只留文字：藏掉一级项的图标（参考站导航为纯文字药丸） */
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-seg-center .navbar-icon {
+	display: none !important;
+}
+/* 导航药丸：一级项（直链与下拉触发同款） */
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-seg-center .dropdown-menu > a,
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-seg-center .dropdown-trigger {
+	height: 2.25rem !important;
+	padding-inline: 0.85rem !important;
+	border-radius: 999px !important;
+	font-size: 0.875rem !important;
+	font-weight: 500 !important;
+	color: var(--pz-fg-soft) !important;
+	background: transparent !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-seg-center .dropdown-menu > a:hover,
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-seg-center .dropdown-trigger:hover {
+	background: var(--pz-subtle) !important;
+	color: var(--pz-fg) !important;
+}
+/* 下拉箭头：触发钮原本留了 pr-8 给绝对定位的箭头，药丸的 padding-inline
+   把这块空间压掉后箭头压在文字上；还它右内距，并把箭头放大到 1rem、
+   颜色从 text-black/20 提到弱化墨色，展开时翻转朝上 */
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-seg-center .dropdown-trigger {
+	padding-right: 1.75rem !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-seg-center .dropdown-arrow {
+	font-size: 1rem !important;
+	color: var(--pz-muted) !important;
+	right: 0.5rem !important;
+}
+/* 展开翻转由组件自带的 hover rotate 规则负责（rotate 属性，与 translate
+   互不干扰），纸面不另加 transform，免得把 -translate-y-1/2 顶偏 */
+/* 下拉面板：纸面浮层——白面、发丝线、只有浮层才许有真阴影 */
+html[data-site-mode="paper"][data-paper-theme="ink"] .dropdown-content {
+	background: var(--pz-elevated) !important;
+	border: 1px solid var(--pz-border) !important;
+	border-radius: 12px !important;
+	box-shadow: 0 24px 64px rgb(17 18 20 / 0.14) !important;
+	padding: 0.4rem !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .dropdown-item {
+	font-size: 0.875rem !important;
+	color: var(--pz-fg-soft) !important;
+	border-radius: 8px !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .dropdown-item:hover {
+	background: var(--pz-accent-soft) !important;
+	color: var(--pz-accent) !important;
+}
+/* 右侧控件压平（搜索/音乐/调色板/明暗都保留，明暗与形态入口是底线） */
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-right-controls .btn-plain {
+	color: var(--pz-fg-soft) !important;
+	border-radius: 999px !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-right-controls .btn-plain:hover {
+	background: var(--pz-subtle) !important;
+	color: var(--pz-fg) !important;
+}
+
+/* ================================================================
+ * 纸面 · 骨架：三栏（左 rail 13rem / 中流 / 右 rail 14.5rem）
+ * 列几何真源变量内联在 #content-panel-inner 上，形态作用域内
+ * !important 改写（素简同法）；壳宽对齐参考 --max-width 107.5rem
+ * ================================================================ */
+@media (min-width: 1280px) {
+	html[data-site-mode="paper"][data-paper-theme="ink"] #content-panel-inner {
+		--cols-xl: 13rem minmax(0, 1fr) 14.5rem !important;
+		--content-ratio-xl: 1 !important;
+		max-width: 107.5rem !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="ink"] #main-grid {
+		column-gap: 2rem !important;
+	}
+	/* 两侧栏缺席的页面退两栏/一栏（:has 只读静态 DOM 结构，首帧即定） */
+	html[data-site-mode="paper"][data-paper-theme="ink"] body:not(:has(#left-sidebar)) #content-panel-inner {
+		--cols-xl: minmax(0, 1fr) 14.5rem !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="ink"] body:not(:has(#right-sidebar)) #content-panel-inner {
+		--cols-xl: 13rem minmax(0, 1fr) !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="ink"] body:not(:has(#right-sidebar)):not(:has(#left-sidebar)) #content-panel-inner {
+		--cols-xl: minmax(0, 1fr) !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="ink"] #main-grid #left-sidebar,
+	html[data-site-mode="paper"][data-paper-theme="ink"] #main-grid #right-sidebar {
+		max-width: none !important;
+	}
+}
+/* 1180–1280 参考站收起右 rail：这边右栏退到内容下方整行，不藏内容 */
+@media (min-width: 768px) and (max-width: 1279.98px) {
+	html[data-site-mode="paper"][data-paper-theme="ink"] #content-panel-inner {
+		--cols-md: 13rem minmax(0, 1fr) !important;
+		--content-ratio-md: 1 !important;
+		max-width: 107.5rem !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="ink"] #main-grid {
+		column-gap: 2rem !important;
+	}
+}
+
+/* ================================================================
+ * 纸面 · 两条 rail：去盒子化——平铺段 + 发丝线分隔
+ * ================================================================ */
+html[data-site-mode="paper"][data-paper-theme="ink"] #left-sidebar .card-base,
+html[data-site-mode="paper"][data-paper-theme="ink"] #right-sidebar .card-base,
+html[data-site-mode="paper"][data-paper-theme="ink"] #left-sidebar .card-base-transparent,
+html[data-site-mode="paper"][data-paper-theme="ink"] #right-sidebar .card-base-transparent {
+	background: transparent !important;
+	border: none !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+	padding-left: 0 !important;
+	padding-right: 0 !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #left-sidebar > div,
+html[data-site-mode="paper"][data-paper-theme="ink"] #right-sidebar > div {
+	gap: 0 !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #left-sidebar > div > * + *,
+html[data-site-mode="paper"][data-paper-theme="ink"] #right-sidebar > div > * + * {
+	border-top: 1px solid var(--pz-border);
+	padding-top: 1.1rem;
+	margin-top: 1.1rem;
+}
+/* 段标题：小号、弱化、字距微开 */
+html[data-site-mode="paper"][data-paper-theme="ink"] .widget-title {
+	font-size: 0.8125rem !important;
+	font-weight: 600 !important;
+	color: var(--pz-muted) !important;
+	letter-spacing: 0.04em;
+	margin-left: 0 !important;
+	margin-top: 0 !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .widget-title::before {
+	display: none !important;
+}
+
+/* ---------- rail · identity：紧凑横排（小头像左置、名粗、bio 弱） ---------- */
+html[data-site-mode="paper"][data-paper-theme="ink"] #left-sidebar .card-base:has(.profile-avatar-image) a[aria-label="Go to About Page"] {
+	max-width: 4.25rem !important;
+	margin: 0 0 0.6rem !important;
+	border-radius: 10px !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #left-sidebar .card-base:has(.profile-avatar-image) .px-2 {
+	padding-inline: 0 !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #left-sidebar .card-base:has(.profile-avatar-image) .font-bold.text-xl {
+	text-align: left !important;
+	font-size: 1.125rem !important;
+	color: var(--pz-fg) !important;
+	margin-bottom: 0.15rem !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #left-sidebar .card-base:has(.profile-avatar-image) .h-1.w-5 {
+	display: none !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #left-sidebar .card-base:has(.profile-avatar-image) .text-neutral-400 {
+	text-align: left !important;
+	font-size: 0.875rem !important;
+	color: var(--pz-muted) !important;
+	margin-bottom: 0.6rem !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #left-sidebar .card-base:has(.profile-avatar-image) .flex.flex-wrap.gap-2 {
+	justify-content: flex-start !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #left-sidebar .card-base:has(.profile-avatar-image) .btn-regular {
+	background: transparent !important;
+	border: 1px solid var(--pz-border) !important;
+	border-radius: 8px !important;
+	color: var(--pz-fg-soft) !important;
+	box-shadow: none !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #left-sidebar .card-base:has(.profile-avatar-image) .btn-regular:hover {
+	border-color: var(--pz-border-strong) !important;
+	color: var(--pz-accent) !important;
+	background: var(--pz-accent-soft) !important;
+}
+
+/* ---------- rail · 标签：药丸流（发丝线描边、墨绿 hover） ---------- */
+html[data-site-mode="paper"][data-paper-theme="ink"] #right-sidebar .tag-item,
+html[data-site-mode="paper"][data-paper-theme="ink"] #left-sidebar .tag-item {
+	background: transparent !important;
+	border: 1px solid var(--pz-border) !important;
+	border-radius: 999px !important;
+	color: var(--pz-fg-soft) !important;
+	font-size: 0.8125rem !important;
+	box-shadow: none !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #right-sidebar .tag-item:hover,
+html[data-site-mode="paper"][data-paper-theme="ink"] #left-sidebar .tag-item:hover {
+	background: var(--pz-accent-soft) !important;
+	border-color: transparent !important;
+	color: var(--pz-accent) !important;
+}
+
+/* ================================================================
+ * 纸面 · 首页文章网格：封面在上、编号压封面、标题摘要在下
+ * （半去图化：封面是配角，网格卡以文字为主）
+ * ================================================================ */
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode {
+	counter-reset: pz-card;
+	gap: 1.25rem !important;
+	--post-card-min-width: 17.5rem;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .post-card-item {
+	counter-increment: pz-card;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .post-card-wrapper {
+	border-radius: 12px !important;
+	height: 100%;
+}
+/* 编号徽章：压在封面左上（无封面时落在卡面左上同一位置） */
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .post-card-wrapper::before {
+	content: counter(pz-card, decimal-leading-zero);
+	position: absolute;
+	top: 0.6rem;
+	left: 0.8rem;
+	z-index: 30;
+	font-size: 1.05rem;
+	font-weight: 800;
+	letter-spacing: 0.01em;
+	color: var(--pz-fg);
+	/* 封面深浅不定，垫一块纸色芯片保证编号永远可读 */
+	background: color-mix(in srgb, var(--pz-bg) 86%, transparent);
+	padding: 0.05rem 0.42rem;
+	border-radius: 6px;
+	pointer-events: none;
+}
+/* 网格列数：组件的 minmax 变量被运行时内联写死，纸面直接定列
+   （中栏约 936px 时 3 列，与参考站密度一致） */
+@media (min-width: 1280px) {
+	html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode {
+		grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+	}
+}
+/* 封面：从桌面绝对定位里解放出来，回到流内当顶部横带 */
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .post-card-item a.post-card-image {
+	display: block !important;
+	position: relative !important;
+	inset: auto !important;
+	width: 100% !important;
+	aspect-ratio: 16 / 9;
+	border-radius: 0 !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .post-card-image img {
+	transform: none !important;
+}
+/* 内容区：满宽、紧凑内边距，标题降阶、去掉标题前竖条 */
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .post-card-content {
+	width: 100% !important;
+	padding: 0.9rem 1rem 1rem !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .post-card-title {
+	font-size: 1.0625rem !important;
+	line-height: 1.35 !important;
+	margin-bottom: 0.35rem !important;
+	color: var(--pz-fg) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .post-card-title::before {
+	display: none !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .post-card-title:hover {
+	color: var(--pz-accent) !important;
+}
+/* 元信息压成一行小字；标签不在卡面出现（rail 与详情页有全套） */
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .post-meta {
+	margin-bottom: 0.4rem !important;
+	font-size: 0.75rem !important;
+	color: var(--pz-muted) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .post-meta .text-sm {
+	font-size: 0.75rem !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .post-meta-tags,
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .post-card-bottom-tags,
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .post-card-item .stats {
+	display: none !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .description {
+	font-size: 0.875rem !important;
+	line-height: 1.55 !important;
+	color: var(--pz-fg-soft) !important;
+	padding-right: 0 !important;
+	margin-bottom: 0 !important;
+	-webkit-line-clamp: 2 !important;
+	line-clamp: 2 !important;
+}
+/* 元信息图标：摘掉薄荷底小方块，回到裸图标 + 弱化色 */
+html[data-site-mode="paper"][data-paper-theme="ink"] .post-meta .meta-icon {
+	background: transparent !important;
+	color: var(--pz-muted) !important;
+	width: auto !important;
+	height: auto !important;
+	padding: 0 !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .navbar-segments {
+	box-shadow: none !important;
+}
+/* 分类计数：摘掉薄荷底小方块，只留弱化数字（两条 rail 通用） */
+html[data-site-mode="paper"][data-paper-theme="ink"] #left-sidebar a[href*="/archive/?category="] .min-w-8,
+html[data-site-mode="paper"][data-paper-theme="ink"] #right-sidebar a[href*="/archive/?category="] .min-w-8 {
+	background: transparent !important;
+	color: var(--pz-muted) !important;
+	font-weight: 600 !important;
+}
+
+/* ---------- 列表模式（访客切了列表时）：横卡、封面缩成右侧小图 ---------- */
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.list-mode .post-card-wrapper {
+	border-radius: 12px !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.list-mode .post-card-title {
+	font-size: 1.25rem !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.list-mode .post-card-title::before {
+	background: var(--pz-accent) !important;
+}
+
+/* ---------- 分类条：压平，选中走浅绿底 ---------- */
+html[data-site-mode="paper"][data-paper-theme="ink"] #category-bar-wrapper .category-bar {
+	background: transparent !important;
+	border: none !important;
+	border-bottom: 1px solid var(--pz-border) !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+	padding-inline: 0 !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #category-bar-wrapper a {
+	border-radius: 999px !important;
+	font-size: 0.875rem !important;
+	color: var(--pz-fg-soft) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #category-bar-wrapper a:hover {
+	background: var(--pz-subtle) !important;
+	color: var(--pz-fg) !important;
+}
+/* 分类药丸本体（categories.css 的 MD3 tonal 口径换成纸面口径）：
+   常态透明发丝线，选中 = 浅绿底墨绿字（不对标实心绿） */
+html[data-site-mode="paper"][data-paper-theme="ink"] .category-pill {
+	background: transparent !important;
+	border: 1px solid var(--pz-border) !important;
+	color: var(--pz-fg-soft) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .category-pill .pill-count {
+	background: var(--pz-subtle) !important;
+	color: var(--pz-muted) !important;
+	opacity: 1 !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .category-pill:hover {
+	background: var(--pz-subtle) !important;
+	color: var(--pz-fg) !important;
+	border-color: var(--pz-border-strong) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .category-pill[data-active],
+html[data-site-mode="paper"][data-paper-theme="ink"] .category-pill[data-soft-active] {
+	background: var(--pz-accent-soft) !important;
+	color: var(--pz-accent) !important;
+	border-color: transparent !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .category-pill[data-active] .pill-count,
+html[data-site-mode="paper"][data-paper-theme="ink"] .category-pill[data-soft-active] .pill-count {
+	background: rgb(255 255 255 / 0.55) !important;
+	color: var(--pz-accent) !important;
+}
+html.dark[data-site-mode="paper"][data-paper-theme="ink"] .category-pill[data-active] .pill-count,
+html.dark[data-site-mode="paper"][data-paper-theme="ink"] .category-pill[data-soft-active] .pill-count {
+	background: rgb(0 0 0 / 0.25) !important;
+}
+
+/* ================================================================
+ * 纸面 · 正文链接与页脚
+ * ================================================================ */
+html[data-site-mode="paper"][data-paper-theme="ink"] .site-footer {
+	border-top: 1px solid var(--pz-border);
+	color: var(--pz-muted);
+	background: transparent !important;
+}
+
+/* ================================================================
+ * 纸面 · 文章页（标题区 / 元信息 / 系列盒 / prose / 代码块 / 评论）
+ * 规格：标题 1.75rem/1.15 无竖条、正文 1.0625rem 行高 1.7、
+ * 代码块纸面底 + 标题条、表格去薄荷改纸面灰绿
+ * ================================================================ */
+/* 标题：摘掉基座的 --primary 竖条（cover 压图标题是 .text-white，不在此列） */
+html[data-site-mode="paper"][data-paper-theme="ink"] #content-column [data-pagefind-meta="title"]:not([class~="text-white"]) {
+	font-size: 1.75rem !important;
+	line-height: 1.15 !important;
+	color: var(--pz-fg) !important;
+	letter-spacing: -0.01em;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] #content-column [data-pagefind-meta="title"]:not([class~="text-white"])::before {
+	display: none !important;
+}
+/* 元信息：图标去薄荷底片（与卡片 meta 同口径） */
+html[data-site-mode="paper"][data-paper-theme="ink"] .post-meta-root .meta-icon,
+html[data-site-mode="paper"][data-paper-theme="ink"] .post-meta .meta-icon {
+	background: transparent !important;
+	color: var(--pz-muted) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .post-meta-root {
+	color: var(--pz-muted);
+}
+/* 系列盒：边线改发丝线、头条改纸面灰 */
+html[data-site-mode="paper"][data-paper-theme="ink"] .series-nav {
+	border-color: var(--pz-border) !important;
+	border-radius: 8px;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .series-nav-toggle {
+	background: var(--pz-subtle) !important;
+}
+/* prose 本体：字号/行高/墨色（.prose 的排版在更高层级，须 !important 压过；
+   内层元素颜色由 --tw-prose-* 变量驱动，一并换纸面令牌） */
+html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content {
+	font-size: 1.0625rem !important;
+	line-height: 1.7 !important;
+	color: var(--pz-fg) !important;
+	--tw-prose-body: var(--pz-fg);
+	--tw-prose-headings: var(--pz-fg);
+	--tw-prose-lead: var(--pz-fg-soft);
+	--tw-prose-links: var(--pz-accent);
+	--tw-prose-bold: var(--pz-fg);
+	--tw-prose-counters: var(--pz-accent);
+	--tw-prose-bullets: var(--pz-accent);
+	--tw-prose-hr: var(--pz-border);
+	--tw-prose-quotes: var(--pz-fg-soft);
+	--tw-prose-quote-borders: var(--pz-border-strong);
+	--tw-prose-captions: var(--pz-muted);
+	--tw-prose-code: var(--pz-fg);
+	--tw-prose-th-borders: var(--pz-border);
+	--tw-prose-td-borders: var(--pz-border);
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content h2 {
+	font-size: 1.5rem;
+	line-height: 1.35;
+	color: var(--pz-fg);
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content h3 {
+	font-size: 1.25rem;
+	line-height: 1.35;
+	color: var(--pz-fg);
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content a {
+	color: var(--pz-accent);
+	text-decoration-color: color-mix(in srgb, var(--pz-accent) 45%, transparent);
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content a:hover {
+	color: var(--pz-accent-hover);
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content blockquote {
+	border-left: 2px solid var(--pz-border-strong);
+	color: var(--pz-fg-soft);
+	background: transparent !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content hr {
+	border-color: var(--pz-border);
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content li::marker {
+	color: var(--pz-accent);
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content img {
+	border-radius: 8px;
+}
+/* 表格：去薄荷——表头纸面灰、边线发丝线、斑马纹极淡灰 */
+html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content table th {
+	background: var(--pz-subtle) !important;
+	color: var(--pz-fg);
+	border-color: var(--pz-border) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content table td {
+	border-color: var(--pz-border) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content table tbody tr:nth-child(2n) td {
+	background: color-mix(in srgb, var(--pz-subtle) 55%, transparent);
+}
+/* 行内代码：纸面底 + 发丝线 */
+html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content :not(pre) > code {
+	background: var(--pz-code-bg);
+	border: 1px solid var(--pz-border);
+	border-radius: 6px;
+	color: var(--pz-fg);
+}
+/* 标签胶囊（tags.css 无层样式，须 !important）： tonal 绿 → 发丝线描边 */
+html[data-site-mode="paper"][data-paper-theme="ink"] .tag-item {
+	background: transparent !important;
+	border: 1px solid var(--pz-border) !important;
+	color: var(--pz-fg-soft) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .tag-item:hover {
+	background: var(--pz-subtle) !important;
+	border-color: var(--pz-border-strong) !important;
+	color: var(--pz-fg) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .tag-item .tag-count-badge {
+	background: var(--pz-subtle) !important;
+	color: var(--pz-muted) !important;
+}
+/* 标签/分类/系列三页共用的页头大标题：主题色字 → 墨字并对齐内页字阶 */
+html[data-site-mode="paper"][data-paper-theme="ink"] .card-base > .text-2xl.font-bold {
+	color: var(--pz-fg) !important;
+	font-size: 1.75rem !important;
+	line-height: 1.15 !important;
+}
+/* TOC 标签色（徽章/指示条已由令牌变量接管） */
+html[data-site-mode="paper"][data-paper-theme="ink"] #sidebar-toc .toc-label {
+	color: var(--pz-fg-soft);
+}
+/* Waline 评论：主题变量换纸面令牌 */
+html[data-site-mode="paper"][data-paper-theme="ink"] #waline {
+	--waline-theme-color: var(--pz-accent);
+	--waline-active-color: var(--pz-accent-hover);
+	--waline-color: var(--pz-fg);
+	--waline-bg-color: var(--pz-elevated);
+	--waline-bg-color-light: var(--pz-subtle);
+	--waline-border-color: var(--pz-border);
+	--waline-info-color: var(--pz-muted);
+}
+
+/* ================================================================
+ * 纸面 · 内页共用（页头图标块/标题、归档、计数片、代码框精修）
+ * ================================================================ */
+/* 页头：实底图标块 → 浅绿底墨绿字素框（friends/guestbook/bangumi 等共用） */
+html[data-site-mode="paper"][data-paper-theme="ink"] .page-icon {
+	background: var(--pz-accent-soft) !important;
+	border: 1px solid var(--pz-border) !important;
+	color: var(--pz-accent) !important;
+	border-radius: 8px !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .page-heading h2 {
+	font-size: 1.75rem;
+	line-height: 1.15;
+	color: var(--pz-fg);
+	letter-spacing: -0.01em;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .page-heading p {
+	color: var(--pz-muted);
+	font-size: 0.875rem;
+}
+/* 侧栏分类计数片去薄荷（隐藏的移动端副本同类，一并覆盖） */
+html[data-site-mode="paper"][data-paper-theme="ink"] :is(#left-sidebar, #right-sidebar, #mobile-bottom-sidebar) a .min-w-8 {
+	background: transparent !important;
+	color: var(--pz-muted) !important;
+}
+/* 归档：时间线竖点改边框强色、行内分类片改纸面灰 */
+html[data-site-mode="paper"][data-paper-theme="ink"] .dash-line .w-1 {
+	background: var(--pz-border-strong) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .card-base span.shrink-0.inline-block.rounded-sm {
+	background: var(--pz-subtle) !important;
+	color: var(--pz-fg-soft) !important;
+}
+/* 正文高亮（动态 ==高亮== 同路）：薄荷 → 浅绿 */
+html[data-site-mode="paper"][data-paper-theme="ink"] #content-column mark {
+	background: var(--pz-accent-soft) !important;
+	color: inherit;
+}
+/* 公告正文回左对齐 + 纸面弱色 */
+html[data-site-mode="paper"][data-paper-theme="ink"] .announcement-content {
+	text-align: left;
+	color: var(--pz-fg-soft);
+}
+/* 代码框精修：EC 变量是无层样式下发的，须 !important 才压得住 */
+html[data-site-mode="paper"][data-paper-theme="ink"] .expressive-code {
+	--ec-frm-edBg: var(--pz-code-bg) !important;
+	--ec-frm-edTitBg: var(--pz-code-head) !important;
+	--ec-frm-trmBg: var(--pz-code-bg) !important;
+	--ec-brdCol: var(--pz-border) !important;
+	--ec-brdRad: 8px !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .expressive-code .frame {
+	background: var(--pz-code-bg) !important;
+	border-color: var(--pz-border) !important;
+	border-radius: 8px !important;
+}
+/* 表头文字与标题字号补 !important（prose 的 em 缩放会顶掉普通声明） */
+html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content table th {
+	color: var(--pz-fg) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content h2 {
+	font-size: 1.5rem !important;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content h3 {
+	font-size: 1.25rem !important;
+}
+
+}

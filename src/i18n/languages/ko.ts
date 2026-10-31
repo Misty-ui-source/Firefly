@@ -131,6 +131,7 @@ export const ko: Translation = {
 	[Key.siteModeHarmony]: "조화",
 	[Key.siteModeBrick]: "브릭",
 	[Key.siteModeAstral]: "아스트랄",
+	[Key.siteModePaper]: "페이퍼보트",
 	[Key.harmonySettings]: "조화 전용",
 	[Key.harmonyScheme]: "색상 스타일",
 	[Key.harmonySchemeTonalSpot]: "토널 스팟",

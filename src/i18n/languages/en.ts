@@ -132,6 +132,7 @@ export const en: Translation = {
 	[Key.siteModeHarmony]: "Harmonic",
 	[Key.siteModeBrick]: "Brick",
 	[Key.siteModeAstral]: "Astral",
+	[Key.siteModePaper]: "Paper Boat",
 	[Key.harmonySettings]: "Harmony Palette",
 	[Key.harmonyScheme]: "Color Style",
 	[Key.harmonySchemeTonalSpot]: "Tonal Spot",

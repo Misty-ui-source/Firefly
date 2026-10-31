@@ -33,7 +33,7 @@ export type NavbarMode = "static" | "fixed" | "dynamic";
 export type NavbarStyle = "classic" | "float" | "capsule" | "segment";
 
 // 站点形态：full 华彩（默认，全套呈现）/ pure 素简（简洁导航·专注阅读）/ harmony 谐彩（Material 3 色阶·柔影，视觉参考 Shirone 主题）/ brick 顽彩（玩具积木粗野主义：蓝描边·硬阴影·小圆角，视觉参考 xuhome）/ astral 璨夜（深蓝星空·毛玻璃·衬线主场，视觉参考 XinghuisamaBlogs）；与 utils/setting-utils.ts 的 SITE_MODES 保持一致
-export type SiteMode = "full" | "pure" | "harmony" | "brick" | "astral";
+export type SiteMode = "full" | "pure" | "harmony" | "brick" | "astral" | "paper";
 
 export type SiteConfig = {
 	title: string;
@@ -102,6 +102,12 @@ export type SiteConfig = {
 	// 璨夜主题布局（全站默认，控制台主题页可改）：bento 璨夜（首页瓷砖矩阵）/ classic 经典（Firefly 经典骨架）；
 	// 访客可在调色板外观页签覆盖（localStorage astralLayout），骨架样式见 styles/astral-mode.css 的 [data-astral-layout] 段
 	astralLayout?: "bento" | "classic";
+	// 纸舟子主题：ink 纸面（轻笑纸底墨线）/ manual 手册（终末地工业手册）；控制台主题页可改默认，
+	// 访客可在调色板外观页签覆盖（localStorage paperTheme），样式见 styles/paper-mode.css 的 [data-paper-theme] 作用域
+	paperTheme?: "ink" | "manual";
+	// 纸面主题色（独立色相 0-360，不跟全站主色相）：默认 177 = 纸面墨绿（oklch 校准值）；
+	// 控制台主题页可改默认，访客在调色板纸舟段覆盖（localStorage paperHue），经 --paper-hue 变量喂 paper-mode.css 的墨色令牌
+	paperHue?: number;
 
 	// 素简字体菜单（控制台字体页可管）：有序的 PureFont 键数组，第一项为默认字体；访客自选优先（localStorage pureFont）
 	pureFontMenu?: string[];

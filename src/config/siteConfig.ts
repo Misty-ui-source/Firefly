@@ -150,6 +150,13 @@ export const siteConfig: SiteConfig = {
 	// 控制台主题页可改默认，访客可在显示设置（调色板）里覆盖、存 localStorage
 	siteMode: "full",
 
+	// 纸舟子主题（全站默认）：ink 纸面（轻笑Chuckle 纸底墨线）/ manual 手册（终末地工业手册风）；
+	// 两套是独立主题、仅借住纸舟一个形态槽位。控制台主题页可改默认，访客在显示设置里覆盖、存 localStorage
+	paperTheme: "ink",
+
+	// 纸面主题色（独立色相 0-360）：177 = 纸面墨绿；控制台主题页可改默认，访客在显示设置纸舟段覆盖、存 localStorage paperHue
+	paperHue: 177,
+
 	// 素简字体菜单（控制台字体页可管：放哪几款、按什么顺序）：数组顺序即调色板展示顺序，第一项为默认字体；
 	// 可选值 system 系统默认 / maru / mplus / luoli / lxgw / zhuque / inter / jetbrains / notoserif / greatvibes / xiaomaiti（与 setting-utils 的 PureFont 对应）
 	// 访客在显示设置（调色板）里选过的存 localStorage pureFont，优先于这里的默认
