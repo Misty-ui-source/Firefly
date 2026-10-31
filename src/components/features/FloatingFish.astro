@@ -68,6 +68,15 @@ const fishScale = featuresConfig.fishScale ?? 1;
 		transform: scale(0.78);
 		opacity: 0.55;
 	}
+	/* 默认进场（站长 2026-10-31）：从右栏外淡进——起始态全藏在右缘外，
+	   ff-entering 挂着时用慢过渡，进场结束摘掉恢复常速（半藏用） */
+	#floating-fish.ff-enter {
+		transform: translateX(130%);
+		opacity: 0;
+	}
+	#floating-fish.ff-entering {
+		transition: transform 0.85s cubic-bezier(0.22, 0.8, 0.3, 1), opacity 0.85s ease;
+	}
 	.ff-fish {
 		position: relative;
 		width: calc(4.9rem * var(--ff-scale, 1));
@@ -244,10 +253,26 @@ const fishScale = featuresConfig.fishScale ?? 1;
 	(() => {
 		const root = document.getElementById("floating-fish");
 		if (!root) return;
+		// 默认进场（站长 2026-10-31）：从右栏淡进；首次出现与从素简切回时都播
+		const playEnter = () => {
+			if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+			root.classList.add("ff-entering", "ff-enter");
+			requestAnimationFrame(() =>
+				requestAnimationFrame(() => root.classList.remove("ff-enter")),
+			);
+			window.setTimeout(() => root.classList.remove("ff-entering"), 950);
+			root.addEventListener(
+				"pointerdown",
+				() => root.classList.remove("ff-entering", "ff-enter"),
+				{ once: true },
+			);
+		};
 		// 素简门（站长 2026-10-31 定版）：素简形态默认不显示肥鱼，切走再回来
 		const applyPureGate = () => {
+			const wasHidden = root.hidden;
 			root.hidden =
 				document.documentElement.getAttribute("data-site-mode") === "pure";
+			if (wasHidden && !root.hidden) playEnter();
 		};
 		applyPureGate();
 		window.addEventListener("siteModeChange", applyPureGate);
