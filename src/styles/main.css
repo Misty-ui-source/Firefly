@@ -720,3 +720,25 @@ html {
 .pagination-info {
   @apply text-sm text-(--text-secondary) text-center mb-2;
 }
+
+/* ── 形态专属元素的全局守卫（必须常加载）──
+   这些元素全站渲染、只在对应形态下点亮，「默认隐藏」必须放在常加载的主包里：
+   形态 CSS 自 2026-10-31 起按形态拆分、只加载当前形态一份，守卫若只写在
+   形态文件里，其他形态下文件不加载、元素就会裸奔出来（素简信息行漏进华彩、
+   璨夜瓷砖漏进其他形态，均实测过）。点亮规则在各形态文件里、特异性高于此处。
+   必须进 @layer components 与形态文件同层竞争：无 layer 的规则会压过一切
+   layered 规则（优先级反转），会把素简自己的点亮规则也压死。 */
+@layer components {
+  .pure-page-info {
+    display: none;
+  }
+  #pure-reading-progress {
+    display: none;
+  }
+  #main-grid .astral-tile {
+    display: none;
+  }
+  #astral-veil-layer {
+    display: none;
+  }
+}
