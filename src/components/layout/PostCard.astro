@@ -11,6 +11,8 @@ import { getFileDirFromPath, getTagUrl } from "@/utils/url-utils";
 
 interface Props {
 	class?: string;
+	/** 文章真实序号（按 published 升序，最老一篇 = 1）；手册形态的编号 tag 取它，其余形态不消费 */
+	no?: number;
 	entry: CollectionEntry<"posts">;
 	title: string;
 	url: string;
@@ -103,6 +105,7 @@ const minutes = remarkPluginFrontmatter.minutes;
 ---
 
 <div
+  data-no={Astro.props.no ? String(Astro.props.no).padStart(3, "0") : undefined}
   class:list={[
     "post-card-wrapper",
     hasCover ? "has-cover" : "no-cover",
@@ -162,6 +165,9 @@ const minutes = remarkPluginFrontmatter.minutes;
       showReadingTime={metaShowReadingTime}
       className={`mb-4 post-meta card-header-meta${showTagsAtBottom ? " meta-tags-deferred" : ""}`}
     />
+
+    <!-- 手册 records 右列字数：默认隐藏（main.css 守卫），仅纸舟·手册点亮 -->
+    {words != null && <span class="post-card-words">{words.toLocaleString("en-US")} 字</span>}
 
     <!-- description -->
     <div

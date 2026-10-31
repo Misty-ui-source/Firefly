@@ -71,6 +71,83 @@ html.dark[data-site-mode="paper"][data-paper-theme="ink"] {
 	--page-bg: #1c1c1c;
 }
 
+/* ---------- 手册字体：Saira Variable（宽体拉丁/数字，font-stretch 50%–125%） ----------
+ * 自托管于 public/fonts/（Fontsource 分发，OFL 许可见 public/fonts/Saira-LICENSE.txt）。
+ * 只有手册的 font-family 引用它，非手册访客不会触发下载。 */
+@font-face {
+	font-family: "Saira Variable";
+	font-style: normal;
+	font-display: swap;
+	font-weight: 100 900;
+	font-stretch: 50% 125%;
+	src: url("/fonts/saira-latin-wdth-normal.woff2") format("woff2-variations");
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+		U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+		U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+	font-family: "Saira Variable";
+	font-style: normal;
+	font-display: swap;
+	font-weight: 100 900;
+	font-stretch: 50% 125%;
+	src: url("/fonts/saira-latin-ext-wdth-normal.woff2") format("woff2-variations");
+	unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+		U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+		U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ---------- 手册令牌（layer 外；源站 endfield 套件原值，见手册差距清单） ---------- */
+html[data-site-mode="paper"][data-paper-theme="manual"] {
+	--mn-paper: #f4f4f2;
+	--mn-panel: #ffffff;
+	--mn-ink: #161616;
+	--mn-ink-2: #5c5c5c;
+	--mn-rule: #d9d9d6;
+	--mn-chip: #e4e4e0;
+	--mn-signal: #fffa00;
+	--mn-on-signal: #161616;
+	--mn-trace: var(--mn-ink);
+	--mn-tag-bg: var(--mn-ink);
+	--mn-tag-fg: var(--mn-panel);
+	--mn-danger: #b3261e;
+	--mn-hatch: repeating-linear-gradient(-45deg, transparent 0 5px, color-mix(in srgb, var(--mn-ink) 22%, transparent) 5px 6.5px);
+	--mn-font-ui: "Saira Variable", "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+	--mn-font-text: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+	--mn-cut: 7px;
+	--mn-pad: clamp(1rem, 4vw, 2.5rem);
+	--mn-mech: cubic-bezier(0.7, 0, 0.2, 1);
+	--mn-snap: cubic-bezier(0.16, 1, 0.3, 1);
+	/* 桥：全站组件读的变量换手册口径（信号黄只给「在这里」，主强调色用墨） */
+	--primary: var(--mn-ink);
+	--page-bg: #f4f4f2;
+	--line-divider: var(--mn-rule);
+	--btn-regular-bg: var(--mn-chip);
+	--btn-regular-bg-hover: #d8d8d3;
+	--btn-content: var(--mn-ink);
+	--btn-plain-bg-hover: var(--mn-chip);
+	--toc-badge-bg: var(--mn-chip);
+	--toc-btn-hover: var(--mn-chip);
+	/* toc.css 会把这两个再与 transparent 做 50% color-mix，
+	   所以先预混成淡黄，避免整条目录被 50% 纯信号黄糊住 */
+	--toc-btn-active: color-mix(in srgb, var(--mn-signal) 24%, var(--mn-panel));
+	--toc-indicator-bg: color-mix(in srgb, var(--mn-signal) 38%, var(--mn-panel));
+}
+html.dark[data-site-mode="paper"][data-paper-theme="manual"] {
+	--mn-paper: #191919;
+	--mn-panel: #222222;
+	--mn-ink: #ededed;
+	--mn-ink-2: #a3a3a3;
+	--mn-rule: #353535;
+	--mn-chip: #2e2e2e;
+	--mn-trace: var(--mn-signal);
+	--mn-tag-bg: #3a3a3a;
+	--mn-tag-fg: var(--mn-ink);
+	--mn-danger: #ff8a7a;
+	--btn-regular-bg-hover: #3a3a3a;
+	--page-bg: #191919;
+}
+
 @layer components {
 
 /* ================================================================
@@ -914,6 +991,1221 @@ html[data-site-mode="paper"][data-paper-theme="ink"] .paper-portal-dot {
 	border-radius: 999px;
 	background: var(--pz-accent);
 	margin-right: 0.45rem;
+}
+
+/* ================================================================
+ * 手册（manual）：终末地工业手册风——独立主题，借住纸舟槽位。
+ * 令牌与机制见《手册设计与差距清单-2026-10-31》：纸底墨线、信号黄
+ * 只表「在这里/可操作」、切角、发丝线分栏、基本完全去图。
+ * 骨架 = 既有 DOM 重排：#navbar 变左 rail、侧栏退场（二期落位）、
+ * 首页 hero 是唯一新组件（ManualHero，守卫在 main.css）。
+ * ================================================================ */
+
+/* ---------- 基线 ---------- */
+html[data-site-mode="paper"][data-paper-theme="manual"] {
+	background: var(--mn-paper) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] body {
+	background: var(--mn-paper) !important;
+	color: var(--mn-ink);
+	font-family: var(--mn-font-ui) !important;
+	line-height: 1.6;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] ::selection {
+	background: var(--mn-signal);
+	color: var(--mn-on-signal);
+}
+
+/* 等高线底纹：自绘 SVG 作 mask，9% 墨色；右上一团、左下一团（源站同构） */
+html[data-site-mode="paper"][data-paper-theme="manual"] body::before {
+	content: "";
+	position: fixed;
+	inset: 0;
+	z-index: 0;
+	pointer-events: none;
+	background: color-mix(in srgb, var(--mn-ink) 9%, transparent);
+	-webkit-mask:
+		url("/manual/contour-a.svg") right -9rem top -7rem / 52rem auto no-repeat,
+		url("/manual/contour-b.svg") left -6rem bottom -14rem / 40rem auto no-repeat;
+	mask:
+		url("/manual/contour-a.svg") right -9rem top -7rem / 52rem auto no-repeat,
+		url("/manual/contour-b.svg") left -6rem bottom -14rem / 40rem auto no-repeat;
+}
+/* 三色条：只出现在页面最顶边 */
+html[data-site-mode="paper"][data-paper-theme="manual"] body::after {
+	content: "";
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 3px;
+	z-index: 200;
+	pointer-events: none;
+	background: linear-gradient(90deg, #ff00f0 0 33.34%, var(--mn-signal) 33.34% 66.67%, #00ffa2 66.67% 100%);
+}
+
+/* 通用卡面：白板、发丝线、无圆角无影 */
+html[data-site-mode="paper"][data-paper-theme="manual"] .card-base,
+html[data-site-mode="paper"][data-paper-theme="manual"] .card-base-transparent {
+	background-color: var(--mn-panel) !important;
+	border: 1px solid var(--mn-rule) !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+	backdrop-filter: none !important;
+	color: var(--mn-ink);
+}
+
+/* ---------- 桌面骨架：左 rail + 内容让位（≥1024px） ---------- */
+@media (min-width: 1024px) {
+	html[data-site-mode="paper"][data-paper-theme="manual"] #top-row {
+		width: 12rem !important;
+		height: 100dvh !important;
+		right: auto !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #navbar-wrapper,
+	html[data-site-mode="paper"][data-paper-theme="manual"] #navbar {
+		height: 100%;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #navbar > div {
+		height: 100%;
+		background: var(--mn-paper) !important;
+		border: 0 !important;
+		border-right: 1px solid var(--mn-rule) !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+		backdrop-filter: none !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .navbar-segments {
+		display: flex !important;
+		flex-direction: column;
+		align-items: stretch;
+		height: 100%;
+		max-width: none !important;
+		padding: 1.1rem 0 1rem;
+	}
+	/* 站名：只留文字（去图），宽体 800 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] .navbar-seg-left {
+		padding: 0 1.25rem;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .navbar-seg-left a {
+		padding: 0 !important;
+		height: auto !important;
+		border-radius: 0 !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .navbar-logo,
+	html[data-site-mode="paper"][data-paper-theme="manual"] .navbar-brand-accent,
+	html[data-site-mode="paper"][data-paper-theme="manual"] .navbar-seg-left img {
+		display: none !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .navbar-title-text {
+		font-stretch: 125%;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		font-size: 1.02rem;
+		color: var(--mn-ink);
+	}
+	/* 导航列：分组在栏内原地展开（手风琴），当前/悬停走信号语义 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] .navbar-seg-center {
+		flex-direction: column;
+		align-items: stretch;
+		justify-content: flex-start;
+		gap: 0;
+		margin-top: 1.4rem;
+		padding: 0 !important;
+		width: 100%;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .dropdown-container {
+		position: static !important;
+		width: 100%;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .dropdown-container > button,
+	html[data-site-mode="paper"][data-paper-theme="manual"] .dropdown-container > a {
+		width: 100%;
+		height: auto !important;
+		justify-content: flex-start;
+		padding: 0.55rem 1.25rem !important;
+		border-radius: 0 !important;
+		font-weight: 700;
+		font-size: 0.95rem;
+		color: var(--mn-ink);
+		background: transparent;
+		white-space: nowrap;
+	}
+	/* 源站 rail 是纯文字导航：去掉行内图标，只留文字与分组箭头 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] .navbar-seg-center .navbar-icon {
+		display: none !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .dropdown-container > button:hover,
+	html[data-site-mode="paper"][data-paper-theme="manual"] .dropdown-container > a:hover {
+		background: var(--mn-chip);
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .dropdown-menu {
+		position: static !important;
+		display: none;
+		opacity: 1 !important;
+		visibility: visible !important;
+		transform: none !important;
+		box-shadow: none !important;
+		margin: 0 !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .dropdown-container:hover .dropdown-menu,
+	html[data-site-mode="paper"][data-paper-theme="manual"] .dropdown-container:focus-within .dropdown-menu {
+		display: block;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .dropdown-content {
+		animation: none !important;
+		background: transparent !important;
+		border: 0 !important;
+		box-shadow: none !important;
+		border-radius: 0 !important;
+		padding: 0.15rem 0 0.45rem !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .dropdown-item {
+		padding-left: 2.6rem !important;
+		border-radius: 0 !important;
+		font-size: 0.88rem;
+		color: var(--mn-ink-2);
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .dropdown-item:hover {
+		background: var(--mn-chip);
+		color: var(--mn-ink);
+	}
+	/* 栏底：控制钮一行（搜索/音乐/调色板/深浅/菜单） */
+	html[data-site-mode="paper"][data-paper-theme="manual"] .navbar-seg-right {
+		margin-top: auto;
+		justify-self: stretch !important;
+		border-top: 1px solid var(--mn-rule);
+		padding: 0.8rem 1.25rem 0.2rem;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .navbar-right-controls {
+		flex-wrap: wrap;
+		gap: 0.25rem;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .navbar-right-controls button {
+		border-radius: 0 !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .navbar-right-controls button:hover {
+		background: var(--mn-chip);
+	}
+	/* 内容壳：左让 rail，去最大宽，边距走令牌 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] .content-panel {
+		--content-top: 0rem !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #content-panel-inner {
+		margin-left: 12rem !important;
+		margin-right: 0 !important;
+		max-width: none !important;
+		width: auto !important;
+		padding-left: var(--mn-pad);
+		padding-right: var(--mn-pad);
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #main-grid {
+		grid-template-columns: minmax(0, 1fr) !important;
+		padding-left: 0 !important;
+		padding-right: 0 !important;
+	}
+	/* 一期：左右侧栏先退场（二期按 ledger/records 在内容下方落位） */
+	html[data-site-mode="paper"][data-paper-theme="manual"] #left-sidebar,
+	html[data-site-mode="paper"][data-paper-theme="manual"] #right-sidebar {
+		display: none !important;
+	}
+}
+
+/* ---------- 首页 hero（ManualHero，仅手册点亮） ---------- */
+html[data-site-mode="paper"][data-paper-theme="manual"] .manual-hero {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 36%);
+	grid-template-rows: auto auto 1fr;
+	column-gap: clamp(1.5rem, 4vw, 3.5rem);
+	padding-top: 1.25rem;
+	padding-bottom: 2.5rem;
+	border-bottom: 1px solid var(--mn-rule);
+	margin-bottom: 2rem;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-hero-meta {
+	grid-column: 1 / -1;
+	display: flex;
+	flex-wrap: wrap;
+	margin: 0 0 1.5rem;
+	font-size: 0.8125rem;
+	font-stretch: 112%;
+	letter-spacing: 0.02em;
+	color: var(--mn-ink-2);
+	font-variant-numeric: tabular-nums;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-hero-meta > * {
+	padding: 0 0.75rem;
+	border-left: 1px solid var(--mn-rule);
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-hero-meta > *:first-child {
+	padding-left: 0;
+	border-left: 0;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-hero-meta b {
+	color: var(--mn-ink);
+	font-weight: 700;
+}
+/* 字标：实心站名 + 描边域名 */
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-wordmark {
+	grid-column: 1;
+	display: flex;
+	flex-direction: column;
+	/* 源站比例：字段行与字标之间留一大段空，字标落在 hero 中段 */
+	margin: clamp(2.5rem, 9vh, 6rem) 0 0;
+	font-stretch: 125%;
+	font-weight: 800;
+	line-height: 1.02;
+	letter-spacing: -0.01em;
+	text-transform: uppercase;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-wordmark-solid {
+	font-size: clamp(2.75rem, 6.5vw, 5.5rem);
+	color: var(--mn-ink);
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-wordmark-hollow {
+	margin-top: 0.1em;
+	font-size: clamp(1.4rem, 3.2vw, 2.7rem);
+	color: transparent;
+	-webkit-text-stroke: 2px var(--mn-ink);
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-hero-copy {
+	grid-column: 1;
+	margin-top: 1.75rem;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-claim {
+	margin: 0 0 0.9rem;
+	font-size: 1.3rem;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-marker {
+	padding: 0.12em 0.45em;
+	background: var(--mn-signal);
+	color: var(--mn-on-signal);
+	font-weight: 800;
+	-webkit-box-decoration-break: clone;
+	box-decoration-break: clone;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-bio {
+	margin: 0;
+	max-width: 34rem;
+	color: var(--mn-ink-2);
+	line-height: 1.75;
+}
+/* 切角按钮：mask 切右下角，hover 黄色自左扫入（源站同机制） */
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+	margin: 1.6rem 0 0;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-btn {
+	--fill: var(--mn-chip);
+	position: relative;
+	isolation: isolate;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.6em;
+	padding: 0.55rem 1.5rem 0.55rem 1rem;
+	background: var(--fill);
+	-webkit-mask: linear-gradient(-45deg, transparent calc(0.5rem - 0.5px), #000 0.5rem);
+	mask: linear-gradient(-45deg, transparent calc(0.5rem - 0.5px), #000 0.5rem);
+	color: var(--mn-ink);
+	font-size: 0.9rem;
+	font-weight: 700;
+	line-height: 1.4;
+	white-space: nowrap;
+	text-decoration: none;
+	transition: color 0.12s 0.06s;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-btn-go {
+	--fill: var(--mn-ink);
+	color: var(--mn-panel);
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-btn::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	background: var(--mn-signal);
+	transform: translateX(-101%);
+	transition: transform 0.28s var(--mn-mech);
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-btn:hover,
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-btn:focus-visible {
+	color: var(--mn-on-signal);
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-btn:hover::before,
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-btn:focus-visible::before {
+	transform: none;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-btn-sub {
+	font-weight: 400;
+	opacity: 0.75;
+}
+/* 最新一篇画框：面板切两角 + 斜线阴影 + 描边巨号（hover 墨色灌入） */
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-frame {
+	grid-column: 2;
+	grid-row: 2 / 4;
+	position: relative;
+	display: block;
+	margin: 0 1rem 1rem 0;
+	min-height: 22rem;
+	text-decoration: none;
+	color: var(--mn-ink);
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-frame::before {
+	content: "";
+	position: absolute;
+	inset: 1.5rem -1rem -1rem 1.5rem;
+	background: var(--mn-hatch);
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-frame-window {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	gap: 0.4rem;
+	padding: 1.75rem 1.75rem 3.6rem;
+	background: var(--mn-panel);
+	clip-path: polygon(3.25rem 0, 100% 0, 100% calc(100% - 3.25rem), calc(100% - 3.25rem) 100%, 0 100%, 0 3.25rem);
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-hollow-no {
+	font-stretch: 112%;
+	font-size: clamp(5rem, 9vw, 9rem);
+	font-weight: 800;
+	line-height: 0.8;
+	letter-spacing: -0.03em;
+	color: transparent;
+	-webkit-text-stroke: 2px var(--mn-ink);
+	background: linear-gradient(var(--mn-ink), var(--mn-ink)) left / 0% 100% no-repeat;
+	-webkit-background-clip: text;
+	background-clip: text;
+	transition: background-size 0.45s var(--mn-mech);
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-frame:hover .mn-hollow-no,
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-frame:focus-visible .mn-hollow-no {
+	background-size: 100% 100%;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-frame-title {
+	font-size: 1.45rem;
+	font-weight: 800;
+	line-height: 1.35;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-field {
+	font-size: 0.8125rem;
+	font-stretch: 112%;
+	color: var(--mn-ink-2);
+	font-variant-numeric: tabular-nums;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-plate {
+	position: absolute;
+	left: 0.75rem;
+	bottom: 0.75rem;
+	max-width: 86%;
+	padding: 0.45rem 1.1rem 0.5rem 0.75rem;
+	background: linear-gradient(-45deg, transparent calc(0.6rem - 0.5px), var(--mn-ink) calc(0.6rem + 0.5px));
+	color: var(--mn-panel);
+	font-size: 0.8125rem;
+	font-weight: 600;
+	line-height: 1.45;
+}
+@media (max-width: 1023px) {
+	html[data-site-mode="paper"][data-paper-theme="manual"] .manual-hero {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .mn-frame {
+		grid-column: 1;
+		grid-row: auto;
+		margin-top: 2rem;
+		min-height: 18rem;
+	}
+}
+
+/* ---------- 文章列表 records 化（去图，≥1024px） ---------- */
+@media (min-width: 1024px) {
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container {
+		display: flex !important;
+		flex-direction: column;
+		height: auto !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper {
+		position: relative !important;
+		inset: auto !important;
+		width: auto !important;
+		height: auto !important;
+		display: grid !important;
+		grid-template-columns: auto auto minmax(0, 1fr) auto;
+		align-items: baseline;
+		column-gap: 1rem;
+		background: transparent !important;
+		border: 0 !important;
+		border-bottom: 1px solid var(--mn-rule) !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+		overflow: visible !important;
+		padding: 0.7rem 0.6rem;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper:first-child {
+		border-top: 1px solid var(--mn-rule);
+	}
+	/* 行 hover：底垫板色 + 左侧 trace 条落下 + 内容右移（源站 records 机制） */
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper::after {
+		content: "";
+		position: absolute;
+		inset: 0 auto 0 0;
+		width: 4px;
+		background: var(--mn-trace);
+		transform: scaleY(0);
+		transform-origin: top;
+		transition: transform 0.2s var(--mn-snap);
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper:hover {
+		background: var(--mn-panel) !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper:hover::after {
+		transform: none;
+	}
+	/* 单行 records：内容盒 display:contents，字段直接进网格
+	   （源站列序 = 编号 / 日期 / 标题 / 右字段；我们的右字段是分类） */
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-content {
+		display: contents !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-title,
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-meta > * {
+		transition: transform 0.25s var(--mn-snap);
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper:hover .post-card-title,
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper:hover .post-meta > * {
+		transform: translateX(6px);
+	}
+	/* 去图三件套：封面、摘要、底部标签/统计全撤 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] .post-card-image,
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .description,
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-bottom-tags,
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .stats {
+		display: none !important;
+	}
+	/* 编号 tag：真实序号 data-no，墨底切角（源站 ef-tag） */
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper::before {
+		content: "No." attr(data-no);
+		grid-column: 1;
+		display: inline-flex;
+		align-items: center;
+		padding: 0.1rem 0.8rem 0.1rem 0.5rem;
+		background: linear-gradient(-45deg, transparent calc(var(--mn-cut) - 0.5px), var(--mn-tag-bg) var(--mn-cut));
+		color: var(--mn-tag-fg);
+		font-size: 0.8125rem;
+		font-stretch: 112%;
+		font-weight: 500;
+		line-height: 1.5;
+		font-variant-numeric: tabular-nums;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper:not([data-no])::before {
+		content: none;
+	}
+	/* 标题：去左边竖条装饰，字号收回正文级，进网格第 3 列 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-title {
+		grid-column: 3;
+		font-size: 1.0625rem !important;
+		line-height: 1.5 !important;
+		margin: 0 !important;
+		color: var(--mn-ink) !important;
+		min-width: 0;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-title::before {
+		display: none !important;
+	}
+	/* 元信息拆字段进网格：日期第 2 列、分类第 4 列（右对齐），标签项撤 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-meta {
+		display: contents !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-meta > * {
+		font-size: 0.8125rem;
+		font-stretch: 112%;
+		color: var(--mn-ink-2);
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-meta > :nth-child(1) {
+		grid-column: 2;
+		grid-row: 1;
+	}
+	/* 右列是字数（源站 records 第四列），分类退场 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-meta > :nth-child(2) {
+		display: none !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-words {
+		display: block;
+		grid-column: 4;
+		grid-row: 1;
+		justify-self: end;
+		font-size: 0.8125rem;
+		font-stretch: 112%;
+		color: var(--mn-ink-2);
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+		transition: transform 0.25s var(--mn-snap);
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper:hover .post-card-words {
+		transform: translateX(6px);
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-title {
+		grid-row: 1;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper::before {
+		grid-row: 1;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-meta > :nth-child(n + 3),
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-meta .meta-icon {
+		display: none !important;
+	}
+	/* records 区头：眉题 + 标题 + 斜线带（源站 bar-title 的纯 CSS 等价；
+	   容器是 flex 列，两个伪元素靠 order 提到卡片之前叠成两行） */
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container::before {
+		content: "// POSTS";
+		order: -2;
+		display: block;
+		font-size: 0.7rem;
+		font-stretch: 125%;
+		font-weight: 600;
+		letter-spacing: 0.14em;
+		color: var(--mn-ink-2);
+		margin-bottom: 0.35rem;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container::after {
+		content: "全部文章";
+		order: -1;
+		display: block;
+		font-size: 1.15rem;
+		font-weight: 800;
+		line-height: 1.4;
+		color: var(--mn-ink);
+		margin-bottom: 1.25rem;
+		background:
+			linear-gradient(var(--mn-ink), var(--mn-ink)) left 6rem center / 0.8rem 0.8rem no-repeat,
+			var(--mn-hatch) left 6.8rem center / calc(100% - 6.8rem) 0.8rem no-repeat;
+	}
+}
+
+/* ---------- 分类栏 → chips 行 ---------- */
+html[data-site-mode="paper"][data-paper-theme="manual"] .category-bar {
+	background: transparent !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+	padding: 0 0 1.1rem !important;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .category-pill {
+	border-radius: 0 !important;
+	background: linear-gradient(-45deg, transparent calc(var(--mn-cut) - 0.5px), var(--mn-chip) var(--mn-cut)) !important;
+	color: var(--mn-ink) !important;
+	font-weight: 600;
+	border: 0 !important;
+	box-shadow: none !important;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .category-pill .pill-count {
+	color: var(--mn-ink-2);
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .category-pill[data-active] {
+	background: linear-gradient(-45deg, transparent calc(var(--mn-cut) - 0.5px), var(--mn-signal) var(--mn-cut)) !important;
+	color: var(--mn-on-signal) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .category-pill[data-active] .pill-count {
+	color: var(--mn-on-signal);
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .category-divider,
+html[data-site-mode="paper"][data-paper-theme="manual"] .category-bar .scroll-fade {
+	display: none !important;
+}
+
+/* 首页分类栏让位：源站首页无此行（分类是 records 旁的 ledger，二期落位）；
+   非首页（归档等列表页）保留，正对源站列表页的 chips 筛选行 */
+html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #category-bar-wrapper {
+	display: none !important;
+}
+
+/* ---------- 分页与页脚 ---------- */
+html[data-site-mode="paper"][data-paper-theme="manual"] .pagination-wrapper :is(a, .btn-card) {
+	border-radius: 0 !important;
+	border: 1px solid var(--mn-rule) !important;
+	background: var(--mn-panel) !important;
+	box-shadow: none !important;
+	color: var(--mn-ink) !important;
+	font-stretch: 112%;
+	font-variant-numeric: tabular-nums;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .pagination-wrapper a[aria-current="page"] {
+	background: var(--mn-signal) !important;
+	color: var(--mn-on-signal) !important;
+	border-color: var(--mn-signal) !important;
+	font-weight: 700;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] footer#footer,
+html[data-site-mode="paper"][data-paper-theme="manual"] .footer {
+	border-top: 1px solid var(--mn-rule);
+	background: transparent !important;
+	color: var(--mn-ink-2);
+}
+@media (prefers-reduced-motion: reduce) {
+	html[data-site-mode="paper"][data-paper-theme="manual"] .mn-btn::before,
+	html[data-site-mode="paper"][data-paper-theme="manual"] .mn-hollow-no,
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-title,
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-meta > *,
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper::after {
+		transition: none !important;
+	}
+}
+
+/* ================================================================
+ * 二期：文章页（sheet + margin）与正文 prose
+ * ================================================================ */
+/* 文章外层包裹：去掉圆角裁剪，sheet 直接贴纸面 */
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container {
+	background: var(--mn-panel) !important;
+	border: 1px solid var(--mn-rule) !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+	padding: clamp(2rem, 5vw, 3.5rem) var(--mn-pad) 4rem !important;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] #content-wrapper > div:has(> #post-container) {
+	border-radius: 0 !important;
+	overflow: visible !important;
+}
+/* 页头字段行（字数/分钟、日期/分类/标签）：去图标盒，纯字段 */
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .meta-icon,
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container > div:first-of-type .h-6.w-6 {
+	display: none !important;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .post-meta-root {
+	font-size: 0.8125rem;
+	font-stretch: 112%;
+	color: var(--mn-ink-2);
+	font-variant-numeric: tabular-nums;
+}
+/* 标题（data-pagefind-meta=title 的 div）：正文字体、去左竖条 */
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container [data-pagefind-meta="title"] {
+	font-family: var(--mn-font-text);
+	font-size: clamp(1.875rem, 5.5vw, 2.5rem) !important;
+	font-weight: 700;
+	line-height: 1.3;
+	color: var(--mn-ink) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container [data-pagefind-meta="title"]::before {
+	display: none !important;
+}
+/* 所属系列条：发丝线框、直角 */
+html[data-site-mode="paper"][data-paper-theme="manual"] .series-nav {
+	border: 1px solid var(--mn-rule) !important;
+	border-radius: 0 !important;
+	background: var(--mn-panel) !important;
+}
+/* 版权块：纸面 + 发丝线（去主题色底） */
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container [class*="license"] {
+	background: var(--mn-paper) !important;
+	border: 1px solid var(--mn-rule);
+	border-radius: 0 !important;
+}
+/* ---------- 正文 prose（源站 ef-prose 口径） ---------- */
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .markdown-body,
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .prose {
+	max-width: 40rem !important;
+	font-family: var(--mn-font-text);
+	font-size: 1.0625rem;
+	line-height: 1.85;
+	color: var(--mn-ink);
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .markdown-body a,
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .prose a {
+	color: var(--mn-ink);
+	text-decoration: underline;
+	text-decoration-color: var(--mn-signal);
+	text-decoration-thickness: 0.4em;
+	text-underline-offset: -0.18em;
+	text-decoration-skip-ink: none;
+}
+html.dark[data-site-mode="paper"][data-paper-theme="manual"] #post-container .markdown-body a,
+html.dark[data-site-mode="paper"][data-paper-theme="manual"] #post-container .prose a {
+	text-decoration-thickness: 1.5px;
+	text-underline-offset: 0.25em;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .markdown-body h2,
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .prose h2 {
+	font-family: var(--mn-font-ui);
+	font-size: 1.375rem;
+	font-weight: 700;
+	margin: 2.4em 0 0.8em;
+	padding-top: 0.9em;
+	border-top: 1px solid var(--mn-rule);
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .markdown-body h3,
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .prose h3 {
+	font-family: var(--mn-font-ui);
+	font-size: 1.15rem;
+	font-weight: 700;
+	margin: 1.8em 0 0.6em;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .markdown-body blockquote,
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .prose blockquote {
+	border-left: 3px solid var(--mn-ink);
+	color: var(--mn-ink-2);
+	background: transparent;
+	border-radius: 0;
+	font-style: normal;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .markdown-body code:not(pre code),
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .prose code:not(pre code) {
+	border: 1px solid var(--mn-rule);
+	background: var(--mn-paper);
+	border-radius: 0;
+	font-size: 0.86em;
+	padding: 0.1em 0.35em;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .markdown-body table,
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .prose table {
+	border-collapse: collapse;
+	font-size: 0.95rem;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .markdown-body th,
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .prose th {
+	border-bottom: 1px solid var(--mn-ink);
+	background: transparent !important;
+	font-weight: 700;
+	text-align: left;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .markdown-body td,
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .prose td {
+	border-bottom: 1px solid var(--mn-rule);
+	background: transparent !important;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .markdown-body img,
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .prose img {
+	border-radius: 0;
+}
+/* 代码块（expressive-code）：直角、发丝线、纸底 */
+html[data-site-mode="paper"][data-paper-theme="manual"] .expressive-code {
+	--ec-brdRad: 0px;
+	--ec-brdClr: var(--mn-rule);
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .expressive-code .frame {
+	border-radius: 0 !important;
+	box-shadow: none !important;
+}
+/* 文章页骨架（≥1024）：sheet 定宽 + 右栏 margin */
+@media (min-width: 1024px) {
+	html[data-site-mode="paper"][data-paper-theme="manual"] #main-grid:has(#post-container) {
+		grid-template-columns: minmax(0, 47rem) minmax(16rem, 1fr) !important;
+		column-gap: 0 !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #main-grid:has(#post-container) #right-sidebar {
+		display: block !important;
+		border-left: 1px solid var(--mn-rule);
+		padding-left: var(--mn-pad);
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #main-grid:has(#post-container) #content-column {
+		padding-right: var(--mn-pad);
+	}
+}
+/* margin 里的侧栏卡：去卡面，只留标题与行 */
+html[data-site-mode="paper"][data-paper-theme="manual"] #right-sidebar .card-base {
+	background: transparent !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+	padding-left: 0 !important;
+	padding-right: 0 !important;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] #right-sidebar .widget-title {
+	font-family: var(--mn-font-ui);
+	font-weight: 800;
+	font-size: 1rem;
+	color: var(--mn-ink);
+}
+/* 浮动控制（右缘按钮列）：压平为纸面方钮 */
+html[data-site-mode="paper"][data-paper-theme="manual"] .floating-controls button,
+html[data-site-mode="paper"][data-paper-theme="manual"] #floating-controls button {
+	border-radius: 0 !important;
+	background: var(--mn-panel) !important;
+	border: 1px solid var(--mn-rule) !important;
+	color: var(--mn-ink) !important;
+	box-shadow: none !important;
+}
+
+/* ---------- 首页侧栏落位（≥1024）：内容下方整宽堆叠，卡片改台账节 ---------- */
+@media (min-width: 1024px) {
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #main-grid {
+		grid-template-columns: minmax(0, 1fr) !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #content-column {
+		grid-row: 1;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar {
+		display: flex !important;
+		grid-row: 2;
+		grid-column: 1 / -1;
+		width: 100% !important;
+		max-width: none !important;
+		margin-top: 1rem;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar {
+		display: flex !important;
+		grid-row: 3;
+		grid-column: 1 / -1;
+		width: 100% !important;
+		max-width: none !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #content-column {
+		grid-column: 1 / -1;
+		width: 100% !important;
+		max-width: none !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar .card-base,
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar .card-base {
+		background: transparent !important;
+		border: 0 !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+		padding-left: 0 !important;
+		padding-right: 0 !important;
+	}
+	/* 节标题：墨线收尾的组头（源站 group-head） */
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar .widget-title,
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar .widget-title {
+		font-family: var(--mn-font-ui);
+		font-weight: 800;
+		font-size: 1.05rem;
+		color: var(--mn-ink);
+		padding-bottom: 0.5rem;
+		border-bottom: 1px solid var(--mn-ink);
+		margin-bottom: 0.75rem;
+	}
+	/* 资料卡头像是装饰图，手册去图；链接与签名保留为文字行 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar > :first-child img {
+		display: none !important;
+	}
+}
+
+/* ---------- 二期修正批 ---------- */
+/* 分页当前页是 div.bg-(--primary)，不是 a：墨块改信号黄方块 */
+html[data-site-mode="paper"][data-paper-theme="manual"] .pagination-wrapper [aria-current="page"] {
+	background: var(--mn-signal) !important;
+	color: var(--mn-on-signal) !important;
+	border-radius: 0 !important;
+}
+/* 全站 .btn-card（上下篇导航等）去圆角，与无圆角系统一致 */
+html[data-site-mode="paper"][data-paper-theme="manual"] .btn-card {
+	border-radius: 0 !important;
+}
+/* TOC：条目与活动指示去圆角 */
+html[data-site-mode="paper"][data-paper-theme="manual"] .toc-item,
+html[data-site-mode="paper"][data-paper-theme="manual"] .toc-active-indicator,
+html[data-site-mode="paper"][data-paper-theme="manual"] .toc-badge {
+	border-radius: 0 !important;
+}
+/* 表格：去底色与圆角（表头黑底来自 table/thead 自身背景） */
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .prose table {
+	background: transparent !important;
+	border-radius: 0 !important;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .prose thead,
+html[data-site-mode="paper"][data-paper-theme="manual"] #post-container .prose thead tr {
+	background: transparent !important;
+}
+/* 浮动按钮列：图标墨色、方角 */
+html[data-site-mode="paper"][data-paper-theme="manual"] .floating-controls-container .floating-btn {
+	border-radius: 0 !important;
+	color: var(--mn-ink) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .floating-controls-container .floating-btn svg {
+	color: var(--mn-ink) !important;
+}
+/* 文章页不挂分类栏（源站文章页是面包屑位，没有 chips 行） */
+html[data-site-mode="paper"][data-paper-theme="manual"] #main-grid:has(#post-container) #category-bar-wrapper {
+	display: none !important;
+}
+/* 表格横滚容器去圆角 */
+html[data-site-mode="paper"][data-paper-theme="manual"] .horizontal-scroll-container {
+	border-radius: 0 !important;
+}
+/* 分类计数徽：源头用了 oklch(var(--hue)) 的薄荷底，手册改纸片色方徽 */
+html[data-site-mode="paper"][data-paper-theme="manual"] [data-id="categories"] .min-w-8 {
+	background: var(--mn-chip) !important;
+	color: var(--mn-ink) !important;
+	border-radius: 0 !important;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] [data-id="categories"] a,
+html[data-site-mode="paper"][data-paper-theme="manual"] [data-id="tags"] a {
+	border-radius: 0 !important;
+}
+/* 首页整宽堆叠时日历/热力图别撑满：收回自然宽度 */
+@media (min-width: 1024px) {
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home [data-id="calendar-widget"] {
+		max-width: 36rem;
+	}
+}
+
+/* ---------- 二期扫尾：内页自有壳 ---------- */
+/* 品牌图（蝴蝶 logo）：手册只留文字字标，移动端顶栏同样去图 */
+html[data-site-mode="paper"][data-paper-theme="manual"] #navbar picture,
+html[data-site-mode="paper"][data-paper-theme="manual"] #top-row picture {
+	display: none !important;
+}
+/* 内容区里的大圆角一律压平（日志壳、关于链接卡、友链卡、各页页头图标等自有组件） */
+html[data-site-mode="paper"][data-paper-theme="manual"] #content-wrapper :is(.rounded-lg, .rounded-xl, .rounded-2xl, .rounded-3xl) {
+	border-radius: 0 !important;
+}
+/* 日志页壳：2px 黑框改 1px 发丝线、底色走面板 */
+html[data-site-mode="paper"][data-paper-theme="manual"] #content-wrapper .border-2.border-black {
+	border: 1px solid var(--mn-rule) !important;
+	background: var(--mn-panel) !important;
+	color: var(--mn-ink) !important;
+}
+/* 借 --hue 现算的薄荷底片（分类计数、归档分类签等）改纸片色；时间线色点改墨点 */
+html[data-site-mode="paper"][data-paper-theme="manual"] [class*="oklch(0.95_0.025"] {
+	background: var(--mn-chip) !important;
+	color: var(--mn-ink) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] [class*="oklch(0.5_0.05"] {
+	background: var(--mn-ink) !important;
+}
+/* 内容区表单控件：纸面、发丝线、直角 */
+html[data-site-mode="paper"][data-paper-theme="manual"] #content-wrapper :is(input, textarea, select) {
+	border-radius: 0 !important;
+	background: var(--mn-paper) !important;
+	border: 1px solid var(--mn-rule) !important;
+	color: var(--mn-ink) !important;
+}
+
+/* ---------- ticker（ManualHero 底部墨底滚动带） ---------- */
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-ticker {
+	grid-column: 1 / -1;
+	margin-top: 2.25rem;
+	background: var(--mn-ink);
+	color: var(--mn-paper);
+	overflow: hidden;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-ticker-track {
+	display: flex;
+	width: max-content;
+	animation: mn-tick 48s linear infinite;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-ticker-run {
+	display: inline-flex;
+	align-items: center;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-ticker-item {
+	font-family: var(--mn-font-ui);
+	font-size: 0.8125rem;
+	font-stretch: 112%;
+	letter-spacing: 0.04em;
+	white-space: nowrap;
+	padding: 0.55rem 0 0.55rem 2.25rem;
+}
+/* 编号是信号黄签（源站 ticker 的构成：黄签 + 白标题） */
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-ticker-item b {
+	background: var(--mn-signal);
+	color: var(--mn-on-signal);
+	font-weight: 700;
+	padding: 0.12rem 0.5rem;
+	margin-right: 0.9rem;
+}
+@keyframes mn-tick {
+	to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+	html[data-site-mode="paper"][data-paper-theme="manual"] .mn-ticker {
+		overflow-x: auto;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .mn-ticker-track {
+		animation: none;
+	}
+}
+
+/* ---------- rail 当前页高亮（脚本打 .mn-nav-active） ---------- */
+@media (min-width: 1024px) {
+	html[data-site-mode="paper"][data-paper-theme="manual"] #navbar .navbar-seg-center a.mn-nav-active {
+		background: linear-gradient(-45deg, transparent 7px, var(--mn-signal) 0) !important;
+		color: var(--mn-on-signal) !important;
+	}
+	/* 当前项藏在下拉组里时，父组行反转为墨底纸字（子项展开后是信号黄） */
+	html[data-site-mode="paper"][data-paper-theme="manual"] #navbar .dropdown-container.mn-nav-active-parent > :first-child {
+		background: var(--mn-ink) !important;
+		color: var(--mn-paper) !important;
+	}
+}
+
+/* ---------- 移动端 records（<1024）：两行网格，封面/摘要/标签撤 ---------- */
+@media (max-width: 1023.98px) {
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container {
+		display: flex !important;
+		flex-direction: column;
+		height: auto !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container::before {
+		content: "// POSTS";
+		order: -2;
+		display: block;
+		font-size: 0.7rem;
+		font-stretch: 125%;
+		font-weight: 600;
+		letter-spacing: 0.14em;
+		color: var(--mn-ink-2);
+		margin-bottom: 0.35rem;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container::after {
+		content: "全部文章";
+		order: -1;
+		display: block;
+		font-size: 1.15rem;
+		font-weight: 800;
+		line-height: 1.4;
+		color: var(--mn-ink);
+		margin-bottom: 1.25rem;
+		background:
+			linear-gradient(var(--mn-ink), var(--mn-ink)) left 6rem center / 0.8rem 0.8rem no-repeat,
+			var(--mn-hatch) left 6.8rem center / calc(100% - 6.8rem) 0.8rem no-repeat;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper {
+		position: relative !important;
+		inset: auto !important;
+		width: auto !important;
+		height: auto !important;
+		display: grid !important;
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		grid-template-rows: auto auto;
+		align-items: baseline;
+		column-gap: 0.75rem;
+		row-gap: 0.3rem;
+		background: transparent !important;
+		border: 0 !important;
+		border-bottom: 1px solid var(--mn-rule) !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+		overflow: visible !important;
+		padding: 0.65rem 0.25rem;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper:first-of-type {
+		border-top: 1px solid var(--mn-rule);
+	}
+	/* 封面锚是 wrapper 的直系 <a>（标题在 content 内），移动端撤 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper > a {
+		display: none !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-content {
+		display: contents !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper::before {
+		content: "No." attr(data-no);
+		grid-column: 1;
+		grid-row: 1;
+		display: inline-flex;
+		align-items: center;
+		padding: 0.1rem 0.8rem 0.1rem 0.5rem;
+		background: linear-gradient(-45deg, transparent 7px, var(--mn-tag-bg) 0);
+		color: var(--mn-tag-fg);
+		font-family: var(--mn-font-ui);
+		font-size: 0.75rem;
+		font-weight: 700;
+		font-stretch: 112%;
+		letter-spacing: 0.04em;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-wrapper:not([data-no])::before {
+		content: none;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-title {
+		grid-column: 1 / -1;
+		grid-row: 2;
+		font-size: 1.05rem !important;
+		line-height: 1.5 !important;
+		margin: 0 !important;
+		color: var(--mn-ink) !important;
+		min-width: 0;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-title::before {
+		display: none !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-meta {
+		display: contents !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-meta > * {
+		font-size: 0.8125rem;
+		font-stretch: 112%;
+		color: var(--mn-ink-2);
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-meta > :nth-child(1) {
+		grid-column: 2;
+		grid-row: 1;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-meta > :nth-child(2) {
+		display: none !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-words {
+		display: block;
+		grid-column: 3;
+		grid-row: 1;
+		justify-self: end;
+		font-size: 0.8125rem;
+		font-stretch: 112%;
+		color: var(--mn-ink-2);
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-meta > :nth-child(n + 3),
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-meta .meta-icon,
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .description,
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .post-card-bottom-tags,
+	html[data-site-mode="paper"][data-paper-theme="manual"] #post-list-container .stats {
+		display: none !important;
+	}
+}
+
+/* ================================================================
+ * 比例对齐（对源站首页版式）：rail 字阶收小；≥1280 首页列表区
+ * 改成 records 主列 + 右侧栏旁列（源站 records 与分类台账并排）
+ * ================================================================ */
+@media (min-width: 1024px) {
+	html[data-site-mode="paper"][data-paper-theme="manual"] #navbar .navbar-seg-center a {
+		font-size: 0.9375rem;
+	}
+}
+@media (min-width: 1280px) {
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #main-grid {
+		grid-template-columns: minmax(0, 1fr) 20rem !important;
+		column-gap: 3.5rem !important;
+	}
+	/* 内容链三层 contents 化，让 hero/列表/分页直接成为网格项 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #content-column,
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #swup-container,
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #content-wrapper {
+		display: contents !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home .manual-hero {
+		grid-column: 1 / -1;
+		grid-row: 1;
+		min-width: 0;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #post-list-container {
+		grid-column: 1;
+		grid-row: 2;
+		min-width: 0;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home .pagination-wrapper {
+		grid-column: 1;
+		grid-row: 3;
+		min-width: 0;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar {
+		grid-column: 2;
+		grid-row: 2 / span 2;
+		width: auto !important;
+		max-width: none !important;
+		min-width: 0;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar {
+		grid-row: 4;
+	}
 }
 
 }

@@ -526,6 +526,46 @@ if (document.readyState === 'loading') {
 }
 </script>
 
+<script is:inline>
+	// 纸舟·手册：rail 当前页信号黄高亮。仅 paper+manual 时打标，
+	// 其他形态下类名无样式、零影响；样式在 paper-mode.css 手册段。
+	(function () {
+		if (window.__mnNavActiveBound) return;
+		window.__mnNavActiveBound = true;
+		function markMnNavActive() {
+			var de = document.documentElement;
+			var links = document.querySelectorAll("#navbar .navbar-seg-center a[href]");
+			links.forEach(function (a) { a.classList.remove("mn-nav-active"); });
+			document.querySelectorAll("#navbar .mn-nav-active-parent").forEach(function (el) { el.classList.remove("mn-nav-active-parent"); });
+			if (de.getAttribute("data-site-mode") !== "paper" || de.getAttribute("data-paper-theme") !== "manual") return;
+			var path = location.pathname.replace(/\/+$/, "") || "/";
+			var best = null;
+			var bestLen = -1;
+			links.forEach(function (a) {
+				var href = a.getAttribute("href");
+				if (!href || href.charAt(0) !== "/") return;
+				var hp = href.replace(/\/+$/, "") || "/";
+				var hit = hp === "/" ? path === "/" : path === hp || path.indexOf(hp + "/") === 0;
+				if (hit && hp.length > bestLen) { best = a; bestLen = hp.length; }
+			});
+			if (best) {
+				best.classList.add("mn-nav-active");
+				// 命中的是下拉子项时，父组容器打标（父行本身不是链接，靠容器类上色）
+				var dd = best.closest(".dropdown-container");
+				if (dd && best.closest(".dropdown-menu")) {
+					dd.classList.add("mn-nav-active-parent");
+				}
+			}
+		}
+		document.addEventListener("swup:contentReplaced", markMnNavActive);
+		if (document.readyState === "loading") {
+			document.addEventListener("DOMContentLoaded", markMnNavActive);
+		} else {
+			markMnNavActive();
+		}
+	})();
+</script>
+
 {
     import.meta.env.PROD && (
         <script is:inline data-swup-ignore-script define:vars={{ scriptUrl: url('/pagefind/pagefind.js') }}>

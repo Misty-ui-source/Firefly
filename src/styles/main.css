@@ -745,4 +745,12 @@ html {
   .paper-portal {
     display: none;
   }
+  /* 手册首页字标 hero：只在纸舟·手册点亮 */
+  .manual-hero {
+    display: none;
+  }
+  /* 手册 records 右列字数：只在纸舟·手册点亮 */
+  .post-card-words {
+    display: none;
+  }
 }

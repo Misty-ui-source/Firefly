@@ -1,0 +1,100 @@
+---
+import { render } from "astro:content";
+import { siteConfig } from "@/config";
+import { getSortedPosts } from "@/utils/content-utils";
+import { getPostUrlBySlug, url } from "@/utils/url-utils";
+
+/**
+ * 手册（manual）首页字标 hero：只在纸舟·手册主题下点亮（守卫在 main.css
+ * 常加载，本组件默认 display:none；点亮规则在 paper-mode.css 手册段）。
+ * 结构与数据口径对齐参考站首页：字段行（日期 / 运行天数 / 篇数 / 总字数）、
+ * 实心站名 + 描边域名、黄 marker 副题、切角按钮组、最新一篇画框（描边编号）。
+ * 全部数字都是真数据：篇数/总字数与站点统计同一算法（正文去代码后
+ * 中文字符 + 拉丁字母计数），编号 = 按 published 升序的真实序号。
+ */
+const posts = await getSortedPosts();
+const total = posts.length;
+const latest = posts[0];
+const latestNo = total; // 升序编号：最新一篇就是总数
+const latestUrl = latest ? getPostUrlBySlug(latest.id) : url("/");
+
+let latestWords = 0;
+if (latest) {
+	const { remarkPluginFrontmatter } = await render(latest);
+	latestWords = remarkPluginFrontmatter.words ?? 0;
+}
+
+let totalWords = 0;
+for (const post of posts) {
+	if (post.body) {
+		const text = post.body
+			.replace(/```[\s\S]*?```/g, "")
+			.replace(/`[^`]*`/g, "")
+			.replace(/\s+/g, " ")
+			.trim();
+		const chinese = text.match(/[\u4e00-\u9fa5]/g) || [];
+		const latin = text.match(/[a-zA-Z]/g) || [];
+		totalWords += chinese.length + latin.length;
+	}
+}
+
+const start = new Date(`${siteConfig.siteStartDate || "2026-10-15"}T00:00:00+08:00`);
+const now = new Date();
+const days = Math.max(1, Math.floor((now.getTime() - start.getTime()) / 86400000) + 1);
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const todayStr = `${now.getFullYear()}.${pad2(now.getMonth() + 1)}.${pad2(now.getDate())}`;
+const latestDate = latest
+	? `${latest.data.published.getFullYear()}.${pad2(latest.data.published.getMonth() + 1)}.${pad2(latest.data.published.getDate())}`
+	: "";
+const noStr = String(latestNo).padStart(3, "0");
+const fmt = (n: number) => n.toLocaleString("en-US");
+---
+
+<section class="manual-hero" aria-label="站点概览">
+	<p class="mn-hero-meta">
+		<time>{todayStr}</time>
+		<span>第 <b>{days}</b> 天</span>
+		<span><b>{total}</b> 篇</span>
+		<span><b>{fmt(totalWords)}</b> 字</span>
+	</p>
+
+	<h2 class="mn-wordmark">
+		<span class="mn-wordmark-solid">Alexander</span>
+		<span class="mn-wordmark-hollow" aria-hidden="true">LANERC.ME</span>
+	</h2>
+
+	<div class="mn-hero-copy">
+		<p class="mn-claim"><span class="mn-marker">{siteConfig.subtitle}</span></p>
+		<p class="mn-bio">{siteConfig.description}</p>
+		<p class="mn-actions">
+			<a class="mn-btn mn-btn-go" href={latestUrl}>读最新一篇 <span class="mn-btn-sub">No.{noStr}</span></a>
+			<a class="mn-btn" href={url("/archive/")}>全部文章</a>
+			<a class="mn-btn" href={url("/about/")}>关于本站</a>
+		</p>
+	</div>
+
+	{latest && (
+		<a class="mn-frame" href={latestUrl}>
+			<span class="mn-frame-window">
+				<span class="mn-hollow-no" aria-hidden="true">{noStr}</span>
+				<span class="mn-frame-title">{latest.data.title}</span>
+				<span class="mn-field">{latestDate} / {fmt(latestWords)} 字</span>
+			</span>
+			<span class="mn-plate">最新发布，点开就读。</span>
+		</a>
+	)}
+
+	{posts.length > 0 && (
+		<div class="mn-ticker" aria-hidden="true">
+			<div class="mn-ticker-track">
+				{[0, 1].map(() => (
+					<span class="mn-ticker-run">
+						{posts.slice(0, 8).map((p, i) => (
+							<span class="mn-ticker-item"><b>No.{String(total - i).padStart(3, "0")}</b>{p.data.title}</span>
+						))}
+					</span>
+				))}
+			</div>
+		</div>
+	)}
+</section>

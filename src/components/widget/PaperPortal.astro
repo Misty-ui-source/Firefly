@@ -70,7 +70,11 @@ const isExternal = (url: string) => /^https?:\/\//.test(url);
 	// 窄屏不接管，开关仍走原全站菜单。捕获阶段截下点击，抢在 Navbar 的 onclick 之前。
 	const portalMq = window.matchMedia("(min-width: 1024px)");
 	function portalIsPaper() {
-		return document.documentElement.dataset.siteMode === "paper";
+		// 传送门是纸面（ink）专属：手册（manual）下不接管，九宫格仍开全站菜单
+		return (
+			document.documentElement.dataset.siteMode === "paper" &&
+			document.documentElement.dataset.paperTheme === "ink"
+		);
 	}
 	function portalSetOpen(open) {
 		const panel = document.getElementById("paper-portal-panel");

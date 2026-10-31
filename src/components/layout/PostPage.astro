@@ -41,6 +41,7 @@ const coverPositionClass =
   {
     page.data.map((entry: PostEntry, index: number) => (
       <PostCard
+        no={page.total - ((page.currentPage - 1) * page.size + index)}
         entry={entry}
         title={entry.data.title}
         tags={entry.data.tags}
@@ -330,6 +331,7 @@ const coverPositionClass =
     setTimeout(initLayout, 0);
   }
 </script>
+
 <style is:global>
   .post-grid-auto {
     display: grid;
