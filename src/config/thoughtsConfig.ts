@@ -10,6 +10,11 @@ export const thoughtsConfig: ThoughtsConfig = {
 	title: "碎碎念",
 	items: [
 		{
+			title: '突然发现b站追番没拉取到数据，看来构建之后专门需要检查一下啊',
+			content: '以后养成习惯，构建一次之后一定要检查检查哈哈哈哈',
+			createdAt: '2026-10-31T07:07:11.304Z'
+		},
+		{
 			title: '又为宿舍减少了一只蚊子',
 			content: '如题哈哈哈哈哈哈',
 			createdAt: '2026-10-30T16:51:13.421Z'
