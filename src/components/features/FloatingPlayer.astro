@@ -73,7 +73,13 @@ const quality = fp?.quality || "320k";
 		color: #e9edf5;
 	}
 	.fp-panel {
-		margin-bottom: 0.5rem;
+		/* 绝对定位挂在播放条上方：永远向上展开。曾用流内排布——默认贴底时
+		   靠容器底锚定往上长没问题，但拖动后容器改顶锚定，面板就往下展开
+		   还把播放条顶下去（站长 2026-10-31 点名），故改出流。 */
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: calc(100% + 0.5rem);
 		border-radius: 1rem;
 		padding: 0.6rem;
 		background: var(--card-bg, rgb(255 255 255 / 0.92));
