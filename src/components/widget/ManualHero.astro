@@ -85,12 +85,12 @@ const fmt = (n: number) => n.toLocaleString("en-US");
 	)}
 
 	{posts.length > 0 && (
-		<div class="mn-ticker" aria-hidden="true">
+		<div class="mn-ticker">
 			<div class="mn-ticker-track">
-				{[0, 1].map(() => (
-					<span class="mn-ticker-run">
+				{[0, 1].map((run) => (
+					<span class="mn-ticker-run" aria-hidden={run === 1 ? "true" : undefined}>
 						{posts.slice(0, 8).map((p, i) => (
-							<span class="mn-ticker-item"><b>No.{String(total - i).padStart(3, "0")}</b>{p.data.title}</span>
+							<a class="mn-ticker-item" href={getPostUrlBySlug(p.id)} tabindex={run === 1 ? -1 : undefined}><b>No.{String(total - i).padStart(3, "0")}</b>{p.data.title}</a>
 						))}
 					</span>
 				))}
@@ -198,5 +198,68 @@ const fmt = (n: number) => n.toLocaleString("en-US");
 		document.addEventListener("swup:contentReplaced", function () {
 			setTimeout(run, 0);
 		});
+	})();
+</script>
+
+<!-- 手册首页右栏构成（站长 2026-11-01 定）：动态 / 公告 / 最新评论 / 日历。
+     公告部件本体在左栏，纯 CSS 搬不过栏，只在「纸舟·手册 + 首页 + ≥1280」
+     时用脚本把它的节点挪进右栏、排在动态之后；形态切走或窗口变窄时原样
+     挪回左栏原位。其他部件的显隐在 paper-mode.css 手册首页段（仅不显示）。 -->
+<script is:inline>
+	(function () {
+		if (window.__mnAnnBound) {
+			if (window.__mnAnnApply) window.__mnAnnApply();
+			return;
+		}
+		window.__mnAnnBound = true;
+		var ann = null;
+		var home = null;
+		var homeNext = null;
+		var moved = false;
+		function find() {
+			if (!ann || !ann.isConnected) {
+				ann = document.querySelector('#left-sidebar-wrapper widget-layout[data-id="announcement"], #right-sidebar-static widget-layout[data-id="announcement"]');
+				if (ann && !moved) {
+					home = ann.parentNode;
+					homeNext = ann.nextElementSibling;
+				}
+			}
+			return ann;
+		}
+		function apply() {
+			var de = document.documentElement;
+			var on =
+				de.getAttribute("data-site-mode") === "paper" &&
+				de.getAttribute("data-paper-theme") === "manual" &&
+				window.innerWidth >= 1280;
+			var a = find();
+			if (!a) return;
+			if (on && !moved) {
+				var dyn = document.querySelector('#right-sidebar-static widget-layout[data-id="latest-dynamics"]');
+				if (dyn && dyn.parentNode && a.parentNode !== dyn.parentNode) {
+					dyn.parentNode.insertBefore(a, dyn.nextSibling);
+					moved = true;
+				}
+			} else if (!on && moved) {
+				if (home) {
+					if (homeNext && homeNext.parentNode === home) home.insertBefore(a, homeNext);
+					else home.appendChild(a);
+				}
+				moved = false;
+			}
+		}
+		window.__mnAnnApply = apply;
+		new MutationObserver(apply).observe(document.documentElement, {
+			attributes: true,
+			attributeFilter: ["data-site-mode", "data-paper-theme"],
+		});
+		document.addEventListener("swup:contentReplaced", function () {
+			ann = null;
+			moved = false;
+			setTimeout(apply, 0);
+		});
+		window.addEventListener("resize", apply);
+		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", apply);
+		else apply();
 	})();
 </script>

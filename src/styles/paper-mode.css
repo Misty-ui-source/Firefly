@@ -2010,6 +2010,18 @@ html[data-site-mode="paper"][data-paper-theme="manual"] .mn-ticker-item {
 	white-space: nowrap;
 	padding: 0.55rem 0 0.55rem 2.25rem;
 }
+/* 流动带条目是文章链接（源站同款可点）：去下划线、悬停整条变信号黄、带子暂停滚动方便点 */
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-ticker-item {
+	color: inherit;
+	text-decoration: none;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-ticker:hover .mn-ticker-track {
+	animation-play-state: paused;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] .mn-ticker-item:hover {
+	background: var(--mn-signal);
+	color: var(--mn-on-signal);
+}
 /* 编号是信号黄签（源站 ticker 的构成：黄签 + 白标题） */
 html[data-site-mode="paper"][data-paper-theme="manual"] .mn-ticker-item b {
 	background: var(--mn-signal);
@@ -2036,10 +2048,11 @@ html[data-site-mode="paper"][data-paper-theme="manual"] .mn-ticker-item b {
 		background: linear-gradient(-45deg, transparent 7px, var(--mn-signal) 0) !important;
 		color: var(--mn-on-signal) !important;
 	}
-	/* 当前项藏在下拉组里时，父组行反转为墨底纸字（子项展开后是信号黄） */
+	/* 当前项藏在下拉组里时，父组行只给浅灰高亮（与展开态同款），
+	   不许整行墨黑——源站只有「当前项信号黄」一种选中语言（2026-11-01 站长纠正） */
 	html[data-site-mode="paper"][data-paper-theme="manual"] #navbar .dropdown-container.mn-nav-active-parent > :first-child {
-		background: var(--mn-ink) !important;
-		color: var(--mn-paper) !important;
+		background: var(--mn-chip) !important;
+		color: var(--mn-ink) !important;
 	}
 }
 
@@ -2209,15 +2222,34 @@ html[data-site-mode="paper"][data-paper-theme="manual"] :is(.float-panel, .dropd
 html[data-site-mode="paper"][data-paper-theme="manual"] #display-setting :is(button, input, select, textarea) {
 	border-radius: 0 !important;
 }
+/* 浮层在手册 rail 下的落位：音乐/显示设置面板在基座里按顶栏设计用 right-16
+   锚在导航条内，手册 ≥1024 导航条是 12rem 左栏，面板会被推出屏幕左侧
+   （站长 2026-11-01 图 101/102 报障，本地实测设置面板左半截在屏外 x<0）。
+   改 fixed 锚到 rail 右缘外侧、与栏顶对齐——两个面板同病同治 */
+@media (min-width: 1024px) {
+	html[data-site-mode="paper"][data-paper-theme="manual"] :is(#music-nav-panel, #display-setting) {
+		position: fixed !important;
+		left: calc(12rem + 0.75rem) !important;
+		right: auto !important;
+		top: 0.75rem !important;
+	}
+	/* 明暗下拉同病：它按顶栏锚在 .navbar-bar 上（栏顶 y=84），按钮却在栏中段
+	   （实测 y=462），面板和按钮隔了大半个栏。改锚回按钮本体正下方 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] div:has(> #scheme-switch) {
+		position: relative !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] #theme-mode-panel {
+		top: calc(100% + 0.5rem) !important;
+		left: 0 !important;
+		right: auto !important;
+	}
+}
 /* 未选中项的变暗从 0.6 抬到 0.78：仍可区分，但不能糊到来路不明 */
 html[data-site-mode="paper"][data-paper-theme="manual"] #display-setting .opacity-60 {
 	opacity: 0.78 !important;
 }
-/* 选中项（形态/子主题/布局等一切选项）：墨块纸字，一眼可辨 */
-html[data-site-mode="paper"][data-paper-theme="manual"] #display-setting button[class*="btn-regular-bg-hover"] {
-	background: var(--mn-ink) !important;
-	color: var(--mn-paper) !important;
-}
+/* 选中项（形态/子主题/布局等）：跟随令牌的浅灰高亮（--btn-regular-bg-hover），
+   不再用实心墨块——墨块太重且会把同行未选项衬得像消失（2026-11-01 站长否决） */
 
 /* ================================================================
  * 比例对齐（对源站首页版式）：rail 字阶收小；≥1280 首页列表区
@@ -2254,30 +2286,31 @@ html[data-site-mode="paper"][data-paper-theme="manual"] #display-setting button[
 		grid-row: 3;
 		min-width: 0;
 	}
-	/* 右栏逐 widget 落位（容器两层 contents 化）：整栏作一个网格项跨行时，
-	   栏高会把行撑开、分页被顶远；逐个落位后分页只跟列表行走 */
-	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static #right-sidebar,
-	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static #right-sidebar > div {
-		display: contents !important;
+	/* 右栏整栏落位（2026-11-01 站长报障后改）：逐件按行落位时，列表行被
+	   文章撑到近 2000px，动态下方的评论要等下一行才开始，右栏中段空出一
+	   大截。改回整栏一个网格项（基座的 --right-display-xl 变量切回 block）、
+	   跨 2–8 行、栏内自然堆叠（动态→评论→统计→信息→日历从顶往下排）；
+	   分页在左列自己的行里，只跟列表走，不受右栏高度影响 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #main-grid {
+		--right-display-xl: block;
 	}
-	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static widget-layout {
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static {
 		grid-column: 2;
+		grid-row: 2 / 9;
+		align-self: start;
 		min-width: 0;
 	}
-	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static widget-layout[data-id="latest-dynamics"] {
-		grid-row: 2;
-	}
-	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static widget-layout[data-id="recent-comments"] {
-		grid-row: 3;
-	}
-	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static widget-layout[data-id="site-stats"] {
-		grid-row: 4;
-	}
-	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static widget-layout[data-id="site-info"] {
-		grid-row: 5;
-	}
-	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static widget-layout[data-id="calendar-widget"] {
-		grid-row: 6;
+	/* 手册首页侧栏只留四件（站长 2026-11-01 定）：右栏 = 动态 / 公告 / 最新
+	   评论 / 日历（公告由 ManualHero 的脚本从左栏挪进右栏、排在动态之后）；
+	   其余部件（统计 / 站点信息 / 资料 / 音乐 / 分类 / 标签）在手册首页只是
+	   不显示，其他形态与页面不受影响 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static widget-layout[data-id="site-stats"],
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static widget-layout[data-id="site-info"],
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper #left-sidebar > div:first-child > :first-child,
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper widget-layout[data-id*="music"],
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper widget-layout[data-id="categories"],
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper widget-layout[data-id="tags"] {
+		display: none !important;
 	}
 	/* 左栏同样逐件落位（资料/公告/音乐/分类/标签）：与右栏逐行配对，
 	   两列互为行高、谁也不用整栏吊在页底，全页不再有整列空段。
