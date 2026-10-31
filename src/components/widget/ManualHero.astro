@@ -253,11 +253,14 @@ const fmt = (n: number) => n.toLocaleString("en-US");
 			attributes: true,
 			attributeFilter: ["data-site-mode", "data-paper-theme"],
 		});
-		document.addEventListener("swup:contentReplaced", function () {
+		// 本站 swup 派发 v4 钩子名 swup:page:view；contentReplaced 是旧名不派发，留作兜底
+		var onSwupNav = function () {
 			ann = null;
 			moved = false;
 			setTimeout(apply, 0);
-		});
+		};
+		document.addEventListener("swup:page:view", onSwupNav);
+		document.addEventListener("swup:contentReplaced", onSwupNav);
 		window.addEventListener("resize", apply);
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", apply);
 		else apply();

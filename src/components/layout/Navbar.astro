@@ -557,6 +557,9 @@ if (document.readyState === 'loading') {
 				}
 			}
 		}
+		// 本站 swup 派发的是 v4 钩子名（swup:page:view，此时 URL 已更新）；
+		// swup:contentReplaced 是旧名、本站不派发，只留作兜底（打标幂等）。
+		document.addEventListener("swup:page:view", markMnNavActive);
 		document.addEventListener("swup:contentReplaced", markMnNavActive);
 		if (document.readyState === "loading") {
 			document.addEventListener("DOMContentLoaded", markMnNavActive);
