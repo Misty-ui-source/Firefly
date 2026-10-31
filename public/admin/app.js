@@ -4772,7 +4772,8 @@ routes.sitenav = async () => {
       <button class="btn" id="btn-sn-save">💾 保存到仓库</button></div>
     <div class="card"><h2>🌐 站点导航 <span class="sub">${SITENAV_PATH}</span></h2>
     <p class="hint">这里管的是<b>博客 lanerc.me 顶部</b>的导航栏（不是控制台自己的）。顶级项和下拉项都能 ↑↓ 排序、编辑、删除；带下拉的项点「管理下拉」展开。纯父项 URL 填 #。图标填 Iconify 名（如 material-symbols:home）。保存后重新构建生效。<b>注意：这里只加菜单入口、不生成页面，新栏目先建单页再挂。</b></p>
-    <div id="sn-list"></div></div>`;
+    <div id="sn-list"></div></div>
+    <div id="portal-slot"></div>`;
   const render = () => {
     $('#sn-list').innerHTML = items.map((it, i) => `
       <div class="card">
@@ -4879,7 +4880,164 @@ routes.sitenav = async () => {
     } catch (e) { toast(e.message, true); }
     btn.disabled = false;
   };
+  initPortalCard();
 };
+
+/* ---------- 纸舟传送门管理：src/config/portalConfig.ts（顶栏九宫格下拉卡，仅纸舟显示） ---------- */
+const PORTAL_PATH = 'src/config/portalConfig.ts';
+function parsePortalGroup(src, from, key) {
+  const li = src.indexOf(key + ':', from);
+  if (li < 0) return [];
+  const s = src.indexOf('[', li);
+  const e = s >= 0 ? snBracketEnd(src, s) : -1;
+  if (e < 0) return [];
+  return splitBraceObjects(src.slice(s + 1, e)).map((raw) => ({
+    name: getStrField(raw, 'name'), url: getStrField(raw, 'url'), note: getStrField(raw, 'note'),
+    enable: !/enable\s*:\s*false/.test(raw), current: /current\s*:\s*true/.test(raw),
+  }));
+}
+function parsePortal(src) {
+  const ci = src.indexOf('export const portalConfig');
+  if (ci < 0) return null;
+  return { links: parsePortalGroup(src, ci, 'links'), lines: parsePortalGroup(src, ci, 'lines') };
+}
+function portalEntryTs(e, isLine) {
+  let s = `\t\t{\n\t\t\tname: "${tsEsc(e.name)}",\n\t\t\turl: "${tsEsc(e.url)}",\n`;
+  if (e.note) s += `\t\t\tnote: "${tsEsc(e.note)}",\n`;
+  if (isLine && e.current) s += `\t\t\tcurrent: true,\n`;
+  if (e.enable === false) s += `\t\t\tenable: false,\n`;
+  return s + `\t\t},`;
+}
+function buildPortalTs(data) {
+  return `// ============================================================================
+// 纸舟传送门配置（顶栏九宫格下拉卡，仅纸舟形态显示）
+// 本文件为纯数据格式，由 Alexander Console「🌐 站点导航」页的
+// 「🚪 纸舟传送门」卡维护（传送门条目 + 博客线路，增删/排序/改名/开关）
+// ============================================================================
+
+export interface PortalEntry {
+\tname: string;
+\turl: string;
+\tnote?: string;
+\tenable?: boolean;
+}
+
+export interface PortalLine extends PortalEntry {
+\tcurrent?: boolean;
+}
+
+export interface PortalConfig {
+\tlinks: PortalEntry[];
+\tlines: PortalLine[];
+}
+
+export const portalConfig: PortalConfig = {
+\tlinks: [
+${data.links.map((e) => portalEntryTs(e, false)).join('\n')}
+\t],
+\tlines: [
+${data.lines.map((e) => portalEntryTs(e, true)).join('\n')}
+\t],
+};
+`;
+}
+async function initPortalCard() {
+  const slot = document.getElementById('portal-slot');
+  if (!slot) return;
+  let sha = null, data = null;
+  try {
+    const f = await ghGetFile(PORTAL_PATH);
+    sha = f.sha;
+    data = parsePortal(f.text);
+    if (!data) throw new Error('没解析出传送门数据，文件格式可能变了，先别保存');
+  } catch (e) {
+    slot.innerHTML = `<div class="card"><h2>🚪 纸舟传送门 <span class="sub">${PORTAL_PATH}</span></h2><p class="hint">加载失败：${esc(e.message)}</p></div>`;
+    return;
+  }
+  slot.innerHTML = `
+    <div class="card"><h2>🚪 纸舟传送门 <span class="sub">${PORTAL_PATH}</span></h2>
+    <p class="hint">博客<b>左栏第一块</b>的凸起卡（<b>只在纸舟形态显示</b>，照 qcqx 的样式）。传送门条目与博客线路两组都能增删 / ↑↓ 排序 / 编辑 / 开关；线路里「当前线路」只能有一个，整行垫浅色底 + 绿点。链接以 http 开头的外链自动新窗口打开。保存后重新构建生效。</p>
+    <p style="font-weight:700;margin:.9rem 0 .3rem">传送门</p>
+    <div id="pp-links"></div>
+    <button class="mini-btn" id="pp-add-link">＋ 添加条目</button>
+    <p style="font-weight:700;margin:1.1rem 0 .3rem">博客线路</p>
+    <div id="pp-lines"></div>
+    <button class="mini-btn" id="pp-add-line">＋ 添加线路</button>
+    <div class="toolbar"><span class="spacer"></span><button class="btn" id="pp-save">💾 保存传送门</button></div></div>`;
+  const rowHtml = (e, g, i) => `
+    <div class="list-item">
+      <span class="title">${esc(e.name)}</span><span class="meta">${esc(e.url)}${e.note ? ` · ${esc(e.note)}` : ''}${g === 'lines' && e.current ? ' · 当前线路' : ''}${e.enable === false ? ' · 已停用' : ''}</span><span class="spacer"></span>
+      <button class="mini-btn" data-g="${g}" data-act="up" data-i="${i}">↑</button><button class="mini-btn" data-g="${g}" data-act="down" data-i="${i}">↓</button>
+      <button class="mini-btn" data-g="${g}" data-act="edit" data-i="${i}">编辑</button>
+      <button class="mini-btn danger" data-g="${g}" data-act="del" data-i="${i}">删除</button>
+    </div>`;
+  const renderPp = () => {
+    $('#pp-links').innerHTML = data.links.map((e, i) => rowHtml(e, 'links', i)).join('') || '<p class="hint">还没有条目</p>';
+    $('#pp-lines').innerHTML = data.lines.map((e, i) => rowHtml(e, 'lines', i)).join('') || '<p class="hint">还没有线路</p>';
+    slot.querySelectorAll('[data-g]').forEach((b) => {
+      b.onclick = () => {
+        const arr = data[b.dataset.g], i = parseInt(b.dataset.i, 10), act = b.dataset.act, it = arr[i];
+        if (act === 'up' && i > 0) { [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]]; renderPp(); }
+        if (act === 'down' && i < arr.length - 1) { [arr[i + 1], arr[i]] = [arr[i], arr[i + 1]]; renderPp(); }
+        if (act === 'edit') openPortalEditor(it, b.dataset.g === 'lines', data, renderPp);
+        if (act === 'del') { if (confirm(`删除「${it.name}」？`)) { arr.splice(i, 1); renderPp(); } }
+      };
+    });
+  };
+  renderPp();
+  $('#pp-add-link').onclick = () => {
+    const draft = { name: '', url: '', note: '', enable: true, current: false };
+    openPortalEditor(draft, false, data, () => { data.links.push(draft); renderPp(); });
+  };
+  $('#pp-add-line').onclick = () => {
+    const draft = { name: '', url: '', note: '', enable: true, current: false };
+    openPortalEditor(draft, true, data, () => { data.lines.push(draft); renderPp(); });
+  };
+  $('#pp-save').onclick = async () => {
+    const btn = $('#pp-save');
+    btn.disabled = true;
+    try {
+      const r = await saveWithLog(PORTAL_PATH, buildPortalTs(data), sha, '更新纸舟传送门 [管理台]', { type: '导航', action: '更新', target: '纸舟传送门' });
+      sha = r.content.sha;
+      toast('传送门已保存，重新构建网站后生效');
+    } catch (e) { toast(e.message, true); }
+    btn.disabled = false;
+  };
+}
+function openPortalEditor(target, isLine, data, onOk) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal card">
+      <h3>${isLine ? '线路' : '传送门条目'}编辑</h3>
+      <div class="field"><label>名称 *</label><input id="pp-name" value="${esc(target.name || '')}" placeholder="如：控制台"></div>
+      <div class="field"><label>链接 URL *</label><input id="pp-url" value="${esc(target.url || '')}" placeholder="/admin/ 或 https://…"></div>
+      <div class="field"><label>右侧备注（可空）</label><input id="pp-note" value="${esc(target.note || '')}" placeholder="如：Waline 后台"></div>
+      ${isLine ? `<div class="field"><label><input type="checkbox" id="pp-current" ${target.current ? 'checked' : ''}> 当前线路（整行垫浅色底 + 绿点，只能有一个）</label></div>` : ''}
+      <div class="field"><label><input type="checkbox" id="pp-enable" ${target.enable === false ? '' : 'checked'}> 启用（关掉前台不显示，条目保留）</label></div>
+      <div class="toolbar"><span class="spacer"></span>
+        <button class="btn btn-ghost" id="pp-cancel">取消</button>
+        <button class="btn" id="pp-ok">确定</button></div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#pp-cancel').onclick = () => overlay.remove();
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.querySelector('#pp-ok').onclick = () => {
+    const name = overlay.querySelector('#pp-name').value.trim();
+    const url = overlay.querySelector('#pp-url').value.trim();
+    if (!name || !url) { toast('名称和 URL 必填', true); return; }
+    target.name = name; target.url = url;
+    target.note = overlay.querySelector('#pp-note').value.trim();
+    target.enable = overlay.querySelector('#pp-enable').checked;
+    if (isLine) {
+      const cur = overlay.querySelector('#pp-current').checked;
+      if (cur) data.lines.forEach((l) => { if (l !== target) l.current = false; });
+      target.current = cur;
+    }
+    overlay.remove();
+    onOk();
+  };
+}
 
 /* ---------- 时间线管理 ---------- */
 /* ---------- 列表型编辑器（时间线/碎碎念）本地草稿 ----------

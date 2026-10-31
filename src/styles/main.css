@@ -741,4 +741,11 @@ html {
   #astral-veil-layer {
     display: none;
   }
+  /* 纸舟传送门下拉与纸面文章卡封面胶囊：只在纸舟点亮 */
+  .paper-portal {
+    display: none;
+  }
+  .pz-card-pills {
+    display: none;
+  }
 }

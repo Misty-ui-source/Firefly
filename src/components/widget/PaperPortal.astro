@@ -1,0 +1,117 @@
+---
+import { portalConfig } from "@/config";
+
+// 纸舟传送门：顶栏九宫格点开的下拉卡（照 qcqx 的 data-site-portals 交互），
+// 非常驻侧栏卡。全站渲染、仅纸舟点亮：默认隐藏守卫在 main.css、
+// 定位与样式在 paper-mode.css；开关接管在本组件脚本里（纸面桌面端）。
+// 数据来自 portalConfig.ts，Alexander Console「站点导航」页可维护。
+const links = (portalConfig.links ?? []).filter((e) => e.enable !== false);
+const lines = (portalConfig.lines ?? []).filter((e) => e.enable !== false);
+const isExternal = (url: string) => /^https?:\/\//.test(url);
+---
+
+{
+	(links.length > 0 || lines.length > 0) && (
+		<nav id="paper-portal-panel" class="paper-portal" aria-label="传送门" inert>
+			{links.length > 0 && (
+				<div class="paper-portal-group">
+					<p class="paper-portal-title">传送门</p>
+					<ul class="paper-portal-list">
+						{links.map((e) => (
+							<li>
+								<a
+									href={e.url}
+									{...(isExternal(e.url)
+										? { target: "_blank", rel: "noopener" }
+										: {})}
+								>
+									<span class="paper-portal-name">{e.name}</span>
+									{e.note && (
+										<span class="paper-portal-note">{e.note}</span>
+									)}
+								</a>
+							</li>
+						))}
+					</ul>
+				</div>
+			)}
+			{lines.length > 0 && (
+				<div class="paper-portal-group paper-portal-lines">
+					<p class="paper-portal-title">博客线路</p>
+					<ul class="paper-portal-list">
+						{lines.map((e) => (
+							<li>
+								<a
+									href={e.url}
+									class:list={[{ "is-current": !!e.current }]}
+									{...(isExternal(e.url) && !e.current
+										? { target: "_blank", rel: "noopener" }
+										: {})}
+								>
+									<span class="paper-portal-name">
+										{e.current && <span class="paper-portal-dot" />}
+										{e.name}
+									</span>
+									{e.note && (
+										<span class="paper-portal-note">{e.note}</span>
+									)}
+								</a>
+							</li>
+						))}
+					</ul>
+				</div>
+			)}
+		</nav>
+	)
+}
+
+<script>
+	// 纸面桌面端：九宫格（#nav-menu-switch）改开传送门下拉，不开快捷面板/抽屉；
+	// 窄屏不接管，开关仍走原全站菜单。捕获阶段截下点击，抢在 Navbar 的 onclick 之前。
+	const portalMq = window.matchMedia("(min-width: 1024px)");
+	function portalIsPaper() {
+		return document.documentElement.dataset.siteMode === "paper";
+	}
+	function portalSetOpen(open) {
+		const panel = document.getElementById("paper-portal-panel");
+		const btn = document.getElementById("nav-menu-switch");
+		if (!panel) return;
+		panel.classList.toggle("is-open", open);
+		panel.toggleAttribute("inert", !open);
+		if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false");
+	}
+	document.addEventListener(
+		"click",
+		(e) => {
+			const panel = document.getElementById("paper-portal-panel");
+			if (!panel) return;
+			const t = e.target;
+			if (!(t instanceof Element)) return;
+			if (t.closest("#nav-menu-switch")) {
+				if (portalIsPaper() && portalMq.matches) {
+					e.stopPropagation();
+					e.preventDefault();
+					// 与其他浮层互斥：开传送门时收起其余浮层
+					document
+						.querySelectorAll(
+							"[data-floating-panel]:not(#paper-portal-panel)",
+						)
+						.forEach((p) => p.classList.add("float-panel-closed"));
+					portalSetOpen(!panel.classList.contains("is-open"));
+				}
+				return;
+			}
+			if (!panel.classList.contains("is-open")) return;
+			if (t.closest("#paper-portal-panel")) {
+				if (t.closest("a")) portalSetOpen(false);
+				return;
+			}
+			portalSetOpen(false);
+		},
+		true,
+	);
+	document.addEventListener("keydown", (e) => {
+		if (e.key === "Escape") portalSetOpen(false);
+	});
+	portalMq.addEventListener?.("change", () => portalSetOpen(false));
+</script>

@@ -6,6 +6,7 @@ import SpineModel from "@components/features/SpineModel.astro";
 import Footer from "@components/layout/Footer.astro";
 import HeaderTopRow from "@components/layout/HeaderTopRow.astro";
 import NavMenuPanel from "@components/layout/NavMenuPanel.astro";
+import PaperPortal from "@/components/widget/PaperPortal.astro";
 import SideBar from "@components/layout/SideBar.astro";
 import type { MarkdownHeading } from "astro";
 import FloatingControls from "@/components/controls/FloatingControls.astro";
@@ -201,6 +202,9 @@ const {
 
 <!-- 移动端导航抽屉：渲染为 <body> 直系子元素，脱离导航栏的 transform 包含块才能铺满视口 -->
 <NavMenuPanel links={resolveNavMenuLinks()} />
+
+<!-- 纸舟传送门下拉：纸面桌面端九宫格改开这张卡（组件脚本接管开关），其余形态由 main.css 守卫隐藏 -->
+<PaperPortal />
 
 <!--
     触屏设备上让代码块的复制按钮默认隐藏，点一下代码块才显形。

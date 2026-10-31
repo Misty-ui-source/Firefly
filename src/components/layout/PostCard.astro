@@ -100,6 +100,8 @@ const { remarkPluginFrontmatter } = await render(entry);
 const descriptionText = description || remarkPluginFrontmatter.excerpt || "";
 const words = remarkPluginFrontmatter.words;
 const minutes = remarkPluginFrontmatter.minutes;
+// 纸面封面胶囊用的日期串（frontmatter 日期按 UTC 读，避免时区漂移）
+const publishedStr = `${published.getUTCFullYear()}-${String(published.getUTCMonth() + 1).padStart(2, "0")}-${String(published.getUTCDate()).padStart(2, "0")}`;
 ---
 
 <div
@@ -259,6 +261,14 @@ const minutes = remarkPluginFrontmatter.minutes;
       </a>
     )
   }
+
+  {/* 纸面封面胶囊（日期 + 阅读时长）：默认隐藏守卫在 main.css，仅纸舟网格模式点亮，列表模式不显示 */}
+  {hasCover && (
+    <div class="pz-card-pills" aria-hidden="true">
+      <span>{publishedStr}</span>
+      <span>{minutes} 分钟</span>
+    </div>
+  )}
 
   {
     !hasCover && (

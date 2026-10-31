@@ -77,6 +77,12 @@ export { licenseConfig } from "./licenseConfig"; // 许可证配置
 export { mermaidConfig } from "./mermaidConfig"; // Mermaid 图表配置
 export { musicPlayerConfig } from "./musicConfig"; // 音乐播放器配置
 export { navBarConfig, navBarSearchConfig } from "./navBarConfig"; // 导航栏配置与搜索配置
+export {
+	portalConfig,
+	type PortalConfig,
+	type PortalEntry,
+	type PortalLine,
+} from "./portalConfig"; // 纸舟传送门配置（控制台「站点导航」页维护）
 export { live2dWidgetConfig, spineModelConfig } from "./pioConfig"; // 看板娘配置
 export { plantumlConfig } from "./plantumlConfig"; // PlantUML 图表配置
 export { profileConfig } from "./profileConfig"; // 用户资料配置

@@ -193,6 +193,7 @@ const paperHuePresets = [
 	{ value: 305, label: "黛紫" },
 	{ value: 25, label: "朱砂" },
 	{ value: 48, label: "赭石" },
+	{ value: 55, label: "书纸黄" },
 ] as const;
 const siteModeOptions = [
 	{ value: "full", labelKey: I18nKey.siteModeFull },
@@ -1314,7 +1315,7 @@ $effect(() => {
 					onclick={() => { paperHue = preset.value; }}
 				></button>
 				{/each}
-				<span class="text-xs text-neutral-500 dark:text-neutral-400 self-center ml-1">墨绿 / 藏青 / 靛蓝 / 黛紫 / 朱砂 / 赭石</span>
+				<span class="text-xs text-neutral-500 dark:text-neutral-400 self-center ml-1">墨绿 / 藏青 / 靛蓝 / 黛紫 / 朱砂 / 赭石 / 书纸黄</span>
 			</div>
 			<div class="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5">纸面自己的主题色，不跟全站主色相；默认 177 墨绿</div>
 			{/if}
