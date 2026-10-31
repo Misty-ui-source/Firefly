@@ -3,7 +3,7 @@
  * /api/*、GitHub、R2、Umami 都不进缓存，保证打开看到的永远是新鲜数据。
  * 同源静态资源走 network-first：有网永远拿最新版，断网才用缓存兜底。
  */
-const CACHE = 'console-shell-v42';
+const CACHE = 'console-shell-v43';
 const SHELL = [
   './',
   './index.html',

@@ -34,7 +34,36 @@ const nowISO = () => {
 
 /* ---------- GitHub API ---------- */
 function token() { return localStorage.getItem(TOKEN_KEY); }
-async function gh(path, opts = {}) {
+const REFRESH_KEY = 'admin_github_refresh_token';
+const TOKEN_EXP_KEY = 'admin_github_token_exp';
+function storeTokens(d) {
+  if (!d) return;
+  if (d.access_token) localStorage.setItem(TOKEN_KEY, d.access_token);
+  if (d.refresh_token) localStorage.setItem(REFRESH_KEY, d.refresh_token);
+  if (d.expires_in) localStorage.setItem(TOKEN_EXP_KEY, String(Date.now() + d.expires_in * 1000));
+}
+let _refreshing = null;
+async function refreshAccessToken() {
+  const rt = localStorage.getItem(REFRESH_KEY);
+  if (!rt) return false;
+  if (_refreshing) return _refreshing;
+  _refreshing = (async () => {
+    try {
+      const res = await fetch('/api/github-exchange', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grant_type: 'refresh_token', refresh_token: rt, client_id: window.ADMIN_CONFIG.githubClientId }),
+      });
+      if (!res.ok) return false;
+      const d = await res.json();
+      if (!d.access_token) return false;
+      storeTokens(d);
+      return true;
+    } catch (e) { return false; } finally { _refreshing = null; }
+  })();
+  return _refreshing;
+}
+async function gh(path, opts = {}) { return ghAttempt(path, opts, true); }
+async function ghAttempt(path, opts, canRefresh) {
   const isGet = !opts.method || opts.method === 'GET';
   /* GitHub 的 GET 响应带 Cache-Control: private, max-age=60，浏览器会缓存；
    * 而写入用的 URL（无参数）与读取用的（带 ?ref=）不同，写操作不会让缓存失效——
@@ -51,9 +80,16 @@ async function gh(path, opts = {}) {
       ...(opts.headers || {}),
     },
   });
-  if (res.status === 401 || res.status === 403) {
+  if (res.status === 401) {
+    /* access token 过期：先用 refresh token 静默续期、重试一次，续不上才踢回登录页 */
+    if (canRefresh && (await refreshAccessToken())) return ghAttempt(path, opts, false);
     logout();
     throw new Error('登录已过期，请重新登录');
+  }
+  if (res.status === 403) {
+    /* 403 多为限流或权限范围问题，不等于登录失效，不清 token、不踢下线 */
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message || 'GitHub API 拒绝了请求（403），请稍后再试');
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -470,14 +506,15 @@ async function finishLogin() {
     try { const j = await res.json(); detail = j.error ? ': ' + j.error : ''; } catch (e) {}
     toast('换 token 失败: ' + res.status + detail, true); return false;
   }
-  const { access_token } = await res.json();
-  localStorage.setItem(TOKEN_KEY, access_token);
+  storeTokens(await res.json());
   const me = await gh('/user');
   localStorage.setItem(USER_KEY, me.login);
   return true;
 }
 function logout() {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_KEY);
+  localStorage.removeItem(TOKEN_EXP_KEY);
   localStorage.removeItem(USER_KEY);
   location.reload();
 }
@@ -7038,7 +7075,10 @@ async function init() {
     const ok = await finishLogin().catch((e) => { toast(e.message, true); return false; });
     if (!ok) { routes.login(); hideLoader(); return; }
   }
+  if (!token() && localStorage.getItem(REFRESH_KEY)) await refreshAccessToken();
   if (!token()) { routes.login(); hideLoader(); return; }
+  const _exp = parseInt(localStorage.getItem(TOKEN_EXP_KEY) || '0', 10);
+  if (_exp && Date.now() > _exp) await refreshAccessToken();
   $('#user-badge').textContent = '👤 ' + (localStorage.getItem(USER_KEY) || '');
   $('#user-badge').classList.remove('hidden');
   $('#btn-logout').classList.remove('hidden');
