@@ -620,7 +620,7 @@ async function getUrlWithFallback(platform, songInfo, quality) {
 // 会拿外平台 id 撞出别人的歌。第二梯队：星海搜索 tx/wy/kg，命中候选
 // 后走该平台整链。换源结果照样过验活才递给播放器。
 const SWAP_LABELS = { wy: "网易", tx: "QQ", kw: "酷我", kg: "酷狗", mg: "咪咕" };
-const SWAP_DEADLINE_MS = 45000;
+const SWAP_DEADLINE_MS = 25000;
 
 async function xinghaiSearchSwap(targetPlatform, songInfo, quality, deadline) {
 	const source = PLATFORM_TO_XINGHAI[targetPlatform];
@@ -655,23 +655,31 @@ async function xinghaiSearchSwap(targetPlatform, songInfo, quality, deadline) {
 }
 
 async function getUrlWithSwap(platform, songInfo, quality) {
-	try {
-		const url = await getUrlWithFallback(platform, songInfo, quality);
-		return { url, servedPlatform: platform, swapped: false };
-	} catch (nativeErr) {
-		if (!songInfo?.name) throw nativeErr;
-		const deadline = Date.now() + SWAP_DEADLINE_MS;
-		const attempts = [];
-		const infoSearch = { ...songInfo, id: "", songmid: "", hash: "" };
+	// 并发竞速（2026-10-31 二改）：本平台链与酷我/咪咕按名搜索链同时起跑，
+	// 谁先出活链谁赢——串行等本平台整链失败再换源太慢，线上长链容易中途死。
+	// 第二梯队（星海搜索 tx/wy/kg）只在三路全灭时才串行补试，受总截止约束。
+	const infoSearch = { ...songInfo, id: "", songmid: "", hash: "" };
+	const racers = [
+		getUrlWithFallback(platform, songInfo, quality).then((url) => ({
+			url, servedPlatform: platform, swapped: false,
+		})),
+	];
+	if (songInfo?.name) {
 		for (const p of ["kw", "mg"]) {
 			if (p === platform) continue;
-			try {
-				const url = await getUrlWithFallback(p, infoSearch, quality);
-				return { url, servedPlatform: p, swapped: true };
-			} catch (e) {
-				attempts.push(SWAP_LABELS[p] + ": " + (e?.message || e));
-			}
+			racers.push(
+				getUrlWithFallback(p, infoSearch, quality).then((url) => ({
+					url, servedPlatform: p, swapped: true,
+				})),
+			);
 		}
+	}
+	try {
+		return await Promise.any(racers);
+	} catch (agg) {
+		const attempts = (agg?.errors || []).map((e) => e?.message || String(e));
+		if (!songInfo?.name) throw new Error(attempts.join(" | ") || String(agg));
+		const deadline = Date.now() + SWAP_DEADLINE_MS;
 		for (const p of ["tx", "wy", "kg"]) {
 			if (p === platform || Date.now() > deadline) continue;
 			try {
@@ -681,7 +689,7 @@ async function getUrlWithSwap(platform, songInfo, quality) {
 				attempts.push(SWAP_LABELS[p] + ": " + (e?.message || e));
 			}
 		}
-		throw new Error((nativeErr?.message || nativeErr) + " | 换源也失败: " + attempts.join("; "));
+		throw new Error(attempts.join(" | ") + " | 换源也失败");
 	}
 }
 
