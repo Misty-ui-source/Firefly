@@ -149,10 +149,20 @@ function registerSwupHooks(): void {
 
 		// 更新首页状态（body.is-home 驱动 CSS --content-top 等）
 		// 首页口径与 layout-utils.isHomePage 保持一致：首页分页（/2/、/3/ …）也算首页
+		// 注意：visit.to.url 是相对路径，new URL 必须带 base——无 base 构造会抛
+		// Invalid URL 并中断整个 visit:start 钩子，is-home 同步随之失效（软导航进
+		// 文章页后 body 残留首页类、横幅保持全幅，只能强刷恢复）——2026-10-31 事故
 		const bodyElement = document.querySelector("body") as HTMLElement;
+		const targetPathname = (() => {
+			try {
+				return new URL(visit.to.url, window.location.href).pathname;
+			} catch {
+				return visit.to.url;
+			}
+		})();
 		const isHomePage =
-			pathsEqual(visit.to.url, url("/")) ||
-			/^\/\d+\/?$/.test(new URL(visit.to.url).pathname);
+			pathsEqual(targetPathname, url("/")) ||
+			/^\/\d+\/?$/.test(targetPathname);
 		const wasHome = bodyElement.classList.contains("is-home");
 		const contentPanel = document.querySelector(
 			".content-panel",
