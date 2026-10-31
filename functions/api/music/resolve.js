@@ -665,13 +665,16 @@ async function getUrlWithSwap(platform, songInfo, quality) {
 		})),
 	];
 	if (songInfo?.name) {
+		// 换源选手晚 1.2 秒起跑：本平台能痛快出链时不抢（保住本平台音质），
+		// 本平台卡住（多半 VIP）换源链再接手竞速。
+		const delayedSwap = async (p) => {
+			await new Promise((r) => setTimeout(r, 1200));
+			const url = await getUrlWithFallback(p, infoSearch, quality);
+			return { url, servedPlatform: p, swapped: true };
+		};
 		for (const p of ["kw", "mg"]) {
 			if (p === platform) continue;
-			racers.push(
-				getUrlWithFallback(p, infoSearch, quality).then((url) => ({
-					url, servedPlatform: p, swapped: true,
-				})),
-			);
+			racers.push(delayedSwap(p));
 		}
 	}
 	try {
