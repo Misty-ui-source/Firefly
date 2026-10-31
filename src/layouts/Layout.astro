@@ -665,105 +665,21 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
         }
       })();
     </script>
-    <!-- 形态 CSS 拆分加载：当前形态（上方脚本已落位 data-site-mode）阻塞加载
-         保证首帧无闪烁；其余三套 load 后空闲预载，切换时 setting-utils 会先调
-         __ensureSiteModeCss 等目标样式真正生效再翻 data-site-mode。 -->
-    <script
-      is:inline
-      define:vars={{
-        modeCssUrls: {
-          pure: pureModeCssUrl,
-          harmony: harmonyModeCssUrl,
-          brick: brickModeCssUrl,
-          astral: astralModeCssUrl,
-        },
-      }}
-    >
-      (function () {
-        const urls = modeCssUrls;
-        const applied = {};
-        function ensureModeCss(mode) {
-          return new Promise((resolve) => {
-            const href = urls[mode];
-            if (!href || applied[mode]) return resolve();
-            let link = document.querySelector(
-              'link[data-mode-css="' + mode + '"]',
-            );
-            if (!link) {
-              link = document.createElement("link");
-              link.rel = "stylesheet";
-              link.href = href;
-              link.setAttribute("data-mode-css", mode);
-              document.head.appendChild(link);
-            } else if (link.rel === "preload") {
-              link.rel = "stylesheet";
-            }
-            if (link.sheet) {
-              applied[mode] = true;
-              return resolve();
-            }
-            link.addEventListener(
-              "load",
-              () => {
-                applied[mode] = true;
-                resolve();
-              },
-              { once: true },
-            );
-            link.addEventListener(
-              "error",
-              () => {
-                applied[mode] = true;
-                resolve();
-              },
-              { once: true },
-            );
-            setTimeout(() => {
-              applied[mode] = true;
-              resolve();
-            }, 3000);
-          });
-        }
-        window.__ensureSiteModeCss = ensureModeCss;
-        const current =
-          document.documentElement.getAttribute("data-site-mode") || "full";
-        if (urls[current]) {
-          const link = document.createElement("link");
-          link.rel = "stylesheet";
-          link.href = urls[current];
-          link.setAttribute("data-mode-css", current);
-          link.addEventListener(
-            "load",
-            () => {
-              applied[current] = true;
-            },
-            { once: true },
-          );
-          document.head.appendChild(link);
-        }
-        window.addEventListener(
-          "load",
-          () => {
-            const preloadOthers = () => {
-              for (const m of Object.keys(urls)) {
-                if (m === current || applied[m]) continue;
-                if (document.querySelector('link[data-mode-css="' + m + '"]'))
-                  continue;
-                const l = document.createElement("link");
-                l.rel = "preload";
-                l.as = "style";
-                l.href = urls[m];
-                l.setAttribute("data-mode-css", m);
-                document.head.appendChild(l);
-              }
-            };
-            if ("requestIdleCallback" in window)
-              requestIdleCallback(preloadOthers, { timeout: 3000 });
-            else setTimeout(preloadOthers, 1200);
-          },
-          { once: true },
-        );
-      })();
+    <!-- 形态 CSS 静态加载（2026-10-31 回滚运行时加载）：四套形态样式以真实
+         <link> 进 head、首帧绘制前全部就位。早先的拆分版靠 JS 运行时创建当前
+         形态的 stylesheet，其余空闲预载——文件虽在缓存里，样式落上身却晚于
+         首帧，任何形态下翻页/切换都会先闪一帧华彩。代价是每页多下其余三套
+         的字节（合计 br 约 15KB），换全程零闪烁。规则本体都带形态属性门控、
+         隐藏守卫在常加载主包里，全量加载与拆分前的大包行为一致。 -->
+    <link rel="stylesheet" href={pureModeCssUrl} />
+    <link rel="stylesheet" href={harmonyModeCssUrl} />
+    <link rel="stylesheet" href={brickModeCssUrl} />
+    <link rel="stylesheet" href={astralModeCssUrl} />
+    <script is:inline>
+      // 样式已静态就位：setting-utils 切换时调用的确保钩子直接放行（立即翻属性）
+      window.__ensureSiteModeCss = function () {
+        return Promise.resolve();
+      };
     </script>
     <style
       define:vars={{
