@@ -2300,16 +2300,14 @@ html[data-site-mode="paper"][data-paper-theme="manual"] #display-setting .opacit
 		align-self: start;
 		min-width: 0;
 	}
-	/* 手册首页侧栏只留四件（站长 2026-11-01 定）：右栏 = 动态 / 公告 / 最新
+	/* 手册首页侧栏构成（站长 2026-11-01 定）：右栏 = 动态 / 公告 / 最新
 	   评论 / 日历（公告由 ManualHero 的脚本从左栏挪进右栏、排在动态之后）；
-	   其余部件（统计 / 站点信息 / 资料 / 音乐 / 分类 / 标签）在手册首页只是
-	   不显示，其他形态与页面不受影响 */
+	   分类 / 标签紧贴分页下方放回中栏（见下方落位）；其余部件（统计 / 站点
+	   信息 / 资料 / 音乐）在手册首页只是不显示，其他形态与页面不受影响 */
 	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static widget-layout[data-id="site-stats"],
 	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static widget-layout[data-id="site-info"],
 	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper #left-sidebar > div:first-child > :first-child,
-	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper widget-layout[data-id*="music"],
-	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper widget-layout[data-id="categories"],
-	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper widget-layout[data-id="tags"] {
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper widget-layout[data-id*="music"] {
 		display: none !important;
 	}
 	/* 左栏同样逐件落位（资料/公告/音乐/分类/标签）：与右栏逐行配对，
@@ -2333,11 +2331,13 @@ html[data-site-mode="paper"][data-paper-theme="manual"] #display-setting .opacit
 	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper widget-layout[data-id*="music"] {
 		grid-row: 6;
 	}
+	/* 分类/标签：宽幅索引件，紧贴分页下方放回中栏（站长 2026-11-01 拍板，
+	   填列表与右栏的身高差；源站「列表 + 分类台账」的语言） */
 	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper widget-layout[data-id="categories"] {
-		grid-row: 7;
+		grid-row: 4;
 	}
 	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper widget-layout[data-id="tags"] {
-		grid-row: 8;
+		grid-row: 5;
 	}
 }
 
