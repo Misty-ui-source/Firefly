@@ -4732,7 +4732,7 @@ function siteNavItemTs(it, indent) {
   if (it._drop && it.children && it.children.length) {
     s += `${t}\tchildren: [\n${it.children.map((c) => siteNavItemTs(c, indent + 2)).join('\n')}\n${t}\t],\n`;
   }
-  return s + `${t}}},`;
+  return s + `${t}},`;
 }
 function buildSiteNavTs(items) {
   return `import {

@@ -53,18 +53,18 @@ const fmt = (n: number) => n.toLocaleString("en-US");
 <section class="manual-hero" aria-label="站点概览">
 	<p class="mn-hero-meta">
 		<time>{todayStr}</time>
-		<span>第 <b>{days}</b> 天</span>
-		<span><b>{total}</b> 篇</span>
-		<span><b>{fmt(totalWords)}</b> 字</span>
+		<span>第 <b data-mn-fx-load>{days}</b> 天</span>
+		<span><b data-mn-fx-load>{total}</b> 篇</span>
+		<span><b data-mn-fx-load>{fmt(totalWords)}</b> 字</span>
 	</p>
 
 	<h2 class="mn-wordmark">
-		<span class="mn-wordmark-solid">Alexander</span>
-		<span class="mn-wordmark-hollow" aria-hidden="true">LANERC.ME</span>
+		<span class="mn-wordmark-solid mn-in-drive">Alexander</span>
+		<span class="mn-wordmark-hollow mn-in-drive" style="animation-delay: 140ms" aria-hidden="true">LANERC.ME</span>
 	</h2>
 
 	<div class="mn-hero-copy">
-		<p class="mn-claim"><span class="mn-marker">{siteConfig.subtitle}</span></p>
+		<p class="mn-claim"><span class="mn-marker mn-in-stroke">{siteConfig.subtitle}</span></p>
 		<p class="mn-bio">{siteConfig.description}</p>
 		<p class="mn-actions">
 			<a class="mn-btn mn-btn-go" href={latestUrl}>读最新一篇 <span class="mn-btn-sub">No.{noStr}</span></a>
@@ -74,9 +74,9 @@ const fmt = (n: number) => n.toLocaleString("en-US");
 	</div>
 
 	{latest && (
-		<a class="mn-frame" href={latestUrl}>
+		<a class="mn-frame" href={latestUrl} data-mn-fx-host>
 			<span class="mn-frame-window">
-				<span class="mn-hollow-no" aria-hidden="true">{noStr}</span>
+				<span class="mn-hollow-no" aria-hidden="true" data-mn-fx>{noStr}</span>
 				<span class="mn-frame-title">{latest.data.title}</span>
 				<span class="mn-field">{latestDate} / {fmt(latestWords)} 字</span>
 			</span>
@@ -98,3 +98,105 @@ const fmt = (n: number) => n.toLocaleString("en-US");
 		</div>
 	)}
 </section>
+
+<!-- 读数特效（参考站 fx.js 的 scramble 同款）：数字/字母像面板计数器一样
+     滚动并从左到右逐字锁定。字段行数字在页面打开时依次落定（600ms，
+     间隔压进 180ms 内）；画框编号在指针进入/聚焦画框时落定（360ms），
+     与 CSS 的灌墨同时发生。prefers-reduced-motion 时完全不跑。 -->
+<script is:inline>
+	(function () {
+		if (window.__mnFxBound) {
+			if (window.__mnFxRun) window.__mnFxRun();
+			return;
+		}
+		window.__mnFxBound = true;
+		var still =
+			typeof matchMedia === "function"
+				? matchMedia("(prefers-reduced-motion: reduce)")
+				: { matches: true };
+		var running = new WeakMap();
+		function stand(ch) {
+			if (/\d/.test(ch)) return String(Math.floor(Math.random() * 10));
+			if (/[A-Za-z]/.test(ch))
+				return String.fromCharCode(
+					(ch < "a" ? 65 : 97) + Math.floor(Math.random() * 26),
+				);
+			return ch;
+		}
+		function scramble(el, ms) {
+			ms = ms || 360;
+			if (still.matches) return;
+			var before = running.get(el);
+			if (before) cancelAnimationFrame(before.frame);
+			var nodes = before ? before.nodes : null;
+			if (!nodes) {
+				nodes = [];
+				var walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+				var n;
+				while ((n = walk.nextNode())) nodes.push({ n: n, final: n.data });
+			}
+			var final = nodes
+				.map(function (x) {
+					return x.final;
+				})
+				.join("");
+			if (!/[0-9A-Za-z]/.test(final)) return;
+			var labelled = before ? before.labelled : el.hasAttribute("aria-label");
+			if (!labelled) el.setAttribute("aria-label", final.trim());
+			var started = performance.now();
+			var state = { nodes: nodes, labelled: labelled, frame: 0 };
+			running.set(el, state);
+			var step = function (now) {
+				var done = Math.min(1, (now - started) / ms);
+				var locked = Math.floor(done * final.length);
+				for (var i = 0; i < nodes.length; i++) {
+					var x = nodes[i];
+					var keep = Math.max(0, Math.min(x.final.length, locked));
+					x.n.data =
+						x.final.slice(0, keep) +
+						x.final
+							.slice(keep)
+							.split("")
+							.map(stand)
+							.join("");
+					locked -= x.final.length;
+				}
+				if (done < 1) {
+					state.frame = requestAnimationFrame(step);
+				} else {
+					for (var j = 0; j < nodes.length; j++) nodes[j].n.data = nodes[j].final;
+					if (!labelled) el.removeAttribute("aria-label");
+					running.delete(el);
+				}
+			};
+			state.frame = requestAnimationFrame(step);
+		}
+		function run() {
+			var hero = document.querySelector(".manual-hero");
+			if (!hero || still.matches) return;
+			var load = hero.querySelectorAll("[data-mn-fx-load]");
+			var gap = load.length > 1 ? Math.min(40, 180 / (load.length - 1)) : 0;
+			load.forEach(function (el, i) {
+				setTimeout(function () {
+					scramble(el, 600);
+				}, 120 + i * gap);
+			});
+			var host = hero.querySelector("[data-mn-fx-host]");
+			if (host && !host.__mnFxHost) {
+				host.__mnFxHost = true;
+				var go = function () {
+					host.querySelectorAll("[data-mn-fx]").forEach(function (el) {
+						scramble(el);
+					});
+				};
+				host.addEventListener("pointerenter", go);
+				host.addEventListener("focus", go);
+			}
+		}
+		window.__mnFxRun = run;
+		run();
+		document.addEventListener("swup:contentReplaced", function () {
+			setTimeout(run, 0);
+		});
+	})();
+</script>

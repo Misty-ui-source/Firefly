@@ -230,6 +230,8 @@ const viewConfigStr = JSON.stringify({
             ui.artist.innerText = track.artist;
             ui.artist.title = track.artist;
 
+            local.picAlts = track.picAlts || [];
+            local.picTry = 0;
             if (track.pic) {
                 ui.cover.classList.add('opacity-0');
                 ui.cover.src = track.pic;
@@ -298,6 +300,18 @@ const viewConfigStr = JSON.stringify({
 
             img.src = track.pic || '';
             img.alt = track.name + ' - ' + track.artist;
+            if (track.pic && track.picAlts && track.picAlts.length) {
+                (function (alts) {
+                    var t = 0;
+                    img.onerror = function () {
+                        if (t < alts.length) {
+                            img.src = alts[t++];
+                        } else {
+                            img.onerror = null;
+                        }
+                    };
+                })(track.picAlts);
+            }
             title.innerText = track.name;
             artist.innerText = track.artist;
 
@@ -704,7 +718,13 @@ const viewConfigStr = JSON.stringify({
             ui.cover.classList.remove('opacity-0');
         });
         ui.cover.addEventListener('error', function () {
-            ui.cover.classList.add('opacity-0');
+            // 主接口对图片回 403 时依次换备用接口的同图地址，全失败才隐藏
+            var alts = local.picAlts || [];
+            if (ui.cover.getAttribute('src') && (local.picTry || 0) < alts.length) {
+                ui.cover.src = alts[local.picTry++];
+            } else {
+                ui.cover.classList.add('opacity-0');
+            }
         });
 
         // ── Cleanup on DOM removal ───────────────────────────────

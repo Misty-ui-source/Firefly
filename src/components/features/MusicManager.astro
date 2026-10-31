@@ -130,6 +130,29 @@ const managerConfigStr = JSON.stringify({
         window.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
     }
 
+    // 封面备用地址：主接口可能单对图片请求回 403（如 i-meto），
+    // 按其它接口模板（备用优先、主接口兜底）拼同图地址，供视图加载失败时依次换源。
+    function buildPicAlts(picUrl) {
+        if (!picUrl || !config.meting) return [];
+        var mId = picUrl.match(/[?&]id=([^&]+)/);
+        var mServer = picUrl.match(/[?&]server=([^&]+)/);
+        if (!mId || !mServer) return [];
+        var m = config.meting;
+        var templates = (m.fallbackApis || []).concat(m.api ? [m.api] : []);
+        var out = [];
+        templates.forEach(function (t) {
+            if (!t) return;
+            var u = t
+                .replace(':server', mServer[1])
+                .replace(':type', 'pic')
+                .replace(':id', mId[1])
+                .replace('&r=:r', '')
+                .replace(':r', '');
+            if (u !== picUrl && out.indexOf(u) === -1) out.push(u);
+        });
+        return out;
+    }
+
     // ── Meting fetch ─────────────────────────────────────────
     async function fetchMetingData() {
         if (!config.meting) return;
@@ -158,6 +181,7 @@ const managerConfigStr = JSON.stringify({
                             artist: item.author || item.artist || 'Unknown',
                             url: item.url,
                             pic: item.pic || item.cover || '',
+                            picAlts: buildPicAlts(item.pic || item.cover || ''),
                             lrc: item.lrc
                         };
                     });

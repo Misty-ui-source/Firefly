@@ -1062,6 +1062,12 @@ html[data-site-mode="paper"][data-paper-theme="manual"] .card-base-transparent {
 		height: 100dvh !important;
 		right: auto !important;
 	}
+	/* rail 是固定的（源站 .side 为 sticky + 100dvh）：关掉基座 dynamic-navbar
+	   的滚动自动隐藏——否则整条 rail 会被 -translate-y-full 滑出画面 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] #navbar-wrapper {
+		translate: none !important;
+		transform: none !important;
+	}
 	html[data-site-mode="paper"][data-paper-theme="manual"] #navbar-wrapper,
 	html[data-site-mode="paper"][data-paper-theme="manual"] #navbar {
 		height: 100%;
@@ -1278,7 +1284,10 @@ html[data-site-mode="paper"][data-paper-theme="manual"] .mn-claim {
 }
 html[data-site-mode="paper"][data-paper-theme="manual"] .mn-marker {
 	padding: 0.12em 0.45em;
-	background: var(--mn-signal);
+	/* 用可动画的 background-size 承载底色：入场时黄带从左扫入（mn-in-stroke） */
+	background-image: linear-gradient(var(--mn-signal), var(--mn-signal));
+	background-repeat: no-repeat;
+	background-size: 100% 100%;
 	color: var(--mn-on-signal);
 	font-weight: 800;
 	-webkit-box-decoration-break: clone;
@@ -2162,6 +2171,55 @@ html[data-site-mode="paper"][data-paper-theme="manual"] .mn-ticker-item b {
 }
 
 /* ================================================================
+ * 机制对齐续：入场动画（源站 ef-in-drive / ef-in-stroke）与
+ * 浮层纸面化（调色板是形态逃生口：不透明、选中态必须一眼可辨）
+ * ================================================================ */
+@media (prefers-reduced-motion: no-preference) {
+	html[data-site-mode="paper"][data-paper-theme="manual"] .mn-in-drive {
+		animation: mn-drive 620ms var(--mn-mech) both;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] .mn-in-stroke {
+		animation: mn-stroke 420ms var(--mn-mech) 420ms both;
+	}
+}
+@keyframes mn-drive {
+	from { clip-path: inset(0 100% 0 0); transform: translateX(-0.12em); }
+	to { clip-path: inset(0 -5% 0 0); transform: none; }
+}
+@keyframes mn-stroke {
+	from { background-size: 0% 100%; }
+	to { background-size: 100% 100%; }
+}
+/* 纸舟无壁纸层：背景视频播放键控的是看不见的东西，两个纸舟主题都不显示
+   （栏内开关 + 快捷面板里的「视频播放」行） */
+html[data-site-mode="paper"] #bg-player-toggle,
+html[data-site-mode="paper"] .navbar-quick-row[data-quick-action="video"] {
+	display: none !important;
+}
+/* 浮层（调色板/搜索/导航下拉）：纸面不透明、无毛玻璃无圆角无影 */
+html[data-site-mode="paper"][data-paper-theme="manual"] :is(.float-panel, .dropdown-content) {
+	background: var(--mn-panel) !important;
+	backdrop-filter: none !important;
+	-webkit-backdrop-filter: none !important;
+	border: 1px solid var(--mn-rule) !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+	color: var(--mn-ink) !important;
+}
+html[data-site-mode="paper"][data-paper-theme="manual"] #display-setting :is(button, input, select, textarea) {
+	border-radius: 0 !important;
+}
+/* 未选中项的变暗从 0.6 抬到 0.78：仍可区分，但不能糊到来路不明 */
+html[data-site-mode="paper"][data-paper-theme="manual"] #display-setting .opacity-60 {
+	opacity: 0.78 !important;
+}
+/* 选中项（形态/子主题/布局等一切选项）：墨块纸字，一眼可辨 */
+html[data-site-mode="paper"][data-paper-theme="manual"] #display-setting button[class*="btn-regular-bg-hover"] {
+	background: var(--mn-ink) !important;
+	color: var(--mn-paper) !important;
+}
+
+/* ================================================================
  * 比例对齐（对源站首页版式）：rail 字阶收小；≥1280 首页列表区
  * 改成 records 主列 + 右侧栏旁列（源站 records 与分类台账并排）
  * ================================================================ */
@@ -2196,15 +2254,57 @@ html[data-site-mode="paper"][data-paper-theme="manual"] .mn-ticker-item b {
 		grid-row: 3;
 		min-width: 0;
 	}
-	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar {
+	/* 右栏逐 widget 落位（容器两层 contents 化）：整栏作一个网格项跨行时，
+	   栏高会把行撑开、分页被顶远；逐个落位后分页只跟列表行走 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static #right-sidebar,
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static #right-sidebar > div {
+		display: contents !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static widget-layout {
 		grid-column: 2;
-		grid-row: 2 / span 2;
-		width: auto !important;
-		max-width: none !important;
 		min-width: 0;
 	}
-	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar {
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static widget-layout[data-id="latest-dynamics"] {
+		grid-row: 2;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static widget-layout[data-id="recent-comments"] {
+		grid-row: 3;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static widget-layout[data-id="site-stats"] {
 		grid-row: 4;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static widget-layout[data-id="site-info"] {
+		grid-row: 5;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #right-sidebar-static widget-layout[data-id="calendar-widget"] {
+		grid-row: 6;
+	}
+	/* 左栏同样逐件落位（资料/公告/音乐/分类/标签）：与右栏逐行配对，
+	   两列互为行高、谁也不用整栏吊在页底，全页不再有整列空段。
+	   左栏静态包裹是 #left-sidebar-wrapper，内部三层（栏体/上组/粘性组）都要 contents 化 */
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper #left-sidebar,
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper #left-sidebar > div {
+		display: contents !important;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper #left-sidebar > div:first-child > :first-child,
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper widget-layout {
+		grid-column: 1;
+		min-width: 0;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper #left-sidebar > div:first-child > :first-child {
+		grid-row: 4;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper widget-layout[data-id="announcement"] {
+		grid-row: 5;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper widget-layout[data-id*="music"] {
+		grid-row: 6;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper widget-layout[data-id="categories"] {
+		grid-row: 7;
+	}
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #left-sidebar-wrapper widget-layout[data-id="tags"] {
+		grid-row: 8;
 	}
 }
 
