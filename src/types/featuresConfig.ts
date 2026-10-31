@@ -7,6 +7,10 @@ export interface FeaturesConfig {
 	floatingPlayer: boolean;
 	/** 肥鱼是否上站（含灵境入口） */
 	fish: boolean;
+	/** 肥鱼贴边半藏：闲置 6 秒自动贴边半藏 + 变淡，一碰回来 */
+	fishPeek: boolean;
+	/** 肥鱼大小倍率：0.8 小 / 1 中 / 1.25 大 */
+	fishScale: number;
 	/** 季节雪（冬季默认开的季节逻辑）是否启用 */
 	seasonalSnow: boolean;
 }

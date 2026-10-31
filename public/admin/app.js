@@ -1856,6 +1856,7 @@ async function mountFeaturesSection() {
   try {
     const [ff, bf] = await Promise.all([ghGetFile(FPATH), ghGetFile(BPATH)]);
     const pickB = (t, key, dft) => { const m = t.match(new RegExp(key + '\\s*:\\s*(true|false)')); return m ? m[1] === 'true' : dft; };
+    const pickN = (t, key, dft) => { const m = t.match(new RegExp(key + '\\s*:\\s*([0-9.]+)')); return m ? parseFloat(m[1]) : dft; };
     const pickS = (t, key, dft) => { const m = t.match(new RegExp(key + '\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"')); try { return m ? JSON.parse('"' + m[1] + '"') : dft; } catch (e) { return dft; } };
     const ft = ff.text, bt = bf.text;
     const pinNull = /pin\s*:\s*null/.test(bt);
@@ -1863,6 +1864,8 @@ async function mountFeaturesSection() {
       danmaku: pickB(ft, 'danmaku', true),
       floatingPlayer: pickB(ft, 'floatingPlayer', true),
       fish: pickB(ft, 'fish', true),
+      fishPeek: pickB(ft, 'fishPeek', true),
+      fishScale: pickN(ft, 'fishScale', 1),
       seasonalSnow: pickB(ft, 'seasonalSnow', true),
       briefing: pickB(bt, 'enabled', true),
       pinTitle: pinNull ? '' : pickS(bt, 'title', ''),
@@ -1874,6 +1877,8 @@ async function mountFeaturesSection() {
       ${chk('ft-danmaku', cur.danmaku, '碎碎念弹幕（总闸）', '开：璨夜里访客可手动打开（默认关）；关：全站无弹幕。')}
       ${chk('ft-player', cur.floatingPlayer, '浮动播放器', '左下角常驻播放器是否上站。')}
       ${chk('ft-fish', cur.fish, '肥鱼', '右下角肥鱼是否上站（灵境页本体不受影响）。')}
+      ${chk('ft-fishpeek', cur.fishPeek, '肥鱼贴边半藏', '开：闲置 6 秒自动贴边半藏、变淡，一碰就回来；关：老实呆在原地。')}
+      <div class="field"><label>肥鱼大小</label><select id="ft-fishscale"><option value="0.8" ${cur.fishScale === 0.8 ? 'selected' : ''}>小</option><option value="1" ${cur.fishScale === 1 ? 'selected' : ''}>中（默认）</option><option value="1.25" ${cur.fishScale === 1.25 ? 'selected' : ''}>大</option></select><p class="hint">肥鱼本体的显示大小倍率。</p></div>
       ${chk('ft-snow', cur.seasonalSnow, '季节雪', '冬季（12/1/2 月）自动下雪的总闸；访客个人开关照常。')}
       ${chk('ft-briefing', cur.briefing, '每日选刊', '只在璨夜瓷砖行显现。')}
       <div class="field"><label>选刊置顶 · 标题</label><input type="text" id="ft-pin-title" value="${esc(cur.pinTitle)}" placeholder="不置顶就留空"></div>
@@ -1889,6 +1894,8 @@ async function mountFeaturesSection() {
         + `\tdanmaku: ${on('#ft-danmaku')},\n`
         + `\tfloatingPlayer: ${on('#ft-player')},\n`
         + `\tfish: ${on('#ft-fish')},\n`
+        + `\tfishPeek: ${on('#ft-fishpeek')},\n`
+        + `\tfishScale: ${box.querySelector('#ft-fishscale').value},\n`
         + `\tseasonalSnow: ${on('#ft-snow')},\n`
         + '};\n';
       const pinT = box.querySelector('#ft-pin-title').value.trim();

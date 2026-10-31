@@ -613,6 +613,78 @@ async function getUrlWithFallback(platform, songInfo, quality) {
 	throw new Error("所有源均失败: " + errors.join("; "));
 }
 
+// ─── 跨平台换源（2026-10-31 补，学落雪音乐）：本平台整链失败（多半是
+// VIP/版权锁）后，拿歌名+歌手去别的平台找同一首歌，而不是就此判死。
+// 第一梯队 kw/mg：溯音处理器本就是按名搜索 + 严格匹配（歌名/歌手对不上
+// 直接抛错），天然适合换源；必须剥掉本平台的 id 再喂，否则星海/模板源
+// 会拿外平台 id 撞出别人的歌。第二梯队：星海搜索 tx/wy/kg，命中候选
+// 后走该平台整链。换源结果照样过验活才递给播放器。
+const SWAP_LABELS = { wy: "网易", tx: "QQ", kw: "酷我", kg: "酷狗", mg: "咪咕" };
+const SWAP_DEADLINE_MS = 45000;
+
+async function xinghaiSearchSwap(targetPlatform, songInfo, quality, deadline) {
+	const source = PLATFORM_TO_XINGHAI[targetPlatform];
+	if (!source) throw new Error("星海不支持该平台搜索");
+	const kw = [songInfo.name, songInfo.singer].filter(Boolean).join(" ").trim();
+	if (!kw) throw new Error("缺少搜索关键词");
+	const url =
+		XINGHAI_MAIN_API +
+		"?types=search&source=" + source +
+		"&name=" + encodeURIComponent(kw) +
+		"&count=10&pages=1";
+	const res = await httpRequest(url, {
+		method: "GET",
+		headers: { "User-Agent": "LX-Music-Mobile", Accept: "application/json" },
+	});
+	const list = Array.isArray(res.body) ? res.body : res.body?.data;
+	if (!Array.isArray(list) || !list.length) throw new Error("星海搜索无结果");
+	for (const item of list) {
+		if (Date.now() > deadline) throw new Error("换源超时");
+		const candName = item?.name || item?.title || "";
+		const candArtist = Array.isArray(item?.artist)
+			? item.artist.join(" ")
+			: item?.artist || item?.singer || "";
+		if (!titleMatch(candName, songInfo.name || "")) continue;
+		if (songInfo.singer && candArtist && !titleMatch(candArtist, songInfo.singer)) continue;
+		const candId = item?.id ?? item?.songmid ?? item?.hash;
+		if (candId === undefined || candId === null || candId === "") continue;
+		const info2 = { ...songInfo, id: String(candId), songmid: String(candId), hash: String(candId) };
+		return await getUrlWithFallback(targetPlatform, info2, quality);
+	}
+	throw new Error("星海搜索无匹配歌曲");
+}
+
+async function getUrlWithSwap(platform, songInfo, quality) {
+	try {
+		const url = await getUrlWithFallback(platform, songInfo, quality);
+		return { url, servedPlatform: platform, swapped: false };
+	} catch (nativeErr) {
+		if (!songInfo?.name) throw nativeErr;
+		const deadline = Date.now() + SWAP_DEADLINE_MS;
+		const attempts = [];
+		const infoSearch = { ...songInfo, id: "", songmid: "", hash: "" };
+		for (const p of ["kw", "mg"]) {
+			if (p === platform) continue;
+			try {
+				const url = await getUrlWithFallback(p, infoSearch, quality);
+				return { url, servedPlatform: p, swapped: true };
+			} catch (e) {
+				attempts.push(SWAP_LABELS[p] + ": " + (e?.message || e));
+			}
+		}
+		for (const p of ["tx", "wy", "kg"]) {
+			if (p === platform || Date.now() > deadline) continue;
+			try {
+				const url = await xinghaiSearchSwap(p, songInfo, quality, deadline);
+				return { url, servedPlatform: p, swapped: true };
+			} catch (e) {
+				attempts.push(SWAP_LABELS[p] + ": " + (e?.message || e));
+			}
+		}
+		throw new Error((nativeErr?.message || nativeErr) + " | 换源也失败: " + attempts.join("; "));
+	}
+}
+
 function json(data, status = 200, extraHeaders = {}) {
 	return new Response(JSON.stringify(data), {
 		status,
@@ -640,9 +712,9 @@ export async function onRequestGet(context) {
 
 	const songInfo = { id, songmid: id, hash: id, name, singer };
 	try {
-		const url = await getUrlWithFallback(platform, songInfo, quality);
+		const got = await getUrlWithSwap(platform, songInfo, quality);
 		const res = json(
-			{ url, platform, quality },
+			{ url: got.url, platform, servedPlatform: got.servedPlatform, swapped: got.swapped, quality },
 			200,
 			{ "Cache-Control": "public, max-age=1200" },
 		);

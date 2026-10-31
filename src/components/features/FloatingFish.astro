@@ -4,9 +4,13 @@
 // 大脑在 /api/fish/chat（Pages Function，DeepSeek 4.1 Flash，key 走环境变量）；
 // 没接上时她装睡。成长经验存 localStorage feiyuExpV1，与灵境 /lingjing/ 互通：
 // 来访/聊天/听歌（浮动播放器 fishExp 事件）攒经验，升级解锁姿态与台词。
+import { featuresConfig } from "@/config/featuresConfig";
+
+const fishPeek = featuresConfig.fishPeek !== false;
+const fishScale = featuresConfig.fishScale ?? 1;
 ---
 
-<div id="floating-fish" hidden>
+<div id="floating-fish" hidden data-fish-peek={fishPeek ? "1" : "0"} style={`--ff-scale:${fishScale}`}>
 	<div class="ff-panel" data-ff-panel hidden>
 		<header class="ff-head">
 			<div class="ff-head-meta">
@@ -52,9 +56,21 @@
 	:global(html.dark) #floating-fish {
 		color: #e9edf5;
 	}
+	#floating-fish {
+		transition: transform 0.45s ease, opacity 0.45s ease;
+	}
+	/* 贴边半藏（整改 A+B）：靠右时半藏出边缘，自由位置只缩淡 */
+	#floating-fish.ff-peek-edge {
+		transform: translateX(46%) scale(0.78);
+		opacity: 0.55;
+	}
+	#floating-fish.ff-peek-free {
+		transform: scale(0.78);
+		opacity: 0.55;
+	}
 	.ff-fish {
 		position: relative;
-		width: 4.9rem;
+		width: calc(4.9rem * var(--ff-scale, 1));
 		background: transparent;
 		border: none;
 		padding: 0;
@@ -346,6 +362,28 @@
 		root.querySelector("[data-ff-close]")?.addEventListener("click", () => {
 			panel.hidden = true;
 		});
+
+		// 贴边半藏（2026-10-31 整改 A+B）：闲置 6 秒没人理 → 半藏变淡；
+		// 碰它、拖它、开面板都算「理它」，计时归零。控制台功能开关可关。
+		if (root.dataset.fishPeek === "1") {
+			let peekTimer: ReturnType<typeof setTimeout> | undefined;
+			const armPeek = () => {
+				clearTimeout(peekTimer);
+				peekTimer = setTimeout(() => {
+					if (!panel.hidden) return;
+					const r = root.getBoundingClientRect();
+					const nearRight = window.innerWidth - r.right < 140;
+					root.classList.add(nearRight ? "ff-peek-edge" : "ff-peek-free");
+				}, 6000);
+			};
+			const wakeFish = () => {
+				root.classList.remove("ff-peek-edge", "ff-peek-free");
+				armPeek();
+			};
+			root.addEventListener("pointerenter", wakeFish);
+			root.addEventListener("pointerdown", wakeFish);
+			armPeek();
+		}
 
 		const convo: { role: string; text: string }[] = [
 			{

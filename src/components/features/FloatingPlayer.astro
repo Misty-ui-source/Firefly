@@ -45,6 +45,15 @@ const quality = fp?.quality || "320k";
 				<button type="button" class="fp-btn" data-fp-expand aria-label="歌单">☰</button>
 				<button type="button" class="fp-btn" data-fp-close aria-label="关闭">✕</button>
 			</div>
+			<button type="button" class="fp-ball" data-fp-ball hidden aria-label="展开播放器">
+				<svg class="fp-ring" viewBox="0 0 56 56" aria-hidden="true">
+					<circle class="fp-ring-bg" cx="28" cy="28" r="25" />
+					<circle class="fp-ring-fg" data-fp-ring cx="28" cy="28" r="25" />
+				</svg>
+				<img class="fp-ball-cover" data-fp-ball-cover alt="" hidden />
+				<span class="fp-ball-glyph" data-fp-ball-glyph>♪</span>
+				<span class="fp-ball-state" data-fp-ball-state>▶</span>
+			</button>
 			<audio data-fp-audio preload="none" />
 			<script type="application/json" data-fp-config set:html={JSON.stringify({ playlists, quality })} />
 		</div>
@@ -216,6 +225,79 @@ const quality = fp?.quality || "320k";
 		width: 2.15rem;
 		height: 2.15rem;
 	}
+	/* 缩球形态（2026-10-31 整改）：圆环 = 歌曲进度 */
+	#floating-player.fp--ball {
+		width: auto;
+	}
+	.fp-ball {
+		position: relative;
+		width: 3.5rem;
+		height: 3.5rem;
+		border-radius: 999px;
+		background: var(--card-bg, rgb(255 255 255 / 0.92));
+		box-shadow: 0 12px 32px rgb(0 0 0 / 0.22);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+		cursor: grab;
+		touch-action: none;
+		padding: 0;
+	}
+	.fp-ball:active {
+		cursor: grabbing;
+	}
+	.fp-ring {
+		position: absolute;
+		inset: 0;
+		transform: rotate(-90deg);
+		pointer-events: none;
+	}
+	.fp-ring circle {
+		fill: none;
+		stroke-width: 3;
+	}
+	.fp-ring-bg {
+		stroke: rgb(128 128 128 / 0.25);
+	}
+	.fp-ring-fg {
+		stroke: var(--primary);
+		stroke-linecap: round;
+	}
+	.fp-ball-cover {
+		position: absolute;
+		inset: 5px;
+		width: calc(100% - 10px);
+		height: calc(100% - 10px);
+		border-radius: 999px;
+		object-fit: cover;
+		pointer-events: none;
+	}
+	.fp-ball-glyph {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 1.15rem;
+		pointer-events: none;
+	}
+	.fp-ball-state {
+		position: absolute;
+		right: -2px;
+		bottom: -2px;
+		width: 1.15rem;
+		height: 1.15rem;
+		border-radius: 999px;
+		background: var(--primary);
+		color: white;
+		font-size: 0.55rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		pointer-events: none;
+	}
+	.fp-bar {
+		touch-action: none;
+	}
 </style>
 
 <script>
@@ -343,7 +425,11 @@ const quality = fp?.quality || "320k";
 				if (!res.ok || !data.url) throw new Error(data.error || "解析失败");
 				audio.src = data.url;
 				await audio.play();
-				setStatus("");
+				if (data.swapped) {
+					setStatus("已换源 · " + (PLATFORM_LABELS[data.servedPlatform] || data.servedPlatform || ""));
+					const myIndex = i;
+					setTimeout(() => { if (index === myIndex) setStatus(""); }, 3500);
+				} else setStatus("");
 				if (!expPinged) {
 					expPinged = true;
 					window.dispatchEvent(new CustomEvent("fishExp", { detail: { amount: 3, reason: "music" } }));
@@ -382,13 +468,126 @@ const quality = fp?.quality || "320k";
 		root.querySelectorAll("[data-fp-tab]").forEach((el) =>
 			el.addEventListener("click", () => loadPlaylist((el as HTMLElement).dataset.fpTab || platform)),
 		);
+		// ─── 整改（2026-10-31）：缩球 + 进度环 + 拖动 + 收起保险 + 断流自愈 ───
+		const PLATFORM_LABELS: Record<string, string> = { wy: "网易", tx: "QQ", kw: "酷我", kg: "酷狗", mg: "咪咕" };
+		const bar = $(".fp-bar") as HTMLElement;
+		const ball = $("[data-fp-ball]") as HTMLButtonElement;
+		const ringFg = $("[data-fp-ring]") as unknown as SVGCircleElement;
+		const ballCover = $("[data-fp-ball-cover]") as HTMLImageElement;
+		const ballGlyph = $("[data-fp-ball-glyph]") as HTMLElement;
+		const ballState = $("[data-fp-ball-state]") as HTMLElement;
+		const RING_C = 2 * Math.PI * 25;
+		ringFg.style.strokeDasharray = String(RING_C);
+		ringFg.style.strokeDashoffset = String(RING_C);
+		let collapsed = false;
+		let shrinkTimer: ReturnType<typeof setTimeout> | undefined;
+		let dragging = false;
+		let justDragged = false;
+		function showBall() {
+			collapsed = true;
+			panel.hidden = true;
+			bar.style.display = "none";
+			ball.hidden = false;
+			root.classList.add("fp--ball");
+		}
+		function showBar() {
+			collapsed = false;
+			ball.hidden = true;
+			bar.style.display = "";
+			root.classList.remove("fp--ball");
+			armShrink();
+		}
+		function armShrink() {
+			clearTimeout(shrinkTimer);
+			if (collapsed || audio.paused) return;
+			shrinkTimer = setTimeout(() => {
+				if (!audio.paused && !dragging) showBall();
+			}, 4000);
+		}
+		ball.addEventListener("click", () => {
+			if (justDragged) { justDragged = false; return; }
+			showBar();
+		});
+		root.addEventListener("pointerenter", () => clearTimeout(shrinkTimer));
+		root.addEventListener("pointerleave", armShrink);
+		root.addEventListener("pointerdown", () => clearTimeout(shrinkTimer));
+		root.addEventListener("pointerup", armShrink);
+		// 收起保险：点播放器外面就把歌单面板收起
+		document.addEventListener("pointerdown", (e) => {
+			if (!panel.hidden && !root.contains(e.target as Node)) panel.hidden = true;
+		});
+		// 进度环 + 球封面同步
+		audio.addEventListener("timeupdate", () => {
+			const d = audio.duration;
+			const pr = d > 0 && isFinite(d) ? audio.currentTime / d : 0;
+			ringFg.style.strokeDashoffset = String(RING_C * (1 - pr));
+			if (coverEl.src && ballCover.src !== coverEl.src) {
+				ballCover.src = coverEl.src;
+				ballCover.hidden = false;
+				ballGlyph.style.display = "none";
+			}
+		});
+		// 拖动（播放条空白区与球）：>6px 判拖动，落点存 fpPosV1
+		const POS_KEY = "fpPosV1";
+		function applyPos(x: number, y: number) {
+			const w = root.offsetWidth, h = root.offsetHeight;
+			const nx = Math.min(Math.max(4, x), Math.max(4, window.innerWidth - w - 4));
+			const ny = Math.min(Math.max(4, y), Math.max(4, window.innerHeight - h - 4));
+			root.style.left = nx + "px";
+			root.style.top = ny + "px";
+			root.style.bottom = "auto";
+			root.style.right = "auto";
+		}
+		try {
+			const savedPos = JSON.parse(localStorage.getItem(POS_KEY) || "null");
+			if (savedPos && typeof savedPos.x === "number") applyPos(savedPos.x, savedPos.y);
+		} catch {}
+		let dragSt: { dx: number; dy: number; sx: number; sy: number } | null = null;
+		root.addEventListener("pointerdown", (e) => {
+			const t = e.target as HTMLElement;
+			if (t.closest("[data-fp-panel]")) return;
+			if (t.closest("button") && !t.closest("[data-fp-ball]")) return;
+			const r = root.getBoundingClientRect();
+			dragSt = { dx: e.clientX - r.left, dy: e.clientY - r.top, sx: e.clientX, sy: e.clientY };
+		});
+		window.addEventListener("pointermove", (e) => {
+			if (!dragSt) return;
+			if (!dragging && Math.hypot(e.clientX - dragSt.sx, e.clientY - dragSt.sy) < 6) return;
+			dragging = true;
+			applyPos(e.clientX - dragSt.dx, e.clientY - dragSt.dy);
+		});
+		window.addEventListener("pointerup", () => {
+			if (!dragSt) return;
+			if (dragging) {
+				justDragged = true;
+				const r = root.getBoundingClientRect();
+				try { localStorage.setItem(POS_KEY, JSON.stringify({ x: Math.round(r.left), y: Math.round(r.top) })); } catch {}
+				setTimeout(() => { justDragged = false; }, 60);
+			}
+			dragSt = null;
+			dragging = false;
+		});
+		// 断流自愈：直链被掐断时重新解析一次（后端带换源），再不行 play() 内部会跳下一首
+		let healing = false;
+		audio.addEventListener("error", async () => {
+			if (index < 0 || healing || !audio.src) return;
+			healing = true;
+			setStatus("直链断了，重新解析…");
+			try { await play(index); } catch {}
+			healing = false;
+		});
+
 		audio.addEventListener("play", () => {
 			toggleBtn.textContent = "⏸";
 			coverEl.classList.add("fp-cover--spin");
+			ballState.textContent = "⏸";
+			armShrink();
 		});
 		audio.addEventListener("pause", () => {
 			toggleBtn.textContent = "▶";
 			coverEl.classList.remove("fp-cover--spin");
+			ballState.textContent = "▶";
+			clearTimeout(shrinkTimer);
 		});
 		audio.addEventListener("ended", () => {
 			if (tracks.length) play((index + 1) % tracks.length);

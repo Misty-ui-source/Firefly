@@ -6,5 +6,7 @@ export const featuresConfig: FeaturesConfig = {
 	danmaku: true,
 	floatingPlayer: true,
 	fish: true,
+	fishPeek: true,
+	fishScale: 1,
 	seasonalSnow: true,
 };

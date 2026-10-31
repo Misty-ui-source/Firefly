@@ -1605,6 +1605,78 @@ routes.music = async () => {
 
   renderSongs();
 
+  /* ── 浮动播放器歌单（2026-10-31 新增）：读写 musicConfig.ts 的 floatingPlayer 段 ── */
+  (() => {
+    const fpCard = document.createElement('div');
+    fpCard.className = 'card';
+    fpCard.id = 'fp-card';
+    view.insertBefore(fpCard, view.children[1] || null);
+    const PLATS = [['wy', '网易云'], ['tx', 'QQ音乐'], ['kg', '酷狗'], ['kw', '酷我'], ['mg', '咪咕']];
+    function parseFp(text) {
+      const m = text.match(/floatingPlayer\s*:\s*\{/);
+      if (!m) return null;
+      let i = m.index + m[0].length - 1, depth = 0, end = -1;
+      for (; i < text.length; i++) { if (text[i] === '{') depth++; else if (text[i] === '}') { depth--; if (!depth) { end = i; break; } } }
+      if (end < 0) return null;
+      const blk = text.slice(m.index, end + 1);
+      const qm = blk.match(/quality\s*:\s*"([^"]+)"/);
+      const playlists = [];
+      const re = /\{\s*platform\s*:\s*"([^"]+)"\s*,\s*id\s*:\s*"([^"]*)"\s*,\s*label\s*:\s*"((?:[^"\\]|\\.)*)"\s*\}/g;
+      let mm;
+      while ((mm = re.exec(blk))) {
+        let label = mm[3];
+        try { label = JSON.parse('"' + mm[3] + '"'); } catch (e) {}
+        playlists.push({ platform: mm[1], id: mm[2], label });
+      }
+      return { start: m.index, end: end + 1, enabled: !/enabled\s*:\s*false/.test(blk), quality: qm ? qm[1] : '320k', playlists };
+    }
+    let fp = parseFp(cfg.text);
+    if (!fp) { fpCard.innerHTML = '<h2>🎧 浮动播放器歌单</h2><p class="hint">musicConfig.ts 里找不到 floatingPlayer 段。</p>'; return; }
+    function renderFp() {
+      fpCard.innerHTML = `
+        <h2>🎧 浮动播放器歌单 <span class="sub">璨夜左下角常驻播放器 · 共 ${fp.playlists.length} 张</span></h2>
+        <p class="hint">浮动播放器按这里整单镜像歌单（平台 + 歌单 ID + 显示名）。改完点保存，一次提交，Pages 重建后生效。</p>
+        <div class="field"><label><input type="checkbox" id="fp-enabled" ${fp.enabled ? 'checked' : ''}> 启用浮动播放器</label></div>
+        <div class="field"><label>音质</label><select id="fp-quality">${['128k', '192k', '320k', 'flac'].map((q) => `<option value="${q}" ${fp.quality === q ? 'selected' : ''}>${q}</option>`).join('')}</select></div>
+        <div id="fp-rows"></div>
+        <div class="toolbar"><button class="btn btn-small btn-ghost" id="fp-add">＋ 添加歌单</button><button class="btn" id="fp-save">💾 保存浮动歌单</button></div>`;
+      const rows = fpCard.querySelector('#fp-rows');
+      fp.playlists.forEach((pl, i) => {
+        const row = document.createElement('div');
+        row.className = 'row2';
+        row.innerHTML = `
+          <div class="field"><label>平台</label><select data-k="platform">${PLATS.map(([v, t]) => `<option value="${v}" ${pl.platform === v ? 'selected' : ''}>${t}（${v}）</option>`).join('')}</select></div>
+          <div class="field"><label>歌单 ID</label><input type="text" data-k="id" value="${esc(pl.id)}" placeholder="如 2804070207"></div>
+          <div class="field"><label>显示名</label><input type="text" data-k="label" value="${esc(pl.label)}" placeholder="如 我喜欢的音乐"></div>
+          <div class="field"><label>操作</label><button class="mini-btn danger" data-a="del" type="button">删除</button></div>`;
+        row.querySelectorAll('[data-k]').forEach((inp) => { inp.onchange = () => { fp.playlists[i][inp.dataset.k] = inp.value.trim(); }; });
+        row.querySelector('[data-a=del]').onclick = () => { if (!confirm(`删掉歌单「${pl.label || pl.id}」？`)) return; fp.playlists.splice(i, 1); renderFp(); };
+        rows.appendChild(row);
+      });
+      fpCard.querySelector('#fp-enabled').onchange = (e) => { fp.enabled = e.target.checked; };
+      fpCard.querySelector('#fp-quality').onchange = (e) => { fp.quality = e.target.value; };
+      fpCard.querySelector('#fp-add').onclick = () => { fp.playlists.push({ platform: 'wy', id: '', label: '' }); renderFp(); };
+      fpCard.querySelector('#fp-save').onclick = saveFp;
+    }
+    async function saveFp() {
+      const rows = fp.playlists.filter((pl) => pl.id);
+      const items = rows.map((pl) => `\t\t\t{ platform: "${pl.platform}", id: "${escConfigStr(pl.id)}", label: "${escConfigStr(pl.label || pl.id)}" },`);
+      const blockText = 'floatingPlayer: {\n'
+        + `\t\tenabled: ${fp.enabled},\n`
+        + `\t\tquality: "${fp.quality}",\n`
+        + '\t\tplaylists: [\n' + items.join('\n') + (items.length ? '\n' : '') + '\t\t],\n\t}';
+      const next = cfg.text.slice(0, fp.start) + blockText + cfg.text.slice(fp.end);
+      try {
+        await saveWithLog(MUSIC_CONFIG, next, cfg.sha, '更新浮动播放器歌单 [管理台]', { type: '音乐', action: '更新', target: '浮动播放器歌单' });
+        cfg = await ghGetFile(MUSIC_CONFIG);
+        fp = parseFp(cfg.text);
+        renderFp();
+        toast('浮动歌单已保存（Pages 重新构建后生效）');
+      } catch (e) { toast(e.message, true); }
+    }
+    renderFp();
+  })();
+
   let mp3File = null, coverUrl = '';
   /* 上传压缩档位：记住上次选择 */
   try { const saved = localStorage.getItem('admin-mp3-kbps'); if (saved && $('#ms-kbps')) $('#ms-kbps').value = saved; } catch (e) {}
