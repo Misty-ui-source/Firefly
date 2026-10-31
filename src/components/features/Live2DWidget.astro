@@ -104,8 +104,9 @@ function serializeMenus(menus: Props["config"]["menus"]) {
 </div>
 
 <script>
-	import { createWidget } from "l2d-widget";
-
+	// l2d-widget 引擎（约 650KB）不在此静态 import：改到 initWidget 里动态
+	// import，只有真的要初始化看板娘时才下载；移动端/璨夜被守卫提前返回，
+	// 永远不拉引擎。引导脚本本身只剩几 KB。
 	// 修复 l2d-widget 气泡 不会自动换行
 	// l2d-widget 使用行内样式，CSS 无法覆盖，需用 JS 修改
 	function patchTipBubble(el: HTMLElement) {
@@ -142,12 +143,15 @@ function serializeMenus(menus: Props["config"]["menus"]) {
 		},
 	};
 
-	// 璨夜（astral）形态下不设看板娘：初始化守卫跳过 createWidget（模型不加载、
-	// 零开销），从璨夜切到其他形态时由 siteModeChange 监听懒补初始化；已经
-	// 初始化过的，切进璨夜靠根节点标记类 l2d-main-root 在 astral-mode.css
-	// 里隐藏（形态切换是实时改 data-site-mode、不刷新页面，两条路都要有）。
-	const isAstralMode = () =>
-		document.documentElement.dataset.siteMode === "astral";
+	// 璨夜（astral）与素简（pure）形态下不设看板娘：astral-mode.css / pure-mode.css
+	// 都把 widget 容器 display:none，初始化纯属白下载引擎。守卫跳过 createWidget
+	// （引擎 chunk 也不拉），切到其他形态时由 siteModeChange 监听懒补初始化；
+	// 已经初始化过的，切进这两个形态靠 CSS 隐藏（形态切换是实时改
+	// data-site-mode、不刷新页面，两条路都要有）。
+	const isNoMascotMode = () => {
+		const m = document.documentElement.dataset.siteMode;
+		return m === "astral" || m === "pure";
+	};
 	let widgetInitialized = false;
 
 	// 找出 createWidget 新挂到 body 的根节点（fixed 定位且内含 canvas 的 div，
@@ -171,9 +175,9 @@ function serializeMenus(menus: Props["config"]["menus"]) {
 		}, 200);
 	}
 
-	function initWidget() {
+	async function initWidget() {
 		if (widgetInitialized) return;
-		if (isAstralMode()) return;
+		if (isNoMascotMode()) return;
 		const container = document.getElementById("l2d-widget-container");
 		if (!container) return;
 
@@ -203,6 +207,9 @@ function serializeMenus(menus: Props["config"]["menus"]) {
 				console.warn("No Live2D models configured");
 				return;
 			}
+
+			// 守卫都过了、确定要初始化，才动态拉引擎 chunk
+			const { createWidget } = await import("l2d-widget");
 
 			const options: any = {
 				model: models.length === 1 ? models[0] : models,
@@ -271,17 +278,25 @@ function serializeMenus(menus: Props["config"]["menus"]) {
 		}
 	}
 
-	// 璨夜 → 其他形态：补上被守卫跳过的初始化（切回璨夜的隐藏走 CSS 标记类）
+	// 无看板娘形态 → 其他形态：补上被守卫跳过的初始化（切回去的隐藏走 CSS）
 	window.addEventListener("siteModeChange", () => {
-		if (!isAstralMode()) initWidget();
+		if (!isNoMascotMode()) initWidget();
 	});
 
-	// 确保只初始化一次
-	if (document.readyState === "loading") {
-		document.addEventListener("DOMContentLoaded", initWidget);
-	} else {
-		initWidget();
+	// 首屏不抢带宽：等页面 load 完成、主线程空闲了再初始化看板娘
+	// （形态切换的 siteModeChange 路径仍直调 initWidget、立即响应）
+	function scheduleInit() {
+		const run = () => {
+			if ("requestIdleCallback" in window) {
+				requestIdleCallback(() => initWidget(), { timeout: 2500 });
+			} else {
+				initWidget();
+			}
+		};
+		if (document.readyState === "complete") run();
+		else window.addEventListener("load", run, { once: true });
 	}
+	scheduleInit();
 
 	// 响应式处理：窗口大小变化时显示/隐藏
 	function handleResponsive() {

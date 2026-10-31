@@ -66,14 +66,15 @@ const activeLink = config.mode === "geo" ? (config.geoLink ?? config.link) : con
   </div>
   {
     config.mode === "geo" && (
-      <script
-        define:vars={{
-          geoTemplate: config.geoTemplate || "",
-          ownerLat: config.ownerLat ?? 0,
-          ownerLon: config.ownerLon ?? 0,
-          staticContent: config.content || "",
-        }}
-      >
+      <script>
+        import { announcementConfig } from "@/config/announcementConfig";
+        // 配置全站一份：脚本用普通打包脚本（不再 define:vars 按实例内联），
+        // Astro 每页只出一份、执行一次即按 class 更新全部公告实例，省掉
+        // 重复内联的那份 19.6KB。值与 announcementConfig 同源同口径。
+        const geoTemplate = announcementConfig.geoTemplate || "";
+        const ownerLat = announcementConfig.ownerLat ?? 0;
+        const ownerLon = announcementConfig.ownerLon ?? 0;
+        const staticContent = announcementConfig.content || "";
         (() => {
           // 公告在左右侧边栏各渲染一份（桌面/平板/手机看到的不是同一个实例），
           // 必须按 class 更新全部实例：只按 id 取第一个会导致另一份永远停在静态文案

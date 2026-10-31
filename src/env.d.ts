@@ -44,6 +44,8 @@ declare global {
 		// biome-ignore lint/suspicious/noExplicitAny: External library without types
 		spine: any;
 		closeAnnouncement: () => void;
+		// Layout 头部形态 CSS 加载器：确保某形态的拆分样式表已生效
+		__ensureSiteModeCss?: (mode: string) => Promise<void>;
 		// __fireflyMusic type is defined in global.d.ts
 		semifullScrollHandler?: (() => void) | undefined;
 		initSemifullScrollDetection?: () => void;

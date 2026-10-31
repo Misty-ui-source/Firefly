@@ -465,11 +465,22 @@ export function getStoredSiteMode(): SiteMode {
 export function applySiteModeToDocument(mode: SiteMode): void {
 	if (typeof document === "undefined") return;
 	const safe: SiteMode = SITE_MODES.includes(mode) ? mode : "full";
-	beginModeFade();
-	document.documentElement.setAttribute("data-site-mode", safe);
-	window.dispatchEvent(
-		new CustomEvent("siteModeChange", { detail: { mode: safe } }),
-	);
+	const flip = () => {
+		beginModeFade();
+		document.documentElement.setAttribute("data-site-mode", safe);
+		window.dispatchEvent(
+			new CustomEvent("siteModeChange", { detail: { mode: safe } }),
+		);
+	};
+	// 形态 CSS 已拆分（Layout 头部只阻塞加载当前形态、其余空闲预载）：先等
+	// 目标形态样式表真正生效再翻属性，避免切过去一帧没样式。通常预载已
+	// 完成、立即返回；没有这个钩子（异常环境）时按旧路径直接翻。
+	const ensure = window.__ensureSiteModeCss;
+	if (typeof ensure === "function" && safe !== "full") {
+		void ensure(safe).then(flip);
+		return;
+	}
+	flip();
 }
 
 export function setSiteMode(mode: SiteMode): void {

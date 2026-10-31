@@ -47,10 +47,13 @@ import { getCanonicalUrl, url } from "@/utils/url-utils";
 
 import "@/styles/main.css";
 import "@/styles/immersive-reading.css";
-import "@/styles/pure-mode.css";
-import "@/styles/harmony-mode.css";
-import "@/styles/brick-mode.css";
-import "@/styles/astral-mode.css";
+// 四套形态样式不进主包：以独立文件出产物，头部按访客当前形态只阻塞加载
+// 一份、其余空闲预载（见 head 里的形态 CSS 加载脚本），切换形态不闪烁、
+// 默认形态访客不再白下其余三套的解析与匹配成本。
+import pureModeCssUrl from "@/styles/pure-mode.css?url";
+import harmonyModeCssUrl from "@/styles/harmony-mode.css?url";
+import brickModeCssUrl from "@/styles/brick-mode.css?url";
+import astralModeCssUrl from "@/styles/astral-mode.css?url";
 import "@/styles/variables.styl";
 import "@rehype-callouts-theme";
 
@@ -660,6 +663,106 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
         if (bannerTitleEnabled !== null) {
           document.documentElement.setAttribute("data-banner-title-enabled", bannerTitleEnabled);
         }
+      })();
+    </script>
+    <!-- 形态 CSS 拆分加载：当前形态（上方脚本已落位 data-site-mode）阻塞加载
+         保证首帧无闪烁；其余三套 load 后空闲预载，切换时 setting-utils 会先调
+         __ensureSiteModeCss 等目标样式真正生效再翻 data-site-mode。 -->
+    <script
+      is:inline
+      define:vars={{
+        modeCssUrls: {
+          pure: pureModeCssUrl,
+          harmony: harmonyModeCssUrl,
+          brick: brickModeCssUrl,
+          astral: astralModeCssUrl,
+        },
+      }}
+    >
+      (function () {
+        const urls = modeCssUrls;
+        const applied = {};
+        function ensureModeCss(mode) {
+          return new Promise((resolve) => {
+            const href = urls[mode];
+            if (!href || applied[mode]) return resolve();
+            let link = document.querySelector(
+              'link[data-mode-css="' + mode + '"]',
+            );
+            if (!link) {
+              link = document.createElement("link");
+              link.rel = "stylesheet";
+              link.href = href;
+              link.setAttribute("data-mode-css", mode);
+              document.head.appendChild(link);
+            } else if (link.rel === "preload") {
+              link.rel = "stylesheet";
+            }
+            if (link.sheet) {
+              applied[mode] = true;
+              return resolve();
+            }
+            link.addEventListener(
+              "load",
+              () => {
+                applied[mode] = true;
+                resolve();
+              },
+              { once: true },
+            );
+            link.addEventListener(
+              "error",
+              () => {
+                applied[mode] = true;
+                resolve();
+              },
+              { once: true },
+            );
+            setTimeout(() => {
+              applied[mode] = true;
+              resolve();
+            }, 3000);
+          });
+        }
+        window.__ensureSiteModeCss = ensureModeCss;
+        const current =
+          document.documentElement.getAttribute("data-site-mode") || "full";
+        if (urls[current]) {
+          const link = document.createElement("link");
+          link.rel = "stylesheet";
+          link.href = urls[current];
+          link.setAttribute("data-mode-css", current);
+          link.addEventListener(
+            "load",
+            () => {
+              applied[current] = true;
+            },
+            { once: true },
+          );
+          document.head.appendChild(link);
+        }
+        window.addEventListener(
+          "load",
+          () => {
+            const preloadOthers = () => {
+              for (const m of Object.keys(urls)) {
+                if (m === current || applied[m]) continue;
+                if (document.querySelector('link[data-mode-css="' + m + '"]'))
+                  continue;
+                const l = document.createElement("link");
+                l.rel = "preload";
+                l.as = "style";
+                l.href = urls[m];
+                l.setAttribute("data-mode-css", m);
+                document.head.appendChild(l);
+              }
+            };
+            if ("requestIdleCallback" in window)
+              requestIdleCallback(preloadOthers, { timeout: 3000 });
+            else setTimeout(preloadOthers, 1200);
+          },
+          { once: true },
+        );
       })();
     </script>
     <style
