@@ -11,6 +11,16 @@ export const timelineConfig: TimelineConfig = {
 	title: "时间线",
 	items: [
 		{
+			date: '2026.9.28',
+			type: '里程碑',
+			featured: true,
+			title: '全款拿下lanerc.me',
+			subtitle: '告别二级域名，正式拥有专属顶级域名',
+			description: '借助 GitHub 学生开发者福利，正式启用 lanerc.me 独立顶级域名。个人站点完成身份升级，后续博客、项目与折腾记录都将在此扎根更新。',
+			details: ['- 域名：lanerc.me', '- 获取渠道：GitHub Student Developer Pack 学生福利', '- 权益：首年免费注册使用', '- 用途：个人博客与项目站点主域名'],
+			tags: ['域名', 'GitHub 学生包', '建站起点', '个人博客']
+		},
+		{
 			date: '2026.10.27',
 			type: '里程碑',
 			featured: true,
