@@ -148,8 +148,11 @@ function registerSwupHooks(): void {
 		}
 
 		// 更新首页状态（body.is-home 驱动 CSS --content-top 等）
+		// 首页口径与 layout-utils.isHomePage 保持一致：首页分页（/2/、/3/ …）也算首页
 		const bodyElement = document.querySelector("body") as HTMLElement;
-		const isHomePage = pathsEqual(visit.to.url, url("/"));
+		const isHomePage =
+			pathsEqual(visit.to.url, url("/")) ||
+			/^\/\d+\/?$/.test(new URL(visit.to.url).pathname);
 		const wasHome = bodyElement.classList.contains("is-home");
 		const contentPanel = document.querySelector(
 			".content-panel",

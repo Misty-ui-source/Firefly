@@ -117,6 +117,15 @@ export const isHomePage = (pathname: string): boolean => {
 	if (pathname === baseUrlNoSlash) return true;
 	if (pathname === "/") return true;
 
+	// 首页分页（/2/、/3/ …）与第一页同属「首页」：共用横幅高度、导航行为与
+	// 璨夜 bento 等一切首页待遇，避免翻页后骨架退回内页样式（2026-10-31 站长定 A 案）。
+	// 顶层纯数字路径只由首页分页路由生成，不会误伤其他页面。
+	const rel =
+		baseUrlNoSlash && pathname.startsWith(baseUrlNoSlash)
+			? pathname.slice(baseUrlNoSlash.length)
+			: pathname;
+	if (/^\/\d+\/?$/.test(rel)) return true;
+
 	return false;
 };
 

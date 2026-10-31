@@ -22,7 +22,11 @@ const archiveUrl = url("/archive/");
 const pathname = Astro.url.pathname.replace(/\/$/, "");
 const homePath = homeUrl.replace(/\/$/, "");
 const archivePath = archiveUrl.replace(/\/$/, "");
-const isHome = pathname === homePath || pathname === "" || pathname === "/";
+const isHome =
+	pathname === homePath ||
+	pathname === "" ||
+	pathname === "/" ||
+	/^\/\d+$/.test(pathname);
 const isCategories = pathname === "/categories";
 const isArchive = pathname === archivePath;
 const postCategory = (currentPostCategory || "").trim();
@@ -174,7 +178,7 @@ function initialActive(categoryName: string): {
     const pathname = currentUrl.pathname.replace(/\/$/, "");
     const homePath = (bar.getAttribute("data-home-path") || "/").replace(/\/$/, "");
     const archivePath = (bar.getAttribute("data-archive-path") || "/archive").replace(/\/$/, "");
-    const isHome = pathname === homePath || pathname === "" || pathname === "/";
+    const isHome = pathname === homePath || pathname === "" || pathname === "/" || /^\/\d+$/.test(pathname);
     const isArchive = pathname === archivePath;
     const isCategories = pathname === "/categories";
 
