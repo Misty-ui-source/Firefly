@@ -42,14 +42,17 @@ const description = "博客图片都存在这里，点图就能复制外链。";
 			</div>
 		</section>
 	</div>
-</MainGridLayout>
-
-<script is:inline>
-	(function () {
+<script is:inline data-swup-reload-script>
+	// 切页机制（2026-10-31 修正，同 calendar.astro 的范式）：脚本须在 MainGridLayout
+	// 内部且带 data-swup-reload-script，软导航时才会重跑；此前在容器外，点链接
+	// 进来口令门是死的。启动函数挂全局 + 戳记防重复绑，看门狗兜底补跑。
+	window.__initPicbed = function () {
 		var PW_KEY = "picbed-pw";
 		var gate = document.querySelector("[data-pb-gate]");
 		var browser = document.querySelector("[data-pb-browser]");
 		if (!gate || !browser) return;
+		if (gate.dataset.pbBound === "1") return;
+		gate.dataset.pbBound = "1";
 		var pwInput = gate.querySelector("[data-pb-pw]");
 		var errEl = gate.querySelector("[data-pb-error]");
 		var lockBtn = document.querySelector("[data-pb-lock]");
@@ -226,5 +229,24 @@ const description = "博客图片都存在这里，点图就能复制外链。";
 		moreBtn.addEventListener("click", function () { load(true).catch(function () {}); });
 
 		if (password) load(false).catch(function () {});
+	};
+	window.__initPicbed();
+</script>
+<script is:inline data-swup-reload-script>
+	// 看门狗：启动脚本被漏跑时兜底补跑（同 calendar.astro 范式）
+	(function () {
+		function retry() {
+			setTimeout(function () {
+				if (document.querySelector("[data-pb-gate]") && window.__initPicbed) window.__initPicbed();
+			}, 500);
+		}
+		if (!window.__pbWatchdog) {
+			window.__pbWatchdog = true;
+			document.addEventListener("swup:contentReplaced", retry);
+			document.addEventListener("swup:page:view", retry);
+		}
+		retry();
 	})();
 </script>
+</MainGridLayout>
+

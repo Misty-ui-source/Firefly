@@ -457,14 +457,13 @@ html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-m
 	top: 0.6rem;
 	left: 0.8rem;
 	z-index: 30;
-	font-size: 0.78rem;
-	font-weight: 700;
-	letter-spacing: 0.02em;
-	line-height: 1.5;
-	color: #fff;
-	/* 与日期/阅读时长胶囊同款：近黑半透明底 + 白字（照 qcqx 封面胶囊） */
-	background: rgb(10 15 14 / 0.7);
-	padding: 0.14rem 0.45rem;
+	font-size: 1.05rem;
+	font-weight: 800;
+	letter-spacing: 0.01em;
+	color: var(--pz-fg);
+	/* 封面深浅不定，垫一块纸色芯片保证编号永远可读 */
+	background: color-mix(in srgb, var(--pz-bg) 86%, transparent);
+	padding: 0.05rem 0.42rem;
 	border-radius: 6px;
 	pointer-events: none;
 }
@@ -821,30 +820,6 @@ html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content h2 {
 }
 html[data-site-mode="paper"][data-paper-theme="ink"] .markdown-content h3 {
 	font-size: 1.25rem !important;
-}
-
-/* ================================================================
- * 纸面 · 封面胶囊（日期 + 阅读时长）：与编号同款深色胶囊压封面，
- * 只在网格模式点亮；列表模式不显示（守卫在 main.css）
- * ================================================================ */
-html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .pz-card-pills {
-	display: flex;
-	position: absolute;
-	top: 0.6rem;
-	left: 3.05rem;
-	z-index: 30;
-	gap: 0.35rem;
-	pointer-events: none;
-}
-html[data-site-mode="paper"][data-paper-theme="ink"] #post-list-container.grid-mode .pz-card-pills span {
-	background: rgb(10 15 14 / 0.7);
-	color: #fff;
-	font-size: 0.72rem;
-	font-weight: 500;
-	line-height: 1.5;
-	padding: 0.14rem 0.45rem;
-	border-radius: 6px;
-	white-space: nowrap;
 }
 
 /* ================================================================

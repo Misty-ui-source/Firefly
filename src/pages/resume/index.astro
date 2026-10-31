@@ -118,7 +118,37 @@ const description = resumeConfig.description || "";
 			<p class="rs-foot">{resumeConfig.footnote}</p>
 		</div>
 	</section>
+	<script is:inline data-swup-reload-script src="/resume/templates.js"></script>
+	<script is:inline data-swup-reload-script src="/resume/app.js"></script>
+	<script is:inline data-swup-reload-script>
+		// 切页机制（2026-10-31 修正，同 calendar.astro 的范式）：脚本须在
+		// MainGridLayout 内部且带 data-swup-reload-script，软导航时才会重跑；
+		// 此前两段脚本在容器外，从九宫格/导航点进来永远是空壳。看门狗兜底补载。
+		(function () {
+			function booted() {
+				var f = document.getElementById("rs-form");
+				return !!(f && f.children.length);
+			}
+			function loadSeq() {
+				if (booted() || document.body.dataset.rsLoading === "1") return;
+				document.body.dataset.rsLoading = "1";
+				setTimeout(function () { delete document.body.dataset.rsLoading; }, 5000);
+				var t = document.createElement("script");
+				t.src = "/resume/templates.js";
+				t.onload = function () {
+					var a = document.createElement("script");
+					a.src = "/resume/app.js";
+					document.body.appendChild(a);
+				};
+				document.body.appendChild(t);
+			}
+			function retry() { setTimeout(loadSeq, 500); setTimeout(loadSeq, 1800); }
+			if (!window.__rsWatchdog) {
+				window.__rsWatchdog = true;
+				document.addEventListener("swup:contentReplaced", retry);
+				document.addEventListener("swup:page:view", retry);
+			}
+			retry();
+		})();
+	</script>
 </MainGridLayout>
-
-<script is:inline src="/resume/templates.js"></script>
-<script is:inline src="/resume/app.js"></script>

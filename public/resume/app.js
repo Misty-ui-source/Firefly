@@ -536,6 +536,10 @@
 
 	/* ---------- 启动 ---------- */
 	function init() {
+		// 幂等戳记：同一份 DOM 只初始化一次（软导航重跑/看门狗补载可能撞车）
+		var formRoot = document.getElementById("rs-form");
+		if (!formRoot || formRoot.dataset.rsInit === "1") return;
+		formRoot.dataset.rsInit = "1";
 		var baseStyle = document.createElement("style");
 		baseStyle.id = "rs-base-css";
 		baseStyle.textContent = RS.BASE_CSS;
@@ -549,6 +553,18 @@
 			renderPreview();
 		});
 	}
-	if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-	else init();
+	/* ---------- 启动 ----------
+	 * 软导航重跑时 templates.js 与 app.js 的执行顺序不保证：RS 未就绪就等它，
+	 * 别一上来就 init（会死在 RS.BASE_CSS 上，整页变空壳）。 */
+	var bootTries = 0;
+	function boot() {
+		if (!RS) RS = window.RS;
+		if (!RS) {
+			if (++bootTries <= 80) setTimeout(boot, 150);
+			return;
+		}
+		init();
+	}
+	if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+	else boot();
 })();

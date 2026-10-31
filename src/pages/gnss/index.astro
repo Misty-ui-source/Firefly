@@ -86,61 +86,17 @@ const description = gnssConfig.description;
 
 		<p id="g-datainfo" class="gnss-datainfo">星历数据加载中…</p>
 	</section>
-</MainGridLayout>
-
-<style>
-	.gnss-card { padding: 1.25rem; margin-top: 1rem; }
-	.gnss-modes { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
-	.gnss-mode {
-		border: 2px solid var(--line-divider, rgba(0,0,0,.15)); background: transparent; color: var(--content);
-		border-radius: 999px; padding: .4rem 1rem; font-weight: 600; cursor: pointer;
-	}
-	.gnss-mode.is-active { background: var(--primary); color: #fff; border-color: var(--primary); }
-	.gnss-controls { display: flex; gap: .75rem; flex-wrap: wrap; align-items: end; margin-bottom: .75rem; }
-	.gnss-controls label { display: flex; flex-direction: column; gap: .25rem; font-size: .82rem; color: var(--content-meta); }
-	.gnss-controls input, .gnss-controls select {
-		border: 2px solid var(--line-divider, rgba(0,0,0,.15)); border-radius: .6rem; padding: .35rem .55rem;
-		background: var(--card-bg, transparent); color: var(--content); font-size: .92rem;
-	}
-	.gnss-controls input[type="number"] { width: 7.2rem; }
-	.gnss-grow { flex: 1 1 12rem; }
-	.gnss-grow input { width: 100%; }
-	#g-slider { flex: 1 1 10rem; accent-color: var(--primary); }
-	.gnss-btn {
-		border: 2px solid var(--line-divider, rgba(0,0,0,.15)); background: transparent; color: var(--content);
-		border-radius: .6rem; padding: .42rem .8rem; font-weight: 600; cursor: pointer; white-space: nowrap;
-	}
-	.gnss-btn:hover, .gnss-mode:hover { border-color: var(--primary); }
-	.gnss-clock { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--content); }
-	.gnss-status { color: var(--content-meta); font-size: .9rem; margin: .25rem 0 .75rem; }
-	.gnss-main { display: grid; grid-template-columns: minmax(0, 520px) 1fr; gap: 1rem; align-items: start; }
-	@media (max-width: 900px) { .gnss-main { grid-template-columns: 1fr; } }
-	.gnss-skywrap {
-		background: radial-gradient(circle at 50% 42%, #16294d 0%, #0b132b 62%, #070d1f 100%);
-		border-radius: 1rem; padding: .75rem;
-	}
-	#g-sky { width: 100%; height: auto; display: block; }
-	.gnss-detail {
-		background: rgba(127, 160, 255, .08); border: 1.5px dashed var(--line-divider, rgba(0,0,0,.2));
-		border-radius: .75rem; padding: .7rem .85rem; font-size: .9rem; color: var(--content); margin-bottom: .75rem;
-		font-variant-numeric: tabular-nums; line-height: 1.55; word-break: break-all;
-	}
-	.gnss-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; max-height: 430px; overflow: auto; }
-	.gnss-list li {
-		display: flex; gap: .6rem; align-items: baseline; padding: .45rem .7rem; border-radius: .6rem; cursor: pointer;
-		border: 1.5px solid var(--line-divider, rgba(0,0,0,.12)); font-variant-numeric: tabular-nums; font-size: .92rem;
-	}
-	.gnss-list li:hover, .gnss-list li.is-sel { border-color: var(--primary); background: rgba(127, 160, 255, .08); }
-	.gnss-list .prn { font-weight: 800; color: var(--primary); }
-	.gnss-list .dim { color: var(--content-meta); font-size: .82rem; margin-left: auto; }
-	.gnss-help h3 { margin: 0 0 .6rem; font-size: 1.05rem; }
-	.gnss-help ul { margin: 0; padding-left: 1.15rem; color: var(--content); line-height: 1.75; font-size: .94rem; }
-	.gnss-datainfo { color: var(--content-meta); font-size: .82rem; margin-top: .8rem; text-align: center; }
-</style>
-
-<script is:inline src="/gnss/engine.js"></script>
-<script is:inline>
-(function () {
+<script is:inline data-swup-reload-script src="/gnss/engine.js"></script>
+<script is:inline data-swup-reload-script>
+// 切页机制（2026-10-31 修正，同 calendar.astro 的范式）：本页脚本必须位于
+// MainGridLayout 内部（#swup-container 里）且带 data-swup-reload-script，软导航时
+// @swup/astro 才会重跑；此前两段脚本都在 </MainGridLayout> 之后（容器外），
+// 点链接进来永远是空壳、必须刷新。启动函数挂全局，看门狗负责兜底补跑。
+window.__initGnss = function () {
+	if (!window.GNSS) return; // 引擎未到，看门狗补载后会再调
+	var __playEl = document.getElementById('g-play');
+	if (!__playEl || __playEl.dataset.gnssBound === '1') return;
+	__playEl.dataset.gnssBound = '1';
 	var RAW = 'https://raw.githubusercontent.com/Misty-ui-source/Firefly/main/gnss-data/';
 	var CDN = 'https://cdn.jsdelivr.net/gh/Misty-ui-source/Firefly@main/gnss-data/';
 	var state = { mode: 'live', nav: null, navHist: null, alm: null, meta: null, sats: [], sel: null, playing: false, timer: null };
@@ -363,5 +319,79 @@ const description = gnssConfig.description;
 	});
 	els.time.value = fmtInput(new Date());
 	Promise.all([loadRemote(), loadMeta(), loadAlm(), loadHist()]).then(function () { compute(); updateFooter(); });
-})();
+};
+window.__initGnss();
 </script>
+<script is:inline data-swup-reload-script>
+	// 看门狗：引擎（engine.js）或启动脚本被漏跑时兜底补上（同 calendar.astro 范式）
+	(function () {
+		function retry() {
+			setTimeout(function () {
+				if (!document.getElementById('g-play')) return;
+				if (window.GNSS) { if (window.__initGnss) window.__initGnss(); return; }
+				var s = document.createElement('script');
+				s.src = '/gnss/engine.js';
+				s.onload = function () { if (window.__initGnss) window.__initGnss(); };
+				document.body.appendChild(s);
+			}, 600);
+		}
+		if (!window.__gnssWatchdog) {
+			window.__gnssWatchdog = true;
+			document.addEventListener('swup:contentReplaced', retry);
+			document.addEventListener('swup:page:view', retry);
+		}
+		retry();
+	})();
+</script>
+</MainGridLayout>
+
+<style>
+	.gnss-card { padding: 1.25rem; margin-top: 1rem; }
+	.gnss-modes { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+	.gnss-mode {
+		border: 2px solid var(--line-divider, rgba(0,0,0,.15)); background: transparent; color: var(--content);
+		border-radius: 999px; padding: .4rem 1rem; font-weight: 600; cursor: pointer;
+	}
+	.gnss-mode.is-active { background: var(--primary); color: #fff; border-color: var(--primary); }
+	.gnss-controls { display: flex; gap: .75rem; flex-wrap: wrap; align-items: end; margin-bottom: .75rem; }
+	.gnss-controls label { display: flex; flex-direction: column; gap: .25rem; font-size: .82rem; color: var(--content-meta); }
+	.gnss-controls input, .gnss-controls select {
+		border: 2px solid var(--line-divider, rgba(0,0,0,.15)); border-radius: .6rem; padding: .35rem .55rem;
+		background: var(--card-bg, transparent); color: var(--content); font-size: .92rem;
+	}
+	.gnss-controls input[type="number"] { width: 7.2rem; }
+	.gnss-grow { flex: 1 1 12rem; }
+	.gnss-grow input { width: 100%; }
+	#g-slider { flex: 1 1 10rem; accent-color: var(--primary); }
+	.gnss-btn {
+		border: 2px solid var(--line-divider, rgba(0,0,0,.15)); background: transparent; color: var(--content);
+		border-radius: .6rem; padding: .42rem .8rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+	}
+	.gnss-btn:hover, .gnss-mode:hover { border-color: var(--primary); }
+	.gnss-clock { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--content); }
+	.gnss-status { color: var(--content-meta); font-size: .9rem; margin: .25rem 0 .75rem; }
+	.gnss-main { display: grid; grid-template-columns: minmax(0, 520px) 1fr; gap: 1rem; align-items: start; }
+	@media (max-width: 900px) { .gnss-main { grid-template-columns: 1fr; } }
+	.gnss-skywrap {
+		background: radial-gradient(circle at 50% 42%, #16294d 0%, #0b132b 62%, #070d1f 100%);
+		border-radius: 1rem; padding: .75rem;
+	}
+	#g-sky { width: 100%; height: auto; display: block; }
+	.gnss-detail {
+		background: rgba(127, 160, 255, .08); border: 1.5px dashed var(--line-divider, rgba(0,0,0,.2));
+		border-radius: .75rem; padding: .7rem .85rem; font-size: .9rem; color: var(--content); margin-bottom: .75rem;
+		font-variant-numeric: tabular-nums; line-height: 1.55; word-break: break-all;
+	}
+	.gnss-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; max-height: 430px; overflow: auto; }
+	.gnss-list li {
+		display: flex; gap: .6rem; align-items: baseline; padding: .45rem .7rem; border-radius: .6rem; cursor: pointer;
+		border: 1.5px solid var(--line-divider, rgba(0,0,0,.12)); font-variant-numeric: tabular-nums; font-size: .92rem;
+	}
+	.gnss-list li:hover, .gnss-list li.is-sel { border-color: var(--primary); background: rgba(127, 160, 255, .08); }
+	.gnss-list .prn { font-weight: 800; color: var(--primary); }
+	.gnss-list .dim { color: var(--content-meta); font-size: .82rem; margin-left: auto; }
+	.gnss-help h3 { margin: 0 0 .6rem; font-size: 1.05rem; }
+	.gnss-help ul { margin: 0; padding-left: 1.15rem; color: var(--content); line-height: 1.75; font-size: .94rem; }
+	.gnss-datainfo { color: var(--content-meta); font-size: .82rem; margin-top: .8rem; text-align: center; }
+</style>
+
