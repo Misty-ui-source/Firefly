@@ -684,5 +684,12 @@
     "action": "新建",
     "target": "src/content/dynamic/2026-10-31(2).md",
     "detail": ""
+  },
+  {
+    "ts": "2026-10-31T15:52:10.349Z",
+    "type": "导航",
+    "action": "更新",
+    "target": "站点导航",
+    "detail": ""
   }
 ]
