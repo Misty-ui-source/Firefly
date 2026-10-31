@@ -166,7 +166,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
 ---
 
 <!doctype html>
-<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"} data-navbar-style={siteConfig.navbar.navbarStyle ?? "classic"} data-site-mode={siteConfig.siteMode ?? "full"} data-harmony-font={siteConfig.harmonyFont ?? "default"} data-brick-font={siteConfig.brickFont ?? "default"} data-star-font={siteConfig.starFont ?? "default"} data-astral-theme={siteConfig.astralTheme ?? "solid"}>
+<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"} data-navbar-style={siteConfig.navbar.navbarStyle ?? "classic"} data-site-mode={siteConfig.siteMode ?? "full"} data-harmony-font={siteConfig.harmonyFont ?? "default"} data-brick-font={siteConfig.brickFont ?? "default"} data-star-font={siteConfig.starFont ?? "default"} data-astral-theme={siteConfig.astralTheme ?? "solid"} data-astral-layout={siteConfig.astralLayout ?? "bento"}>
   <head>
     <meta charset="UTF-8" />
     {commentConfig?.type === "waline" && commentConfig?.waline?.serverURL && (
@@ -376,6 +376,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
         defaultSiteMode: siteConfig.siteMode ?? "full",
         isSiteModeSwitchable: displaySettingsConfig.siteModeSwitchable,
         defaultAstralTheme: siteConfig.astralTheme ?? "solid",
+        defaultAstralLayout: siteConfig.astralLayout ?? "bento",
         pureFontMenu: siteConfig.pureFontMenu ?? ["system"],
       }}
     >
@@ -503,6 +504,17 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
       document.documentElement.setAttribute(
         "data-astral-theme",
         resolvedAstralTheme
+      );
+
+      // 初始化璨夜主题布局 - 优先 localStorage（调色板外观页签、璨夜主题下方改过时），否则用配置默认；
+      // 骨架规则只在 astral-mode.css 的 [data-astral-layout="bento"] 作用域内消费，其他形态下挂着不生效
+      const astralLayoutStored = localStorage.getItem("astralLayout");
+      const resolvedAstralLayout = ["bento", "classic"].includes(astralLayoutStored)
+        ? astralLayoutStored
+        : defaultAstralLayout;
+      document.documentElement.setAttribute(
+        "data-astral-layout",
+        resolvedAstralLayout
       );
 
       // 初始化谐彩专属调色板 - 独立 harmony* 存储键，首帧前落位防闪烁；

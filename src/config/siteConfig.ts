@@ -165,6 +165,10 @@ export const siteConfig: SiteConfig = {
 	// 访客在显示设置（调色板）外观页签、站点形态下方可覆盖，存 localStorage astralTheme
 	astralTheme: "solid",
 
+	// 璨夜主题布局（控制台主题页可改默认）：bento 璨夜（现行首页瓷砖矩阵）/
+	// classic 经典（Firefly 经典骨架 + 璨夜皮肤）；访客可在调色板覆盖，存 localStorage astralLayout
+	astralLayout: "bento",
+
 	// 站点开始日期，用于统计运行天数
 	siteStartDate: "2026-10-15",
 

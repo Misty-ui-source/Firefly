@@ -534,6 +534,57 @@ export function setAstralTheme(theme: AstralTheme): void {
 	applyAstralThemeToDocument(safe);
 }
 
+// ─── 璨夜主题布局（璨夜 bento / 经典） ─────────────────────────────────
+// 只在站点形态 = 璨夜（astral）时生效：bento = 现行首页瓷砖矩阵（默认）；
+// classic 经典 = Firefly 经典骨架（横幅 + 侧栏 + 文章流），只保留璨夜皮肤。
+// 控制台主题页定全站默认（siteConfig.astralLayout），访客在调色板外观页签、
+// 璨夜主题下方覆盖，存 localStorage astralLayout；Layout 首帧脚本同步落位防闪烁，
+// 骨架样式全部收在 astral-mode.css 的 [data-astral-layout="bento"] 作用域里。
+
+export type AstralLayout = "bento" | "classic";
+
+const ASTRAL_LAYOUTS: AstralLayout[] = ["bento", "classic"];
+
+export function getDefaultAstralLayout(): AstralLayout {
+	const v = siteConfig.astralLayout ?? "bento";
+	return ASTRAL_LAYOUTS.includes(v as AstralLayout)
+		? (v as AstralLayout)
+		: "bento";
+}
+
+export function getStoredAstralLayout(): AstralLayout {
+	const defaultLayout = getDefaultAstralLayout();
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.getItem !== "function"
+	) {
+		return defaultLayout;
+	}
+	const stored = localStorage.getItem("astralLayout") as AstralLayout | null;
+	return stored && ASTRAL_LAYOUTS.includes(stored) ? stored : defaultLayout;
+}
+
+export function applyAstralLayoutToDocument(layout: AstralLayout): void {
+	if (typeof document === "undefined") return;
+	const safe: AstralLayout = ASTRAL_LAYOUTS.includes(layout) ? layout : "bento";
+	beginModeFade();
+	document.documentElement.setAttribute("data-astral-layout", safe);
+	window.dispatchEvent(
+		new CustomEvent("astralLayoutChange", { detail: { layout: safe } }),
+	);
+}
+
+export function setAstralLayout(layout: AstralLayout): void {
+	const safe: AstralLayout = ASTRAL_LAYOUTS.includes(layout) ? layout : "bento";
+	if (
+		typeof localStorage !== "undefined" &&
+		typeof localStorage.setItem === "function"
+	) {
+		localStorage.setItem("astralLayout", safe);
+	}
+	applyAstralLayoutToDocument(safe);
+}
+
 // ─── 谐彩专属调色板 ──────────────────────────────────────
 // 只在站点形态 = 谐彩（harmony）时生效的一组外观选项（对标 Shirone 的动态取色
 // 面板）：独立 harmony* 存储键，与全站 hue、素简 pureFont 等键互不干扰。

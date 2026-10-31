@@ -99,6 +99,10 @@ export type SiteConfig = {
 	// 控制台主题页可改默认，访客可在显示设置里覆盖（localStorage siteMode），样式见 styles/pure-mode.css、styles/harmony-mode.css、styles/brick-mode.css 与 styles/astral-mode.css
 	siteMode?: SiteMode;
 
+	// 璨夜主题布局（全站默认，控制台主题页可改）：bento 璨夜（首页瓷砖矩阵）/ classic 经典（Firefly 经典骨架）；
+	// 访客可在调色板外观页签覆盖（localStorage astralLayout），骨架样式见 styles/astral-mode.css 的 [data-astral-layout] 段
+	astralLayout?: "bento" | "classic";
+
 	// 素简字体菜单（控制台字体页可管）：有序的 PureFont 键数组，第一项为默认字体；访客自选优先（localStorage pureFont）
 	pureFontMenu?: string[];
 

@@ -46,7 +46,9 @@ import {
 	PURE_FONT_LABELS,
 	getStoredSiteMode,
 	getDefaultAstralTheme,
+	getDefaultAstralLayout,
 	getStoredAstralTheme,
+	getStoredAstralLayout,
 	getStoredHarmonyHue,
 	getStoredHarmonyScheme,
 	getStoredHarmonySpec,
@@ -100,6 +102,7 @@ import {
 	setPureFont,
 	setSiteMode,
 	setAstralTheme,
+	setAstralLayout,
 	setHarmonyHue,
 	setHarmonyScheme,
 	setHarmonySpec,
@@ -162,6 +165,12 @@ const defaultAstralTheme = getDefaultAstralTheme();
 const astralThemeOptions = [
 	{ value: "solid", label: "实面" },
 	{ value: "starfield", label: "星尘" },
+] as const;
+// 璨夜主题布局（经典 / 璨夜）：仅璨夜下出现，在璨夜主题行下方；控制台定默认、这里是访客覆盖
+let astralLayout = $state(getStoredAstralLayout());
+const astralLayoutOptions = [
+	{ value: "classic", label: "经典布局" },
+	{ value: "bento", label: "璨夜布局" },
 ] as const;
 const siteModeOptions = [
 	{ value: "full", labelKey: I18nKey.siteModeFull },
@@ -1021,6 +1030,10 @@ $effect(() => {
 });
 
 $effect(() => {
+	setAstralLayout(astralLayout);
+});
+
+$effect(() => {
 	setPureFont(pureFont);
 });
 
@@ -1206,6 +1219,25 @@ $effect(() => {
 				{/each}
 			</div>
 			<div class="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5">实面：近不透明实面卡，稳定优先 · 星尘：毛玻璃星空版（面纱层 + 半透卡片）</div>
+			{/if}
+			<!-- 璨夜主题布局（仅璨夜出现）：经典 = Firefly 经典骨架 + 璨夜皮肤，璨夜 = 现行 bento 瓷砖矩阵 -->
+			{#if isAstral}
+			<div class="text-xs font-bold text-(--btn-content) opacity-80 mt-3 mb-1.5">主题布局</div>
+			<div class="flex flex-wrap gap-2">
+				{#each astralLayoutOptions as opt}
+				<button
+					aria-label={opt.label}
+					class="flex-1 min-w-[45%] btn-regular rounded-md py-2 px-3 flex items-center justify-center gap-2 active:scale-95 transition-all relative overflow-hidden"
+					class:opacity-60={astralLayout !== opt.value}
+					class:bg-(--btn-regular-bg-hover)={astralLayout === opt.value}
+					onclick={() => { astralLayout = opt.value; }}
+					title={opt.label}
+				>
+					<span class="text-xs font-medium">{opt.label}</span>
+				</button>
+				{/each}
+			</div>
+			<div class="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5">经典：Firefly 经典版式（横幅 + 侧栏 + 文章流），保留璨夜皮肤 · 璨夜：现行首页瓷砖矩阵</div>
 			{/if}
 		</div>
 		{/if}
