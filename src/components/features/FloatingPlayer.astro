@@ -598,5 +598,10 @@ const quality = fp?.quality || "320k";
 		audio.addEventListener("ended", () => {
 			if (tracks.length) play((index + 1) % tracks.length);
 		});
+
+		// 默认收缩（站长 2026-10-31 定）：进站只露球，点球展开播放条；
+		// 播放后 4 秒自动缩回的原有节奏不变。root 在此之前一直 hidden，
+		// 同一脚本任务内完成展开→收缩，不会闪一下播放条。
+		showBall();
 	})();
 </script>

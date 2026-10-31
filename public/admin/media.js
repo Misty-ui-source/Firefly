@@ -1638,6 +1638,7 @@ routes.music = async () => {
         <p class="hint">浮动播放器按这里整单镜像歌单（平台 + 歌单 ID + 显示名）。改完点保存，一次提交，Pages 重建后生效。</p>
         <div class="field"><label><input type="checkbox" id="fp-enabled" ${fp.enabled ? 'checked' : ''}> 启用浮动播放器</label></div>
         <div class="field"><label>音质</label><select id="fp-quality">${['128k', '192k', '320k', 'flac'].map((q) => `<option value="${q}" ${fp.quality === q ? 'selected' : ''}>${q}</option>`).join('')}</select></div>
+        <div class="field"><label>粘贴链接解析</label><div style="display:flex;gap:.5rem"><input type="text" id="fp-link" placeholder="粘贴歌单分享链接或整段分享文案，自动识别平台和歌单 ID" style="flex:1"><button class="btn btn-small" id="fp-parse" type="button">解析添加</button></div><p class="hint" id="fp-parse-msg" style="margin-top:.35rem"></p></div>
         <div id="fp-rows"></div>
         <div class="toolbar"><button class="btn btn-small btn-ghost" id="fp-add">＋ 添加歌单</button><button class="btn" id="fp-save">💾 保存浮动歌单</button></div>`;
       const rows = fpCard.querySelector('#fp-rows');
@@ -1657,6 +1658,69 @@ routes.music = async () => {
       fpCard.querySelector('#fp-quality').onchange = (e) => { fp.quality = e.target.value; };
       fpCard.querySelector('#fp-add').onclick = () => { fp.playlists.push({ platform: 'wy', id: '', label: '' }); renderFp(); };
       fpCard.querySelector('#fp-save').onclick = saveFp;
+      fpCard.querySelector('#fp-parse').onclick = applyParsedLink;
+      fpCard.querySelector('#fp-link').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); applyParsedLink(); } };
+    }
+    /* 歌单分享链接 → 平台 + ID：按域名认平台、按各家歌单路径抠 ID；
+       认不出返回 null（短链如 163cn.tv 展开前抠不到，会走到手动兜底提示） */
+    function parsePlaylistLink(raw) {
+      const s = String(raw || '').trim();
+      if (!s) return null;
+      const urlM = s.match(/https?:\/\/[^\s，。）】」]+/);
+      const u = urlM ? urlM[0] : s;
+      let m = null;
+      if (/163\.com/.test(u)) {
+        if (!/playlist/.test(u)) return null;
+        m = u.match(/[?&#]id=(\d{4,})/) || u.match(/playlist\/(\d{4,})/);
+        return m ? { platform: 'wy', id: m[1] } : null;
+      }
+      if (/qq\.com/.test(u)) {
+        m = u.match(/playlist\/(\d{5,})/);
+        return m ? { platform: 'tx', id: m[1] } : null;
+      }
+      if (/kugou\.com/.test(u)) {
+        m = u.match(/special\/single\/(\d{3,})/);
+        return m ? { platform: 'kg', id: m[1] } : null;
+      }
+      if (/kuwo\.cn/.test(u)) {
+        m = u.match(/playlist_detail\/(\d{4,})/);
+        return m ? { platform: 'kw', id: m[1] } : null;
+      }
+      if (/migu\.cn/.test(u)) {
+        m = u.match(/playlist\/(\d{4,})/);
+        return m ? { platform: 'mg', id: m[1] } : null;
+      }
+      return null;
+    }
+    async function applyParsedLink() {
+      const inp = fpCard.querySelector('#fp-link');
+      const msg = fpCard.querySelector('#fp-parse-msg');
+      const raw = inp ? inp.value : '';
+      const hit = parsePlaylistLink(raw);
+      if (!hit) {
+        // 兜底：纯数字 ID 填进第一个空行（平台沿用该行原选择，请用户核对）
+        const digits = (String(raw).match(/\d{5,}/) || [])[0];
+        if (digits) {
+          const row = fp.playlists.find((pl) => !pl.id);
+          if (row) { row.id = digits; renderFp(); toast(`已把 ID ${digits} 填入空行，平台请核对一眼`); return; }
+        }
+        if (msg) msg.textContent = '没认出这个链接。支持网易云 / QQ / 酷狗 / 酷我 / 咪咕的歌单分享链接（短链请先点开复制完整链接），也可以先添加空行、把歌单 ID 直接粘进来再点解析。';
+        return;
+      }
+      // 分享文案里的《歌单名》优先当显示名；没有再问自家歌单接口要（wy/tx 有名，kg 接口不带名、kw/mg 无此接口）
+      const nameM = String(raw).match(/《([^》]{1,60})》/);
+      const pl = { platform: hit.platform, id: hit.id, label: nameM ? nameM[1] : '' };
+      fp.playlists.push(pl);
+      renderFp();
+      const platName = (PLATS.find((p) => p[0] === hit.platform) || [])[1] || hit.platform;
+      toast(`已添加歌单：${platName} · ${hit.id}${pl.label ? ' · ' + pl.label : ''}`);
+      if (!pl.label && (hit.platform === 'wy' || hit.platform === 'tx')) {
+        try {
+          const r = await fetch(`/api/music/playlist?platform=${hit.platform}&id=${encodeURIComponent(hit.id)}`);
+          const d = await r.json();
+          if (d && d.name) { pl.label = d.name; renderFp(); toast(`显示名已自动带出：${d.name}`); }
+        } catch (e) { /* 取不到就留空，手填即可 */ }
+      }
     }
     async function saveFp() {
       const rows = fp.playlists.filter((pl) => pl.id);
