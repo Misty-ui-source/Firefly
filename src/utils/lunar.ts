@@ -76,10 +76,15 @@ export function solarToLunar(y: number, m: number, d: number): LunarDate {
 const LUNAR_FESTIVALS: Record<string, string> = {
 	"1-1": "春节",
 	"1-15": "元宵节",
+	"2-2": "龙抬头",
+	"3-3": "上巳节",
 	"5-5": "端午节",
 	"7-7": "七夕节",
+	"7-15": "中元节",
 	"8-15": "中秋节",
 	"9-9": "重阳节",
+	"10-1": "寒衣节",
+	"10-15": "下元节",
 	"12-8": "腊八节",
 	"12-23": "小年",
 };

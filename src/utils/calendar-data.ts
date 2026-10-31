@@ -148,13 +148,40 @@ export async function getOnThisDayMap(): Promise<
 	return map;
 }
 
+/* 公历节日 / 纪念日（与 src/pages/calendar.astro 内联脚本的同名表保持一致，
+   两处改一处必须同步）。元旦 / 劳动节 / 国庆节不在此列：它们由假期层负责，
+   清明是节气层的事。浮动节日键为「月-第几个-星期几（0=周日）」。 */
+export const SOLAR_FESTIVALS: Record<string, string> = {
+	"1-10": "中国人民警察节", "2-14": "情人节", "3-8": "妇女节", "3-12": "植树节",
+	"3-15": "消费者权益日", "4-1": "愚人节", "4-15": "全民国家安全教育日",
+	"4-22": "世界地球日", "4-23": "世界读书日", "5-4": "青年节", "5-12": "全国防灾减灾日",
+	"5-19": "中国旅游日", "6-1": "儿童节", "6-6": "全国爱眼日", "6-26": "国际禁毒日",
+	"7-1": "建党节", "7-7": "七七事变纪念日", "8-1": "建军节", "8-19": "中国医师节",
+	"9-3": "抗战胜利纪念日", "9-10": "教师节", "9-18": "九一八事变纪念日", "9-30": "烈士纪念日",
+	"10-10": "辛亥革命纪念日", "10-24": "程序员节", "10-25": "台湾光复日", "10-31": "万圣夜",
+	"11-8": "记者节", "11-9": "全国消防日", "11-11": "光棍节", "12-4": "国家宪法日",
+	"12-13": "国家公祭日", "12-20": "澳门回归纪念日", "12-24": "平安夜", "12-25": "圣诞节",
+};
+export const SOLAR_WEEK_FESTIVALS: Record<string, string> = {
+	"5-2-0": "母亲节", "5-3-0": "全国助残日", "6-3-0": "父亲节",
+	"9-3-6": "全民国防教育日", "11-4-4": "感恩节",
+};
+
+export function solarFestivalOf(y: number, m: number, d: number): string {
+	const fixed = SOLAR_FESTIVALS[`${m}-${d}`];
+	if (fixed) return fixed;
+	const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+	const nth = Math.floor((d - 1) / 7) + 1;
+	return SOLAR_WEEK_FESTIVALS[`${m}-${nth}-${dow}`] || "";
+}
+
 // 近在眼前（首页条用）：从今天起往后 60 天，找最近的一个值得倒计时的日子。
-// 扫描口径与日历页前端倒计时一致（同日内的先后：节气 → 农历节日 → 假期首日
-// → 校历起始日 → 个人记录），只取第一条。日期语义全程在「上海日历日」空间里
+// 扫描口径与日历页前端倒计时一致（同日内的先后：节气 → 农历节日 → 公历节日
+// → 假期首日 → 校历起始日 → 个人记录），只取第一条。日期语义全程在「上海日历日」空间里
 // 用键字符串 + UTC 零点推算，避免构建机时区带来的漂移。
 export interface NextCountdown {
 	name: string;
-	tag: "节气" | "农历" | "假期" | "校历" | "记录";
+	tag: "节气" | "农历" | "节日" | "假期" | "校历" | "记录";
 	date: string; // YYYY-MM-DD
 	daysLeft: number; // 0 = 今天
 }
@@ -178,6 +205,9 @@ export function getNextCountdown(): NextCountdown | null {
 
 		const fest = lunarFestival(solarToLunar(y, m, d));
 		if (fest) return { name: fest, tag: "农历", date: k, daysLeft: off };
+
+		const sfest = solarFestivalOf(y, m, d);
+		if (sfest) return { name: sfest, tag: "节日", date: k, daysLeft: off };
 
 		for (const h of layers.holidays[String(y)] || []) {
 			if (h.date === k && h.type !== "workday" && !seenHoliday.has(h.name)) {

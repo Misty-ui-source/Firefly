@@ -70,7 +70,7 @@ const payload = JSON.stringify({
 		<section class="card-base px-5 py-5 md:px-7">
 			<div class="calendar-count-head">
 				<h3>近在眼前</h3>
-				<p>接下来 60 天里最近的日子：节气、农历节日、假期、校历与个人记录，点一行跳到那天。</p>
+				<p>接下来 60 天里最近的日子：节气、农历节日、公历节日、假期、校历与个人记录，点一行跳到那天。</p>
 			</div>
 			<div class="calendar-countdown" data-cal-countdown></div>
 		</section>
@@ -153,11 +153,24 @@ const payload = JSON.stringify({
 			return ["初", "十", "廿", "卅"][Math.floor(d / 10)] + LUNAR_DIGITS[d % 10];
 		}
 		function lunarMonthName(l) { return (l.leap ? "闰" : "") + LUNAR_MONTHS[l.month - 1] + "月"; }
-		var LUNAR_FESTIVALS = { "1-1": "春节", "1-15": "元宵节", "5-5": "端午节", "7-7": "七夕节", "8-15": "中秋节", "9-9": "重阳节", "12-8": "腊八节", "12-23": "小年" };
+		var LUNAR_FESTIVALS = { "1-1": "春节", "1-15": "元宵节", "2-2": "龙抬头", "3-3": "上巳节", "5-5": "端午节", "7-7": "七夕节", "7-15": "中元节", "8-15": "中秋节", "9-9": "重阳节", "10-1": "寒衣节", "10-15": "下元节", "12-8": "腊八节", "12-23": "小年" };
 		function lunarFestival(l) {
 			if (l.leap) return "";
 			if (l.month === 12 && l.day === lMonthDays(l.year, 12)) return "除夕";
 			return LUNAR_FESTIVALS[l.month + "-" + l.day] || "";
+		}
+		/* 公历节日 / 纪念日（与 src/utils/calendar-data.ts 的同名表保持一致，两处改一处必须同步）。
+		   元旦 / 劳动节 / 国庆节不在此列：它们由假期层的名字牌显示，免得格子里重复；
+		   清明是节气层的事。浮动节日键为「月-第几个-星期几（0=周日）」。 */
+		var SOLAR_FESTIVALS = { "1-10": "中国人民警察节", "2-14": "情人节", "3-8": "妇女节", "3-12": "植树节", "3-15": "消费者权益日", "4-1": "愚人节", "4-15": "全民国家安全教育日", "4-22": "世界地球日", "4-23": "世界读书日", "5-4": "青年节", "5-12": "全国防灾减灾日", "5-19": "中国旅游日", "6-1": "儿童节", "6-6": "全国爱眼日", "6-26": "国际禁毒日", "7-1": "建党节", "7-7": "七七事变纪念日", "8-1": "建军节", "8-19": "中国医师节", "9-3": "抗战胜利纪念日", "9-10": "教师节", "9-18": "九一八事变纪念日", "9-30": "烈士纪念日", "10-10": "辛亥革命纪念日", "10-24": "程序员节", "10-25": "台湾光复日", "10-31": "万圣夜", "11-8": "记者节", "11-9": "全国消防日", "11-11": "光棍节", "12-4": "国家宪法日", "12-13": "国家公祭日", "12-20": "澳门回归纪念日", "12-24": "平安夜", "12-25": "圣诞节" };
+		var SOLAR_WEEK_FESTIVALS = { "5-2-0": "母亲节", "5-3-0": "全国助残日", "6-3-0": "父亲节", "9-3-6": "全民国防教育日", "11-4-4": "感恩节" };
+		function solarFestival(k) {
+			var p = parseKey(k);
+			var fixed = SOLAR_FESTIVALS[(p.m + 1) + "-" + p.d];
+			if (fixed) return fixed;
+			var dow = new Date(p.y, p.m, p.d).getDay();
+			var nth = Math.floor((p.d - 1) / 7) + 1;
+			return SOLAR_WEEK_FESTIVALS[(p.m + 1) + "-" + nth + "-" + dow] || "";
 		}
 		function lunarOf(k) {
 			var p = parseKey(k);
@@ -206,6 +219,8 @@ const payload = JSON.stringify({
 			if (tm) meta += " · " + tm;
 			var fv = lunarFestival(ln);
 			if (fv && fv !== tm) meta += " · " + fv;
+			var sf = solarFestival(selected);
+			if (sf && sf !== tm && sf !== fv) meta += " · " + sf;
 			html += '<p class="calendar-lunar-meta">' + meta + "</p>";
 			if (!list.length) {
 				html += '<p class="calendar-empty">这一天还没有任何记录。</p>';
@@ -254,7 +269,7 @@ const payload = JSON.stringify({
 				});
 				var hol = evs.filter(function (e) { return e.kind === "holiday" || e.kind === "workday"; })[0];
 				var cellLunar = lunarOf(k);
-				var fest = termOf(k) || lunarFestival(cellLunar);
+				var fest = termOf(k) || lunarFestival(cellLunar) || solarFestival(k);
 				var lunarText = fest || (cellLunar.day === 1 ? lunarMonthName(cellLunar) : lunarDayName(cellLunar.day));
 				html += '<button type="button" class="calendar-cell'
 					+ (d.getMonth() !== cursor.m ? " is-out" : "")
@@ -308,6 +323,8 @@ const payload = JSON.stringify({
 				if (tm) items.push({ k: k, name: tm, tag: "节气" });
 				var fv = lunarFestival(lunarOf(k));
 				if (fv) items.push({ k: k, name: fv, tag: "农历" });
+				var sf = solarFestival(k);
+				if (sf) items.push({ k: k, name: sf, tag: "节日" });
 				(data.holidays[String(d.getFullYear())] || []).forEach(function (h) {
 					if (h.date === k && h.type !== "workday" && !seenHoliday[h.name]) {
 						seenHoliday[h.name] = 1;
