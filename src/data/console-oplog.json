@@ -740,5 +740,12 @@
     "action": "新建",
     "target": "src/content/dynamic/2026-11-01.md",
     "detail": ""
+  },
+  {
+    "ts": "2026-11-01T15:57:01.677Z",
+    "type": "日记",
+    "action": "新建",
+    "target": "src/content/diary/2026-11-01.md",
+    "detail": ""
   }
 ]
