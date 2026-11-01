@@ -574,6 +574,16 @@ function initToolsPanel(
 		if (!settingsPanel) return;
 		const inMingxin =
 			document.documentElement.getAttribute("data-site-mode") === "mingxin";
+		/* 搬家前先收面板：开着的面板跨形态搬家会把父级/状态弄脱节（站长实锤：
+		   明信开着调色板切纸舟，还原后内容与右栏组件叠死、选项点不动）。
+		   两个方向都收——进明信（面板在别形态开着点明信 chip）同理。
+		   收成关闭态后让它在新形态里干净重开；inert/aria 由 float-panel
+		   的状态同步跟上，这里再照关闭态契约补齐一遍防观察者漏拍。 */
+		if (!settingsPanel.classList.contains("float-panel-closed")) {
+			settingsPanel.classList.add("float-panel-closed");
+			settingsPanel.setAttribute("inert", "");
+			settingsPanel.setAttribute("aria-hidden", "true");
+		}
 		if (inMingxin && settingsPanel.parentElement !== document.body) {
 			settingsHome = {
 				parent: settingsPanel.parentElement as HTMLElement,

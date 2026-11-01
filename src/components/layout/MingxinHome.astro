@@ -1423,9 +1423,10 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 		--mingxin-blind-pad: clamp(1rem, 1.9vw, 1.6rem);
 		--mingxin-blind-band-height: clamp(2.9rem, 5vh, 3.6rem);
 		--mingxin-blind-photo-width: min(
-			62vw,
+			44vw,
+			52rem,
 			calc(
-				(76vh - var(--mingxin-blind-pad) * 2 - var(--mingxin-blind-band-height)) * 4 / 3
+				(60vh - var(--mingxin-blind-pad) * 2 - var(--mingxin-blind-band-height)) * 4 / 3
 			)
 		);
 		--mingxin-blind-photo-height: calc(var(--mingxin-blind-photo-width) * 3 / 4);
@@ -1485,12 +1486,20 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 		z-index: 1;
 		pointer-events: none;
 		opacity: 0;
+		overflow: hidden;
 	}
 	.mingxin-blinds__finale-image {
+		/* 必须与收缩门图同一套居中契约：控制器按 left/top 50% + translate(-50%,-50%)
+		   做「图框→满屏」等比放大；此前漏写定位，图被推到左半边、右边整幅空着
+		   （站长 2026-11-01 实拍对比原站后点名） */
+		position: absolute;
+		left: 50%;
+		top: 50%;
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
 		display: block;
+		transform-origin: center;
 		will-change: transform, filter;
 	}
 
@@ -1649,7 +1658,7 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 		margin: 0;
 		padding: 0;
 		list-style: none;
-		max-height: 25rem;
+		max-height: 36rem;
 		overflow-y: auto;
 	}
 	.mingxin-afterglow__post-link {
@@ -1716,6 +1725,8 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 		margin: 0;
 		padding: 0.4rem 0 0.4rem 1.3rem;
 		list-style: none;
+		max-height: 36rem;
+		overflow-y: auto;
 	}
 	.mingxin-afterglow__timeline::before {
 		content: "";
