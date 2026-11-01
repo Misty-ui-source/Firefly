@@ -1,14 +1,44 @@
 {
-	"misty-ui-source/fuwari": {
-		"description": "✨A static blog template built with Astro. ",
+	"cuteleaf/firefly": {
+		"description": "🍀Firefly, fresh and aesthetic Astro blog theme template. ",
+		"language": "Astro",
+		"avatarUrl": "https://avatars.githubusercontent.com/u/43440669?v=4",
+		"license": "MIT"
+	},
+	"imupxuu/xuhome": {
+		"description": "myhomesite",
+		"language": "Astro",
+		"avatarUrl": "https://avatars.githubusercontent.com/u/132238077?v=4",
+		"license": null
+	},
+	"jarvis0227/aemeath": {
+		"description": "二改Firefly的新主题，Aemeath ",
+		"language": "Astro",
+		"avatarUrl": "https://avatars.githubusercontent.com/u/153078906?v=4",
+		"license": "MIT"
+	},
+	"lyravoid/shirone": {
+		"description": "An expressive, anime-inspired blog theme built on Material 3 Expressive, Astro 7, and Svelte 5",
+		"language": "TypeScript",
+		"avatarUrl": "https://avatars.githubusercontent.com/u/272864777?v=4",
+		"license": "MIT"
+	},
+	"misty-ui-source/firefly": {
+		"description": "Alexander 的个人博客源码（Firefly 主题）",
 		"language": "Astro",
 		"avatarUrl": "https://avatars.githubusercontent.com/u/199457569?v=4",
 		"license": "MIT"
 	},
-	"saicaca/fuwari": {
-		"description": "✨A static blog template built with Astro. ",
-		"language": "Astro",
-		"avatarUrl": "https://avatars.githubusercontent.com/u/25200299?v=4",
+	"misty-ui-source/folia-major": {
+		"description": "专注于绚丽的歌词动画效果的本地音乐/navidrome/第三方多平台在线音乐播放器",
+		"language": null,
+		"avatarUrl": "https://avatars.githubusercontent.com/u/199457569?v=4",
+		"license": "AGPL-3.0"
+	},
+	"mmzming/my-blog": {
+		"description": "Firefly-Mod 魔改自用博客，和Firefly一样部署方式，使用前记得修改配置文件和删掉public里面两个indexnow文件（百度和头条SEO用的，这个得自己独立配置）。",
+		"language": "TypeScript",
+		"avatarUrl": "https://avatars.githubusercontent.com/u/88274799?v=4",
 		"license": "MIT"
 	}
 }

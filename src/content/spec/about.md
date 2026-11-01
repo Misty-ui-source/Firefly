@@ -107,6 +107,33 @@ This static blog is based on [Firefly](https://github.com/CuteLeaf/Firefly).
 
 建立本站的初衷是希望能与自己以及在看的你分享、记录一些实用的技术和日常生活中的趣闻轶事，如果有帮助到你，那我也会非常开心。
 也欢迎各位访客提出建议与批评。
+## 站在巨人的肩膀上
+
+这个小窝不是凭空变出来的——它站在几个开源项目和站点的肩膀上，我从他们的代码里学到很多，再一路折腾成现在的样子：
+
+[CuteLeaf 的 Firefly](https://github.com/CuteLeaf/Firefly) 是本站的底座：整站长在它身上，横幅、布局、卡片这些骨架都来自它，我的活儿大多是在它上面改。
+
+::github{repo="CuteLeaf/Firefly"}
+
+[朝朝听雨的 Aemeath](https://github.com/Jarvis0227/Aemeath) 是第二形态「素简」的出处：他的 Pure——简洁导航、专注阅读——我照着逐项对回来，在这边落了地，他的仓库我也一直在跟。
+
+::github{repo="Jarvis0227/Aemeath"}
+
+[MmzMing 的博客](https://github.com/MmzMing/my-blog) 是第七形态「明信」的源头：海报机、五幕横滑和那只黑猫，都出自他的实现，我照着移植了一套到这边。
+
+::github{repo="MmzMing/my-blog"}
+
+[LyraVoid 的 Shirone](https://github.com/LyraVoid/Shirone) 是「谐彩」的视觉语言来源：一套 Material 3 的主题，色阶、柔影和竖条母题都从它那儿来。
+
+::github{repo="LyraVoid/Shirone"}
+
+[UpXuu 的 xuhome](https://github.com/ImUpXuu/xuhome) 是第四形态「顽彩」的出处：玩具砖块粗野主义——粗蓝边、硬阴影、积木感，整套视觉都照着它对的。
+
+::github{repo="ImUpXuu/xuhome"}
+
+其余形态也各有出处：璨夜参考 XingHuiSama 的星空毛玻璃，纸面参考[轻笑Chuckle](https://qcqx.cn)，手册参考[终末地博客](https://tblog.amamo.top)。
+
+如果这些项目也帮到了你，去给它们点个 Star 就是最好的感谢。
 ## 我的项目
 ::github{repo="Misty-ui-source/Firefly"}
 ::github{repo="Misty-ui-source/folia-major"}
