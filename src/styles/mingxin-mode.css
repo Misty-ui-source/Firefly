@@ -2129,6 +2129,40 @@ html[data-site-mode="mingxin"] #navbar-wrapper.navbar-hidden {
 	html[data-site-mode="mingxin"] body.is-home:has(.mingxin-home) .site-footer {
 		display: none;
 	}
+	/* 首页主网格放开为单列全宽：.mingxin-home 靠 width:100vw +
+	   margin-left:calc(50% - 50vw) 出血，该式只在内容栏与视口同心时
+	   成立；明信下 #main-grid 被 64rem 上限与侧栏列轨道夹着，内容栏
+	   中心偏离视口中心，影像层整层被推偏、溢出侧被 overflow-x 裁掉，
+	   五幕因此整体压向画面中部、邻幕不露头（2026-11-01 站长对比原站
+	   报障；卡片组件与控制器与原站逐行一致，问题不在卡而在栏）。
+	   首页把网格放回全宽单列后内容栏即视口宽、出血式退化为恒等，
+	   构图与原站同心。仅首页，列表/文章页的 64rem 列不受影响。 */
+	html[data-site-mode="mingxin"] body.is-home:has(.mingxin-home)
+		#content-panel-inner {
+		width: 100%;
+		max-width: none;
+	}
+	html[data-site-mode="mingxin"] body.is-home:has(.mingxin-home) #main-grid {
+		max-width: none;
+		padding-inline: 0 !important;
+		grid-template-columns: minmax(0, 1fr) !important;
+	}
+	html[data-site-mode="mingxin"] body.is-home:has(.mingxin-home)
+		#main-grid
+		> :is(
+			#left-sidebar-wrapper,
+			#left-sidebar-dynamic,
+			#right-sidebar-static,
+			#right-sidebar-dynamic
+		) {
+		display: none !important;
+	}
+	html[data-site-mode="mingxin"] body.is-home:has(.mingxin-home)
+		#main-grid
+		> #content-column {
+		width: 100%;
+		max-width: none;
+	}
 	/* 影像层 100vw 出血在带经典滚动条的系统上会多出横向滚动，首页裁掉 */
 	html[data-site-mode="mingxin"]:has(.mingxin-home) {
 		overflow-x: hidden;
