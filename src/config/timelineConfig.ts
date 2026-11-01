@@ -56,7 +56,7 @@ export const timelineConfig: TimelineConfig = {
 			type: '里程碑',
 			featured: true,
 			title: '用 Fuwari 搭建了第一个个人站点',
-			subtitle: '建站之路正式启程',
+			subtitle: '建站之路正式启程！',
 			description: '从零上手 Fuwari 博客框架，折腾部署、调试样式，终于搭好了第一个属于自己的个人博客。从此有了专属的内容自留地，可以记录学习、分享折腾笔记，正式开启写作之路。\n初始目标仅仅用来存放学习资料，与技术折腾存档。',
 			details: ['- 博客框架：Fuwari（基于 Astro）', '- 部署平台：Cloudflare Pages', '- 完成基础样式与导航配置', '- 本地连接Obsidian，支持 Markdown 写作与文章发布'],
 			tags: ['个人站点', 'Fuwari', 'Astro', '建站', '学习记录'],
