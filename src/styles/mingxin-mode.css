@@ -2084,6 +2084,15 @@ html[data-site-mode="mingxin"] #navbar-wrapper.navbar-hidden {
 		.content-panel {
 		--content-top: 0 !important;
 	}
+	/* 内页：横幅已整块退场，它在基座里预留的高度必须一并回收——
+	   layout-base 在 banner 模式下给非首页面板留了
+	   calc(var(--banner-height-non-home) - 3.5rem)（约 592px @1440），
+	   只藏横幅不回收高度时，内页内容被顶到半屏才开始（2026-11-01 站长报障，
+	   友链/归档/关于/动态全中）。回到基座无横幅时的缺省 5.5rem，
+	   恰好让开明信胶囊顶栏。同样直接写在面板元素上并带 !important。 */
+	html[data-site-mode="mingxin"] body:not(.is-home) .content-panel {
+		--content-top: 5.5rem !important;
+	}
 	/* onload 入场动画残留 transform 会成为 fixed 舞台的包含块，首页停用；
 	   注意 .onload-animation 的 opacity:0 在未分层样式表里，普通声明
 	   压不过它（分层规则对普通声明优先级更低），三件都须 !important */
