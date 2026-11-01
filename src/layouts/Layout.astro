@@ -747,24 +747,49 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
       };
     </script>
     <script>
-      // 形态自愈（2026-11-01）：站长真机多次遇到「存着的形态半失效」——
-      // localStorage 说是某形态、页面却按别的形态渲染（横幅带空白、皮肤
-      // 不对版），切走再切回就好。本脚本在 load 后自检一次：用各形态样式
-      // 文件里的 --mx-probe 探针核对「当前形态的样式是否真生效」，同时
-      // 核对 html 上的 data-site-mode 是否等于 localStorage 的选择；
-      // 任一对不上就带新参数整页重载一次（每页每会话最多一次，防死循环）。
-      window.addEventListener("load", () => {
-        setTimeout(() => {
+      // 形态自愈 v2（2026-11-01 立，2026-11-02 补强）：站长真机多次遇到
+      // 「存着的形态半失效」——localStorage 说是某形态、页面却按别的形态
+      // 渲染（横幅带空白、皮肤不对版），切走再切回就好，且只犯在他常规
+      // Edge 档案里（无痕/Chrome 全好、清缓存无效，病灶在站点数据层）。
+      // v1 只在整页 load 后查一次 --mx-probe 探针，漏了两种情况：①软导航
+      // 切页后才坏（load 不再触发，v1 永远不查新页面）；②探针对版但版式
+      // 坏了（纸舟/明信横幅没退场、内容上方大片空白或整屏壁纸）。
+      // v2：检查抽成可重入函数，load 后查一次、swup:page:view 后再查一次；
+      // 除探针与 data-site-mode 外加两道版式/子状态核对——纸舟核
+      // data-paper-theme 与 localStorage 的子主题选择（setPaperTheme 两者
+      // 同写，正常永不分叉）；纸舟/明信核 #wallpaper-wrapper 计算显示必须
+      // 为 none（这两形态横幅恒退场，它露出来就是半失效）。任一对不上且
+      // 本页本会话未自愈过，就带新参数整页重载一次（防死循环）。
+      (() => {
+        const MODES = ["full", "pure", "harmony", "brick", "astral", "paper", "mingxin"];
+        const checkSiteModeHealth = () => {
           try {
-            const MODES = ["full", "pure", "harmony", "brick", "astral", "paper", "mingxin"];
             const stored = localStorage.getItem("siteMode");
             const attr = document.documentElement.getAttribute("data-site-mode") || "full";
             const intended = MODES.includes(stored) ? stored : attr;
-            const probe = getComputedStyle(document.body)
-              .getPropertyValue("--mx-probe")
-              .trim();
+            let ok = attr === intended;
+            if (ok) {
+              const probe = getComputedStyle(document.body)
+                .getPropertyValue("--mx-probe")
+                .trim();
+              ok = probe === intended;
+            }
+            if (ok && intended === "paper") {
+              const paperThemeStored = localStorage.getItem("paperTheme");
+              if (["ink", "manual"].includes(paperThemeStored)) {
+                ok =
+                  document.documentElement.getAttribute("data-paper-theme") ===
+                  paperThemeStored;
+              }
+            }
+            if (ok && (intended === "paper" || intended === "mingxin")) {
+              const wrapper = document.getElementById("wallpaper-wrapper");
+              if (wrapper) {
+                ok = getComputedStyle(wrapper).display === "none";
+              }
+            }
             const key = "mxHeal:" + location.pathname;
-            if (probe === intended && attr === intended) {
+            if (ok) {
               sessionStorage.removeItem(key);
               return;
             }
@@ -776,8 +801,14 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
           } catch {
             /* 自愈失败不打扰访客 */
           }
-        }, 400);
-      });
+        };
+        window.addEventListener("load", () => {
+          setTimeout(checkSiteModeHealth, 400);
+        });
+        document.addEventListener("swup:page:view", () => {
+          setTimeout(checkSiteModeHealth, 400);
+        });
+      })();
     </script>
     <style
       define:vars={{
