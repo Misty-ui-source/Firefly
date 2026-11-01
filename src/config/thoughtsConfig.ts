@@ -10,9 +10,84 @@ export const thoughtsConfig: ThoughtsConfig = {
 	title: "碎碎念",
 	items: [
 		{
-			title: "博客迁至 Cloudflare",
-			content: "昨晚干了件大事，把博客从 HK 机子的 Docker 迁到了 Cloudflare Pages，评论系统也从 SQLite 迁到了 Vercel + MongoDB。折腾到半夜，但很值得。",
-			createdAt: "2026-10-24T01:30:00+08:00",
+			title: '可恶的蚊子',
+			content: '一晚上被三四个文字伺候，头一回因为这个没睡好啊',
+			createdAt: '2026-10-31T21:45:08.475Z'
+		},
+		{
+			title: '突然发现b站追番没拉取到数据，看来构建之后专门需要检查一下啊',
+			content: '以后养成习惯，构建一次之后一定要检查检查哈哈哈哈',
+			createdAt: '2026-10-31T07:07:11.304Z'
+		},
+		{
+			title: '又为宿舍减少了一只蚊子',
+			content: '如题哈哈哈哈哈哈',
+			createdAt: '2026-10-30T16:51:13.421Z'
+		},
+		{
+			title: '现在好难受',
+			content: '以后看到这个还会想到这段时间嘛，啊啊啊啊，回旋镖终于打在自己身上了',
+			createdAt: '2026-10-29T05:11:59.468Z'
+		},
+		{
+			title: '拉锯上滑梯的小丑都来了',
+			content: '拉锯上滑梯的小丑都来了🤣',
+			createdAt: '2026-10-28T15:42:18.010Z'
+		},
+		{
+			title: '删掉删掉',
+			content: '最后还是决定删掉那些聊天记录吧，组会上怎么想到了呢🤔',
+			createdAt: '2026-10-28T09:04:31.886Z'
+		},
+		{
+			title: '睡得好晚',
+			content: '啊啊啊啊啊，好快',
+			createdAt: '2026-10-27T17:07:17.903Z'
+		},
+		{
+			title: '突然觉得muse的额度也很少了',
+			content: '上周额度居然都用光了，还用超了不少，但是好在有170亿的底子在，依旧是用不完的节奏（只要配合codex使用）',
+			createdAt: '2026-10-26T08:10:07.478Z'
+		},
+		{
+			title: '微机系统你##',
+			content: '这老师在问什么问题啊，居然都不怎么会',
+			createdAt: '2026-10-26T08:08:27.892Z'
+		},
+		{
+			title: '久违的睡了一个1点开始的午觉',
+			content: '感觉下午精神了许多，还是午觉舒服啊，但是自己好拖延，每次都两点开始',
+			createdAt: '2026-10-26T06:01:05.804Z'
+		},
+		{
+			title: '不想去开组会，不想考试',
+			content: '但是也就想想',
+			createdAt: '2026-10-25T15:58:54.139Z'
+		},
+		{
+			title: '突然觉得用好ai好难',
+			content: '今晚用codex帮助我安装了一下AMD ROSS，有感而发',
+			createdAt: '2026-10-25T15:58:26.930Z'
+		},
+		{
+			title: 'vibe coding好容易上瘾',
+			content: '本来说一小时前休息会呢，结果又拖延了一小时',
+			createdAt: '2026-10-25T07:34:19.095Z'
+		},
+		{
+			title: '电子系统设计好难啊',
+			content: '这个寄存状态能不能放过我 啊',
+			createdAt: '2026-10-25T03:05:07.684Z'
+		},
+		{
+			title: '同时拿到国励奖和秋奖了！yes！',
+			content: '上一年的努力果然没白费！但是为什么🧐昨晚我没及时发现，还是今天中午发现的',
+			createdAt: '2026-10-24T07:56:50.649Z'
+		},
+		{
+			title: '博客迁至 Cloudflare',
+			content: '昨晚干了件大事，把博客从 HK 机子的 Docker 迁到了 Cloudflare Pages，评论系统也从 SQLite 迁到了 Vercel + MongoDB。折腾到半夜，但很值得。',
+			createdAt: '2026-10-24T01:30:00+08:00'
 		},
 	],
 };

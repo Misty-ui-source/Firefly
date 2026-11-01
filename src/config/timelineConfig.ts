@@ -42,6 +42,27 @@ export const timelineConfig: TimelineConfig = {
 			link: 'https://lanerc.me/admin/'
 		},
 		{
+			date: '2026.09.28',
+			type: '里程碑',
+			featured: true,
+			title: '全款拿下lanerc.me',
+			subtitle: '告别二级域名，正式拥有专属顶级域名',
+			description: '借助 GitHub 学生开发者福利，正式启用 lanerc.me 独立顶级域名。个人站点完成身份升级，后续博客、项目与折腾记录都将在此扎根更新。',
+			details: ['域名：lanerc.me', '获取渠道：GitHub Student Developer Pack 学生福利', '权益：首年免费注册使用', '用途：个人博客与项目站点主域名'],
+			tags: ['域名', 'GitHub 学生包', '建站起点', '个人博客']
+		},
+		{
+			date: '2025.10.24',
+			type: '里程碑',
+			featured: true,
+			title: '用 Fuwari 搭建了第一个个人站点',
+			subtitle: '建站之路正式启程！',
+			description: '从零上手 Fuwari 博客框架，折腾部署、调试样式，终于搭好了第一个属于自己的个人博客。从此有了专属的内容自留地，可以记录学习、分享折腾笔记，正式开启写作之路。\n初始目标仅仅用来存放学习资料，与技术折腾存档。',
+			details: ['博客框架：Fuwari（基于 Astro）', '部署平台：Cloudflare Pages', '完成基础样式与导航配置', '本地连接Obsidian，支持 Markdown 写作与文章发布'],
+			tags: ['个人站点', 'Fuwari', 'Astro', '建站', '学习记录'],
+			link: 'https://www.lanerc.me'
+		},
+		{
 			date: '2024.6',
 			type: '成长',
 			featured: true,
