@@ -1713,6 +1713,21 @@ const renderPlayer = fpEnabled && fpPlaylists.length > 0;
 	}
 </style>
 
+<script is:inline>
+	// 访客覆盖先于引擎脚本落位：localStorage["mingxinPlayerVariant"] 优先于
+	// 配置默认（控制台 playerVariant 只作默认）。本脚本在根元素之后、引擎
+	// （打包模块，deferred）之前执行，引擎读到的即覆盖后的形态。
+	(function () {
+		try {
+			var v = localStorage.getItem("mingxinPlayerVariant");
+			if (v === "pill" || v === "sidebar") {
+				var root = document.getElementById("mingxin-music-player");
+				if (root) root.setAttribute("data-mxmp-variant", v);
+			}
+		} catch (e) {}
+	})();
+</script>
+
 <script>
 	import { isArticleDetailPage } from "@/utils/url-utils";
 

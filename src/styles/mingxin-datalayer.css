@@ -312,7 +312,7 @@
 	transition: translate 420ms var(--guide-ease);
 }
 
-.stat-card {
+.mingxin-datalayer .stat-card {
 	position: absolute;
 	inset: 0;
 	transform: translateY(calc((var(--stat-i) - var(--stat-active, 0)) * 100%));
@@ -326,14 +326,14 @@
 	transition: transform 420ms var(--guide-ease);
 }
 
-.stat-card__label {
+.mingxin-datalayer .stat-card__label {
 	margin: 0;
 	font-size: clamp(0.72rem, 0.9vw, 0.85rem);
 	font-weight: 800;
 	color: var(--guide-muted);
 }
 
-.stat-card__value {
+.mingxin-datalayer .stat-card__value {
 	margin: 0;
 	font-family: var(--font-mono, ui-monospace, monospace);
 	font-size: clamp(1.5rem, 2.5vw, 2.05rem);
@@ -344,7 +344,7 @@
 }
 
 /* 缩略态看缩写值，展开态看完整值 */
-.stat-card__full { display: none; }
+.mingxin-datalayer .stat-card__full { display: none; }
 
 .mingxin-datalayer[data-guide-expanded] .guide-card--active .stat-card__compact { display: none; }
 .mingxin-datalayer[data-guide-expanded] .guide-card--active .stat-card__full { display: inline; }

@@ -15,6 +15,7 @@ import {
 	getSortedPostsList,
 	getTagList,
 } from "@/utils/content-utils";
+import { formatDateI18nWithTime } from "@/utils/date-utils";
 import { dynamicSlug, sortDynamics } from "@/utils/dynamic-utils";
 import { loadLocalImage } from "@/utils/schema-image";
 import { getPostUrlBySlug, getTagUrl, url } from "@/utils/url-utils";
@@ -227,12 +228,21 @@ const footerLinks = [
 	{ label: "Atom", href: url("/atom.xml"), external: false },
 	{ label: "Sitemap", href: "/sitemap-index.xml", external: true },
 ];
-const earliestPost = allPosts.length
-	? allPosts[allPosts.length - 1].data.published
-	: null;
-const runtimeDays = earliestPost
-	? Math.max(0, Math.floor((Date.now() - earliestPost.getTime()) / 86400000))
-	: null;
+/* 运行天数与全站同口径：siteConfig.siteStartDate 当天 00:00（+08:00）起算。
+   旧口径按最早文章日期算，旧文追溯到 2025 年会得出 372 天的假数（站长实锤）。 */
+const runtimeStart = new Date(
+	`${siteConfig.siteStartDate || "2026-10-15"}T00:00:00+08:00`,
+);
+const runtimeDays = Math.max(
+	0,
+	Math.floor((Date.now() - runtimeStart.getTime()) / 86400000),
+);
+/* 构建时间与站点信息卡（SiteInfo）同源同格式：构建时刻 + i18n 带时间格式 */
+const footerBuildTime = formatDateI18nWithTime(new Date());
+/* 页脚运行时间与他形态页脚（FooterConfig.html）同格式：天/时/分/秒、每秒跳字；
+   SSR 先给构建时刻的分解值，挂载后由 boot 脚本按同一起点逐秒刷新 */
+const runtimeDiffMs = Math.max(0, Date.now() - runtimeStart.getTime());
+const runtimeText = `${Math.floor(runtimeDiffMs / 86400000)} 天 ${Math.floor((runtimeDiffMs % 86400000) / 3600000)} 小时 ${Math.floor((runtimeDiffMs % 3600000) / 60000)} 分 ${Math.floor((runtimeDiffMs % 60000) / 1000)} 秒`;
 
 /* ================= 终幕内容区 ·「Hero」变体（原站 HomeDataLayer 移植） =================
    与「经典」变体共用同一批构建期数据装配，html[data-mingxin-afterglow] 决定显哪套。
@@ -437,7 +447,10 @@ const statBoxes = [
 /* 层叠插画按下标倒序渲染：下标 0（访客）最后画、视觉在最上层 */
 const statLayers = statBoxes.map((box, i) => ({ box, i })).reverse();
 
-/* 订阅与联系：邮箱打头 + profileConfig 社交链接；中心 hub 取 GitHub（无则第一条） */
+/* 订阅与联系：直接用全站同一份联系方式数据源 profileConfig.links（与
+   Profile 卡/作者卡/关于页清单同一套条目），不另行手写——旧口径手写一条
+   「邮箱」打头、又拼 profile 的 Email，同一邮箱出现两次，源里有的
+   Telegram 还漏掉（站长 2026-11-01 实锤）。中心 hub 取 GitHub（无则第一条） */
 const brandColorOf = (haystack: string) => {
 	const text = haystack.toLowerCase();
 	if (text.includes("github")) return "#181717";
@@ -448,20 +461,12 @@ const brandColorOf = (haystack: string) => {
 	if (text.includes("twitter") || text.includes("x.com")) return "#1d9bf0";
 	return undefined;
 };
-const contactLinks = [
-	{
-		name: "邮箱",
-		icon: "material-symbols:mail-outline-rounded",
-		href: "mailto:xz011@qq.com",
-		color: "#ea4335" as string | undefined,
-	},
-	...profileConfig.links.map((link) => ({
-		name: link.name,
-		icon: link.icon,
-		href: link.url,
-		color: brandColorOf(`${link.icon} ${link.name}`),
-	})),
-];
+const contactLinks = profileConfig.links.map((link) => ({
+	name: link.name,
+	icon: link.icon,
+	href: link.url,
+	color: brandColorOf(`${link.icon} ${link.name}`),
+}));
 const primaryContact =
 	contactLinks.find((link) => /github/i.test(`${link.icon} ${link.name}`)) ??
 	contactLinks[0];
@@ -665,6 +670,32 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 	{/* 内容区：终幕退场后从下方上滑接管。两套变体同一批构建期数据，
 	    html[data-mingxin-afterglow="hero"|"classic"] 决定显哪套（默认 hero=「Hero」）。 */}
 	<div data-mingxin-afterglow>
+	{/* 终幕变体访客开关：Hero / 经典两段，点了写 html 属性 + localStorage
+	    即时换（显隐全走 mingxin-mode.css 的 [data-mingxin-afterglow] 规则）；
+	    外观卡明信段有同名开关，两处选中态由脚本互相刷新。 */}
+	<div class="mingxin-afterglow-switch" role="radiogroup" aria-label="终幕内容区样式">
+		<span class="mingxin-afterglow-switch__label">终幕</span>
+		<div class="mingxin-afterglow-switch__track">
+			<button
+				type="button"
+				class="mingxin-afterglow-switch__btn"
+				data-afterglow-choice="hero"
+				role="radio"
+				aria-checked="false"
+			>
+				Hero
+			</button>
+			<button
+				type="button"
+				class="mingxin-afterglow-switch__btn"
+				data-afterglow-choice="classic"
+				role="radio"
+				aria-checked="false"
+			>
+				经典
+			</button>
+		</div>
+	</div>
 	{/* —— 变体「Hero」：原站 HomeDataLayer 四卡（牌堆/站点数据/内容索引/订阅联系），
 	    结构与类名照原站 home-data-layer.css，样式在 styles/mingxin-datalayer.css。
 	    默认态照原站层级：牌堆卡展开通栏在上、其余三卡缩成底部一行（data-guide-expanded
@@ -1236,9 +1267,24 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 				© {new Date().getFullYear()} {siteConfig.title}
 			</p>
 			<div class="mingxin-footer__meta">
-				{runtimeDays !== null && (
-					<p class="mingxin-footer__meta-row">小屋已运行 {runtimeDays} 天</p>
-				)}
+				<p class="mingxin-footer__meta-row">
+					小屋已运行 <span data-mx-uptime data-start={runtimeStart.getTime()}>{runtimeText}</span>
+				</p>
+				<p class="mingxin-footer__meta-row">构建时间 {footerBuildTime}</p>
+				<p class="mingxin-footer__meta-row">
+					<a
+						href="https://icp.gov.moe/?keyword=20260282"
+						target="_blank"
+						rel="noopener"
+					>
+						<img
+							src="/moe-icp-icon.png"
+							alt="萌ICP备"
+							class="mingxin-footer__icp-icon"
+							loading="lazy"
+						/>萌ICP备20260282号
+					</a>
+				</p>
 				<p class="mingxin-footer__meta-row">Astro · Firefly · 明信</p>
 			</div>
 		</div>
@@ -1782,6 +1828,53 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 		gap: 0.25rem;
 		text-align: right;
 	}
+	/* 终幕变体开关：与外观卡形态 chip 同一套选中态语言（深字描边 + 13% 染） */
+	.mingxin-afterglow-switch {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 0.75rem;
+		max-width: 64rem;
+		margin: 0 auto;
+		padding: 1.25rem 1rem 0;
+	}
+	.mingxin-afterglow-switch__label {
+		font-weight: 800;
+		color: var(--deep-text);
+	}
+	.mingxin-afterglow-switch__track {
+		display: flex;
+		gap: 0.4rem;
+	}
+	.mingxin-afterglow-switch__btn {
+		padding: 0.35rem 0.9rem;
+		border: 1px solid var(--surface-outline-variant);
+		border-radius: 999px;
+		background: transparent;
+		color: var(--deep-text);
+		font: inherit;
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.mingxin-afterglow-switch__btn[aria-checked="true"] {
+		border-color: var(--deep-text);
+		background: color-mix(in oklch, var(--deep-text) 13%, transparent);
+		box-shadow: inset 0 0 0 1px var(--deep-text);
+		font-weight: 800;
+	}
+
+	/* 备案图标尺寸与他形态页脚（FooterConfig.html 内联样式）同值 */
+	.mingxin-footer__icp-icon {
+		display: inline-block;
+		width: 1.15em;
+		height: 1.15em;
+		vertical-align: -0.22em;
+		margin-right: 0.3em;
+	}
+	.mingxin-footer__meta a {
+		color: inherit;
+		text-decoration: none;
+	}
 
 	/* ================= 静态回退（≤768px / 减弱动效） ================= */
 	.mingxin-static {
@@ -2273,6 +2366,54 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 			}
 		}
 		cleanups.push(mountRotator(root));
+		/* 页脚运行时间逐秒跳字：与他形态页脚同一算法（起点 +08:00、天/时/分/秒） */
+		const uptimeEl = root.querySelector<HTMLElement>("[data-mx-uptime]");
+		if (uptimeEl) {
+			const start = Number(uptimeEl.dataset.start || 0);
+			const tick = () => {
+				const diff = Math.max(0, Date.now() - start);
+				uptimeEl.textContent = `${Math.floor(diff / 86400000)} 天 ${Math.floor((diff % 86400000) / 3600000)} 小时 ${Math.floor((diff % 3600000) / 60000)} 分 ${Math.floor((diff % 60000) / 1000)} 秒`;
+			};
+			tick();
+			const timer = window.setInterval(tick, 1000);
+			cleanups.push(() => window.clearInterval(timer));
+		}
+		/* 终幕变体开关（终幕区）：写 html 属性 + localStorage 即时换，
+		   选中态与外观卡的同名 chip 互刷（卡内 chip 由 navbar 脚本管） */
+		const glowButtons = Array.from(
+			root.querySelectorAll<HTMLElement>("[data-afterglow-choice]"),
+		);
+		if (glowButtons.length) {
+			const syncGlow = () => {
+				const current =
+					document.documentElement.getAttribute("data-mingxin-afterglow") ===
+					"classic"
+						? "classic"
+						: "hero";
+				glowButtons.forEach((button) => {
+					button.setAttribute(
+						"aria-checked",
+						String(button.dataset.afterglowChoice === current),
+					);
+				});
+			};
+			const onGlowClick = (event: Event) => {
+				const button = (event.target as Element).closest<HTMLElement>(
+					"[data-afterglow-choice]",
+				);
+				if (!button) return;
+				const value = button.dataset.afterglowChoice === "classic" ? "classic" : "hero";
+				document.documentElement.setAttribute("data-mingxin-afterglow", value);
+				try {
+					localStorage.setItem("mingxinAfterglow", value);
+				} catch {}
+				syncGlow();
+			};
+			const switchEl = root.querySelector<HTMLElement>(".mingxin-afterglow-switch");
+			switchEl?.addEventListener("click", onGlowClick);
+			syncGlow();
+			cleanups.push(() => switchEl?.removeEventListener("click", onGlowClick));
+		}
 		const layer = root.querySelector<HTMLElement>(".mingxin-datalayer");
 		if (layer && layer.dataset.guideMounted !== "true") {
 			layer.dataset.guideMounted = "true";

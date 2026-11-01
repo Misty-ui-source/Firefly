@@ -288,7 +288,10 @@ const mxBannerPick =
 		if (!root) return;
 		if (document.documentElement.dataset.siteMode !== "mingxin") return;
 		const tree = collectTree();
-		if (!tree) {
+		/* 文章页标记门：面板已改无条件渲染（软导航到达也要在场），非文章页
+		   （如 spec 页同有 .prose 标题）靠文章页专属的 pagefind 标题标记自隐，
+		   与旧 SSR 条件渲染的页面范围保持一致 */
+		if (!tree || !tree.titleElement) {
 			root.hidden = true;
 			return;
 		}

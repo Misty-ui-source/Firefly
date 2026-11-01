@@ -1558,13 +1558,15 @@ html[data-site-mode="mingxin"] #navbar-wrapper.navbar-hidden {
 		}
 	}
 
-	/* ---------- 终幕内容区双变体切换（一期只接属性，切换 UI 在三期） ---------- */
+	/* ---------- 终幕内容区双变体切换（属性 + 终幕区/外观卡双开关） ----------
+	   !important 不可省：hero 变体的 display 来自无层的 mingxin-datalayer.css，
+	   分层普通声明压不过它——无 !important 时切到经典后 Hero 仍在（实测实锤）。 */
 	html[data-mingxin-afterglow="classic"] [data-afterglow-variant="hero"] {
-		display: none;
+		display: none !important;
 	}
 	html:not([data-mingxin-afterglow="classic"])
 		[data-afterglow-variant="classic"] {
-		display: none;
+		display: none !important;
 	}
 
 	/* ---------- 卡片体系：照原站 main.css 的分层口径 ----------
@@ -2048,13 +2050,38 @@ html[data-site-mode="mingxin"] #navbar-wrapper.navbar-hidden {
 	html[data-site-mode="mingxin"] .mingxin-footer {
 		max-width: 64rem !important;
 	}
-	/* 壁纸横幅让位给影像层舞台 */
+	/* 壁纸横幅让位给影像层舞台。!important 不可省：基座 layout-styles.css
+	   是无层样式，给 fullscreen / overlay 壁纸模式的 #wallpaper-wrapper 写了
+	   display:block !important，无层 !important 恒压过分层普通声明——站长
+	   壁纸模式为 fullscreen 时旧守卫（无 !important）整条失效，首页首屏被
+	   华彩全屏壁纸占满、明信舞台被顶到 100vh 之下（2026-11-01 真机实锤）。 */
 	html[data-site-mode="mingxin"] body.is-home:has(.mingxin-home)
 		#wallpaper-wrapper {
-		display: none;
+		display: none !important;
 	}
-	/* 内容面板从视口顶开始（影像层自带满屏舞台） */
+	/* 内页同样不留壁纸横幅（站长 2026-11-01：「进错门了」）：明信内页回到
+	   拼图纹理 + 干净页头，横幅与其标题/波浪覆盖层整体退场。 */
+	html[data-site-mode="mingxin"] body:not(.is-home) #wallpaper-wrapper {
+		display: none !important;
+	}
+	/* 完整外观设置面板：明信期间被控制器挪到 body 末尾（原生父级 .navbar-bar
+	   在明信下 display:none，面板埋在里面永远画不出来）。落位走 fixed：
+	   顶部沿用 .float-panel 自带的 top-21（5.25rem，恰在三段胶囊之下），
+	   右侧 1rem 与其自带 right-4 同值，层级压过内容区即可。 */
+	html[data-site-mode="mingxin"] body > #display-setting {
+		position: fixed !important;
+		right: 1rem;
+		z-index: 80;
+	}
+	/* 内容面板从视口顶开始（影像层自带满屏舞台）。变量必须直接写在
+	   .content-panel 上：layout-base 把 --content-top:100vh（fullscreen 首页）
+	   直接声明在面板元素上，body 级变量（哪怕 !important）也压不过元素
+	   自身的声明——旧写法因此失效，舞台被顶到首屏之下。 */
 	html[data-site-mode="mingxin"] body.is-home:has(.mingxin-home) {
+		--content-top: 0 !important;
+	}
+	html[data-site-mode="mingxin"] body.is-home:has(.mingxin-home)
+		.content-panel {
 		--content-top: 0 !important;
 	}
 	/* onload 入场动画残留 transform 会成为 fixed 舞台的包含块，首页停用；

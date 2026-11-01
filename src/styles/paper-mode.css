@@ -2283,7 +2283,8 @@ html[data-site-mode="paper"][data-paper-theme="manual"] #display-setting .opacit
 	/* 内容链三层 contents 化，让 hero/列表/分页直接成为网格项 */
 	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #content-column,
 	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #swup-container,
-	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #content-wrapper {
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home #content-wrapper,
+	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home .std-home {
 		display: contents !important;
 	}
 	html[data-site-mode="paper"][data-paper-theme="manual"] body.is-home .manual-hero {

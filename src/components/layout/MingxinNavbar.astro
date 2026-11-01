@@ -55,15 +55,23 @@ const modeOptions = [
 	{ value: "mingxin", label: "明信" },
 ] as const;
 
-/* 公告：本站 announcementConfig 是单条文案（原作是 items 列表 + 弹窗，
-   数据形态不同，改走面板内联展开，行与开合逻辑不变） */
+/* 公告：与侧栏 Announcement 组件同一份 announcementConfig、同一渲染口径——
+   正文挂 .announcement-content 走它那支全站脚本（geo 模式按访客位置渲染
+   geoTemplate、失败回落静态 content，脚本按 class 更新全部实例）；链接同
+   activeLink 口径（geo 模式优先 geoLink、缺失回落 link，他形态怎么写这里
+   就怎么写）。旧口径是 SSR 直出静态文案，控制台开 geo 后这边永远对不上。 */
 const noticeText = announcementConfig.content.trim();
+const noticeActiveLink =
+	announcementConfig.mode === "geo"
+		? (announcementConfig.geoLink ?? announcementConfig.link)
+		: announcementConfig.link;
 const noticeLink =
 	noticeText &&
-	announcementConfig.link?.enable &&
-	announcementConfig.link.text &&
-	announcementConfig.link.url
-		? announcementConfig.link
+	noticeActiveLink &&
+	noticeActiveLink.enable !== false &&
+	noticeActiveLink.text &&
+	noticeActiveLink.url
+		? noticeActiveLink
 		: null;
 
 /* 资料卡数据：与原资料卡同源（profileConfig + 发文热力图） */
@@ -266,9 +274,13 @@ const mxHeatmapMonths = await (async () => {
 							<Icon name="material-symbols:keyboard-arrow-down-rounded" class="mxnav-tools-chevron" />
 						</button>
 						<div class="mxnav-tools-notice" data-mxnav-notice hidden>
-							<p>{noticeText}</p>
+							<p class="announcement-content">{noticeText}</p>
 							{noticeLink && (
-								<a href={url(noticeLink.url)}>{noticeLink.text}</a>
+								<a
+									href={url(noticeLink.url)}
+									target={noticeLink.external ? "_blank" : "_self"}
+									rel={noticeLink.external ? "noopener noreferrer" : undefined}
+								>{noticeLink.text}</a>
 							)}
 						</div>
 					</>
@@ -322,6 +334,52 @@ const mxHeatmapMonths = await (async () => {
 										{mode.label}
 									</button>
 								))}
+							</div>
+							<p class="mxnav-appearance__label">
+								<span>终幕内容区</span>
+							</p>
+							<div class="mxnav-appearance__modes" role="radiogroup" aria-label="终幕内容区">
+								<button
+									type="button"
+									class="mxnav-appearance__chip"
+									data-mxnav-afterglow="hero"
+									role="radio"
+									aria-checked="false"
+								>
+									Hero
+								</button>
+								<button
+									type="button"
+									class="mxnav-appearance__chip"
+									data-mxnav-afterglow="classic"
+									role="radio"
+									aria-checked="false"
+								>
+									经典
+								</button>
+							</div>
+							<p class="mxnav-appearance__label">
+								<span>音乐播放器</span>
+							</p>
+							<div class="mxnav-appearance__modes" role="radiogroup" aria-label="音乐播放器形态">
+								<button
+									type="button"
+									class="mxnav-appearance__chip"
+									data-mxnav-player="sidebar"
+									role="radio"
+									aria-checked="false"
+								>
+									侧栏式
+								</button>
+								<button
+									type="button"
+									class="mxnav-appearance__chip"
+									data-mxnav-player="pill"
+									role="radio"
+									aria-checked="false"
+								>
+									胶囊式
+								</button>
 							</div>
 							<button type="button" class="mxnav-appearance__more" data-mxnav-action="palette">
 								<span>更多外观设置</span>

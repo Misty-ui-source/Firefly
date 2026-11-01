@@ -37,6 +37,12 @@ export const profileConfig: ProfileConfig = {
 			showName: false,
 		},
 		{
+			name: "Telegram",
+			icon: "fa7-brands:telegram",
+			url: "https://t.me/zhzhk27",
+			showName: false,
+		},
+		{
 			name: "RSS",
 			icon: "fa7-solid:rss",
 			url: "/rss/",

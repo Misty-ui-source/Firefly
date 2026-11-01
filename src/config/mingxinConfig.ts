@@ -357,6 +357,6 @@ export const mingxinConfig: MingxinConfig = {
 		metingSources: [
 			{ server: "netease", type: "playlist", id: "14164869977", label: "扩展歌单" },
 		],
-		playerVariant: "sidebar",
+		playerVariant: "pill",
 	},
 };

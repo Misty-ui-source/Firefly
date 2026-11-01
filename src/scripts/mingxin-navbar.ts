@@ -561,6 +561,31 @@ function initToolsPanel(
 	}
 	const themeWrap = panel.querySelector<HTMLElement>("[data-mxnav-theme-wrap]");
 
+	/* 完整外观设置面板（#display-setting）原生挂在标准顶栏 .navbar-bar 内，
+	   而 .navbar-bar 在明信下整条 display:none——「更多外观设置」程序化点击
+	   虽然触发了开关，面板却永远渲染不出来（站长实锤「点不开」）。照本站
+	   资料卡的先例：明信期间把面板节点挪到 body 末尾（其开关/外点关闭逻辑
+	   全按 id 工作，不受父级影响），切离明信时按记录的原位放回。 */
+	const settingsPanel = document.getElementById("display-setting");
+	let settingsHome: { parent: HTMLElement; next: Node | null } | null = null;
+	function relocateSettingsPanel(): void {
+		if (!settingsPanel) return;
+		const inMingxin =
+			document.documentElement.getAttribute("data-site-mode") === "mingxin";
+		if (inMingxin && settingsPanel.parentElement !== document.body) {
+			settingsHome = {
+				parent: settingsPanel.parentElement as HTMLElement,
+				next: settingsPanel.nextSibling,
+			};
+			document.body.appendChild(settingsPanel);
+		} else if (!inMingxin && settingsHome) {
+			settingsHome.parent.insertBefore(settingsPanel, settingsHome.next);
+			settingsHome = null;
+		}
+	}
+	relocateSettingsPanel();
+	window.addEventListener("siteModeChange", relocateSettingsPanel, { signal });
+
 	let closeTimer: number | null = null;
 	let repositionFrame = 0;
 	let pointerInside = false;
@@ -806,6 +831,18 @@ function initToolsPanel(
 				setSiteMode(chip.dataset.mxnavMode as ModeValue);
 				return;
 			}
+			const glowChip = target.closest<HTMLElement>("[data-mxnav-afterglow]");
+			if (glowChip) {
+				applyAfterglow(glowChip.dataset.mxnavAfterglow === "classic" ? "classic" : "hero");
+				syncAfterglowChips();
+				return;
+			}
+			const playerChip = target.closest<HTMLElement>("[data-mxnav-player]");
+			if (playerChip) {
+				applyPlayerVariant(playerChip.dataset.mxnavPlayer === "pill" ? "pill" : "sidebar");
+				syncPlayerChips();
+				return;
+			}
 			// 主题行（group）点完不收，其余行点完即收（原作规则）
 			if (target.closest('[data-mxnav-tools-stop="group"]')) return;
 			if (target.closest("[data-mxnav-tools-stop]")) close();
@@ -871,6 +908,79 @@ function initToolsPanel(
 	}
 	window.addEventListener("siteModeChange", syncModes, { signal });
 
+	/* ---- 终幕变体 / 播放器形态：访客覆盖（控制台配置只作默认） ----
+	   与 Layout 首帧脚本同键：终幕 localStorage["mingxinAfterglow"] →
+	   html[data-mingxin-afterglow]（变体显隐全走 CSS，点了即时换）；
+	   播放器 localStorage["mingxinPlayerVariant"] → #mingxin-music-player
+	   的 data-mxmp-variant（两张皮共用同一引擎与 <audio>，换皮不断播）。 */
+	const afterglowChips = Array.from(
+		panel.querySelectorAll<HTMLElement>("[data-mxnav-afterglow]"),
+	);
+	const playerChips = Array.from(
+		panel.querySelectorAll<HTMLElement>("[data-mxnav-player]"),
+	);
+	function currentAfterglow(): "hero" | "classic" {
+		return document.documentElement.getAttribute("data-mingxin-afterglow") === "classic"
+			? "classic"
+			: "hero";
+	}
+	function applyAfterglow(value: "hero" | "classic"): void {
+		document.documentElement.setAttribute("data-mingxin-afterglow", value);
+		try {
+			localStorage.setItem("mingxinAfterglow", value);
+		} catch {}
+		// 终幕区的同名开关（首页在场时）一起同步选中态
+		document
+			.querySelectorAll<HTMLElement>("[data-afterglow-choice]")
+			.forEach((button) => {
+				button.setAttribute(
+					"aria-checked",
+					String(button.dataset.afterglowChoice === value),
+				);
+			});
+	}
+	function syncAfterglowChips(): void {
+		const current = currentAfterglow();
+		afterglowChips.forEach((chip) => {
+			chip.setAttribute(
+				"aria-checked",
+				String(chip.dataset.mxnavAfterglow === current),
+			);
+		});
+	}
+	function currentPlayerVariant(): "sidebar" | "pill" {
+		const stored = (() => {
+			try {
+				return localStorage.getItem("mingxinPlayerVariant");
+			} catch {
+				return null;
+			}
+		})();
+		if (stored === "pill" || stored === "sidebar") return stored;
+		return document.getElementById("mingxin-music-player")?.dataset
+			.mxmpVariant === "sidebar"
+			? "sidebar"
+			: "pill";
+	}
+	function applyPlayerVariant(value: "sidebar" | "pill"): void {
+		const player = document.getElementById("mingxin-music-player");
+		if (player) player.dataset.mxmpVariant = value;
+		try {
+			localStorage.setItem("mingxinPlayerVariant", value);
+		} catch {}
+	}
+	function syncPlayerChips(): void {
+		const current = currentPlayerVariant();
+		playerChips.forEach((chip) => {
+			chip.setAttribute(
+				"aria-checked",
+				String(chip.dataset.mxnavPlayer === current),
+			);
+		});
+	}
+	syncAfterglowChips();
+	syncPlayerChips();
+
 	/* ---- 快捷键提示按平台改写（原作同法） ---- */
 	const modifier = panel.querySelector<HTMLElement>(
 		"[data-mxnav-tools-modifier]",
@@ -935,6 +1045,8 @@ function initToolsPanel(
 		sync: () => {
 			syncThemeSegments();
 			syncModes();
+			syncAfterglowChips();
+			syncPlayerChips();
 		},
 	};
 }
