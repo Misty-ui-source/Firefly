@@ -42,7 +42,7 @@ export const timelineConfig: TimelineConfig = {
 			link: 'https://lanerc.me/admin/'
 		},
 		{
-			date: '2026.9.28',
+			date: '2026.09.28',
 			type: '里程碑',
 			featured: true,
 			title: '全款拿下lanerc.me',
