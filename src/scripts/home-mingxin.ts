@@ -192,8 +192,12 @@ export function mountMingxinBlinds(
 		homeRoot?.querySelector<HTMLElement>("[data-finale-spacer]") ?? null;
 	const afterglowHost =
 		homeRoot?.querySelector<HTMLElement>("[data-mingxin-afterglow]") ?? null;
-	/* 内容区有两套变体（Hero/经典），隐藏的那套 rect 为空：取第一个真实可见的罗盘锚点 */
-	const compassTitle =
+	/* 内容区有两套变体（Hero/经典），隐藏的那套 rect 为空：取第一个真实可见的罗盘锚点。
+	   必须每帧现取，不能只在开机时定死——访客中途切换变体后，旧锚点被
+	   display:none、rect 恒为 0，终幕退场量测全错位：影像被算成透明、
+	   文字层被推走，经典模式下终幕「不出现、爆闪一下直接跳到后面」
+	   （站长 2026-11-01 报障）。 */
+	const resolveCompassTitle = (): HTMLElement | null =>
 		[...(homeRoot?.querySelectorAll<HTMLElement>("[data-afterglow-compass]") ?? [])].find(
 			(el) => el.getClientRects().length > 0,
 		) ?? null;
@@ -426,7 +430,7 @@ export function mountMingxinBlinds(
 					(cardScale || 1)
 				: 0;
 		cachedSceneStep =
-			cachedSceneWidth + Math.max(150, window.innerWidth * 0.16);
+			cachedSceneWidth + Math.max(150, window.innerWidth * 0.12);
 		cyclePeriod =
 			Number.parseFloat(
 				getComputedStyle(cycleStage).getPropertyValue(
@@ -546,6 +550,7 @@ export function mountMingxinBlinds(
 		exitActive = true;
 		const vh = Math.max(1, window.innerHeight);
 		// 布局量测统一在任何写入之前完成
+		const compassTitle = resolveCompassTitle();
 		const compassTop = compassTitle
 			? compassTitle.getBoundingClientRect().top
 			: vh - released;

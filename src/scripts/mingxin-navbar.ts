@@ -601,8 +601,22 @@ function initToolsPanel(
 	let closeTimer: number | null = null;
 	let repositionFrame = 0;
 	let pointerInside = false;
+	let searchComposing = false;
 
 	const isOpen = (): boolean => panel.classList.contains("is-open");
+
+	/* 搜索框正在使用（可见且焦点在输入框内，或拼音组词中）：此时一切
+	   自动收起（悬停离开/焦点离开/滚动）都必须让行——组词时浏览器会
+	   抖动焦点，误触自动收起就是「打四五个字母面板掉下去」（站长报障）。 */
+	function isSearchEngaged(): boolean {
+		const input = panel.querySelector<HTMLInputElement>(
+			"[data-mxnav-search-input]",
+		);
+		if (!input) return false;
+		const box = input.closest<HTMLElement>("[data-mxnav-search]");
+		if (!box || box.hidden) return false;
+		return searchComposing || document.activeElement === input;
+	}
 
 	function cancelClose(): void {
 		if (closeTimer !== null) {
@@ -612,6 +626,7 @@ function initToolsPanel(
 	}
 
 	function scheduleClose(): void {
+		if (isSearchEngaged()) return;
 		if (closeTimer !== null) return;
 		closeTimer = window.setTimeout(() => {
 			closeTimer = null;
@@ -828,6 +843,14 @@ function initToolsPanel(
 		if (willShow) requestAnimationFrame(() => searchInput?.focus());
 	}
 
+	searchInput?.addEventListener("compositionstart", () => {
+		searchComposing = true;
+		cancelClose();
+	});
+	searchInput?.addEventListener("compositionend", () => {
+		searchComposing = false;
+	});
+
 	searchBox?.addEventListener("submit", (event) => {
 		event.preventDefault();
 		const q = searchInput?.value.trim();
@@ -1032,6 +1055,7 @@ function initToolsPanel(
 		"scroll",
 		() => {
 			if (pointerInside) return;
+			if (isSearchEngaged()) return;
 			if (isOpen()) close();
 		},
 		{ passive: true, signal },
