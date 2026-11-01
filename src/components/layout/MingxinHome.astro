@@ -1452,13 +1452,21 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 		overflow: hidden;
 	}
 	.mingxin-blinds__cycle {
+		/* 照原版：整幅铺满舞台、拼图线只有 12% 墨色，全场深浅一致；
+		   此前这边做成底部一条带 + 实色填充，带子上沿就是截图里那道直边分界 */
 		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		height: min(38vh, 22rem);
+		inset: 0;
+		z-index: 0;
+		--mingxin-cycle-line: color-mix(
+			in srgb,
+			var(--on-surface) 12%,
+			transparent
+		);
 		overflow: hidden;
-		opacity: 0.4;
+		opacity: 0;
+		visibility: hidden;
+		transform-origin: 50% 100%;
+		will-change: transform, opacity;
 		pointer-events: none;
 	}
 	.mingxin-blinds__cycle-track {
@@ -1467,7 +1475,7 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 		bottom: 0;
 		left: 0;
 		width: calc(100% + 224px);
-		background: var(--on-surface);
+		background: var(--mingxin-cycle-line);
 		-webkit-mask-image: url("/assets/images/mingxin/puzzle.svg");
 		mask-image: url("/assets/images/mingxin/puzzle.svg");
 		-webkit-mask-size: 224px 224px;

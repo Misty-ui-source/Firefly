@@ -550,6 +550,7 @@ interface ToolsPanel {
 	close: () => void;
 	isOpen: () => boolean;
 	sync: () => void;
+	restore: () => void;
 }
 
 function initToolsPanel(
@@ -559,7 +560,12 @@ function initToolsPanel(
 	const btn = document.querySelector<HTMLElement>("[data-mxnav-tools-btn]");
 	const panel = document.querySelector<HTMLElement>("[data-mxnav-tools-panel]");
 	if (!btn || !panel) {
-		return { close: () => {}, isOpen: () => false, sync: () => {} };
+		return {
+			close: () => {},
+			isOpen: () => false,
+			sync: () => {},
+			restore: () => {},
+		};
 	}
 	const themeWrap = panel.querySelector<HTMLElement>("[data-mxnav-theme-wrap]");
 
@@ -597,6 +603,23 @@ function initToolsPanel(
 	}
 	relocateSettingsPanel();
 	window.addEventListener("siteModeChange", relocateSettingsPanel, { signal });
+
+	/* 还原不能指望上面的监听：切离明信时入口 sync 先于本监听执行 destroy，
+	   ac.abort() 会把带 signal 的监听连带摘除，还原分支永远轮不到跑——面板
+	   就此滞留在 body 末尾、在其他形态下打不开（站长 2026-11-02 报障）。
+	   改走 destroy 钩子：收面板 + 按记录的原位放回，与 reparents 同一条路。 */
+	const restoreSettingsPanel = (): void => {
+		if (!settingsPanel) return;
+		if (!settingsPanel.classList.contains("float-panel-closed")) {
+			settingsPanel.classList.add("float-panel-closed");
+			settingsPanel.setAttribute("inert", "");
+			settingsPanel.setAttribute("aria-hidden", "true");
+		}
+		if (settingsHome) {
+			settingsHome.parent.insertBefore(settingsPanel, settingsHome.next);
+			settingsHome = null;
+		}
+	};
 
 	let closeTimer: number | null = null;
 	let repositionFrame = 0;
@@ -1104,6 +1127,7 @@ function initToolsPanel(
 	return {
 		close,
 		isOpen,
+		restore: restoreSettingsPanel,
 		sync: () => {
 			syncThemeSegments();
 			syncModes();
@@ -1509,6 +1533,7 @@ function init(): void {
 			closeMxnavDropdownPanel();
 		},
 		destroy: () => {
+			tools?.restore();
 			ac.abort();
 			reparents.forEach(restoreReparent);
 		},

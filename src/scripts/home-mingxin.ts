@@ -50,8 +50,12 @@ const SCENE_ENTER_DISTANCE = 0.42;
 const SWING_FACTOR = 0.16;
 const SWING_LIMIT = 9;
 const SWING_RESET_DELAY = 110;
-/** 收缩进度追赶时间常数（近似参考站 scrub: 0.4 的跟随手感） */
-const SHRINK_SMOOTHING = 0.18;
+/** 收缩进度追赶时间常数（近似原版 scrub: 0.4 的跟随手感） */
+const SHRINK_SMOOTHING = 0.25;
+/** 揭示段标题视差追赶时间常数（近似原版揭示 scrub: 0.35；原版五幕无平滑，此处与 pin 共用一台追赶循环） */
+const REVEAL_SMOOTHING = 0.2;
+/** pin 进度追赶时间常数（改良：五幕横滑与终幕放大不再 1:1 硬跟随，带一点追赶的顺滑） */
+const PIN_SMOOTHING = 0.12;
 
 /** pin 进度尾段留给终幕放大：横移在 0.82 前走完，剩余全用于从图框扩到满屏 */
 const FINALE_ENTER_PROGRESS = 0.82;
@@ -316,6 +320,13 @@ export function mountMingxinBlinds(
 	let shrinkValue = 0;
 	let shrinkInitialized = false;
 	let shrinkLastTime = 0;
+	let chaseFrame = 0;
+	let chaseLastTime = 0;
+	let motionInitialized = false;
+	let pinTarget = 0;
+	let pinValue = 0;
+	let revealTarget = 0;
+	let revealValue = 0;
 	let windFrame = 0;
 	let windLastTime = 0;
 	let resetWindTimer = 0;
@@ -1049,11 +1060,13 @@ export function mountMingxinBlinds(
 		if (heroLayer) {
 			heroLayer.dataset.visible = phase === "reveal" ? "true" : "false";
 		}
-		// 揭示段标题视差：随滚动轻微上移并淡出（收缩段开始前走完）
-		if (heroCenter) {
-			const drift = clamp01(scrollY / Math.max(1, metrics.shrinkStart));
-			heroCenter.style.transform = `translateY(${(-drift * vh * 0.18).toFixed(1)}px)`;
-			heroCenter.style.opacity = String(1 - drift * 0.6);
+		// 揭示段标题视差：随滚动轻微上移并淡出（收缩段开始前走完），带追赶不硬跟
+		revealTarget = clamp01(scrollY / Math.max(1, metrics.shrinkStart));
+		if (!motionInitialized) {
+			revealValue = revealTarget;
+			renderReveal();
+		} else {
+			startChase();
 		}
 
 		const shrinkProgress = clamp01(
@@ -1073,8 +1086,9 @@ export function mountMingxinBlinds(
 		const pinProgress = clamp01(
 			(scrollY - metrics.pinStart) / Math.max(1, metrics.pinDistance),
 		);
+		// 离散判定（阶段、接管开关）仍按原始滚动位置，渲染走追赶后的 pinValue：
 		// 横移在 FINALE_ENTER_PROGRESS 前走完，剩余进度全部留给终幕放大
-		const finaleT =
+		const rawFinaleT =
 			phase === "done"
 				? 1
 				: phase === "scenes"
@@ -1083,28 +1097,21 @@ export function mountMingxinBlinds(
 								(1 - FINALE_ENTER_PROGRESS),
 						)
 					: 0;
-		const scenesProgress =
-			phase === "scenes"
-				? (Math.min(pinProgress, FINALE_ENTER_PROGRESS) /
-						FINALE_ENTER_PROGRESS) *
-					lastSceneIndex
-				: 0;
 		horizontalEnabled =
-			rootInView && phase === "scenes" && finaleT === 0 && pinProgress < 0.999;
+			rootInView &&
+			phase === "scenes" &&
+			rawFinaleT === 0 &&
+			pinProgress < 0.999;
 		viewport.classList.toggle("is-horizontal", horizontalEnabled);
-		// 终幕放大期间场景视口整体淡出，避免与放大层重影
-		viewport.style.opacity = String(1 - finaleT);
-		viewport.style.visibility = finaleT >= 1 ? "hidden" : "visible";
 
-		renderScenes(
-			phase === "scenes" ? scenesProgress : 0,
-			(phase === "scenes" || phase === "done") && rootInView,
-		);
-		if (phase === "done") {
-			renderScenes(lastSceneIndex, rootInView);
+		pinTarget = phase === "done" ? 1 : pinProgress;
+		if (!motionInitialized) {
+			motionInitialized = true;
+			pinValue = pinTarget;
+		} else {
+			startChase();
 		}
-		renderFinale(finaleT);
-		renderExit();
+		renderPinFrame();
 		syncPlayback();
 	};
 
@@ -1151,6 +1158,76 @@ export function mountMingxinBlinds(
 		shrinkFrame = requestAnimationFrame(shrinkTick);
 	};
 
+	/** 揭示段标题视差的实际绘制：追赶值驱动，与 sync 里的目标值分离 */
+	const renderReveal = () => {
+		if (!heroCenter) return;
+		const vh = metrics.vh || window.innerHeight;
+		heroCenter.style.transform = `translateY(${(-revealValue * vh * 0.18).toFixed(1)}px)`;
+		heroCenter.style.opacity = String(1 - revealValue * 0.6);
+	};
+
+	/** 五幕与终幕的实际绘制：全部从追赶后的 pinValue 派生，0.82 分界两边同源不错位 */
+	const renderPinFrame = () => {
+		const finaleT =
+			phase === "done" && pinValue >= 0.999
+				? 1
+				: clamp01(
+						(pinValue - FINALE_ENTER_PROGRESS) /
+							(1 - FINALE_ENTER_PROGRESS),
+					);
+		const scenesProgress =
+			(Math.min(pinValue, FINALE_ENTER_PROGRESS) / FINALE_ENTER_PROGRESS) *
+			lastSceneIndex;
+		// 终幕放大期间场景视口整体淡出，避免与放大层重影
+		viewport.style.opacity = String(1 - finaleT);
+		viewport.style.visibility = finaleT >= 1 ? "hidden" : "visible";
+		renderScenes(
+			scenesProgress,
+			(phase === "scenes" || phase === "done") && rootInView,
+		);
+		renderFinale(finaleT);
+		renderExit();
+	};
+
+	/** 追赶循环：揭示视差与 pin 进度共用一台，指数趋近、到位即停（常数见文件头） */
+	const chaseTick = (now: number) => {
+		const delta = chaseLastTime
+			? Math.min((now - chaseLastTime) / 1000, 0.05)
+			: 0;
+		chaseLastTime = now;
+		const pinDiff = pinTarget - pinValue;
+		const revealDiff = revealTarget - revealValue;
+		const pinDone = Math.abs(pinDiff) < 0.0008;
+		const revealDone = Math.abs(revealDiff) < 0.002;
+		if ((pinDone && revealDone) || delta === 0) {
+			if (pinDone && revealDone) {
+				pinValue = pinTarget;
+				revealValue = revealTarget;
+				chaseFrame = 0;
+				renderReveal();
+				renderPinFrame();
+				return;
+			}
+			chaseFrame = requestAnimationFrame(chaseTick);
+			return;
+		}
+		if (!pinDone) {
+			pinValue += pinDiff * (1 - Math.exp(-delta / PIN_SMOOTHING));
+		}
+		if (!revealDone) {
+			revealValue += revealDiff * (1 - Math.exp(-delta / REVEAL_SMOOTHING));
+		}
+		renderReveal();
+		renderPinFrame();
+		chaseFrame = requestAnimationFrame(chaseTick);
+	};
+
+	const startChase = () => {
+		if (chaseFrame || signal.aborted) return;
+		chaseLastTime = performance.now();
+		chaseFrame = requestAnimationFrame(chaseTick);
+	};
+
 	const requestSync = () => {
 		if (syncFrame || signal.aborted) return;
 		syncFrame = requestAnimationFrame(() => {
@@ -1171,6 +1248,8 @@ export function mountMingxinBlinds(
 		// 占位高度会改变终幕与内容区的衔接距离，量完几何再校准，最后才同步状态
 		calibrateFinaleSpacer();
 		renderPortal(shrinkValue);
+		// 几何变了，追赶值直接吸附到新目标，避免 resize 后画面慢慢滑过去
+		motionInitialized = false;
 		sync();
 	};
 
@@ -1216,7 +1295,8 @@ export function mountMingxinBlinds(
 		(event) => {
 			if (
 				!horizontalEnabled ||
-				Math.abs(event.deltaX) <= Math.abs(event.deltaY)
+				Math.abs(event.deltaX) <= Math.abs(event.deltaY) ||
+				(event.target instanceof Node && stands.contains(event.target))
 			) {
 				return;
 			}
