@@ -57,7 +57,6 @@
 	const HEART_GLYPHS = ["♥", "♡"];
 	const HEART_COLORS = ["#f43f5e", "#fb7185", "#e11d48", "#f9a8d4"];
 	const LEAF_GLYPHS = ["🍁", "🍂"];
-	const BURST_COLORS = ["#fb7185", "#e11d48", "#2dd4bf", "#fbbf24", "#a78bfa"];
 	const BURST_GLYPHS = ["♪", "♥", "✦"];
 
 	// 萤火虫的光晕贴图（预渲染一次，每帧 drawImage，比 shadowBlur 省得多）
@@ -469,8 +468,42 @@
 			this.ctx = null;
 		}
 
+		// 点击粒子配色跟随当前形态主题色：璨夜 / 顽彩有固定品牌色板直接用代表色；
+		// 其余形态取主题色相（谐彩取 --harmony-hue、华彩 / 素简取全站 --hue），
+		// 在 HSL 空间展开「本色 + 邻近 + 近互补」四色，切换形态/色相后下一次点击即生效
+		private burstColors(): string[] {
+			const root = document.documentElement;
+			const mode = root.getAttribute("data-site-mode");
+			if (mode === "astral")
+				return ["#818cf8", "#6366f1", "#2dd4bf", "#a5b4fc"];
+			if (mode === "brick")
+				return ["#0284c7", "#f59e0b", "#10b981", "#f87171"];
+			const cs = getComputedStyle(root);
+			const harmonyHue = Number.parseFloat(
+				cs.getPropertyValue("--harmony-hue"),
+			);
+			const baseHue = Number.parseFloat(cs.getPropertyValue("--hue"));
+			const hue =
+				mode === "harmony" && Number.isFinite(harmonyHue)
+					? harmonyHue
+					: Number.isFinite(baseHue)
+						? baseHue
+						: 174;
+			const h = ((hue % 360) + 360) % 360;
+			return [
+				`hsl(${h} 85% 62%)`,
+				`hsl(${(h + 40) % 360} 85% 68%)`,
+				`hsl(${(h + 330) % 360} 80% 66%)`,
+				`hsl(${(h + 160) % 360} 75% 64%)`,
+			];
+		}
+
 		private burst(x: number, y: number) {
-			const n = Math.max(6, this.cfg.count || 12);
+			const base = Math.max(6, this.cfg.count || 12);
+			// 移动端粒子数减半：省电，也避免小屏上糊住点按位置
+			const n =
+				window.innerWidth < 768 ? Math.max(4, Math.round(base / 2)) : base;
+			const colors = this.burstColors();
 			for (let i = 0; i < n; i++) {
 				const ang = rand(0, Math.PI * 2);
 				const sp = rand(0.6, 3.4);
@@ -486,7 +519,7 @@
 					phaseSpeed: 0,
 					alpha: 1,
 					glyph: isGlyph ? pick(BURST_GLYPHS) : undefined,
-					color: pick(BURST_COLORS),
+					color: pick(colors),
 					rot: rand(-0.4, 0.4),
 					rotSpeed: rand(-0.05, 0.05),
 					life,

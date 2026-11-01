@@ -97,6 +97,140 @@ html.is-animating .transition-swup-fade {
    4. Navigation Progress Bar
    -------------------------------------------------------------------------- */
 
+/* --------------------------------------------------------------------------
+   5. 形态切换全局淡变（Mode Fade）
+   --------------------------------------------------------------------------
+   切换 data-site-mode / data-astral-theme 时，setting-utils 的 beginModeFade()
+   先给 html 挂 .mode-fade 再改属性，本节让高频表面元素在 1s 内只过渡颜色类
+   属性（背景 / 文字 / 边框 / 填充），结束后 JS 摘除类。不给 * 挂 transition，
+   避免大面积常驻过渡拖慢日常交互。 */
+
+html.mode-fade,
+html.mode-fade body,
+html.mode-fade .card-base,
+html.mode-fade #navbar-wrapper,
+html.mode-fade #navbar,
+html.mode-fade .float-panel,
+html.mode-fade .btn-regular,
+html.mode-fade .btn-card,
+html.mode-fade .btn-plain,
+html.mode-fade .btn-scale,
+html.mode-fade input,
+html.mode-fade textarea,
+html.mode-fade select {
+    transition:
+        background-color 1000ms ease,
+        border-color 1000ms ease,
+        color 1000ms ease,
+        fill 1000ms ease,
+        stroke 1000ms ease,
+        outline-color 1000ms ease,
+        text-decoration-color 1000ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html.mode-fade,
+    html.mode-fade body,
+    html.mode-fade .card-base,
+    html.mode-fade #navbar-wrapper,
+    html.mode-fade #navbar,
+    html.mode-fade .float-panel,
+    html.mode-fade .btn-regular,
+    html.mode-fade .btn-card,
+    html.mode-fade .btn-plain,
+    html.mode-fade .btn-scale,
+    html.mode-fade input,
+    html.mode-fade textarea,
+    html.mode-fade select {
+        transition: none !important;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   6. 会话级开屏（Splash Screen）
+   --------------------------------------------------------------------------
+   每会话只播一次（sessionStorage splashSeen，Layout 内联脚本同步判定）；
+   背景直接用当前形态的 --page-bg、文字用 --deep-text，不另起视觉体系。
+   点任意处跳过，约 1.9s 自动散去；开屏期间锁滚动。 */
+
+html.splash-open {
+    overflow: hidden;
+}
+
+#splash-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 24px;
+    background: var(--page-bg);
+    color: var(--deep-text);
+    cursor: pointer;
+    animation: splash-in 380ms ease both;
+}
+
+#splash-screen[hidden] {
+    display: none;
+}
+
+#splash-screen.splash-out {
+    opacity: 0;
+    transition: opacity 400ms ease;
+}
+
+#splash-screen .splash-fish {
+    height: min(42vh, 360px);
+    width: auto;
+    animation: splash-bob 1.8s ease-in-out infinite;
+}
+
+#splash-screen .splash-name {
+    font-size: clamp(1.9rem, 6vw, 2.75rem);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+    text-align: center;
+}
+
+#splash-screen .splash-hi {
+    font-size: 1rem;
+    opacity: 0.75;
+}
+
+@keyframes splash-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes splash-bob {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #splash-screen,
+    #splash-screen .splash-fish {
+        animation: none;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   4b. Navigation Progress Bar（自上方第 4 节移至文末，规则不变）
+   -------------------------------------------------------------------------- */
+
 #progress-bar {
     --progress-height: 3px;
 

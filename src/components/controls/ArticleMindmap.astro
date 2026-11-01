@@ -1,0 +1,96 @@
+---
+import { Icon } from "astro-icon/components";
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
+import "@/styles/article-mindmap.css";
+
+interface Props {
+	/** 文章标题（导图根节点文本的兜底来源，运行时优先读当前 DOM 的标题元素） */
+	title?: string;
+}
+
+const { title = "" } = Astro.props;
+
+const mindMapLabel = i18n(I18nKey.tocMindMap);
+const zoomInLabel = i18n(I18nKey.tocMindMapZoomIn);
+const zoomOutLabel = i18n(I18nKey.tocMindMapZoomOut);
+const resetLabel = i18n(I18nKey.tocMindMapReset);
+const fullscreenLabel = i18n(I18nKey.tocMindMapFullscreen);
+const closeLabel = i18n(I18nKey.close);
+---
+
+<!--
+  文章思维导图弹窗：由 MainGridLayout 在有标题的文章页挂载（悬浮控件一带，
+  swup 容器之外常驻）；树在打开时由 src/utils/article-mindmap.ts 从当前
+  正文 DOM 实时采集，工具栏与画布手势都在该控制器里绑定。
+-->
+<dialog
+  id="article-mindmap"
+  class="article-mindmap"
+  data-article-title={title}
+  aria-label={mindMapLabel}
+>
+  <div class="article-mindmap__overlay" data-mindmap-close></div>
+  <div class="article-mindmap__panel">
+    <header class="article-mindmap__header">
+      <span class="article-mindmap__heading">{mindMapLabel}</span>
+      <div class="article-mindmap__tools">
+        <button
+          type="button"
+          class="article-mindmap__tool-btn"
+          data-mindmap-zoom-out
+          title={zoomOutLabel}
+          aria-label={zoomOutLabel}
+        >
+          <Icon name="material-symbols:zoom-out-rounded" class="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          class="article-mindmap__tool-btn"
+          data-mindmap-zoom-in
+          title={zoomInLabel}
+          aria-label={zoomInLabel}
+        >
+          <Icon name="material-symbols:zoom-in-rounded" class="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          class="article-mindmap__tool-btn"
+          data-mindmap-reset
+          title={resetLabel}
+          aria-label={resetLabel}
+        >
+          <Icon name="mdi:restore" class="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          class="article-mindmap__tool-btn"
+          data-mindmap-fullscreen
+          title={fullscreenLabel}
+          aria-label={fullscreenLabel}
+        >
+          <Icon name="mdi:fullscreen" class="article-mindmap__fs-icon is-enter h-4 w-4" />
+          <Icon name="mdi:fullscreen-exit" class="article-mindmap__fs-icon is-exit h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          class="article-mindmap__tool-btn"
+          data-mindmap-close
+          aria-label={closeLabel}
+        >
+          <Icon name="material-symbols:close-rounded" class="h-4 w-4" />
+        </button>
+      </div>
+    </header>
+    <div class="article-mindmap__canvas" data-mindmap-canvas>
+      <svg class="article-mindmap__lines" data-mindmap-lines aria-hidden="true" focusable="false"></svg>
+      <div class="article-mindmap__mount" data-mindmap-tree></div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  import { initArticleMindmap } from "@/utils/article-mindmap";
+
+  initArticleMindmap();
+</script>

@@ -1,0 +1,122 @@
+/**
+ * 内容索引卡的「提示词 → 分支虚线 → 分类卡」循环小剧场。
+ * 移植自原站 home-index-scene-controller.ts（MmzMing/my-blog），逻辑与常量照原样：
+ * JS 只写 data-scene-phase 与文字片段，位移/缩放/错峰/描线全在
+ * styles/mingxin-datalayer.css 里由 [data-scene-phase] 驱动。
+ * 相位：typing → moving → sent → team → reset，循环。
+ * SSR 标记直接是 team 终态：脚本没跑起来时看到的是一幅完成的画。
+ */
+
+/** 每个字符的打字间隔 */
+const TYPE_MS = 22;
+/** 打完字后的阅读停顿 */
+const SEND_MS = 420;
+/** 提示框缩小并上移的时间，与 CSS 的 --scene-prompt-move 一致 */
+const PROMPT_MOVE_MS = 600;
+/** 虚线往下画的时间 */
+const SPREAD_MS = 700;
+/** 三张分类卡之间的错峰 */
+const STAGGER_MS = 160;
+/** 成图停留 */
+const HOLD_MS = 2600;
+/** 淡出并让提示框回到中央，须覆盖 PROMPT_MOVE_MS */
+const RESET_MS = 600;
+/** 起手前的那点留白，别让第一帧就在打字 */
+const LEAD_IN_MS = 500;
+/** 最后一张卡弹完的收尾时长，与 CSS 的 node 过渡对齐 */
+const SETTLE_MS = 500;
+
+type Phase = "typing" | "moving" | "sent" | "team" | "reset";
+
+/** 一轮的总时长：决定下一轮什么时候开始 */
+function cycleLength(promptLength: number): number {
+	const typedAt = LEAD_IN_MS + promptLength * TYPE_MS;
+	return (
+		typedAt + SEND_MS + PROMPT_MOVE_MS + SPREAD_MS + STAGGER_MS * 3 + SETTLE_MS
+	);
+}
+
+/** 挂载循环剧场，返回清理函数（与导览控制器并列，一个模块只管一张卡） */
+export function bootMingxinIndexScene(root: HTMLElement): () => void {
+	const scene = root.querySelector<HTMLElement>("[data-index-scene]");
+	const text = scene?.querySelector<HTMLElement>("[data-scene-text]");
+	if (!scene || !text) return () => {};
+
+	// 构建期就把全文渲染在标记里，这里读一次当作脚本文本
+	const prompt = (text.textContent ?? "").trim();
+	const isReduced = window.matchMedia(
+		"(prefers-reduced-motion: reduce)",
+	).matches;
+
+	let timers: number[] = [];
+	let observer: IntersectionObserver | null = null;
+
+	const clearTimers = (): void => {
+		timers.forEach((id) => {
+			window.clearTimeout(id);
+		});
+		timers = [];
+	};
+
+	const setPhase = (phase: Phase): void => {
+		scene.dataset.scenePhase = phase;
+	};
+
+	const run = (): void => {
+		clearTimers();
+		const later = (fn: () => void, ms: number): void => {
+			timers.push(window.setTimeout(fn, ms));
+		};
+
+		setPhase("typing");
+		text.textContent = "";
+		for (let i = 1; i <= prompt.length; i += 1) {
+			later(
+				() => {
+					text.textContent = prompt.slice(0, i);
+				},
+				LEAD_IN_MS + i * TYPE_MS,
+			);
+		}
+
+		const typedAt = LEAD_IN_MS + prompt.length * TYPE_MS;
+		const movedAt = typedAt + SEND_MS + PROMPT_MOVE_MS;
+		later(() => setPhase("moving"), typedAt + SEND_MS);
+		later(() => setPhase("sent"), movedAt);
+		later(() => setPhase("team"), movedAt + SPREAD_MS * 0.55);
+
+		const doneAt = cycleLength(prompt.length);
+		later(() => setPhase("reset"), doneAt + HOLD_MS);
+		later(run, doneAt + HOLD_MS + RESET_MS);
+	};
+
+	if (isReduced) {
+		text.textContent = prompt;
+		setPhase("team");
+		return () => {};
+	}
+
+	setPhase("typing");
+	text.textContent = "";
+
+	// 整层在首屏之下，滚到了才开演；滚走就拆表
+	observer = new IntersectionObserver(
+		(entries) => {
+			if (entries.some((entry) => entry.isIntersecting)) {
+				if (timers.length === 0) run();
+			} else {
+				clearTimers();
+			}
+		},
+		{ rootMargin: "0px" },
+	);
+	observer.observe(scene);
+
+	return () => {
+		observer?.disconnect();
+		observer = null;
+		clearTimers();
+		text.textContent = prompt;
+		delete scene.dataset.scenePhase;
+	};
+}

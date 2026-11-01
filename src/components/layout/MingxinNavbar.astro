@@ -1,0 +1,462 @@
+---
+import { Icon } from "astro-icon/components";
+import {
+	announcementConfig,
+	mingxinConfig,
+	profileConfig,
+	siteConfig,
+} from "@/config";
+import { getSortedPostsList } from "@/utils/content-utils";
+import { resolveNavMenuLinks } from "@/utils/nav-menu-utils";
+import { url } from "@/utils/url-utils";
+import MingxinProfileSiteAvatar from "./MingxinProfileSiteAvatar.astro";
+
+/**
+ * 明信顶栏（原站 mmz Navbar / NavbarProfileCard 的直接移植，2026-11-01 站长改定：
+ * 不再复刻，搬原作结构、CSS 数值与控制器逻辑，类名统一 mxnav- 前缀防与本站
+ * 标准顶栏撞名）。与原作的差异只有站长点名的四处：
+ * 1. 品牌段 = 站长头像 + "Alexander"（无 logo 图形、无独立资料长条——资料卡
+ *    展开挂在这颗胶囊上，锚点与开合逻辑照原 navbar-profile-controller）；
+ * 2. 菜单项 = 本站导航结构（resolveNavMenuLinks，与标准顶栏同一份数据）；
+ * 3. 右段只有一颗圆形工具钮（原作本就是 tune 钮 + 窄屏菜单钮，无搜索框；
+ *    搜索走工具面板第一行 → 程序化点本站 #search-switch）；
+ * 4. 工具面板在原作三行（搜索/公告/主题三段滑块）之外，主题行下方同箱体内
+ *    展开「外观段」（七形态逃生口 + 调色板入口）——同一只箱子、无缝衔接，
+ *    指针路径全程不断（站长验收口径）。
+ * 显隐：main.css 守卫默认整根隐藏，仅明信点亮（mingxin-mode.css），其余形态
+ * 仍走标准顶栏，两者互不干扰。行为层在 scripts/mingxin-navbar.ts +
+ * scripts/mingxin-dropdown.ts（控制器移植）。
+ */
+
+const links = resolveNavMenuLinks();
+const navbarTitle = siteConfig.navbar.title || siteConfig.title;
+
+/* 共享下拉面板的内容页：带子菜单的导航项各占一页，
+   页序号与触发器容器上的 data-mxnav-dropdown-index 配对（原作同构） */
+const dropdownPages = links
+	.map((link, index) => ({ index, children: link.children ?? [] }))
+	.filter((page) => page.children.length > 0);
+
+/* 工具面板主题行三段滑块：值对应本站 setting-utils 的明暗取值 */
+const toolsThemeOptions = [
+	{ value: "light", label: "亮色", icon: "material-symbols:wb-sunny-outline-rounded" },
+	{ value: "dark", label: "暗色", icon: "material-symbols:dark-mode-outline-rounded" },
+	{ value: "system", label: "系统", icon: "mdi:monitor" },
+] as const;
+
+/* 外观段形态列表（逃生口）：与调色板同一份七形态 */
+const modeOptions = [
+	{ value: "full", label: "华彩" },
+	{ value: "pure", label: "素简" },
+	{ value: "harmony", label: "谐彩" },
+	{ value: "brick", label: "顽彩" },
+	{ value: "astral", label: "璨夜" },
+	{ value: "paper", label: "纸舟" },
+	{ value: "mingxin", label: "明信" },
+] as const;
+
+/* 公告：本站 announcementConfig 是单条文案（原作是 items 列表 + 弹窗，
+   数据形态不同，改走面板内联展开，行与开合逻辑不变） */
+const noticeText = announcementConfig.content.trim();
+const noticeLink =
+	noticeText &&
+	announcementConfig.link?.enable &&
+	announcementConfig.link.text &&
+	announcementConfig.link.url
+		? announcementConfig.link
+		: null;
+
+/* 资料卡数据：与原资料卡同源（profileConfig + 发文热力图） */
+const mxAvatar = url(profileConfig.avatar);
+/* 身份行/横幅/其他站点走明信专属配置：名字仍用 profileConfig.name（站长定版：
+   站名 Alexander、人名 zhz，两处不同名是有意的，不在此统一） */
+const mxProfileTagline = mingxinConfig.profileTagline;
+const mxProfileBanner = mingxinConfig.profileBanner || mingxinConfig.revealImage;
+/* 轮换池：横幅槽非 manual、或横幅留空且揭示槽非 manual（横幅跟随揭示选图）时，
+   不直出 src，挂 data-mx-pick="banner" 由 Layout 首帧脚本定图（统计卡同键同图） */
+const mxBannerPick =
+	(mingxinConfig.profileBannerMode ?? "manual") !== "manual" ||
+	(!mingxinConfig.profileBanner &&
+		(mingxinConfig.revealMode ?? "manual") !== "manual");
+const mxOtherSites = mingxinConfig.otherSites;
+/* 折叠条只堆叠前 3 个站点图标（原作 STACK_LIMIT 同值） */
+const MX_SITES_STACK_LIMIT = 3;
+const mxIsExternalHref = (href: string) => /^(?:https?:)?\/\//i.test(href);
+/* 热力图：近 12 个月 × 每月 4 段（按 1/8/15/22 日切分），峰值量化 3 档（原作 12×4 几何） */
+const mxHeatmapMonths = await (async () => {
+	const posts = await getSortedPostsList();
+	const now = new Date();
+	const postDates = posts.map((p) => p.data.published);
+	const months = Array.from({ length: 12 }, (_, index) => {
+		const cursor = new Date(now.getFullYear(), now.getMonth() - 11 + index, 1);
+		const year = cursor.getFullYear();
+		const month = cursor.getMonth();
+		const counts = Array.from({ length: 4 }, () => 0);
+		for (const date of postDates) {
+			if (date.getFullYear() !== year || date.getMonth() !== month) continue;
+			counts[Math.min(3, Math.floor((date.getDate() - 1) / 7))] += 1;
+		}
+		return { label: `${month + 1}月`, counts };
+	});
+	const peak = Math.max(1, ...months.flatMap((item) => item.counts));
+	return months.map((item) => ({
+		label: item.label,
+		cells: item.counts.map((count) => ({
+			count,
+			level: count === 0 ? 0 : Math.min(3, Math.ceil((count / peak) * 3)),
+		})),
+	}));
+})();
+---
+
+<div class="mxnav" data-mxnav>
+	<div class="mxnav-segments">
+		<!-- 左段：头像 + 站名（滚动收缩成头像球）；资料卡展开挂在这颗胶囊上 -->
+		<div class="mxnav-seg mxnav-seg--left" data-mxnav-left-seg>
+			<a href={url("/")} class="mxnav-brand" data-mxnav-brand aria-label={navbarTitle}>
+				<img
+					class="mxnav-brand__avatar"
+					src={mxAvatar}
+					alt=""
+					width="64"
+					height="64"
+					fetchpriority="high"
+				/>
+				<span class="mxnav-brand__text">{navbarTitle}</span>
+			</a>
+		</div>
+
+		<!-- 中段：紧凑导航椭圆（滚动不变），菜单 = 本站导航结构 -->
+		<div class="mxnav-seg mxnav-seg--center" data-mxnav-center-seg>
+			<nav class="mxnav-nav" data-mxnav-nav aria-label="主导航">
+				<div class="mxnav-hover-highlight" data-mxnav-hover-border></div>
+				<span class="mxnav-moving-icon" data-mxnav-moving-icon aria-hidden="true">
+					<span class="mxnav-moving-icon__glyph mxnav-moving-icon__glyph--current" data-mxnav-icon-current></span>
+					<span class="mxnav-moving-icon__glyph mxnav-moving-icon__glyph--next" data-mxnav-icon-next></span>
+				</span>
+				{links.map((link, i) => (
+					<div
+						class="mxnav-item"
+						data-mxnav-dropdown
+						{...(link.children && link.children.length > 0
+							? { "data-mxnav-dropdown-index": i }
+							: {})}
+					>
+						{link.children && link.children.length > 0 ? (
+							<button
+								type="button"
+								class="mxnav-trigger"
+								data-mxnav-dropdown-trigger
+								aria-haspopup="true"
+								aria-expanded="false"
+							>
+								{link.icon && (
+									<span class="mxnav-trigger-icon" aria-hidden="true">
+										<Icon name={link.icon} />
+									</span>
+								)}
+								<span>{link.name}</span>
+								<Icon name="material-symbols:keyboard-arrow-down-rounded" class="mxnav-trigger__chevron" />
+							</button>
+						) : (
+							<a
+								href={link.external ? link.url : url(link.url)}
+								class="mxnav-trigger"
+								data-mxnav-dropdown-trigger
+								target={link.external ? "_blank" : undefined}
+							>
+								{link.icon && (
+									<span class="mxnav-trigger-icon" aria-hidden="true">
+										<Icon name={link.icon} />
+									</span>
+								)}
+								<span>{link.name}</span>
+								{link.external && (
+									<Icon name="fa7-solid:arrow-up-right-from-square" class="mxnav-trigger__external" />
+								)}
+							</a>
+						)}
+					</div>
+				))}
+
+				<!-- 共享下拉面板：悬停跟随导航项左右滑动，内容页交叉淡换（原作同构） -->
+				{dropdownPages.length > 0 && (
+					<div class="mxnav-dropdown-panel" data-mxnav-dropdown-panel>
+						<span class="mxnav-dropdown-arrow" aria-hidden="true"></span>
+						<div class="mxnav-dropdown-box">
+							{dropdownPages.map((page) => (
+								<div class="mxnav-dropdown-page" data-mxnav-dropdown-page={page.index}>
+									<span aria-hidden="true" class="mxnav-dropdown-highlight"></span>
+									{page.children.map((child) => (
+										<a
+											href={child.external ? child.url : url(child.url)}
+											class="mxnav-dropdown-item"
+											target={child.external ? "_blank" : undefined}
+										>
+											{child.icon && (
+												<Icon name={child.icon} class="mxnav-dropdown-item__icon" />
+											)}
+											<span>{child.name}</span>
+											{child.external && (
+												<Icon name="fa7-solid:arrow-up-right-from-square" class="mxnav-dropdown-item__external" />
+											)}
+										</a>
+									))}
+								</div>
+							))}
+						</div>
+					</div>
+				)}
+			</nav>
+		</div>
+
+		<!-- 右段：只有一颗圆形工具钮（+ 窄屏菜单钮），滚动收缩成球 -->
+		<div class="mxnav-seg mxnav-seg--right">
+			<button
+				type="button"
+				class="mxnav-tools-btn"
+				data-mxnav-tools-btn
+				aria-label="工具"
+				aria-controls="mxnav-tools-panel"
+				aria-expanded="false"
+			>
+				<Icon name="material-symbols:tune-rounded" class="mxnav-tools-btn__icon" />
+			</button>
+			<button
+				type="button"
+				class="mxnav-menu-btn"
+				data-mxnav-menu-btn
+				aria-label="菜单"
+			>
+				<Icon name="material-symbols:menu-rounded" class="mxnav-menu-btn__icon" />
+			</button>
+		</div>
+
+		<!-- 工具面板：挂在 segments 下（避开右段收缩态 overflow:hidden 的裁剪），
+		     定位/开合照原作控制器：箱体中心对准工具钮、视口钳制、指针箭头跟随 -->
+		<div class="mxnav-tools-panel" id="mxnav-tools-panel" data-mxnav-tools-panel>
+			<div class="mxnav-tools-box" role="menu" aria-label="工具">
+				<span class="mxnav-tools-highlight" data-mxnav-tools-highlight aria-hidden="true"></span>
+				<button
+					type="button"
+					class="mxnav-tools-item"
+					data-mxnav-tools-stop
+					data-mxnav-action="search"
+					role="menuitem"
+				>
+					<Icon name="material-symbols:search-rounded" class="mxnav-tools-item__icon" />
+					<span>搜索</span>
+					<kbd class="mxnav-tools-keys" aria-hidden="true">
+						<span data-mxnav-tools-modifier>Ctrl</span>
+						<span>K</span>
+					</kbd>
+				</button>
+				{noticeText && (
+					<>
+						<button
+							type="button"
+							class="mxnav-tools-item"
+							data-mxnav-tools-stop
+							data-mxnav-action="notice"
+							aria-expanded="false"
+							role="menuitem"
+						>
+							<Icon name="material-symbols:campaign-outline-rounded" class="mxnav-tools-item__icon" />
+							<span>公告</span>
+							<Icon name="material-symbols:keyboard-arrow-down-rounded" class="mxnav-tools-chevron" />
+						</button>
+						<div class="mxnav-tools-notice" data-mxnav-notice hidden>
+							<p>{noticeText}</p>
+							{noticeLink && (
+								<a href={url(noticeLink.url)}>{noticeLink.text}</a>
+							)}
+						</div>
+					</>
+				)}
+				<!-- 主题行 + 外观段同在一个悬停组里：外观段是箱体内的一节，
+				     指针从主题行下行进形态格全程不出箱子（无缝衔接，站长验收口径） -->
+				<div class="mxnav-tools-theme-wrap" data-mxnav-theme-wrap>
+					<div
+						class="mxnav-tools-item mxnav-tools-item--group"
+						data-mxnav-tools-stop="group"
+						tabindex="0"
+						role="button"
+						aria-haspopup="true"
+						aria-expanded="false"
+						data-mxnav-appearance-trigger
+					>
+						<Icon name="material-symbols:palette-outline" class="mxnav-tools-item__icon" />
+						<span>主题</span>
+						<div class="mxnav-tools-segments" role="radiogroup" aria-label="明暗模式">
+							<span class="mxnav-tools-thumb" aria-hidden="true"></span>
+							{toolsThemeOptions.map((option) => (
+								<button
+									type="button"
+									class="mxnav-tools-segment"
+									data-mxnav-theme={option.value}
+									role="radio"
+									aria-checked="false"
+									aria-label={option.label}
+									title={option.label}
+								>
+									<Icon name={option.icon} class="mxnav-tools-segment__icon" />
+								</button>
+							))}
+						</div>
+					</div>
+					<div class="mxnav-appearance" data-mxnav-appearance>
+						<div class="mxnav-appearance__clip">
+							<p class="mxnav-appearance__label">
+								<span>站点形态</span>
+								<span class="mxnav-appearance__current">当前：<span data-mxnav-mode-name>明信</span></span>
+							</p>
+							<div class="mxnav-appearance__modes" role="radiogroup" aria-label="站点形态">
+								{modeOptions.map((mode) => (
+									<button
+										type="button"
+										class="mxnav-appearance__chip"
+										data-mxnav-mode={mode.value}
+										role="radio"
+										aria-checked="false"
+									>
+										{mode.label}
+									</button>
+								))}
+							</div>
+							<button type="button" class="mxnav-appearance__more" data-mxnav-action="palette">
+								<span>更多外观设置</span>
+								<Icon name="material-symbols:arrow-forward-rounded" class="mxnav-appearance__more-icon" />
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- 资料卡：原作是 body 级 fixed 面板（避开顶栏壳层的裁剪/滤镜包含块），
+	     本站由控制器在挂载时把本节点挪到 body 末尾（仅明信期间），锚点打开时
+	     实测左段胶囊位置写入（卡片水平中心对准胶囊、视口钳制、桥区在面板内）。 -->
+	<div class="mxnav-profile-dropdown" data-mxnav-profile-panel>
+		<div class="mxnav-profile-mask" data-mxnav-profile-mask aria-hidden="true"></div>
+		<div
+			class:list={[
+				"mxprofile-card",
+				mxOtherSites.length > 0 && "mxprofile-card--has-sites",
+			]}
+			data-mxnav-profile-card
+		>
+			<div class="mxprofile-card__header">
+				<div class="mxprofile-card__banner">
+					<div class="mxprofile-card__banner-slot mxprofile-card__banner-slot--blur">
+						<img src={mxAvatar} alt="" loading="lazy" decoding="async" />
+					</div>
+					<div class="mxprofile-card__banner-slot mxprofile-card__banner-slot--main">
+						<img src={mxBannerPick ? undefined : mxProfileBanner} data-mx-pick={mxBannerPick ? "banner" : undefined} alt="" loading="lazy" decoding="async" />
+					</div>
+				</div>
+				<a class="mxprofile-card__avatar" href={url("/about/")} aria-label="关于">
+					<img class="mxprofile-card__avatar-img" src={mxAvatar} alt="" loading="lazy" decoding="async" />
+					<span class="mxprofile-card__avatar-mask">
+						<span class="mxprofile-card__avatar-mask-text">关于</span>
+					</span>
+				</a>
+			</div>
+			<a class="mxprofile-card__identity" href={url("/about/")} aria-label="关于">
+				<span class="mxprofile-card__identity-text">
+					<strong class="mxprofile-card__name">{profileConfig.name}</strong>
+					{mxProfileTagline && (
+						<span class="mxprofile-card__tagline">{mxProfileTagline}</span>
+					)}
+				</span>
+			</a>
+			{profileConfig.links.length > 0 && (
+				<div class="mxprofile-card__socials">
+					{profileConfig.links.map((link) => (
+						<a
+							class="mxprofile-card__social-btn"
+							href={link.url}
+							target={mxIsExternalHref(link.url) ? "_blank" : undefined}
+							rel={mxIsExternalHref(link.url) ? "me noopener" : "me"}
+							aria-label={link.name}
+							title={link.name}
+						>
+							<Icon name={link.icon} />
+						</a>
+					))}
+				</div>
+			)}
+			<div class="mxprofile-card__content">
+				<div class="mxprofile-card__heatmap" role="img" aria-label="发文热力图">
+					{mxHeatmapMonths.map((month) => (
+						<div class="mxprofile-card__heat-col">
+							<span class="mxprofile-card__heat-month" aria-hidden="true">{month.label}</span>
+							{month.cells.map((cell, week) => (
+								<span
+									class={`mxprofile-card__heat-cell is-level-${cell.level}`}
+									title={`${month.label}第 ${week + 1} 段 · ${cell.count} 篇`}
+								></span>
+							))}
+						</div>
+					))}
+				</div>
+			</div>
+			{mxOtherSites.length > 0 && (
+				<div
+					class="mxprofile-card__sites"
+					data-mxprofile-sites
+					data-mxprofile-sites-open="false"
+				>
+					<div class="mxprofile-card__sites-bar" data-mxprofile-sites-bar>
+						<span class="mxprofile-card__sites-label">其他站点</span>
+						<span class="mxprofile-card__sites-stack" data-mxprofile-sites-stack>
+							{mxOtherSites.slice(0, MX_SITES_STACK_LIMIT).map((site, index) => (
+								<MingxinProfileSiteAvatar site={site} index={index} />
+							))}
+						</span>
+						<button
+							type="button"
+							class="mxprofile-card__sites-toggle"
+							data-mxprofile-sites-toggle
+							aria-expanded="false"
+							aria-label="展开其他站点"
+						>
+							<svg
+								class="mxprofile-card__sites-chevron"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								aria-hidden="true"
+							>
+								<circle cx="12" cy="12" r="10" />
+								<path d="m16 10-4 4-4-4" />
+							</svg>
+						</button>
+					</div>
+					<ul class="mxprofile-card__sites-list" data-mxprofile-sites-list>
+						{mxOtherSites.map((site, index) => (
+							<li>
+								<a
+									class="mxprofile-card__site-row"
+									href={site.url}
+									target="_blank"
+									rel="noopener noreferrer"
+								>
+									<MingxinProfileSiteAvatar site={site} index={index} />
+									<span class="mxprofile-card__site-name">{site.name}</span>
+									<Icon
+										name="fa7-solid:arrow-up-right-from-square"
+										class="mxprofile-card__site-arrow"
+									/>
+								</a>
+							</li>
+						))}
+					</ul>
+				</div>
+			)}
+		</div>
+	</div>
+</div>

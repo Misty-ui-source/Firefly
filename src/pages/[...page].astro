@@ -8,6 +8,9 @@ import { i18n } from "@/i18n/translation";
 import MainGridLayout from "@/layouts/MainGridLayout.astro";
 import DraggableStickers from "@/components/features/DraggableStickers.astro";
 import ManualHero from "@/components/widget/ManualHero.astro";
+import MingxinHome from "@/components/layout/MingxinHome.astro";
+import MingxinList from "@/components/layout/MingxinList.astro";
+import { mingxinConfig } from "@/config";
 import "@/styles/banner-home.css";
 import { getSortedPosts } from "@/utils/content-utils";
 import { url } from "@/utils/url-utils";
@@ -31,6 +34,10 @@ const heading =
 ---
 
 <MainGridLayout heading={heading}>
+  {/* 明信首页（第七形态专属）：默认隐藏（main.css 守卫），仅明信点亮；
+      点亮时标准首页内容由 .std-home 守卫让位（mingxin-mode.css） */}
+  {page.currentPage === 1 && mingxinConfig.enabled && <MingxinHome />}
+  <div class="std-home">
   {page.currentPage === 1 && <DraggableStickers />}
   {/* 手册主题首页字标 hero：默认隐藏（main.css 守卫），仅纸舟·手册点亮 */}
   {page.currentPage === 1 && <ManualHero />}
@@ -46,6 +53,10 @@ const heading =
       />
     )
   }
+  {/* 明信文章列表（原站 ArticleListPage 移植）：默认隐藏（main.css 守卫），
+      仅明信点亮；点亮时 PostPage 与旧分页让位（mingxin-mode.css） */}
+  {mingxinConfig.enabled && <MingxinList page={page} />}
+  </div>
 </MainGridLayout>
 
 <script>

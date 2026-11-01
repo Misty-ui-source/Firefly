@@ -1833,3 +1833,796 @@ routes.music = async () => {
     $('#ms-add').disabled = false;
   };
 };
+
+/* ================= 明信素材（第七形态）：src/config/mingxinConfig.ts =================
+ * 一张卡管明信首页的全部素材与文案：素材槽位（揭示图 / 马赛克图 / 黑猫 / 立绘 / 音效 / 纹理）、
+ * 幕编排（scenes 增删改、拖拽 + ↑↓ 排序，上限 9 幕）、签名备选库、v2 备选图库、
+ * 文案与开关（大标题 / 轮播语 / 终幕 / 座右铭 / afterglow 默认 / 马赛克层开关）。
+ * 轮换池（2026-11-01 站长立规）：每个图槽 = 当前图 + 池（*Pool / scenes[].pool /
+ * standPools）+ 模式（*Mode：manual / random / daily）；换图旧图自动进池、删池图
+ * 只能手动；原 v2 备选库已并入马赛克图池（种子在 config 默认值里）。
+ * 生成方式与音乐页同款：在源码文本上逐段拼接——标量做行内替换、数组块整段重排，
+ * 其余段落（mosaic 参数块、music 块、气泡/台词兜底）逐字保留，最后 saveWithLog 一次提交。 */
+const MX_PATH = 'src/config/mingxinConfig.ts';
+const MX_MAX_SCENES = 9;
+const MX_TEXTURES = [['none', '无'], ['grid', '网格'], ['dots', '点阵'], ['noise', '噪点'], ['diagonal', '斜纹'], ['waves', '波纹'], ['jigsaw', '拼图']];
+const MX_SIGS = [
+  { path: '/assets/images/mingxin/signatures/final.png', label: '定版' },
+  { path: '/assets/images/mingxin/signatures/caveat-bold.png', label: 'Caveat Bold' },
+  { path: '/assets/images/mingxin/signatures/gochi-hand.png', label: 'Gochi Hand' },
+  { path: '/assets/images/mingxin/signatures/permanent-marker.png', label: 'Permanent Marker' },
+  { path: '/assets/images/mingxin/signatures/rock-salt.png', label: 'Rock Salt' },
+  { path: '/assets/images/mingxin/signatures/shadows-two.png', label: 'Shadows Two' },
+];
+const MX_SIG_LEGACY = '/assets/images/mingxin/signature.png';
+const MX_V2 = [
+  'glitch-0.png', 'glitch-1.png', 'glitch-2.png', 'glitch-3.png', 'glitch-4.png', 'glitch-5.jpg',
+  'moon-0.png', 'moon-1.png', 'moon-2.jpg', 'moon-3.png', 'moon-4.jpg', 'moon-5.png',
+  'room-0.jpg', 'room-1.jpg', 'room-2.jpg', 'room-3.png', 'room-4.png', 'room-5.png',
+  'gen-rain-canal.webp', 'gen-golden-rain.webp', 'gen-starry-port.webp', 'gen-feiyu-canal.webp', 'gen-feiyu-aquarium.webp', 'gen-feiyu-teatime.webp',
+].map((n) => '/assets/images/mingxin/v2/' + n);
+
+/* 标量读写：一律从 export const mingxinConfig 之后找（避开 interface 的类型声明行） */
+function mxSeg(text) {
+  const i = text.indexOf('export const mingxinConfig');
+  return i >= 0 ? text.slice(i) : text;
+}
+function mxGetStr(text, key, def = '') {
+  const m = mxSeg(text).match(new RegExp('^\\s*' + key + '\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"', 'm'));
+  if (!m) return def;
+  try { return JSON.parse('"' + m[1] + '"'); } catch (e) { return m[1]; }
+}
+function mxGetNum(text, key, def = 0) {
+  const m = mxSeg(text).match(new RegExp('^\\s*' + key + '\\s*:\\s*(-?[\\d.]+)', 'm'));
+  return m ? parseFloat(m[1]) : def;
+}
+function mxGetBool(text, key, def = false) {
+  const m = mxSeg(text).match(new RegExp('^\\s*' + key + '\\s*:\\s*(true|false)', 'm'));
+  return m ? m[1] === 'true' : def;
+}
+function mxSetScalar(text, key, valRe, rendered) {
+  const base = Math.max(0, text.indexOf('export const mingxinConfig'));
+  const seg = text.slice(base);
+  const re = new RegExp('^([ \\t]*)' + key + '\\s*:\\s*' + valRe + '\\s*,?', 'm');
+  const m = re.exec(seg);
+  if (!m) return null;
+  const at = base + m.index;
+  return text.slice(0, at) + `${m[1]}${key}: ${rendered},` + text.slice(at + m[0].length);
+}
+const mxSetStr = (text, key, v) => mxSetScalar(text, key, '"(?:[^"\\\\]|\\\\.)*"', `"${escConfigStr(v)}"`);
+const mxSetNum = (text, key, v) => mxSetScalar(text, key, '-?[\\d.]+', String(Number.isFinite(v) ? v : 0));
+const mxSetBool = (text, key, v) => mxSetScalar(text, key, '(?:true|false)', v ? 'true' : 'false');
+function mxSetStringArray(text, key, items) {
+  const blk = extractConfigValue(text, key);
+  if (!blk) return null;
+  return text.slice(0, blk.start) + blk.indent + key + ': ' + serializeStringList(items, blk.indent) + text.slice(blk.end);
+}
+/* 平衡括号版提取（只在 export const mingxinConfig 段内找）：scenes 里嵌了
+ * pool 数组后，通用 extractConfigValue 的非贪婪匹配会截断在第一个 ] 上，
+ * 故 scenes / standPools 这类嵌套结构一律走这里。 */
+function mxExtract(text, key) {
+  const base = Math.max(0, text.indexOf('export const mingxinConfig'));
+  const seg = text.slice(base);
+  const m = new RegExp(`^([ \\t]*)${key}\\s*:\\s*`, 'm').exec(seg);
+  if (!m) return null;
+  const vStart = base + m.index + m[0].length;
+  const indent = m[1];
+  if (text[vStart] === '"') {
+    let i = vStart + 1;
+    while (i < text.length && text[i] !== '"') { if (text[i] === '\\') i++; i++; }
+    return { indent, raw: text.slice(vStart, i + 1), isArray: false, start: base + m.index, end: i + 1 };
+  }
+  if (text[vStart] !== '[') return null;
+  let depth = 0, inStr = false, escNext = false, q = '';
+  for (let i = vStart; i < text.length; i++) {
+    const c = text[i];
+    if (inStr) {
+      if (escNext) escNext = false;
+      else if (c === '\\') escNext = true;
+      else if (c === q) inStr = false;
+      continue;
+    }
+    if (c === '"' || c === "'") { inStr = true; q = c; continue; }
+    if (c === '[') depth++;
+    else if (c === ']') {
+      depth--;
+      if (depth === 0) return { indent, raw: text.slice(vStart, i + 1), isArray: true, start: base + m.index, end: i + 1 };
+    }
+  }
+  return null;
+}
+/* 在 afterKey 的值块（含其行尾逗号）之后插入一行新字段；锚点缺失返回 null */
+function mxInsertAfterValue(text, afterKey, key, rendered) {
+  const blk = mxExtract(text, afterKey);
+  if (!blk) return null;
+  let at = blk.end;
+  if (text[at] === ',') at++;
+  return text.slice(0, at) + `\n${blk.indent}${key}: ${rendered},` + text.slice(at);
+}
+/* 池（扁平字符串数组）写回：字段在直改，不在且非空时插到锚点字段之后 */
+function mxSetPoolOrInsert(text, key, items, afterKeys) {
+  const r = mxSetStringArray(text, key, items);
+  if (r !== null) return r;
+  if (!items.length) return text;
+  for (const ak of afterKeys) {
+    const blk = mxExtract(text, ak);
+    if (!blk) continue;
+    const out = mxInsertAfterValue(text, ak, key, serializeStringList(items, blk.indent));
+    if (out !== null) return out;
+  }
+  return null;
+}
+/* 模式（字符串标量）写回：同上 */
+function mxSetModeOrInsert(text, key, v, afterKeys) {
+  const r = mxSetStr(text, key, v);
+  if (r !== null) return r;
+  for (const ak of afterKeys) {
+    const out = mxInsertAfterValue(text, ak, key, `"${escConfigStr(v)}"`);
+    if (out !== null) return out;
+  }
+  return null;
+}
+const mxModeOf = (v) => (['random', 'daily'].includes(v) ? v : 'manual');
+function mxGetPool(text, key) {
+  const blk = extractConfigValue(text, key);
+  return blk && blk.isArray ? parseStringList(blk.raw) : [];
+}
+/* standPools（数组的数组）解析 + 写回 */
+function mxParseStandPools(text, count) {
+  const out = Array.from({ length: count }, () => []);
+  const blk = mxExtract(text, 'standPools');
+  if (!blk) return out;
+  const inner = blk.raw.slice(1, -1);
+  const groups = [];
+  let depth = 0, inStr = false, escNext = false, q = '', start = -1;
+  for (let i = 0; i < inner.length; i++) {
+    const c = inner[i];
+    if (inStr) {
+      if (escNext) escNext = false;
+      else if (c === '\\') escNext = true;
+      else if (c === q) inStr = false;
+      continue;
+    }
+    if (c === '"' || c === "'") { inStr = true; q = c; continue; }
+    if (c === '[') { if (depth === 0) start = i; depth++; }
+    else if (c === ']') { depth--; if (depth === 0 && start >= 0) { groups.push(inner.slice(start, i + 1)); start = -1; } }
+  }
+  groups.forEach((g, i) => { if (i < count) out[i] = parseStringList(g); });
+  return out;
+}
+function mxRenderStandPools(pools, ind) {
+  if (!pools.length) return '[]';
+  return `[\n${pools.map((p) => `${ind}\t[${p.map((s) => `"${escConfigStr(s)}"`).join(', ')}],`).join('\n')}\n${ind}]`;
+}
+function mxSetStandPools(text, pools) {
+  const blk = mxExtract(text, 'standPools');
+  if (blk) return text.slice(0, blk.start) + `${blk.indent}standPools: ` + mxRenderStandPools(pools, blk.indent) + text.slice(blk.end);
+  if (!pools.some((p) => p && p.length)) return text;
+  const anchor = mxExtract(text, 'standModes') || mxExtract(text, 'standImages');
+  if (!anchor) return null;
+  return mxInsertAfterValue(text, mxExtract(text, 'standModes') ? 'standModes' : 'standImages', 'standPools', mxRenderStandPools(pools, anchor.indent));
+}
+/* mosaicImage 由前段任务写入 config，卡先行兼容：字段在就改，不在且值非空就在 afterKey 行后插入一行 */
+function mxSetStrOrInsert(text, key, v, afterKey) {
+  const r = mxSetStr(text, key, v);
+  if (r !== null) return r;
+  if (!v) return text;
+  const base = Math.max(0, text.indexOf('export const mingxinConfig'));
+  const seg = text.slice(base);
+  const m = new RegExp('^([ \\t]*)' + afterKey + '\\s*:[^,\\n]+,?', 'm').exec(seg);
+  if (!m) return null;
+  const at = base + m.index + m[0].length;
+  return text.slice(0, at) + `\n${m[1]}${key}: "${escConfigStr(v)}",` + text.slice(at);
+}
+function mxSetScenes(text, scenes) {
+  const blk = mxExtract(text, 'scenes');
+  if (!blk) return null;
+  const ind = blk.indent;
+  const items = scenes.map((s) =>
+    `${ind}\t{\n` +
+    `${ind}\t\ttitle: "${escConfigStr(s.title)}",\n` +
+    `${ind}\t\tdate: "${escConfigStr(s.date)}",\n` +
+    `${ind}\t\tnote: "${escConfigStr(s.note)}",\n` +
+    `${ind}\t\timage: "${escConfigStr(s.image)}",\n` +
+    (s.composite ? `${ind}\t\tcomposite: true,\n` : '') +
+    (s.pool && s.pool.length ? `${ind}\t\tpool: [${s.pool.map((p) => `"${escConfigStr(p)}"`).join(', ')}],\n` : '') +
+    (s.mode && s.mode !== 'manual' ? `${ind}\t\tmode: "${escConfigStr(s.mode)}",\n` : '') +
+    `${ind}\t},`);
+  return text.slice(0, blk.start) + `${ind}scenes: [\n` + items.join('\n') + `\n${ind}]` + text.slice(blk.end);
+}
+/* otherSites 整段重写（单行对象式，与 config 里 metingSources 的排版同款）；
+ * 字段缺失时退到 profileBanner 行后整块插入（种子字段已在 config 里，正常路径用不到） */
+function mxInsertBlockAfterLine(text, afterKey, blockLines) {
+  const base = Math.max(0, text.indexOf('export const mingxinConfig'));
+  const seg = text.slice(base);
+  const m = new RegExp(`^([ \\t]*)${afterKey}\\s*:[^\\n]*$`, 'm').exec(seg);
+  if (!m) return null;
+  const at = base + m.index + m[0].length;
+  const body = blockLines.map((l) => m[1] + l).join('\n');
+  return text.slice(0, at) + '\n' + body + text.slice(at);
+}
+function mxSetOtherSites(text, sites) {
+  const renderItems = (ind) => sites.map((s) =>
+    `${ind}\t{ name: "${escConfigStr(s.name)}", url: "${escConfigStr(s.url)}", icon: "${escConfigStr(s.icon)}" },`);
+  const blk = extractConfigValue(text, 'otherSites');
+  if (blk) {
+    if (!sites.length) return text.slice(0, blk.start) + `${blk.indent}otherSites: []` + text.slice(blk.end);
+    return text.slice(0, blk.start) + `${blk.indent}otherSites: [\n` + renderItems(blk.indent).join('\n') + `\n${blk.indent}]` + text.slice(blk.end);
+  }
+  if (!sites.length) return text;
+  return mxInsertBlockAfterLine(text, 'profileBanner', [
+    'otherSites: [',
+    ...sites.map((s) => `\t{ name: "${escConfigStr(s.name)}", url: "${escConfigStr(s.url)}", icon: "${escConfigStr(s.icon)}" },`),
+    '],',
+  ]);
+}
+function mxScenePoolOf(o) {
+  const m = o.match(/pool\s*:\s*\[([\s\S]*?)\]/);
+  return m ? parseStringList(m[1]) : [];
+}
+function mxParse(text) {
+  const scenesBlk = mxExtract(text, 'scenes');
+  if (!scenesBlk) return null;
+  const hmBlk = extractConfigValue(text, 'headlineMessages');
+  const siBlk = extractConfigValue(text, 'standImages');
+  const osBlk = extractConfigValue(text, 'otherSites');
+  const standImages = siBlk ? parseStringList(siBlk.raw) : [];
+  const standModesRaw = mxGetPool(text, 'standModes');
+  return {
+    texturePreset: mxGetStr(text, 'texturePreset', 'jigsaw'),
+    textureOpacity: mxGetNum(text, 'textureOpacity', 0.12),
+    revealImage: mxGetStr(text, 'revealImage'),
+    revealPool: mxGetPool(text, 'revealPool'),
+    revealMode: mxModeOf(mxGetStr(text, 'revealMode', 'manual')),
+    headline: mxGetStr(text, 'headline'),
+    headlineMessages: hmBlk ? parseStringList(hmBlk.raw) : [],
+    scenes: splitBraceObjects(scenesBlk.raw).map((o) => ({
+      title: getStrField(o, 'title'), date: getStrField(o, 'date'),
+      note: getStrField(o, 'note'), image: getStrField(o, 'image'),
+      composite: /composite\s*:\s*true/.test(o),
+      pool: mxScenePoolOf(o),
+      mode: mxModeOf(getStrField(o, 'mode') || 'manual'),
+    })),
+    finaleTitle: mxGetStr(text, 'finaleTitle'),
+    finaleSubtitle: mxGetStr(text, 'finaleSubtitle'),
+    signatureImage: mxGetStr(text, 'signatureImage'),
+    footerMotto: mxGetStr(text, 'footerMotto'),
+    afterglowDefault: mxGetStr(text, 'afterglowDefault', 'hero') === 'classic' ? 'classic' : 'hero',
+    mosaicHero: mxGetBool(text, 'mosaicHero', true),
+    mosaicImage: mxGetStr(text, 'mosaicImage'),
+    mosaicPool: mxGetPool(text, 'mosaicPool'),
+    mosaicMode: mxModeOf(mxGetStr(text, 'mosaicMode', 'manual')),
+    dollImage: mxGetStr(text, 'dollImage'),
+    dollPool: mxGetPool(text, 'dollPool'),
+    dollMode: mxModeOf(mxGetStr(text, 'dollMode', 'manual')),
+    standImages,
+    standPools: mxParseStandPools(text, standImages.length),
+    standModes: standImages.map((_, i) => mxModeOf(standModesRaw[i] || 'manual')),
+    soundPress: mxGetStr(text, 'soundPress'),
+    soundLoosen: mxGetStr(text, 'soundLoosen'),
+    profileTagline: mxGetStr(text, 'profileTagline'),
+    profileBanner: mxGetStr(text, 'profileBanner'),
+    profileBannerPool: mxGetPool(text, 'profileBannerPool'),
+    profileBannerMode: mxModeOf(mxGetStr(text, 'profileBannerMode', 'manual')),
+    otherSites: osBlk ? splitBraceObjects(osBlk.raw).map((o) => ({
+      name: getStrField(o, 'name'), url: getStrField(o, 'url'), icon: getStrField(o, 'icon'),
+    })) : [],
+  };
+}
+function mxCleanPool(p) {
+  const seen = new Set();
+  const out = [];
+  for (const v of p || []) {
+    const s = String(v || '').trim();
+    if (s && !seen.has(s)) { seen.add(s); out.push(s); }
+  }
+  return out;
+}
+function mxBuild(text, d) {
+  d = {
+    ...d,
+    revealPool: mxCleanPool(d.revealPool),
+    mosaicPool: mxCleanPool(d.mosaicPool),
+    profileBannerPool: mxCleanPool(d.profileBannerPool),
+    dollPool: mxCleanPool(d.dollPool),
+    scenes: d.scenes.map((s) => ({ ...s, pool: mxCleanPool(s.pool), mode: mxModeOf(s.mode) })),
+    standPools: d.standImages.map((_, i) => mxCleanPool((d.standPools || [])[i])),
+    standModes: d.standImages.map((_, i) => mxModeOf((d.standModes || [])[i] || 'manual')),
+  };
+  let out = text;
+  const steps = [
+    () => mxSetStr(out, 'texturePreset', d.texturePreset),
+    () => mxSetNum(out, 'textureOpacity', d.textureOpacity),
+    () => mxSetStr(out, 'revealImage', d.revealImage),
+    () => mxSetPoolOrInsert(out, 'revealPool', d.revealPool, ['revealImage']),
+    () => mxSetModeOrInsert(out, 'revealMode', d.revealMode, ['revealPool', 'revealImage']),
+    () => mxSetStr(out, 'headline', d.headline),
+    () => mxSetStringArray(out, 'headlineMessages', d.headlineMessages),
+    () => mxSetScenes(out, d.scenes),
+    () => mxSetStr(out, 'finaleTitle', d.finaleTitle),
+    () => mxSetStr(out, 'finaleSubtitle', d.finaleSubtitle),
+    () => mxSetStr(out, 'signatureImage', d.signatureImage),
+    () => mxSetStr(out, 'footerMotto', d.footerMotto),
+    () => mxSetStr(out, 'afterglowDefault', d.afterglowDefault),
+    () => mxSetBool(out, 'mosaicHero', d.mosaicHero),
+    () => mxSetStrOrInsert(out, 'mosaicImage', d.mosaicImage, 'mosaicHero'),
+    () => mxSetPoolOrInsert(out, 'mosaicPool', d.mosaicPool, ['mosaicImage']),
+    () => mxSetModeOrInsert(out, 'mosaicMode', d.mosaicMode, ['mosaicPool', 'mosaicImage']),
+    () => mxSetStr(out, 'dollImage', d.dollImage),
+    () => mxSetPoolOrInsert(out, 'dollPool', d.dollPool, ['dollImage']),
+    () => mxSetModeOrInsert(out, 'dollMode', d.dollMode, ['dollPool', 'dollImage']),
+    () => mxSetStringArray(out, 'standImages', d.standImages),
+    () => mxSetStandPools(out, d.standPools),
+    () => mxSetPoolOrInsert(out, 'standModes', d.standModes, ['standPools', 'standImages']),
+    () => mxSetStr(out, 'soundPress', d.soundPress),
+    () => mxSetStr(out, 'soundLoosen', d.soundLoosen),
+    () => mxSetStrOrInsert(out, 'profileTagline', d.profileTagline, 'heroSubtitle'),
+    () => mxSetStrOrInsert(out, 'profileBanner', d.profileBanner, 'profileTagline'),
+    () => mxSetPoolOrInsert(out, 'profileBannerPool', d.profileBannerPool, ['profileBanner']),
+    () => mxSetModeOrInsert(out, 'profileBannerMode', d.profileBannerMode, ['profileBannerPool', 'profileBanner']),
+    () => mxSetOtherSites(out, d.otherSites),
+  ];
+  for (const step of steps) {
+    const next = step();
+    if (next === null) return null;
+    out = next;
+  }
+  return out;
+}
+/* v2 备选图库选择器（与媒体库选择器同款浮层，数据源是仓库内置的 v2 套图） */
+function mxOpenV2Picker(onPick) {
+  const old = document.querySelector('.mxv2-mask');
+  if (old) old.remove();
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask mxv2-mask';
+  mask.innerHTML = `<div class="modal-card mlp-card">
+    <div class="mlp-head"><h3>🎞 v2 备选图库</h3><span class="hint">点一张填入当前槽位（只改路径，保存后构建生效）</span>
+    <button class="btn btn-small btn-ghost" id="mxv2-close" type="button">✕ 关闭</button></div>
+    <div class="img-grid mlp-grid">${MX_V2.map((p) => `<div class="img-cell mlp-cell" data-p="${esc(p)}"><img loading="lazy" src="${esc(cfgImgPreview(p))}" alt=""><div class="url" title="${esc(p)}">${esc(p.split('/').pop())}</div></div>`).join('')}</div></div>`;
+  document.body.appendChild(mask);
+  const close = () => mask.remove();
+  mask.querySelector('#mxv2-close').onclick = close;
+  mask.addEventListener('click', (e) => { if (e.target === mask) close(); });
+  mask.querySelectorAll('[data-p]').forEach((c) => { c.onclick = () => { close(); onPick(c.dataset.p); }; });
+}
+
+routes.mingxin = async () => {
+  view.innerHTML = '<div class="card"><h2>✉️ 加载中…</h2></div>';
+  let cfg;
+  try { cfg = await ghGetFile(MX_PATH); }
+  catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+  let mx = mxParse(cfg.text);
+  if (!mx) { view.innerHTML = '<div class="card"><h2>✉️ 明信素材</h2><p class="hint">mingxinConfig.ts 解析失败（找不到 scenes 段），先别动这个文件。</p></div>'; return; }
+  let dragI = null, dropTarget = null;
+
+  function slotHtml(idp, label, val, kind, withV2, withPool) {
+    const isAudio = kind === 'audio';
+    return `<div class="field"><label>${label}</label>
+    <div class="slot-row">
+      ${isAudio
+        ? `<audio id="${idp}-pv" controls preload="none" src="${esc(val)}" style="max-width:230px"></audio>`
+        : `<img class="slot-preview" id="${idp}-pv" src="${esc(cfgImgPreview(val))}" alt="" onerror="this.style.visibility='hidden'">`}
+      <div>
+        <div class="toolbar"><input type="text" id="${idp}-in" value="${esc(val)}" placeholder="粘贴 URL 或 /assets/… 路径" style="min-width:280px"><button class="btn btn-small" id="${idp}-apply" type="button">✓ 用这个地址</button></div>
+        <div class="toolbar">
+          <input type="file" id="${idp}-file" class="hidden" accept="${isAudio ? 'audio/*,.mp3' : 'image/*'}">
+          <button class="btn btn-small" id="${idp}-up" type="button">📤 上传到 R2</button>
+          ${isAudio ? '' : `<button class="btn btn-small" id="${idp}-ml" type="button">🗂 媒体库</button>`}
+          ${withV2 ? `<button class="btn btn-small" id="${idp}-v2" type="button">🎞 v2 备选库</button>` : ''}
+        </div>
+      </div>
+    </div>${withPool ? `<div class="mx-pool" id="${idp}-pool"></div>` : ''}</div>`;
+  }
+  /* 轮换池接入（站长立规）：acc = { getCurrent, poolGet, poolSet, modeGet, modeSet }。
+   * 换图（apply 到新值）时旧当前图自动进池、不消失；删池图走 confirm 手动删。 */
+  function wireSlot(idp, set, kind, acc) {
+    const inp = document.getElementById(idp + '-in');
+    const pv = document.getElementById(idp + '-pv');
+    if (!inp) return;
+    const renderPool = () => {
+      const box = document.getElementById(idp + '-pool');
+      if (!box || !acc) return;
+      const pool = acc.poolGet();
+      const mode = acc.modeGet();
+      const modes = [['manual', '手动指定'], ['random', '自动 · 每次随机'], ['daily', '自动 · 每日一张']];
+      box.innerHTML = `
+      <div class="toolbar" style="margin-top:.45rem">
+        <span class="hint">🔁 轮换池</span>
+        ${modes.map(([v, l]) => `<button class="btn btn-small ${mode === v ? '' : 'btn-ghost'}" data-m="${v}" type="button">${l}</button>`).join('')}
+        <button class="btn btn-small btn-ghost" data-add="1" type="button">＋ 从媒体库加图进池</button>
+        <span class="hint">池 ${pool.length} 张 · 换图时旧图自动进池；点池图 = 设为当前（当前图回池）</span>
+      </div>
+      ${pool.length ? `<div class="img-grid" style="margin-top:.35rem">${pool.map((p, pi) => `
+        <div class="img-cell" data-pi="${pi}" style="cursor:pointer;position:relative" title="点图设为当前：${esc(p)}">
+          <img loading="lazy" src="${esc(cfgImgPreview(p))}" alt="">
+          <div class="url">${esc(p.split('/').pop())}</div>
+          <button class="mini-btn danger" data-del="${pi}" type="button" title="从池里删除" style="position:absolute;top:4px;right:4px">✕</button>
+        </div>`).join('')}</div>` : '<p class="hint">池里暂无图——换掉当前图时旧图自动进来，或用上面的按钮从媒体库加。</p>'}`;
+      box.querySelectorAll('[data-m]').forEach((b) => { b.onclick = () => { acc.modeSet(b.dataset.m); renderPool(); }; });
+      const addBtn = box.querySelector('[data-add]');
+      if (addBtn) addBtn.onclick = () => openMediaPicker((url) => {
+        const p = acc.poolGet().slice();
+        if (url && !p.includes(url) && url !== acc.getCurrent()) { p.push(url); acc.poolSet(p); }
+        renderPool();
+      });
+      box.querySelectorAll('[data-del]').forEach((b) => { b.onclick = (e) => {
+        e.stopPropagation();
+        const pi = parseInt(b.dataset.del, 10);
+        const p = acc.poolGet()[pi];
+        if (confirm(`从轮换池删除「${p}」？删掉不会自己回来。`)) {
+          const arr = acc.poolGet().slice();
+          arr.splice(pi, 1);
+          acc.poolSet(arr);
+          renderPool();
+        }
+      }; });
+      box.querySelectorAll('[data-pi]').forEach((c) => { c.onclick = () => {
+        const p = acc.poolGet()[parseInt(c.dataset.pi, 10)];
+        if (p) apply(p);
+      }; });
+    };
+    const apply = (v) => {
+      if (acc && kind === 'image') {
+        const cur = acc.getCurrent();
+        if (v && cur && v !== cur) {
+          const p = acc.poolGet().slice();
+          if (!p.includes(cur)) { p.push(cur); acc.poolSet(p); }
+        }
+        if (v) {
+          const p = acc.poolGet();
+          if (p.includes(v)) acc.poolSet(p.filter((x) => x !== v));
+        }
+      }
+      set(v);
+      inp.value = v;
+      if (pv) { pv.style.visibility = ''; pv.src = kind === 'audio' ? v : cfgImgPreview(v); }
+      renderPool();
+    };
+    document.getElementById(idp + '-apply').onclick = () => apply(inp.value.trim());
+    inp.addEventListener('change', () => apply(inp.value.trim()));
+    const file = document.getElementById(idp + '-file');
+    document.getElementById(idp + '-up').onclick = () => file.click();
+    file.onchange = async (e) => {
+      const f = e.target.files[0];
+      e.target.value = '';
+      if (!f) return;
+      toast('上传中…');
+      try {
+        const { urls } = kind === 'audio' ? await uploadRawFiles([f], 'mingxin') : await uploadImages([f], 'mingxin');
+        if (urls && urls[0]) { apply(urls[0]); toast('已上传并填入，记得点最下方保存'); }
+        else toast('上传没返回地址', true);
+      } catch (err) { toast(err.message, true); }
+    };
+    const ml = document.getElementById(idp + '-ml');
+    if (ml) ml.onclick = () => openMediaPicker((url) => apply(url));
+    const v2 = document.getElementById(idp + '-v2');
+    if (v2) v2.onclick = () => mxOpenV2Picker((p) => apply(p));
+    renderPool();
+  }
+  /* 标量图槽的池接入对象（acc） */
+  const slotAcc = (getCurrent, key) => ({
+    getCurrent,
+    poolGet: () => mx[key + 'Pool'],
+    poolSet: (p) => { mx[key + 'Pool'] = p; },
+    modeGet: () => mx[key + 'Mode'],
+    modeSet: (m) => { mx[key + 'Mode'] = m; },
+  });
+
+  function renderStands() {
+    const box = $('#mx-stands');
+    if (!box) return;
+    box.innerHTML = mx.standImages.map((v, i) => `
+      <div class="mx-stand" data-i="${i}">
+        <div class="list-item"><span class="title">立绘 ${i + 1}</span><span class="spacer"></span>
+          <button class="mini-btn" data-a="up" type="button">↑</button>
+          <button class="mini-btn" data-a="down" type="button">↓</button>
+          <button class="mini-btn danger" data-a="del" type="button">删除</button></div>
+        ${slotHtml(`mx-stand-${i}`, '图片（GIF 走原图上传不转码）', v, 'image', false, true)}
+      </div>`).join('') || '<p class="hint">暂无立绘，点下方添加。</p>';
+    box.querySelectorAll('.mx-stand').forEach((row) => {
+      const i = parseInt(row.dataset.i, 10);
+      wireSlot(`mx-stand-${i}`, (v) => { mx.standImages[i] = v; }, 'image', {
+        getCurrent: () => mx.standImages[i],
+        poolGet: () => mx.standPools[i] || [],
+        poolSet: (p) => { mx.standPools[i] = p; },
+        modeGet: () => mx.standModes[i] || 'manual',
+        modeSet: (m) => { mx.standModes[i] = m; },
+      });
+      row.querySelector('[data-a=up]').onclick = () => { if (i > 0) { [mx.standImages[i - 1], mx.standImages[i]] = [mx.standImages[i], mx.standImages[i - 1]]; renderStands(); } };
+      row.querySelector('[data-a=down]').onclick = () => { if (i < mx.standImages.length - 1) { [mx.standImages[i + 1], mx.standImages[i]] = [mx.standImages[i], mx.standImages[i + 1]]; renderStands(); } };
+      row.querySelector('[data-a=del]').onclick = () => { if (confirm(`删除立绘 ${i + 1}？`)) { mx.standImages.splice(i, 1); mx.standPools.splice(i, 1); mx.standModes.splice(i, 1); renderStands(); } };
+    });
+  }
+
+  function renderSigs() {
+    const box = $('#mx-sigs');
+    if (!box) return;
+    box.innerHTML = MX_SIGS.map((s) => {
+      const cur = mx.signatureImage === s.path || (mx.signatureImage === MX_SIG_LEGACY && s.path.endsWith('/final.png'));
+      return `<div class="img-cell" data-p="${esc(s.path)}" style="cursor:pointer;${cur ? 'outline:3px solid #000;outline-offset:-3px;' : ''}"><img loading="lazy" src="${esc(cfgImgPreview(s.path))}" alt="" style="background:#fff"><div class="url">${esc(s.label)}${cur ? ' · 当前' : ''}</div></div>`;
+    }).join('');
+    box.querySelectorAll('[data-p]').forEach((c) => {
+      c.onclick = () => {
+        mx.signatureImage = c.dataset.p;
+        const cur = $('#mx-sig-cur');
+        if (cur) cur.textContent = mx.signatureImage;
+        renderSigs();
+      };
+    });
+  }
+
+  function sceneRowHtml(s, i) {
+    return `<div class="mx-scene" data-i="${i}" style="border-top:2px dashed #9995;padding:.7rem 0">
+      <div class="list-item">
+        <span class="mx-drag" title="按住拖动排序" style="cursor:grab;font-weight:900;user-select:none">⠿</span>
+        <span class="title">第 ${i + 1} 幕 · <span data-role="ttl">${esc(s.title) || '（未命名）'}</span></span>
+        <span class="meta" data-role="meta">${esc(s.date)}</span><span class="spacer"></span>
+        <button class="mini-btn" data-a="up" type="button">↑</button>
+        <button class="mini-btn" data-a="down" type="button">↓</button>
+        <button class="mini-btn danger" data-a="del" type="button">删除</button>
+      </div>
+      ${slotHtml(`mx-sc-${i}`, '明信片图', s.image, 'image', true, true)}
+      <div class="row2">
+        <div class="field"><label>幕题</label><input type="text" data-k="title" value="${esc(s.title)}" placeholder="四字题，如 迁址安家"></div>
+        <div class="field"><label>日期（幕卡标头）</label><input type="text" data-k="date" value="${esc(s.date)}" placeholder="YYYY/MM/DD"></div>
+      </div>
+      <div class="field"><label>说明句（底栏右栏，最多两行）</label><textarea data-k="note" rows="2">${esc(s.note)}</textarea></div>
+      <div class="field"><label><input type="checkbox" data-k="composite" ${s.composite ? 'checked' : ''}> 与揭示图合成（首幕用：图框不重复加载，舞台背景即同一张图）</label></div>
+    </div>`;
+  }
+  function clearDropMarks() { view.querySelectorAll('.mx-scene').forEach((r) => { r.style.boxShadow = ''; }); }
+  function renderScenes() {
+    const box = $('#mx-scenes');
+    if (!box) return;
+    box.innerHTML = mx.scenes.map((s, i) => sceneRowHtml(s, i)).join('');
+    const cnt = $('#mx-scene-count');
+    if (cnt) cnt.textContent = mx.scenes.length;
+    box.querySelectorAll('.mx-scene').forEach((row) => {
+      const i = parseInt(row.dataset.i, 10);
+      row.querySelectorAll('[data-k]').forEach((inp) => {
+        const k = inp.dataset.k;
+        const evt = inp.type === 'checkbox' ? 'change' : 'input';
+        inp.addEventListener(evt, () => {
+          mx.scenes[i][k] = inp.type === 'checkbox' ? inp.checked : inp.value;
+          if (k === 'title') row.querySelector('[data-role=ttl]').textContent = inp.value || '（未命名）';
+          if (k === 'date') row.querySelector('[data-role=meta]').textContent = inp.value;
+        });
+      });
+      wireSlot(`mx-sc-${i}`, (v) => { mx.scenes[i].image = v; }, 'image', {
+        getCurrent: () => mx.scenes[i].image,
+        poolGet: () => mx.scenes[i].pool || [],
+        poolSet: (p) => { mx.scenes[i].pool = p; },
+        modeGet: () => mx.scenes[i].mode || 'manual',
+        modeSet: (m) => { mx.scenes[i].mode = m; },
+      });
+      row.querySelector('[data-a=up]').onclick = () => { if (i > 0) { [mx.scenes[i - 1], mx.scenes[i]] = [mx.scenes[i], mx.scenes[i - 1]]; renderScenes(); } };
+      row.querySelector('[data-a=down]').onclick = () => { if (i < mx.scenes.length - 1) { [mx.scenes[i + 1], mx.scenes[i]] = [mx.scenes[i], mx.scenes[i + 1]]; renderScenes(); } };
+      row.querySelector('[data-a=del]').onclick = () => {
+        if (mx.scenes.length <= 1) { toast('至少留一幕', true); return; }
+        if (confirm(`删除第 ${i + 1} 幕「${mx.scenes[i].title || '未命名'}」？`)) { mx.scenes.splice(i, 1); renderScenes(); }
+      };
+      const handle = row.querySelector('.mx-drag');
+      handle.addEventListener('mousedown', () => { row.draggable = true; });
+      row.addEventListener('dragstart', (e) => {
+        dragI = i;
+        try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); } catch (err) {}
+      });
+      row.addEventListener('dragend', () => { row.draggable = false; dragI = null; dropTarget = null; clearDropMarks(); });
+      row.addEventListener('dragover', (e) => {
+        if (dragI === null || dragI === i) return;
+        e.preventDefault();
+        const r = row.getBoundingClientRect();
+        const after = (e.clientY - r.top) > r.height / 2;
+        clearDropMarks();
+        row.style.boxShadow = after ? 'inset 0 -4px 0 #000' : 'inset 0 4px 0 #000';
+        dropTarget = { i, after };
+      });
+      row.addEventListener('dragleave', () => { row.style.boxShadow = ''; });
+      row.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (dragI === null || !dropTarget) return;
+        const from = dragI;
+        let to = dropTarget.i + (dropTarget.after ? 1 : 0);
+        const [mv] = mx.scenes.splice(from, 1);
+        if (from < to) to--;
+        mx.scenes.splice(to, 0, mv);
+        dragI = null; dropTarget = null;
+        renderScenes();
+      });
+    });
+  }
+
+  let siteDragI = null, siteDropTarget = null;
+  function siteRowHtml(s, i) {
+    return `<div class="mx-site" data-i="${i}" style="border-top:2px dashed #9995;padding:.7rem 0">
+      <div class="list-item">
+        <span class="mx-drag" title="按住拖动排序" style="cursor:grab;font-weight:900;user-select:none">⠿</span>
+        <span class="title">站点 ${i + 1} · <span data-role="ttl">${esc(s.name) || '（未命名）'}</span></span>
+        <span class="spacer"></span>
+        <button class="mini-btn" data-a="up" type="button">↑</button>
+        <button class="mini-btn" data-a="down" type="button">↓</button>
+        <button class="mini-btn danger" data-a="del" type="button">删除</button>
+      </div>
+      <div class="row2">
+        <div class="field"><label>名称</label><input type="text" data-k="name" value="${esc(s.name)}" placeholder="如 旧站存档"></div>
+        <div class="field"><label>链接（卡上点击新窗打开）</label><input type="text" data-k="url" value="${esc(s.url)}" placeholder="https://…"></div>
+      </div>
+      <div class="field"><label>图标（各站 favicon 地址；留空或加载失败时卡上回落本站叶片标）</label>
+        <div class="slot-row">
+          <img class="slot-preview" data-role="iconpv" src="${esc(cfgImgPreview(s.icon))}" alt="" onerror="this.style.visibility='hidden'">
+          <div><div class="toolbar"><input type="text" data-k="icon" value="${esc(s.icon)}" placeholder="粘贴图标 URL，或点媒体库选" style="min-width:280px"><button class="btn btn-small" data-a="ml" type="button">🗂 媒体库</button></div></div>
+        </div>
+      </div>
+    </div>`;
+  }
+  function clearSiteDropMarks() { view.querySelectorAll('.mx-site').forEach((r) => { r.style.boxShadow = ''; }); }
+  function renderSites() {
+    const box = $('#mx-sites');
+    if (!box) return;
+    box.innerHTML = mx.otherSites.map((s, i) => siteRowHtml(s, i)).join('') || '<p class="hint">暂无站点——作者卡上整条「其他站点」不显示。点下方添加。</p>';
+    const cnt = $('#mx-site-count');
+    if (cnt) cnt.textContent = mx.otherSites.length;
+    box.querySelectorAll('.mx-site').forEach((row) => {
+      const i = parseInt(row.dataset.i, 10);
+      row.querySelectorAll('[data-k]').forEach((inp) => {
+        inp.addEventListener('input', () => {
+          mx.otherSites[i][inp.dataset.k] = inp.value;
+          if (inp.dataset.k === 'name') row.querySelector('[data-role=ttl]').textContent = inp.value || '（未命名）';
+          if (inp.dataset.k === 'icon') {
+            const pv = row.querySelector('[data-role=iconpv]');
+            if (pv) { pv.style.visibility = ''; pv.src = cfgImgPreview(inp.value); }
+          }
+        });
+      });
+      row.querySelector('[data-a=ml]').onclick = () => openMediaPicker((url) => {
+        mx.otherSites[i].icon = url;
+        const inp = row.querySelector('[data-k=icon]');
+        if (inp) inp.value = url;
+        const pv = row.querySelector('[data-role=iconpv]');
+        if (pv) { pv.style.visibility = ''; pv.src = cfgImgPreview(url); }
+      });
+      row.querySelector('[data-a=up]').onclick = () => { if (i > 0) { [mx.otherSites[i - 1], mx.otherSites[i]] = [mx.otherSites[i], mx.otherSites[i - 1]]; renderSites(); } };
+      row.querySelector('[data-a=down]').onclick = () => { if (i < mx.otherSites.length - 1) { [mx.otherSites[i + 1], mx.otherSites[i]] = [mx.otherSites[i], mx.otherSites[i + 1]]; renderSites(); } };
+      row.querySelector('[data-a=del]').onclick = () => {
+        if (confirm(`删除站点「${mx.otherSites[i].name || '未命名'}」？`)) { mx.otherSites.splice(i, 1); renderSites(); }
+      };
+      const handle = row.querySelector('.mx-drag');
+      handle.addEventListener('mousedown', () => { row.draggable = true; });
+      row.addEventListener('dragstart', (e) => {
+        siteDragI = i;
+        try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); } catch (err) {}
+      });
+      row.addEventListener('dragend', () => { row.draggable = false; siteDragI = null; siteDropTarget = null; clearSiteDropMarks(); });
+      row.addEventListener('dragover', (e) => {
+        if (siteDragI === null || siteDragI === i) return;
+        e.preventDefault();
+        const r = row.getBoundingClientRect();
+        const after = (e.clientY - r.top) > r.height / 2;
+        clearSiteDropMarks();
+        row.style.boxShadow = after ? 'inset 0 -4px 0 #000' : 'inset 0 4px 0 #000';
+        siteDropTarget = { i, after };
+      });
+      row.addEventListener('dragleave', () => { row.style.boxShadow = ''; });
+      row.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (siteDragI === null || !siteDropTarget) return;
+        const from = siteDragI;
+        let to = siteDropTarget.i + (siteDropTarget.after ? 1 : 0);
+        const [mv] = mx.otherSites.splice(from, 1);
+        if (from < to) to--;
+        mx.otherSites.splice(to, 0, mv);
+        siteDragI = null; siteDropTarget = null;
+        renderSites();
+      });
+    });
+  }
+
+  async function saveMx() {
+    const bad = [];
+    if (!mx.scenes.length) bad.push('至少要有一幕');
+    if (mx.scenes.length > MX_MAX_SCENES) bad.push(`幕数超过上限 ${MX_MAX_SCENES}`);
+    mx.scenes.forEach((s, i) => {
+      if (!s.title.trim()) bad.push(`第 ${i + 1} 幕没填幕题`);
+      if (!s.image.trim()) bad.push(`第 ${i + 1} 幕没选图`);
+    });
+    if (!mx.headlineMessages.length) bad.push('祝福语轮播至少留一句');
+    if (!mx.revealImage.trim()) bad.push('揭示图不能为空');
+    mx.otherSites.forEach((s, i) => {
+      if (!s.name.trim()) bad.push(`其他站点第 ${i + 1} 条没填名称`);
+      if (!s.url.trim()) bad.push(`其他站点第 ${i + 1} 条没填链接`);
+    });
+    if (bad.length) { toast(bad[0], true); return; }
+    const btn = $('#mx-save');
+    if (btn) btn.disabled = true;
+    try {
+      const next = mxBuild(cfg.text, mx);
+      if (!next) throw new Error('生成配置失败（文件结构可能变了），已取消保存');
+      await saveWithLog(MX_PATH, next, cfg.sha, '更新明信素材 [管理台]', { type: '主题', action: '更新', target: '明信素材' });
+      cfg = await ghGetFile(MX_PATH);
+      const d = mxParse(cfg.text);
+      if (d) mx = d;
+      renderAll();
+      toast('明信素材已保存，网站重新构建后生效');
+    } catch (e) { toast(e.message, true); }
+  }
+
+  function renderAll() {
+    view.innerHTML = `<div class="card">
+      <h2>✉️ 明信素材 <span class="sub">${MX_PATH}</span></h2>
+      <p class="hint">第七形态「明信」首页的素材与文案都在这一张卡里。改完点最下方<b>保存</b>，一次提交；网站重新构建后生效。图片槽位可粘贴地址、上传 R2，或从媒体库 / v2 备选库里选。每个图槽带一个<b>轮换池</b>：换图时旧图自动进池、不消失，删池图只能手动删（会确认）；模式三档——手动指定 / 自动·每次随机 / 自动·每日一张。原 v2 备选库已并入马赛克图的轮换池。作者卡横幅这一槽同时是文章页站点统计卡的底图（共用一槽，池模式同样生效）。</p>
+      <h3 class="sub-h">🖼 素材槽位</h3>
+      ${slotHtml('mx-reveal', '揭示图（首屏全屏图，首幕明信片与它合成）', mx.revealImage, 'image', true, true)}
+      ${slotHtml('mx-mosaicimg', '马赛克图（马赛克 Hero 前段自有照片：碎片拼图与图框成图共用）', mx.mosaicImage, 'image', true, true)}
+      ${slotHtml('mx-pbanner', '作者卡横幅（留空 = 用揭示图；统计卡底图共用此槽）', mx.profileBanner, 'image', true, true)}
+      ${slotHtml('mx-doll', '黑猫本体（左下角对话角色）', mx.dollImage, 'image', false, true)}
+      <div class="field"><label>巡航立绘（影像层底部，顺序即出场序）</label><div id="mx-stands"></div>
+        <div class="toolbar"><button class="btn btn-small btn-ghost" id="mx-stand-add" type="button">＋ 添加立绘</button></div></div>
+      ${slotHtml('mx-press', '黑猫按下音效', mx.soundPress, 'audio', false)}
+      ${slotHtml('mx-loosen', '黑猫松手音效', mx.soundLoosen, 'audio', false)}
+      <div class="row2">
+        <div class="field"><label>背景纹理预设</label><select id="mx-texture">${MX_TEXTURES.map(([v, l]) => `<option value="${v}" ${mx.texturePreset === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="field"><label>纹理不透明度 <span class="meta" id="mx-texop-v">${mx.textureOpacity}</span></label><input type="range" id="mx-texop" min="0" max="1" step="0.01" value="${mx.textureOpacity}"></div>
+      </div>
+      <h3 class="sub-h">🎞 幕编排 <span class="sub">共 <span id="mx-scene-count">${mx.scenes.length}</span> 幕 · 上限 ${MX_MAX_SCENES} 幕</span></h3>
+      <p class="hint">拖动行首的 ⠿ 或用 ↑↓ 排序。编号贴纸的手写笔顺只录到 5（原站数据如此），第 6 幕起贴纸改印印刷体数字。</p>
+      <div id="mx-scenes"></div>
+      <div class="toolbar"><button class="btn btn-small btn-ghost" id="mx-scene-add" type="button">＋ 添加一幕</button></div>
+      <h3 class="sub-h">✒️ 签名备选库</h3>
+      <p class="hint">点一张设为页脚签名。当前：<span class="meta" id="mx-sig-cur">${esc(mx.signatureImage)}</span>${mx.signatureImage === MX_SIG_LEGACY ? '（旧路径，与「定版」是同一张图，保存后自动迁到新路径）' : ''}</p>
+      <div class="img-grid" id="mx-sigs"></div>
+      <h3 class="sub-h">✍️ 文案与开关</h3>
+      <div class="field"><label>揭示层大标题</label><input type="text" id="mx-headline" value="${esc(mx.headline)}"></div>
+      <div class="field"><label>祝福语轮播（一行一句，依次淡入淡出）</label><textarea id="mx-msgs" rows="4">${esc(mx.headlineMessages.join('\n'))}</textarea></div>
+      <div class="row2">
+        <div class="field"><label>终幕标题</label><input type="text" id="mx-ftitle" value="${esc(mx.finaleTitle)}"></div>
+        <div class="field"><label>终幕副题</label><input type="text" id="mx-fsub" value="${esc(mx.finaleSubtitle)}"></div>
+      </div>
+      <div class="field"><label>页脚座右铭（签名下方小字）</label><input type="text" id="mx-motto" value="${esc(mx.footerMotto)}"></div>
+      <div class="field"><label>作者卡身份行（名字下方那行，方括号渲染时自动加、只填括号内文案；只明信作者卡用）</label><input type="text" id="mx-tagline" value="${esc(mx.profileTagline)}"></div>
+      <div class="row2">
+        <div class="field"><label>终幕内容区默认（afterglow）</label><select id="mx-afterglow">
+          <option value="hero" ${mx.afterglowDefault === 'hero' ? 'selected' : ''}>Hero（原站牌堆套）</option>
+          <option value="classic" ${mx.afterglowDefault === 'classic' ? 'selected' : ''}>经典（番茄四模块套）</option>
+        </select></div>
+        <div class="field"><label>马赛克 Hero 层</label>
+          <div class="switch-row"><label class="switch"><input type="checkbox" id="mx-mosaic" ${mx.mosaicHero ? 'checked' : ''}><span class="slider"></span></label><span>开启 <span class="hint">关闭则整层不渲染，首页从揭示段直达幕序</span></span></div>
+        </div>
+      </div>
+      <h3 class="sub-h">🔗 其他站点 <span class="sub">作者卡底部面板 · 共 <span id="mx-site-count">${mx.otherSites.length}</span> 个</span></h3>
+      <p class="hint">作者卡底部的折叠条点开就是这份列表，顺序即显示序，折叠条只露前 3 个图标；整表清空 = 卡上整条不显示。图标填各站自己的 favicon 地址，拿不到就留空，卡上自动用本站叶片标。</p>
+      <div id="mx-sites"></div>
+      <div class="toolbar"><button class="btn btn-small btn-ghost" id="mx-site-add" type="button">＋ 添加站点</button></div>
+      <div class="toolbar"><span class="spacer"></span><button class="btn" id="mx-save" type="button">💾 保存明信素材</button></div>
+    </div>`;
+    wireSlot('mx-reveal', (v) => { mx.revealImage = v; }, 'image', slotAcc(() => mx.revealImage, 'reveal'));
+    wireSlot('mx-mosaicimg', (v) => { mx.mosaicImage = v; }, 'image', slotAcc(() => mx.mosaicImage, 'mosaic'));
+    wireSlot('mx-pbanner', (v) => { mx.profileBanner = v; }, 'image', slotAcc(() => mx.profileBanner, 'profileBanner'));
+    wireSlot('mx-doll', (v) => { mx.dollImage = v; }, 'image', slotAcc(() => mx.dollImage, 'doll'));
+    wireSlot('mx-press', (v) => { mx.soundPress = v; }, 'audio');
+    wireSlot('mx-loosen', (v) => { mx.soundLoosen = v; }, 'audio');
+    renderStands();
+    renderScenes();
+    renderSigs();
+    renderSites();
+    $('#mx-stand-add').onclick = () => { mx.standImages.push(''); mx.standPools.push([]); mx.standModes.push('manual'); renderStands(); };
+    $('#mx-site-add').onclick = () => { mx.otherSites.push({ name: '', url: '', icon: '' }); renderSites(); };
+    $('#mx-scene-add').onclick = () => {
+      if (mx.scenes.length >= MX_MAX_SCENES) { toast(`最多 ${MX_MAX_SCENES} 幕`, true); return; }
+      mx.scenes.push({ title: '', date: '', note: '', image: '', composite: false, pool: [], mode: 'manual' });
+      renderScenes();
+    };
+    const bind = (id, fn, evt) => { const el = document.getElementById(id); if (el) el.addEventListener(evt || 'input', () => fn(el)); };
+    bind('mx-texture', (el) => { mx.texturePreset = el.value; }, 'change');
+    bind('mx-texop', (el) => { mx.textureOpacity = parseFloat(el.value); const v = $('#mx-texop-v'); if (v) v.textContent = el.value; });
+    bind('mx-headline', (el) => { mx.headline = el.value; });
+    bind('mx-msgs', (el) => { mx.headlineMessages = el.value.split('\n').map((s) => s.trim()).filter(Boolean); });
+    bind('mx-ftitle', (el) => { mx.finaleTitle = el.value; });
+    bind('mx-fsub', (el) => { mx.finaleSubtitle = el.value; });
+    bind('mx-motto', (el) => { mx.footerMotto = el.value; });
+    bind('mx-tagline', (el) => { mx.profileTagline = el.value; });
+    bind('mx-afterglow', (el) => { mx.afterglowDefault = el.value; }, 'change');
+    bind('mx-mosaic', (el) => { mx.mosaicHero = el.checked; }, 'change');
+    $('#mx-save').onclick = saveMx;
+  }
+  renderAll();
+};

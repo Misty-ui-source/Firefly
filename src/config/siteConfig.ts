@@ -176,6 +176,10 @@ export const siteConfig: SiteConfig = {
 	// classic 经典（Firefly 经典骨架 + 璨夜皮肤）；访客可在调色板覆盖，存 localStorage astralLayout
 	astralLayout: "bento",
 
+	// 会话级开屏（控制台主题页可改）：true = 每个会话第一次打开先播一次开屏
+	// （博客名 + 肥鱼本体图打招呼，点任意处可跳过，约 1.9s 自动散去，sessionStorage 记已播）
+	splashEnabled: false,
+
 	// 站点开始日期，用于统计运行天数
 	siteStartDate: "2026-10-15",
 

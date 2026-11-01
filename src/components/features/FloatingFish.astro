@@ -267,11 +267,12 @@ const fishScale = featuresConfig.fishScale ?? 1;
 				{ once: true },
 			);
 		};
-		// 素简门（站长 2026-10-31 定版）：素简形态默认不显示肥鱼，切走再回来
+		// 素简门（站长 2026-10-31 定版）：素简形态默认不显示肥鱼，切走再回来；
+		// 明信同理藏起（站长 2026-11-01 拍板：明信形态下肥鱼不出现）
 		const applyPureGate = () => {
 			const wasHidden = root.hidden;
-			root.hidden =
-				document.documentElement.getAttribute("data-site-mode") === "pure";
+			const mode = document.documentElement.getAttribute("data-site-mode");
+			root.hidden = mode === "pure" || mode === "mingxin";
 			if (wasHidden && !root.hidden) playEnter();
 		};
 		applyPureGate();

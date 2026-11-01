@@ -32,8 +32,8 @@ export type NavbarMode = "static" | "fixed" | "dynamic";
 // 导航栏样式：classic 通栏（默认）/ float 悬浮卡片 / capsule 悬浮胶囊 / segment 三段胶囊（下滑收拢）
 export type NavbarStyle = "classic" | "float" | "capsule" | "segment";
 
-// 站点形态：full 华彩（默认，全套呈现）/ pure 素简（简洁导航·专注阅读）/ harmony 谐彩（Material 3 色阶·柔影，视觉参考 Shirone 主题）/ brick 顽彩（玩具积木粗野主义：蓝描边·硬阴影·小圆角，视觉参考 xuhome）/ astral 璨夜（深蓝星空·毛玻璃·衬线主场，视觉参考 XinghuisamaBlogs）；与 utils/setting-utils.ts 的 SITE_MODES 保持一致
-export type SiteMode = "full" | "pure" | "harmony" | "brick" | "astral" | "paper";
+// 站点形态：full 华彩（默认，全套呈现）/ pure 素简（简洁导航·专注阅读）/ harmony 谐彩（Material 3 色阶·柔影，视觉参考 Shirone 主题）/ brick 顽彩（玩具积木粗野主义：蓝描边·硬阴影·小圆角，视觉参考 xuhome）/ astral 璨夜（深蓝星空·毛玻璃·衬线主场，视觉参考 XinghuisamaBlogs）/ paper 纸舟（纸面 ink + 手册 manual 两套主题同槽）/ mingxin 明信（零饱和中性门户·明信片影像层首页·全站无侧栏，视觉参考 mmz）；与 utils/setting-utils.ts 的 SITE_MODES 保持一致
+export type SiteMode = "full" | "pure" | "harmony" | "brick" | "astral" | "paper" | "mingxin";
 
 export type SiteConfig = {
 	title: string;
@@ -99,15 +99,23 @@ export type SiteConfig = {
 	// 控制台主题页可改默认，访客可在显示设置里覆盖（localStorage siteMode），样式见 styles/pure-mode.css、styles/harmony-mode.css、styles/brick-mode.css 与 styles/astral-mode.css
 	siteMode?: SiteMode;
 
-	// 璨夜主题布局（全站默认，控制台主题页可改）：bento 璨夜（首页瓷砖矩阵）/ classic 经典（Firefly 经典骨架）；
-	// 访客可在调色板外观页签覆盖（localStorage astralLayout），骨架样式见 styles/astral-mode.css 的 [data-astral-layout] 段
-	astralLayout?: "bento" | "classic";
+	// 会话级开屏（全站默认，控制台主题页可改）：true = 每个会话第一次打开先播一次开屏
+	// （博客名 + 肥鱼打招呼，点任意处可跳过，约 1.9s 自动散去）；样式见 styles/transition.css 第 6 节
+	splashEnabled?: boolean;
+
+	// 璨夜子主题（全站默认，控制台主题页可改）：solid 实面 / starfield 星尘；
+	// 访客可在调色板外观页签覆盖（localStorage astralTheme），样式见 styles/astral-mode.css
+	astralTheme?: "solid" | "starfield";
 	// 纸舟子主题：ink 纸面（轻笑纸底墨线）/ manual 手册（终末地工业手册）；控制台主题页可改默认，
 	// 访客可在调色板外观页签覆盖（localStorage paperTheme），样式见 styles/paper-mode.css 的 [data-paper-theme] 作用域
 	paperTheme?: "ink" | "manual";
 	// 纸面主题色（独立色相 0-360，不跟全站主色相）：默认 177 = 纸面墨绿（oklch 校准值）；
 	// 控制台主题页可改默认，访客在调色板纸舟段覆盖（localStorage paperHue），经 --paper-hue 变量喂 paper-mode.css 的墨色令牌
 	paperHue?: number;
+
+	// 璨夜主题布局（全站默认，控制台主题页可改）：bento 璨夜（首页瓷砖矩阵）/ classic 经典（Firefly 经典骨架）；
+	// 访客可在调色板外观页签覆盖（localStorage astralLayout），骨架样式见 styles/astral-mode.css 的 [data-astral-layout] 段
+	astralLayout?: "bento" | "classic";
 
 	// 素简字体菜单（控制台字体页可管）：有序的 PureFont 键数组，第一项为默认字体；访客自选优先（localStorage pureFont）
 	pureFontMenu?: string[];

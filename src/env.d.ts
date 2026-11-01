@@ -27,6 +27,23 @@ declare global {
 		};
 		toggleFloatingTOC: () => void;
 		tocInternalNavigation: boolean;
+		ArticleMindmap: {
+			tree: import("./utils/article-mindmap").MindmapTree | null;
+			zoom: number;
+			nodePills: (HTMLElement | null)[];
+			paths: (SVGPathElement | null)[];
+			rootPill: HTMLElement | null;
+			pan: {
+				pointerId: number;
+				startX: number;
+				startY: number;
+				scrollLeft: number;
+				scrollTop: number;
+			} | null;
+			panDragged: boolean;
+		};
+		openArticleMindmap: () => void;
+		__articleMindmapInit?: boolean;
 		ImmersiveReading: {
 			btn: HTMLElement | null;
 			tocBtn: HTMLElement | null;

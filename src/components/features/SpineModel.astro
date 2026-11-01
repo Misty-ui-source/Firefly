@@ -92,6 +92,13 @@ import { url } from "@/utils/url-utils";
     const container = document.getElementById("spine-model-container");
     if (!container) return;
 
+    // 明信（mingxin）形态下不设看板娘：黑猫是该形态唯一的角落角色（二期），
+    // 容器由 main.css 的守卫一并隐藏，这里再钉一次内联样式双保险
+    if (document.documentElement.dataset.siteMode === "mingxin") {
+      container.style.display = "none";
+      return;
+    }
+
     // 检查移动端显示设置
     if (
       spineModelConfig.responsive.hideOnMobile &&
@@ -136,6 +143,13 @@ import { url } from "@/utils/url-utils";
 
   async function initSpineModel() {
     if (!spineModelConfig.enable) return;
+
+    // 明信形态下跳过初始化（运行时也不白下载），切走时由 siteModeChange 补启
+    if (document.documentElement.dataset.siteMode === "mingxin") {
+      const container = document.getElementById("spine-model-container");
+      if (container) container.style.display = "none";
+      return;
+    }
 
     // 检查移动端显示设置，如果隐藏则不加载运行时
     if (
@@ -441,6 +455,18 @@ import { url } from "@/utils/url-utils";
 
   // 监听窗口大小变化
   window.addEventListener("resize", updateResponsiveDisplay);
+
+  // 形态切换：进明信藏起（CSS 守卫 + 这里收掉可能在屏的消息气泡），
+  // 离开明信时补上被守卫跳过的初始化并恢复显示
+  window.addEventListener("siteModeChange", () => {
+    if (document.documentElement.dataset.siteMode === "mingxin") {
+      updateResponsiveDisplay();
+      if (window.clearModelMessage) window.clearModelMessage();
+    } else {
+      updateResponsiveDisplay();
+      initSpineModel();
+    }
+  });
 
   // 页面加载完成后初始化（只初始化一次）
   if (document.readyState === "loading") {

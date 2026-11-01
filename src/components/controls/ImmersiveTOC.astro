@@ -1,5 +1,6 @@
 ---
 import type { MarkdownHeading } from "astro";
+import { Icon } from "astro-icon/components";
 import FloatingButton from "@/components/common/FloatingButton.astro";
 import { siteConfig } from "@/config";
 import I18nKey from "@/i18n/i18nKey";
@@ -40,14 +41,26 @@ const items = encrypted ? [] : computeTocItems(headings, { maxLevel: 3 });
       <div id="immersive-toc" class="immersive-toc" data-position={tocPosition}>
         <div class="immersive-toc-header">
           <span class="immersive-toc-title">{i18n(I18nKey.tableOfContents)}</span>
-          <button
-            class="immersive-toc-toggle"
-            type="button"
-            aria-label={i18n(I18nKey.immersiveReading)}
-            onclick="window.toggleImmersiveTOC()"
-          >
-            ×
-          </button>
+          <span style="display: flex; align-items: center; gap: 0.25rem;">
+            <button
+              class="immersive-toc-toggle"
+              type="button"
+              data-mindmap-open
+              hidden={encrypted || items.length === 0}
+              aria-label={i18n(I18nKey.tocMindMap)}
+              title={i18n(I18nKey.tocMindMap)}
+            >
+              <Icon name="material-symbols:account-tree-rounded" style="font-size: 1.1rem;" aria-hidden="true" />
+            </button>
+            <button
+              class="immersive-toc-toggle"
+              type="button"
+              aria-label={i18n(I18nKey.immersiveReading)}
+              onclick="window.toggleImmersiveTOC()"
+            >
+              ×
+            </button>
+          </span>
         </div>
         <div class="toc-scroll-container custom-scrollbar">
           <div

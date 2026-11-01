@@ -1,5 +1,6 @@
 ---
 import type { MarkdownHeading } from "astro";
+import { Icon } from "astro-icon/components";
 import FloatingButton from "@/components/common/FloatingButton.astro";
 import { sidebarLayoutConfig } from "@/config/sidebarConfig";
 import I18nKey from "@/i18n/i18nKey";
@@ -39,6 +40,19 @@ const hideSidebarOnPostPage =
     class="floating-toc-panel hide overflow-hidden rounded-2xl shadow-2xl backdrop-blur-lg border border-white/20 dark:border-white/10 md:w-80 w-[calc(100vw-2rem)] py-3"
     style="background-color: var(--card-bg-transparent);"
     >
+    <div class="flex items-center justify-between px-3 pb-2 mb-1 border-b border-black/10 dark:border-white/10">
+        <span class="text-sm font-bold text-black/75 dark:text-white/75">{i18n(I18nKey.tableOfContents)}</span>
+        <button
+          type="button"
+          class="flex items-center gap-1.5 py-1 px-1.5 -mr-1.5 rounded-md text-sm text-black/60 dark:text-white/60 hover:text-(--primary) transition-colors"
+          data-mindmap-open
+          hidden={encrypted || items.length === 0}
+          aria-label={i18n(I18nKey.tocMindMap)}
+        >
+          <Icon name="material-symbols:account-tree-rounded" class="text-base" aria-hidden="true" />
+          <span>{i18n(I18nKey.tocMindMap)}</span>
+        </button>
+    </div>
     <div class="toc-scroll-container px-3">
         <div
         class="toc-content"

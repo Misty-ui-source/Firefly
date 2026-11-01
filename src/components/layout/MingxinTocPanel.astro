@@ -1,0 +1,880 @@
+---
+import { Icon } from "astro-icon/components";
+import { mingxinConfig, siteConfig } from "@/config";
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
+import { getSortedPosts } from "@/utils/content-utils";
+
+/**
+ * 明信文章页常驻目录栏（原站 ArticleTocPanel 移植，站长 2026-11-01 点名）：
+ * 只在明信作用域点亮（守卫在 main.css、点亮与样式在 mingxin-mode.css），
+ * 挂载点在 MainGridLayout（与思维导图弹窗同位，swup 容器外常驻，脚本自理重建）。
+ * 目录树由下方脚本从正文 DOM 采集（与原站控制器同路），此处只渲染壳层、
+ * 工具条与统计卡（统计数据为构建期真值）。
+ */
+
+interface Props {
+	/** 文章标题（分享文案用；运行时缺省时脚本回落当前页标题元素） */
+	title?: string;
+}
+
+const { title = "" } = Astro.props;
+
+const outlineLabel = "目录";
+const readingProgressLabel = i18n(I18nKey.readingProgress);
+const accordionAutoLabel = "自动收缩手风琴";
+const expandAllLabel = "全部展开";
+const collapseAllLabel = "全部收起";
+const mindMapLabel = i18n(I18nKey.tocMindMap);
+const shareLabel = i18n(I18nKey.shareArticle);
+const statsHeading = i18n(I18nKey.siteStats);
+
+/* ---------- 站点统计（原站 ArticleTocPanel 前置计算的本站映射） ---------- */
+
+/** 可读字数：剔除代码块/行内代码后数中文 + 英文字母（与原站 countReadableCharacters 同口径） */
+function countReadableCharacters(body = ""): number {
+	const text = String(body)
+		.replace(/```[\s\S]*?```/g, "")
+		.replace(/`[^`]*`/g, "")
+		.replace(/\s+/g, " ")
+		.trim();
+	const cn = text.match(/[\u4e00-\u9fa5]/g) || [];
+	const en = text.match(/[a-zA-Z]/g) || [];
+	return cn.length + en.length;
+}
+
+/** 原站 formatCompactNumber：千以上折成 k（一位小数，整数省小数） */
+function formatCompactNumber(value: number): string {
+	if (Math.abs(value) < 1000) return String(value);
+	const compact = value / 1000;
+	const rounded = Number.isInteger(compact)
+		? compact.toFixed(0)
+		: compact.toFixed(1);
+	return `${rounded}k`;
+}
+
+const posts = await getSortedPosts();
+const totalWords = posts.reduce(
+	(sum, post) => sum + countReadableCharacters(post.body || ""),
+	0,
+);
+const DAY_MS = 24 * 60 * 60 * 1000;
+const runningDays = siteConfig.siteStartDate
+	? Math.max(
+			0,
+			Math.floor(
+				(Date.now() - new Date(siteConfig.siteStartDate).getTime()) / DAY_MS,
+			),
+		)
+	: null;
+const latestUpdate = posts.reduce<Date | null>((latest, post) => {
+	const updated = post.data.updated ?? post.data.published;
+	return !latest || updated > latest ? updated : latest;
+}, null);
+const updateDays = latestUpdate
+	? Math.max(0, Math.floor((Date.now() - latestUpdate.getTime()) / DAY_MS))
+	: 0;
+const updateText = updateDays === 0 ? "今天" : `${updateDays} 天前`;
+/* 轮换集合与原站一一对应：已运行 / 最近更新 / 累计字数（原站无「文章数」一项） */
+const statsSentences = [
+	runningDays !== null ? `已运行 ${runningDays.toLocaleString()} 天` : null,
+	latestUpdate ? `最近更新于${updateText}` : null,
+	`累计记录 ${formatCompactNumber(totalWords)} 字`,
+].filter((sentence): sentence is string => sentence !== null);
+
+/* 统计卡底图与作者卡横幅共用同一槽（profileBanner，空时按其既有语义回落揭示图）；
+ * 淡化处理在 mingxin-mode.css 内按原站公式本地施加 */
+const statsBackground = mingxinConfig.profileBanner || mingxinConfig.revealImage;
+/* 与作者卡横幅共用同一轮换槽：选图条件与 MingxinNavbar 一致，同挂
+   data-mx-pick="banner"，首帧脚本按同一份选图定图（池模式对统计卡同样生效） */
+const mxBannerPick =
+	(mingxinConfig.profileBannerMode ?? "manual") !== "manual" ||
+	(!mingxinConfig.profileBanner &&
+		(mingxinConfig.revealMode ?? "manual") !== "manual");
+---
+
+<aside
+	class="mx-toc-panel is-pending"
+	id="mingxin-toc-panel"
+	aria-label={outlineLabel}
+	data-share-title={title}
+>
+	<div class="mx-toc-panel__view" data-mxtoc-view>
+		<span class="mx-toc-panel__highlight" data-mxtoc-highlight aria-hidden="true"></span>
+		<header class="mx-toc-panel__toolbar">
+			<h2 class="mx-toc-panel__heading">
+				<Icon name="material-symbols:format-list-bulleted-rounded" class="h-5 w-5" aria-hidden="true" />
+				{outlineLabel}
+			</h2>
+			<div class="mx-toc-panel__tools">
+				<button
+					type="button"
+					class="mx-toc-panel__tool-btn"
+					data-mxtoc-auto-btn
+					aria-pressed="true"
+					data-tooltip={accordionAutoLabel}
+					aria-label={accordionAutoLabel}
+				>
+					<Icon name="mingcute:list-collapse-line" class="h-4 w-4" />
+				</button>
+				<button
+					type="button"
+					class="mx-toc-panel__tool-btn"
+					data-mxtoc-toggle-all-btn
+					aria-pressed="false"
+					data-tooltip={expandAllLabel}
+					aria-label={expandAllLabel}
+					data-mxtoc-expand-label={expandAllLabel}
+					data-mxtoc-collapse-label={collapseAllLabel}
+				>
+					<Icon name="mdi:unfold-more-horizontal" class="mx-toc-panel__tool-icon is-expand h-4 w-4" />
+					<Icon name="mdi:unfold-less-horizontal" class="mx-toc-panel__tool-icon is-collapse h-4 w-4" />
+				</button>
+				<button
+					type="button"
+					class="mx-toc-panel__tool-btn"
+					data-mindmap-open
+					data-tooltip={mindMapLabel}
+					aria-label={mindMapLabel}
+				>
+					<Icon name="material-symbols:account-tree-rounded" class="h-4 w-4" />
+				</button>
+			</div>
+		</header>
+
+		<nav class="mx-toc-panel__tree hide-scrollbar" aria-label={outlineLabel} data-mxtoc-tree>
+			<svg class="mx-toc-panel__lines" data-mxtoc-lines aria-hidden="true" focusable="false"></svg>
+		</nav>
+
+		<div class="mx-toc-panel__actions">
+			<div class="mx-toc-panel__action-buttons">
+				{/* 原站同位三钮（咖啡打赏/分享/纯文本版）：本站打赏已关、纯文本版无对应物，
+				    只保留能接真功能的分享（navigator.share，缺失时复制链接） */}
+				<button
+					type="button"
+					class="mx-toc-panel__action-btn"
+					data-mxtoc-share
+					aria-label={shareLabel}
+					title={shareLabel}
+				>
+					<Icon name="material-symbols:share" class="h-4 w-4" aria-hidden="true" />
+				</button>
+			</div>
+			<span class="mx-toc-panel__progress-label" data-mxtoc-progress-label aria-hidden="true">0%</span>
+			<div
+				class="mx-toc-panel__progress"
+				role="progressbar"
+				aria-label={readingProgressLabel}
+				aria-valuemin="0"
+				aria-valuemax="100"
+				aria-valuenow="0"
+				data-mxtoc-progress
+			>
+				<span class="mx-toc-panel__progress-fill" aria-hidden="true"></span>
+			</div>
+		</div>
+
+		<section class="mx-toc-panel__stats" aria-labelledby="mingxin-toc-stats-heading">
+			<div class="mx-toc-panel__stats-card" tabindex={statsSentences.length > 1 ? 0 : undefined}>
+				{statsBackground && (
+					<div class="mx-toc-panel__stats-background" aria-hidden="true">
+						<img src={mxBannerPick ? undefined : statsBackground} data-mx-pick={mxBannerPick ? "banner" : undefined} alt="" loading="lazy" decoding="async" />
+					</div>
+				)}
+				<h3 id="mingxin-toc-stats-heading" class="mx-toc-panel__stats-heading">{statsHeading}</h3>
+				<div class="mx-toc-panel__stats-viewport">
+					<div class="mx-toc-panel__stats-messages" data-stats-count={statsSentences.length}>
+						{statsSentences.map((sentence) => (
+							<p class="mx-toc-panel__stats-message">{sentence}</p>
+						))}
+						{statsSentences.length > 1 && (
+							<p class="mx-toc-panel__stats-message" aria-hidden="true">{statsSentences[0]}</p>
+						)}
+					</div>
+				</div>
+			</div>
+		</section>
+	</div>
+</aside>
+
+<script>
+	/* 明信目录栏控制器：按原站 article-toc-panel-controller 的机制移植（树采集/
+	 * 自动手风琴/活动判定/进度/竖轨/停靠），去掉纸飞机飞行与相关文章双视图
+	 * （本站无对应物）。面板只在明信 + ≥100rem + 精细指针时可见，其余情形
+	 * 脚本直接不接管，悬浮目录抽屉照常工作。 */
+	const READING_OFFSET = 80;
+	const ACTIVE_SCROLL_THROTTLE = 120;
+	const TRACK_BEND_RATIO = 0.3;
+	const RAIL_BOTTOM_GAP = 24;
+	const SVG_NS = "http://www.w3.org/2000/svg";
+
+	interface TocNode {
+		index: number;
+		level: number;
+		depth: number;
+		text: string;
+		id: string | null;
+		element: HTMLElement;
+		parent: number;
+		children: number[];
+		subtreeStart: number;
+		subtreeEnd: number;
+	}
+
+	interface RowRef {
+		row: HTMLElement;
+		link: HTMLAnchorElement;
+		dot: HTMLElement;
+		toggle: HTMLButtonElement | null;
+	}
+
+	let teardown: (() => void) | null = null;
+
+	function getHeadingText(heading: HTMLElement): string {
+		const clone = heading.cloneNode(true) as HTMLElement;
+		clone
+			.querySelectorAll("script, style, .anchor, .anchor-icon, [data-pagefind-ignore]")
+			.forEach((el) => el.remove());
+		const text = clone.textContent?.replace(/#+\s*$/, "").trim();
+		return text || heading.getAttribute("aria-label") || heading.id || "Heading";
+	}
+
+	function collectTree(): { title: string; titleElement: HTMLElement | null; nodes: TocNode[] } | null {
+		const content =
+			document.querySelector(".custom-md") ??
+			document.querySelector(".prose") ??
+			document.querySelector(".markdown-content");
+		if (!content) return null;
+		const elements = Array.from(content.querySelectorAll<HTMLElement>("h1, h2, h3"));
+		if (elements.length === 0) return null;
+		const titleElement = document.querySelector<HTMLElement>('[data-pagefind-meta="title"]');
+		const title = titleElement?.textContent?.trim() || "";
+		const nodes: TocNode[] = [];
+		const stack: number[] = [];
+		for (const element of elements) {
+			const depth = Number.parseInt(element.tagName.slice(1), 10);
+			while (stack.length > 0 && nodes[stack[stack.length - 1]].depth >= depth) stack.pop();
+			const parent = stack.length > 0 ? stack[stack.length - 1] : -1;
+			const node: TocNode = {
+				index: nodes.length,
+				level: stack.length + 1,
+				depth,
+				text: getHeadingText(element),
+				id: element.id || null,
+				element,
+				parent,
+				children: [],
+				subtreeStart: nodes.length,
+				subtreeEnd: nodes.length,
+			};
+			if (parent >= 0) nodes[parent].children.push(node.index);
+			nodes.push(node);
+			stack.push(node.index);
+		}
+		for (let i = nodes.length - 1; i >= 0; i -= 1) {
+			const node = nodes[i];
+			if (node.parent < 0) continue;
+			const parentNode = nodes[node.parent];
+			parentNode.subtreeStart = Math.min(parentNode.subtreeStart, node.subtreeStart);
+			parentNode.subtreeEnd = Math.max(parentNode.subtreeEnd, node.subtreeEnd);
+		}
+		return { title, titleElement, nodes };
+	}
+
+	function initMingxinTocPanel(): void {
+		teardown?.();
+		teardown = null;
+		const root = document.getElementById("mingxin-toc-panel");
+		if (!root) return;
+		if (document.documentElement.dataset.siteMode !== "mingxin") return;
+		const tree = collectTree();
+		if (!tree) {
+			root.hidden = true;
+			return;
+		}
+		root.hidden = false;
+
+		const controller = new AbortController();
+		const { signal } = controller;
+		const view = root.querySelector<HTMLElement>("[data-mxtoc-view]")!;
+		const nav = root.querySelector<HTMLElement>("[data-mxtoc-tree]")!;
+		const linesSvg = root.querySelector<SVGElement>("[data-mxtoc-lines]")!;
+		const highlight = root.querySelector<HTMLElement>("[data-mxtoc-highlight]")!;
+		const autoBtn = root.querySelector<HTMLButtonElement>("[data-mxtoc-auto-btn]")!;
+		const toggleAllBtn = root.querySelector<HTMLButtonElement>("[data-mxtoc-toggle-all-btn]")!;
+		const shareBtn = root.querySelector<HTMLButtonElement>("[data-mxtoc-share]");
+		const progressRegion = root.querySelector<HTMLElement>("[data-mxtoc-progress]");
+		const progressLabel = root.querySelector<HTMLElement>("[data-mxtoc-progress-label]");
+
+		/* ---------- 建树 ---------- */
+		const rows: RowRef[] = [];
+		const trackBase = document.createElementNS(SVG_NS, "path");
+		trackBase.setAttribute("class", "mx-toc-panel__track-base");
+		const trackProgress = document.createElementNS(SVG_NS, "path");
+		trackProgress.setAttribute("class", "mx-toc-panel__track-progress");
+		linesSvg.append(trackBase, trackProgress);
+
+		const buildList = (indexes: number[]): HTMLUListElement => {
+			const ul = document.createElement("ul");
+			ul.className = "mx-toc-panel__list";
+			for (const index of indexes) {
+				const node = tree.nodes[index];
+				const li = document.createElement("li");
+				li.className = "mx-toc-panel__item";
+				const row = document.createElement("div");
+				row.className = "mx-toc-panel__row";
+				row.dataset.tocLevel = String(node.level);
+				row.style.setProperty("--toc-level", String(node.level));
+				const link = document.createElement("a");
+				link.className = "mx-toc-panel__link";
+				link.href = node.id ? `#${encodeURIComponent(node.id)}` : "#";
+				link.title = node.text;
+				const dot = document.createElement("span");
+				dot.className = "mx-toc-panel__dot";
+				const text = document.createElement("span");
+				text.className = "mx-toc-panel__text";
+				text.textContent = node.text;
+				link.append(dot, text);
+				row.append(link);
+				let toggle: HTMLButtonElement | null = null;
+				if (node.children.length > 0) {
+					toggle = document.createElement("button");
+					toggle.type = "button";
+					toggle.className = "mx-toc-panel__toggle";
+					toggle.setAttribute("aria-expanded", "true");
+					toggle.setAttribute("aria-label", "折叠/展开");
+					toggle.addEventListener("click", () => toggleCollapse(index), { signal });
+					row.append(toggle);
+				}
+				li.append(row);
+				rows[index] = { row, link, dot, toggle };
+				if (node.children.length > 0) {
+					const childrenWrap = document.createElement("div");
+					childrenWrap.className = "mx-toc-panel__children";
+					childrenWrap.append(buildList(node.children));
+					li.append(childrenWrap);
+				}
+				ul.append(li);
+			}
+			return ul;
+		};
+
+		/* 根行：文章标题（实心点，点击回标题处）。原站结构：根行与根列表
+		 * 是 nav 下的平级兄弟，根行本身没有折叠钮、整树不随根行收起 */
+		const rootRow = document.createElement("div");
+		rootRow.className = "mx-toc-panel__row mx-toc-panel__row--root";
+		const rootLink = document.createElement("a");
+		rootLink.className = "mx-toc-panel__link";
+		rootLink.href = "#";
+		rootLink.title = tree.title || document.title;
+		const rootDot = document.createElement("span");
+		rootDot.className = "mx-toc-panel__dot";
+		const rootText = document.createElement("span");
+		rootText.className = "mx-toc-panel__text";
+		rootText.textContent = tree.title || document.title;
+		rootLink.append(rootDot, rootText);
+		rootRow.append(rootLink);
+		const rootIndexes = tree.nodes.filter((n) => n.parent < 0).map((n) => n.index);
+		nav.append(rootRow, buildList(rootIndexes));
+		rootLink.addEventListener("click", (event) => {
+			event.preventDefault();
+			const target = tree.titleElement;
+			if (target) {
+				window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - READING_OFFSET, behavior: "smooth" });
+			} else {
+				window.scrollTo({ top: 0, behavior: "smooth" });
+			}
+		}, { signal });
+
+		/* ---------- 状态 ---------- */
+		let autoEnabled = true;
+		let activeIndex = -1;
+		let activeChain = new Set<number>();
+		const manualState = new Map<number, boolean>();
+		let headingTops: number[] = [];
+		let articleStart = 0;
+		let articleEnd = 0;
+		let rootTop = 0;
+		let lastProgressPercent = -1;
+		let trackTotal = 0;
+		let trackTarget = 0;
+		let trackCurrent = 0;
+		let trackRaf: number | null = null;
+		let updateRaf: number | null = null;
+		let measureRaf: number | null = null;
+		let activeScrollTimer: ReturnType<typeof setTimeout> | null = null;
+		let appliedTop = "";
+
+		/* 进度起止按原站取正文元素（.custom-md 链）；停靠锚点取本站文章头块 */
+		const article =
+			document.querySelector(".custom-md") ??
+			document.querySelector(".prose") ??
+			document.querySelector(".markdown-content");
+		const dockAnchor = document.getElementById("post-container") ?? article;
+
+		function cachePositions(): void {
+			const scrollY = window.scrollY;
+			if (article) {
+				const rect = article.getBoundingClientRect();
+				articleStart = rect.top + scrollY;
+				articleEnd = rect.bottom + scrollY;
+			}
+			headingTops = tree.nodes.map((node) => node.element.getBoundingClientRect().top + scrollY);
+			rootTop = tree.titleElement
+				? tree.titleElement.getBoundingClientRect().top + scrollY
+				: articleStart;
+		}
+
+		function isNodeVisible(index: number): boolean {
+			let cursor = tree.nodes[index].parent;
+			while (cursor >= 0) {
+				if (rows[cursor]?.row.classList.contains("is-collapsed")) return false;
+				cursor = tree.nodes[cursor].parent;
+			}
+			return true;
+		}
+
+		/* ---------- 竖轨 ---------- */
+		function visibleDotPoints(): { x: number; y: number; index: number }[] {
+			const navRect = nav.getBoundingClientRect();
+			const points: { x: number; y: number; index: number }[] = [];
+			const push = (dot: HTMLElement, index: number) => {
+				const rect = dot.getBoundingClientRect();
+				points.push({
+					x: rect.left - navRect.left + nav.scrollLeft + rect.width / 2,
+					y: rect.top - navRect.top + nav.scrollTop + rect.height / 2,
+					index,
+				});
+			};
+			push(rootDot, -1);
+			tree.nodes.forEach((node) => {
+				if (isNodeVisible(node.index)) push(rows[node.index].dot, node.index);
+			});
+			return points;
+		}
+
+		function buildTrackPath(points: { x: number; y: number }[]): string {
+			if (points.length === 0) return "";
+			const pts: { x: number; y: number }[] = [points[0]];
+			for (let i = 1; i < points.length; i += 1) {
+				const from = points[i - 1];
+				const to = points[i];
+				if (from.x !== to.x) {
+					const bend = (to.y - from.y) * TRACK_BEND_RATIO;
+					pts.push({ x: from.x, y: from.y + bend });
+					pts.push({ x: to.x, y: to.y - bend });
+				}
+				pts.push(to);
+			}
+			return pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x} ${p.y}`).join(" ");
+		}
+
+		function lengthAtY(total: number, y: number): number {
+			let lo = 0;
+			let hi = total;
+			for (let i = 0; i < 24; i += 1) {
+				const mid = (lo + hi) / 2;
+				if (trackBase.getPointAtLength(mid).y < y) lo = mid;
+				else hi = mid;
+			}
+			return hi;
+		}
+
+		let lastPoints: { x: number; y: number; index: number }[] = [];
+
+		function drawTrack(): void {
+			const points = visibleDotPoints();
+			lastPoints = points;
+			const d = buildTrackPath(points);
+			trackBase.setAttribute("d", d);
+			trackProgress.setAttribute("d", d);
+			const width = nav.scrollWidth;
+			const height = nav.scrollHeight;
+			linesSvg.setAttribute("width", String(width));
+			linesSvg.setAttribute("height", String(height));
+			linesSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+			trackTotal = trackBase.getTotalLength();
+			/* 阅读弧长目标：活动标题圆点处的弧长（无活动时落在根点） */
+			const activePoint = points.find((p) => p.index === activeIndex) ?? points[0];
+			trackTarget = activePoint ? lengthAtY(trackTotal, activePoint.y) : 0;
+			applyTrack();
+			syncCovered(points);
+		}
+
+		function applyTrack(): void {
+			trackProgress.style.strokeDasharray = `${trackCurrent} ${Math.max(0, trackTotal - trackCurrent)}`;
+		}
+
+		function syncCovered(points: { x: number; y: number; index: number }[]): void {
+			for (const point of points) {
+				if (point.index < 0) continue;
+				const len = lengthAtY(trackTotal, point.y);
+				rows[point.index].dot.classList.toggle("is-covered", len <= trackCurrent + 0.5);
+			}
+		}
+
+		function animateTrack(): void {
+			if (trackRaf !== null) return;
+			const step = () => {
+				trackRaf = null;
+				const diff = trackTarget - trackCurrent;
+				if (Math.abs(diff) < 0.5) {
+					trackCurrent = trackTarget;
+					applyTrack();
+					syncCovered(lastPoints);
+					return;
+				}
+				trackCurrent += diff * 0.35;
+				applyTrack();
+				syncCovered(lastPoints);
+				trackRaf = requestAnimationFrame(step);
+			};
+			trackRaf = requestAnimationFrame(step);
+		}
+
+		function scheduleTrack(): void {
+			requestAnimationFrame(() => {
+				drawTrack();
+				animateTrack();
+			});
+		}
+
+		/* ---------- 高亮胶囊（悬停/活动行） ---------- */
+		let highlightedRow: HTMLElement | null = null;
+		function syncHighlight(): void {
+			if (!highlightedRow) {
+				view.removeAttribute("data-mxtoc-highlighted");
+				return;
+			}
+			const target = highlightedRow.getBoundingClientRect();
+			const viewport = nav.getBoundingClientRect();
+			const bounds = view.getBoundingClientRect();
+			const top = Math.max(target.top, viewport.top);
+			const bottom = Math.min(target.bottom, viewport.bottom);
+			if (bottom <= top || target.width === 0) {
+				view.removeAttribute("data-mxtoc-highlighted");
+				return;
+			}
+			highlight.style.transform = `translate(${target.left - bounds.left}px, ${top - bounds.top}px)`;
+			highlight.style.width = `${target.width}px`;
+			highlight.style.height = `${bottom - top}px`;
+			view.setAttribute("data-mxtoc-highlighted", "");
+		}
+		nav.addEventListener("mouseover", (event) => {
+			const row = (event.target as Element).closest<HTMLElement>(".mx-toc-panel__row");
+			highlightedRow = row;
+			syncHighlight();
+		}, { signal });
+		nav.addEventListener("mouseleave", () => {
+			highlightedRow = rows[activeIndex]?.row ?? rootRow;
+			syncHighlight();
+		}, { signal });
+
+		/* ---------- 折叠 ---------- */
+		function syncToggleAllButton(): void {
+			const expanded = tree.nodes.every((node) => {
+				const ref = rows[node.index];
+				return !ref?.toggle || !ref.row.classList.contains("is-collapsed");
+			});
+			toggleAllBtn.setAttribute("aria-pressed", String(expanded));
+			const label = expanded
+				? (toggleAllBtn.dataset.mxtocCollapseLabel ?? "")
+				: (toggleAllBtn.dataset.mxtocExpandLabel ?? "");
+			if (label) {
+				toggleAllBtn.setAttribute("aria-label", label);
+				toggleAllBtn.dataset.tooltip = label;
+			}
+		}
+
+		function rebuildActiveChain(): void {
+			activeChain = new Set<number>();
+			let cursor = activeIndex;
+			while (cursor >= 0) {
+				activeChain.add(cursor);
+				cursor = tree.nodes[cursor].parent;
+			}
+		}
+
+		function applyAutoAccordion(): void {
+			tree.nodes.forEach((node) => {
+				const inside =
+					activeIndex >= node.subtreeStart && activeIndex <= node.subtreeEnd;
+				if (!inside) manualState.delete(node.index);
+			});
+			tree.nodes.forEach((node) => {
+				const ref = rows[node.index];
+				if (!ref?.toggle) return;
+				let expanded: boolean;
+				if (manualState.has(node.index)) {
+					expanded = manualState.get(node.index) === true;
+				} else if (activeChain.has(node.index)) {
+					expanded = true;
+				} else if (!autoEnabled) {
+					expanded = !ref.row.classList.contains("is-collapsed");
+				} else {
+					expanded = false;
+				}
+				ref.row.classList.toggle("is-collapsed", !expanded);
+				ref.toggle.setAttribute("aria-expanded", String(expanded));
+			});
+		}
+
+		function toggleCollapse(index: number): void {
+			const ref = rows[index];
+			if (!ref?.toggle) return;
+			const nextExpanded = ref.row.classList.contains("is-collapsed");
+			if (autoEnabled) manualState.set(index, nextExpanded);
+			ref.row.classList.toggle("is-collapsed", !nextExpanded);
+			ref.toggle.setAttribute("aria-expanded", String(nextExpanded));
+			syncToggleAllButton();
+			scheduleTrack();
+		}
+
+		function expandNode(index: number): void {
+			const ref = rows[index];
+			if (!ref?.toggle) return;
+			if (!ref.row.classList.contains("is-collapsed")) return;
+			manualState.set(index, true);
+			ref.row.classList.remove("is-collapsed");
+			ref.toggle.setAttribute("aria-expanded", "true");
+			syncToggleAllButton();
+			scheduleTrack();
+		}
+
+		autoBtn.addEventListener("click", () => {
+			autoEnabled = !autoEnabled;
+			/* 原站 setAutoEnabled：切换开关即清手动覆盖 */
+			manualState.clear();
+			autoBtn.setAttribute("aria-pressed", String(autoEnabled));
+			if (autoEnabled) {
+				applyAutoAccordion();
+				scheduleTrack();
+			}
+		}, { signal });
+
+		toggleAllBtn.addEventListener("click", () => {
+			const expand = toggleAllBtn.getAttribute("aria-pressed") !== "true";
+			tree.nodes.forEach((node) => {
+				const ref = rows[node.index];
+				if (!ref?.toggle) return;
+				ref.row.classList.toggle("is-collapsed", !expand);
+				ref.toggle.setAttribute("aria-expanded", String(expand));
+			});
+			syncToggleAllButton();
+			scheduleTrack();
+		}, { signal });
+
+		/* ---------- 链接导航 ---------- */
+		nav.addEventListener("click", (event) => {
+			const link = (event.target as Element).closest<HTMLAnchorElement>(".mx-toc-panel__link");
+			if (!link || link === rootLink) return;
+			const row = link.closest<HTMLElement>(".mx-toc-panel__row");
+			const index = rows.findIndex((ref) => ref?.row === row);
+			if (index < 0) return;
+			event.preventDefault();
+			expandNode(index);
+			const element = tree.nodes[index].element;
+			window.scrollTo({
+				top: element.getBoundingClientRect().top + window.scrollY - READING_OFFSET,
+				behavior: "smooth",
+			});
+			if (tree.nodes[index].id) {
+				history.replaceState(null, "", `#${tree.nodes[index].id}`);
+			}
+		}, { signal });
+
+		/* ---------- 分享 ---------- */
+		shareBtn?.addEventListener("click", async () => {
+			const shareData = {
+				title: root.dataset.shareTitle || document.title,
+				url: window.location.href,
+			};
+			if (typeof navigator.share === "function") {
+				try {
+					await navigator.share(shareData);
+				} catch {
+					/* 用户取消系统分享是正常操作，不再弹其他窗口（原站同口径） */
+				}
+				return;
+			}
+			try {
+				await navigator.clipboard.writeText(shareData.url);
+				const original = shareBtn.getAttribute("aria-label");
+				shareBtn.setAttribute("aria-label", "链接已复制");
+				shareBtn.setAttribute("title", "链接已复制");
+				setTimeout(() => {
+					shareBtn.setAttribute("aria-label", original ?? "分享");
+					shareBtn.setAttribute("title", original ?? "分享");
+				}, 1600);
+			} catch {}
+		}, { signal });
+
+		/* ---------- 滚动更新 ---------- */
+		function getProgress(): number {
+			const end = articleEnd - window.innerHeight + READING_OFFSET;
+			if (end <= articleStart) {
+				return window.scrollY + READING_OFFSET >= articleStart ? 1 : 0;
+			}
+			return Math.min(1, Math.max(0, (window.scrollY - articleStart) / (end - articleStart)));
+		}
+
+		function getActiveIndex(): number {
+			if (headingTops.length === 0) return -1;
+			const readingPosition = window.scrollY + READING_OFFSET;
+			let lower = 0;
+			let upper = headingTops.length - 1;
+			let result = 0;
+			while (lower <= upper) {
+				const middle = Math.floor((lower + upper) / 2);
+				if (headingTops[middle] <= readingPosition) {
+					result = middle;
+					lower = middle + 1;
+				} else {
+					upper = middle - 1;
+				}
+			}
+			return result;
+		}
+
+		function syncDock(): void {
+			const height = root.offsetHeight;
+			if (!height) return;
+			let followTop = 128;
+			if (dockAnchor) {
+				const anchorTop = dockAnchor.getBoundingClientRect().top;
+				const fitTop = window.innerHeight - height - RAIL_BOTTOM_GAP;
+				followTop = Math.min(Math.max(128, anchorTop), fitTop);
+			}
+			const footer = document.querySelector("footer.site-footer, footer");
+			if (footer) {
+				const footerTop = footer.getBoundingClientRect().top;
+				const maxTop = Math.max(0, footerTop - height - RAIL_BOTTOM_GAP);
+				followTop = Math.min(followTop, maxTop);
+			}
+			const value = `${followTop}px`;
+			if (value !== appliedTop) {
+				appliedTop = value;
+				root.style.top = value;
+			}
+		}
+
+		function scheduleActiveRowScroll(): void {
+			if (activeScrollTimer) clearTimeout(activeScrollTimer);
+			activeScrollTimer = setTimeout(() => {
+				activeScrollTimer = null;
+				const ref = rows[activeIndex];
+				if (!ref) return;
+				const navRect = nav.getBoundingClientRect();
+				const rowRect = ref.row.getBoundingClientRect();
+				if (rowRect.top >= navRect.top && rowRect.bottom <= navRect.bottom) return;
+				const targetScroll = ref.row.offsetTop - nav.clientHeight / 2 + ref.row.clientHeight / 2;
+				nav.scrollTo({
+					top: Math.max(0, targetScroll),
+					behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+				});
+			}, ACTIVE_SCROLL_THROTTLE);
+		}
+
+		function update(): void {
+			syncDock();
+			const progressPercent = Math.round(getProgress() * 100);
+			if (progressPercent !== lastProgressPercent) {
+				lastProgressPercent = progressPercent;
+				progressRegion?.setAttribute("aria-valuenow", String(progressPercent));
+				progressRegion?.style.setProperty("--mx-toc-reading-progress", String(progressPercent / 100));
+				if (progressLabel) progressLabel.textContent = `${progressPercent}%`;
+			}
+			const nextActiveIndex = getActiveIndex();
+			if (nextActiveIndex !== activeIndex) {
+				activeIndex = nextActiveIndex;
+				rows.forEach((ref, index) => {
+					const isActive = index === activeIndex;
+					ref?.row.classList.toggle("is-active", isActive);
+					if (isActive) ref?.link.setAttribute("aria-current", "location");
+					else ref?.link.removeAttribute("aria-current");
+				});
+				rebuildActiveChain();
+				applyAutoAccordion();
+				syncToggleAllButton();
+				scheduleActiveRowScroll();
+			}
+			scheduleTrack();
+			if (highlightedRow === null) highlightedRow = rows[activeIndex]?.row ?? rootRow;
+			syncHighlight();
+		}
+
+		function scheduleUpdate(): void {
+			if (updateRaf !== null) return;
+			updateRaf = requestAnimationFrame(() => {
+				updateRaf = null;
+				update();
+			});
+		}
+
+		function scheduleMeasure(): void {
+			if (measureRaf !== null) return;
+			measureRaf = requestAnimationFrame(() => {
+				measureRaf = null;
+				cachePositions();
+				activeIndex = -1;
+				update();
+			});
+		}
+
+		window.addEventListener("scroll", scheduleUpdate, { passive: true, signal });
+		window.addEventListener("resize", scheduleMeasure, { signal });
+		nav.addEventListener("scroll", () => {
+			drawTrack();
+			syncHighlight();
+		}, { passive: true, signal });
+
+		/* 原站同款重画机制（ArticleTocPanel 的 ResizeObserver）：字体换字、
+		 * 封面图加载、手风琴高度变化都会推移圆点位置，轨若不跟着重画，
+		 * 接头处（尤其根节点→首个子节点）就会露出错位的小钩/折角。
+		 * 另加 document.fonts.ready 兜底：面板内部行高变化未必改变被观察
+		 * 元素的盒子（面板已达 max-height 时），字体到位后强制重画一次。 */
+		const trackObserver = new ResizeObserver(() => {
+			scheduleMeasure();
+			scheduleTrack();
+			syncDock();
+		});
+		if (article) trackObserver.observe(article);
+		trackObserver.observe(root);
+		trackObserver.observe(nav);
+		if (dockAnchor && dockAnchor !== article) trackObserver.observe(dockAnchor);
+		document.fonts?.ready
+			.then(() => {
+				if (signal.aborted) return;
+				scheduleMeasure();
+				scheduleTrack();
+			})
+			.catch(() => {});
+
+		cachePositions();
+		rebuildActiveChain();
+		applyAutoAccordion();
+		syncToggleAllButton();
+		update();
+		requestAnimationFrame(() => {
+			drawTrack();
+			trackCurrent = trackTarget;
+			applyTrack();
+			root.classList.remove("is-pending");
+		});
+
+		teardown = () => {
+			trackObserver.disconnect();
+			controller.abort();
+			if (trackRaf !== null) cancelAnimationFrame(trackRaf);
+			if (updateRaf !== null) cancelAnimationFrame(updateRaf);
+			if (measureRaf !== null) cancelAnimationFrame(measureRaf);
+			if (activeScrollTimer) clearTimeout(activeScrollTimer);
+		};
+	}
+
+	initMingxinTocPanel();
+	document.addEventListener("swup:page:view", () => initMingxinTocPanel());
+	document.addEventListener("password:decrypted", () => {
+		setTimeout(() => initMingxinTocPanel(), 200);
+	});
+</script>

@@ -1,0 +1,3332 @@
+---
+// 明信音乐播放器（二期）：常驻层（挂 Layout 的 Swup 容器外，跨页续播），
+// 只在明信形态现身，切走形态只藏不暂停——播放不断。
+// 视觉照 Shirone MusicSidebar（番茄仓 organisms/music）：封面卡面（圆封面 +
+// 播放波纹环）、标题/歌手、行内音量、进度条、模式/上下曲/歌单控制行、
+// 歌词面板（居中列 + 当前行高亮）、歌单面板（序号 + 当前项 tonal 底）。
+// 引擎走本站浮动播放器链：歌单先行 musicConfig.floatingPlayer
+// （/api/music/playlist 拉单、/api/music/resolve 换源解析），
+// mingxinConfig.music.metingSources 在后台合并去重、逐源静默降级；
+// 歌词走 Meting 的 lrc 路径（条目自带或按平台+id 补查），LRC 解析同 Shirone lyrics.ts。
+import { mingxinConfig } from "@/config/mingxinConfig";
+import { musicPlayerConfig } from "@/config/musicConfig";
+
+const fp = musicPlayerConfig.floatingPlayer;
+const fpEnabled = !!fp?.enabled;
+const fpPlaylists = (fp?.playlists || []).filter((p) => p.id);
+const quality = fp?.quality || "320k";
+const meting = mingxinConfig.music;
+const playerVariant = meting.playerVariant === "pill" ? "pill" : "sidebar";
+const renderPlayer = fpEnabled && fpPlaylists.length > 0;
+---
+
+{
+	renderPlayer && (
+		<div id="mingxin-music-player" data-mxmp-variant={playerVariant} hidden>
+			<div class="mxmp-view mxmp-view--sidebar">
+			<button
+				type="button"
+				class="mxmp-entry"
+				data-mxmp-entry
+				aria-label="打开明信音乐播放器"
+			>
+				<img class="mxmp-entry-cover" data-mxmp-entry-cover alt="" hidden />
+				<span class="mxmp-entry-glyph" data-mxmp-entry-glyph>
+					♪
+				</span>
+				<span class="mxmp-entry-state" data-mxmp-entry-state>
+					▶
+				</span>
+			</button>
+			<section class="music-player" data-mxmp-card hidden aria-label="音乐播放器">
+				<div class="music-player__track">
+					<div class="music-player__cover" data-mxmp-cover-wrap>
+						<img data-mxmp-cover alt="" hidden />
+						<span class="music-player__cover-glyph" data-mxmp-cover-glyph>
+							♪
+						</span>
+					</div>
+					<div class="music-player__metadata">
+						<strong data-mxmp-title title="">音乐播放器</strong>
+						<span data-mxmp-artist title="">歌单加载中…</span>
+						<div class="music-player__submeta">
+							<div class="music-player__volume-inline">
+								<button
+									type="button"
+									class="mxmp-icon-btn"
+									data-mxmp-mute
+									aria-label="静音"
+								>
+									🔊
+								</button>
+								<div class="music-player__volume-slider-wrap">
+									<input
+										type="range"
+										class="music-player__volume-slider"
+										data-mxmp-volume
+										min="0"
+										max="1"
+										step="0.01"
+										value="0.7"
+										aria-label="音量"
+									/>
+								</div>
+							</div>
+							<div class="music-player__lyrics-actions">
+								<span class="mxmp-status" data-mxmp-status />
+								<button
+									type="button"
+									class="mxmp-icon-btn"
+									data-mxmp-lyrics-toggle
+									aria-label="歌词"
+									aria-expanded="false"
+								>
+									词
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="music-player__progress">
+					<span class="music-player__time-cap" data-mxmp-time-cur>
+						0:00
+					</span>
+					<div class="music-player__progress-control">
+						<input
+							type="range"
+							class="mxmp-progress-slider"
+							data-mxmp-progress
+							min="0"
+							max="1000"
+							step="1"
+							value="0"
+							aria-label="进度"
+						/>
+					</div>
+					<span class="music-player__time-cap" data-mxmp-time-dur>
+						0:00
+					</span>
+				</div>
+				<div class="music-player__controls">
+					<button
+						type="button"
+						class="mxmp-icon-btn"
+						data-mxmp-mode
+						aria-label="播放模式：顺序播放"
+					>
+						🔁
+					</button>
+					<button
+						type="button"
+						class="mxmp-icon-btn"
+						data-mxmp-prev
+						aria-label="上一首"
+					>
+						⏮
+					</button>
+					<button
+						type="button"
+						class="mxmp-icon-btn mxmp-icon-btn--filled"
+						data-mxmp-toggle
+						aria-label="播放"
+					>
+						▶
+					</button>
+					<button type="button" class="mxmp-icon-btn" data-mxmp-next aria-label="下一首">
+						⏭
+					</button>
+					<button
+						type="button"
+						class="mxmp-icon-btn"
+						data-mxmp-list-toggle
+						aria-label="歌单"
+						aria-expanded="false"
+					>
+						☰
+					</button>
+				</div>
+				<div class="music-player__lyrics-panel" data-mxmp-lyrics-panel hidden>
+					<div class="music-player__lyrics-list" data-mxmp-lyrics-list>
+						<p class="music-player__lyrics-empty">暂无歌词</p>
+					</div>
+				</div>
+				<div class="music-player__playlist-panel" data-mxmp-list-panel hidden>
+					<ol class="music-player__playlist" data-mxmp-list>
+						<li class="music-player__empty">加载中…</li>
+					</ol>
+				</div>
+			</section>
+			</div>
+			<div class="mxmp-view mxmp-view--pill">
+				<div
+					class="mxpill"
+					data-mxpill
+					data-state="disc"
+					data-panel="closed"
+					data-playing="false"
+					role="region"
+					aria-label="音乐播放器"
+				>
+					<div class="mxpill__stage">
+						<!-- 展开卡：面板与信息层共用一张表面（移植自 mmz MusicPlayer） -->
+						<div class="mxpill__card">
+							<div class="mxpill__panel">
+								<div class="mxpill__panel-clip">
+									<div class="mxpill__panel-body" data-mxpill-panel-body>
+										<div class="mxpill__panel-tabs">
+											<span class="mxpill__tab-indicator" data-mxpill-tab-indicator aria-hidden="true"></span>
+											<button class="mxpill__tab mxpill__tab--playlist is-active" data-mxpill-tab="playlist" type="button">列表</button>
+											<button class="mxpill__tab mxpill__tab--lyrics" data-mxpill-tab="lyrics" type="button">歌词</button>
+										</div>
+										<div class="mxpill__panel-views">
+											<div class="mxpill__playlist-view is-active" data-mxpill-view="playlist">
+												<div class="mxpill__playlist-list" data-mxpill-list role="listbox" aria-label="歌单"></div>
+											</div>
+											<div class="mxpill__lyrics-view" data-mxpill-view="lyrics">
+												<div class="mxpill__lyrics-list" data-mxpill-lyrics-list role="listbox" aria-label="歌词">
+													<div class="mxpill__lyrics-placeholder">暂无歌词</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+							<!-- 信息层：bar 态常驻在展开卡底部，唱片骑在其左下角 -->
+							<div class="mxpill__info">
+								<div class="mxpill__info-clip">
+									<div class="mxpill__info-surface" data-mxpill-info>
+										<p class="mxpill__title" data-mxpill-title>音乐播放器</p>
+										<p class="mxpill__artist" data-mxpill-artist></p>
+										<div class="mxpill__progress-row">
+											<span class="mxpill__time-current" data-mxpill-time-cur>0:00</span>
+											<div
+												class="mxpill__progress"
+												data-mxpill-progress
+												role="slider"
+												aria-label="进度"
+												aria-valuemin="0"
+												aria-valuemax="100"
+												aria-valuenow="0"
+											>
+												<div class="mxpill__progress-bar" data-mxpill-progress-bar></div>
+												<div class="mxpill__progress-thumb" data-mxpill-progress-thumb></div>
+											</div>
+											<span class="mxpill__time-total" data-mxpill-time-dur>0:00</span>
+										</div>
+										<div class="mxpill__loading" aria-hidden="true">
+											<svg class="mxpill__icon mxpill__icon--lg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 12.05q0 1.125.425 2.188T7.75 16.2l.25.25V15q0-.425.288-.712T9 14t.713.288T10 15v4q0 .425-.288.713T9 20H5q-.425 0-.712-.288T4 19t.288-.712T5 18h1.75l-.4-.35q-1.3-1.15-1.825-2.625T4 12.05Q4 9.7 5.2 7.787T8.425 4.85q.35-.2.738-.025t.512.575q.125.375-.012.75t-.488.575q-1.45.8-2.312 2.213T6 12.05m12-.1q0-1.125-.425-2.187T16.25 7.8L16 7.55V9q0 .425-.288.713T15 10t-.712-.288T14 9V5q0-.425.288-.712T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6h-1.75l.4.35q1.225 1.225 1.788 2.663T20 11.95q0 2.35-1.2 4.263t-3.225 2.937q-.35.2-.737.025t-.513-.575q-.125-.375.013-.75t.487-.575q1.45-.8 2.313-2.212T18 11.95"/></svg>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<!-- 工具栏层：胶囊歌词槽与工具栏共用同一槽位交叉淡入 -->
+						<div class="mxpill__bar">
+							<div class="mxpill__slot">
+								<span class="mxpill__pill-text" data-mxpill-pill-text><span class="mxpill__pill-label" data-mxpill-pill-label></span></span>
+								<div class="mxpill__toolbar">
+									<button class="mxpill__btn mxpill__btn--mode" data-mxpill-mode data-tooltip="播放模式：顺序播放" aria-label="播放模式：顺序播放" type="button">
+										<svg class="mxpill__icon" data-mxpill-icon-mode-list viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m6.85 19l.85.85q.3.3.288.7t-.288.7q-.3.3-.712.313t-.713-.288L3.7 18.7q-.15-.15-.213-.325T3.426 18t.063-.375t.212-.325l2.575-2.575q.3-.3.713-.287t.712.312q.275.3.288.7t-.288.7l-.85.85H17v-3q0-.425.288-.712T18 13t.713.288T19 14v3q0 .825-.587 1.413T17 19zm10.3-12H7v3q0 .425-.288.713T6 11t-.712-.288T5 10V7q0-.825.588-1.412T7 5h10.15l-.85-.85q-.3-.3-.288-.7t.288-.7q.3-.3.712-.312t.713.287L20.3 5.3q.15.15.213.325t.062.375t-.213.325l-2.575 2.575q-.3.3-.712.288T16.3 9.25q-.275-.3-.288-.7t.288-.7z"/></svg>
+										<svg class="mxpill__icon mxpill-hidden" data-mxpill-icon-mode-one viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11.5 10.5h-.75q-.325 0-.537-.213T10 9.75t.213-.537T10.75 9H12q.425 0 .713.288T13 10v4.25q0 .325-.213.538T12.25 15t-.537-.213t-.213-.537zM6.85 19l.85.85q.3.3.288.7t-.288.7q-.3.3-.712.313t-.713-.288L3.7 18.7q-.15-.15-.213-.325T3.426 18t.063-.375t.212-.325l2.575-2.575q.3-.3.713-.287t.712.312q.275.3.288.7t-.288.7l-.85.85H17v-3q0-.425.288-.712T18 13t.713.288T19 14v3q0 .825-.587 1.413T17 19zm10.3-12H7v3q0 .425-.288.713T6 11t-.712-.288T5 10V7q0-.825.588-1.412T7 5h10.15l-.85-.85q-.3-.3-.288-.7t.288-.7q.3-.3.712-.312t.713.287L20.3 5.3q.15.15.213.325t.062.375t-.062.375t-.213.325l-2.575 2.575q-.3.3-.712.288T16.3 9.25q-.275-.3-.288-.7t.288-.7z"/></svg>
+										<svg class="mxpill__icon mxpill-hidden" data-mxpill-icon-mode-shuffle viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15 20q-.425 0-.712-.288T14 19t.288-.712T15 18h1.6l-2.475-2.475q-.3-.3-.287-.712t.312-.713t.713-.3t.712.3L18 16.55V15q0-.425.288-.712T19 14t.713.288T20 15v4q0 .425-.288.713T19 20zm-10.7-.3q-.275-.275-.275-.7t.275-.7L16.6 6H15q-.425 0-.712-.288T14 5t.288-.712T15 4h4q.425 0 .713.288T20 5v4q0 .425-.288.713T19 10t-.712-.288T18 9V7.4L5.7 19.7q-.275.275-.7.275t-.7-.275m-.025-14Q4 5.425 4 5t.275-.7t.687-.275t.713.275l4.2 4.175q.275.275.288.688t-.288.712q-.275.275-.7.275t-.7-.275z"/></svg>
+									</button>
+									<button class="mxpill__btn mxpill__btn--lyrics" data-mxpill-lrc-toggle data-tooltip="歌词" aria-label="歌词" aria-pressed="true" type="button">
+										<svg class="mxpill__icon" data-mxpill-icon-lrc-on viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 20q-.825 0-1.412-.587T2 18V6q0-.825.588-1.412T4 4h16q.825 0 1.413.588T22 6v12q0 .825-.587 1.413T20 20zm0-2h16V6H4zm0 0V6zm3-2h6q.425 0 .713-.288T14 15t-.288-.712T13 14H7q-.425 0-.712.288T6 15t.288.713T7 16m4-4h6q.425 0 .713-.288T18 11t-.288-.712T17 10h-6q-.425 0-.712.288T10 11t.288.713T11 12m-3.287-.288Q8 11.426 8 11t-.288-.712T7 10t-.712.288T6 11t.288.713T7 12t.713-.288m10 4Q18 15.426 18 15t-.288-.712T17 14t-.712.288T16 15t.288.713T17 16t.713-.288"/></svg>
+										<svg class="mxpill__icon mxpill-hidden" data-mxpill-icon-lrc-off viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 20q-.825 0-1.412-.587T2 18V6q0-.825.588-1.412T4 4l2 2H4v12h11.15l-2-2H7q-.425 0-.712-.288T6 15t.288-.712T7 14h4.15l-9.8-9.85q-.275-.275-.288-.687t.288-.713q.275-.275.7-.275t.7.275l18.5 18.5q.275.275.288.688t-.288.712q-.275.275-.7.275t-.7-.275L17.15 20zM22 6v10.75q0 .5-.312.75t-.688.25q-.425 0-.712-.3T20 16.725V6H9.275q-.5 0-.75-.312T8.275 5q0-.425.288-.712T9.275 4H20q.825 0 1.413.588T22 6m-5 6h-1.725q-.5 0-.75-.312t-.25-.688t.25-.687t.75-.313H17q.425 0 .713.288T18 11t-.288.713T17 12m-10.712-.288Q6 11.426 6 11t.288-.712T7 10t.713.288T8 11t-.288.713T7 12t-.712-.288"/></svg>
+									</button>
+									<button class="mxpill__btn" data-mxpill-prev data-tooltip="上一首" aria-label="上一首" type="button">
+										<svg class="mxpill__icon mxpill__icon--lg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5.5 17V7q0-.425.288-.712T6.5 6t.713.288T7.5 7v10q0 .425-.288.713T6.5 18t-.712-.288T5.5 17m11.45-.025l-6.2-4.15q-.225-.15-.337-.362T10.3 12t.113-.462t.337-.363l6.2-4.15q.125-.1.275-.125t.275-.025q.4 0 .7.275t.3.725v8.25q0 .45-.3.725t-.7.275q-.125 0-.275-.025t-.275-.125"/></svg>
+									</button>
+									<button class="mxpill__btn mxpill__btn--play" data-mxpill-play data-tooltip="播放" aria-label="播放" type="button">
+										<svg class="mxpill__icon mxpill__icon--xl" data-mxpill-icon-play viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 17.175V6.825q0-.425.3-.713t.7-.287q.125 0 .263.037t.262.113l8.15 5.175q.225.15.338.375t.112.475t-.112.475t-.338.375l-8.15 5.175q-.125.075-.262.113T9 18.175q-.4 0-.7-.288t-.3-.712"/></svg>
+										<svg class="mxpill__icon mxpill__icon--xl mxpill-hidden" data-mxpill-icon-pause viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16 19q-.825 0-1.412-.587T14 17V7q0-.825.588-1.412T16 5t1.413.588T18 7v10q0 .825-.587 1.413T16 19m-8 0q-.825 0-1.412-.587T6 17V7q0-.825.588-1.412T8 5t1.413.588T10 7v10q0 .825-.587 1.413T8 19"/></svg>
+									</button>
+									<button class="mxpill__btn" data-mxpill-next data-tooltip="下一首" aria-label="下一首" type="button">
+										<svg class="mxpill__icon mxpill__icon--lg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.5 17V7q0-.425.288-.712T17.5 6t.713.288T18.5 7v10q0 .425-.288.713T17.5 18t-.712-.288T16.5 17m-11-.875v-8.25q0-.45.3-.725t.7-.275q.125 0 .275.025t.275.125l6.2 4.15q.225.15.338.363T13.7 12t-.112.463t-.338.362l-6.2 4.15q-.125.1-.275.125t-.275.025q-.4 0-.7-.275t-.3-.725"/></svg>
+									</button>
+									<button class="mxpill__btn" data-mxpill-list-toggle data-tooltip="歌单" aria-label="歌单" type="button">
+										<svg class="mxpill__icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15 6H3v2h12zm0 4H3v2h12zM3 16h8v-2H3zM17 6v8.18c-.31-.11-.65-.18-1-.18a3 3 0 0 0-3 3a3 3 0 0 0 3 3a3 3 0 0 0 3-3V8h3V6z"/></svg>
+									</button>
+									<div class="mxpill__volume">
+										<button class="mxpill__btn mxpill__btn--volume" data-mxpill-volume-btn data-tooltip="音量" aria-label="音量" type="button">
+											<svg class="mxpill__icon" data-mxpill-icon-vol-on viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19 11.975q0-2.075-1.1-3.787t-2.95-2.563q-.375-.175-.55-.537t-.05-.738q.15-.4.538-.575t.787 0Q18.1 4.85 19.55 7.063T21 11.974t-1.45 4.913t-3.875 3.287q-.4.175-.788 0t-.537-.575q-.125-.375.05-.737t.55-.538q1.85-.85 2.95-2.562t1.1-3.788M7 15H4q-.425 0-.712-.288T3 14v-4q0-.425.288-.712T4 9h3l3.3-3.3q.475-.475 1.088-.213t.612.938v11.15q0 .675-.612.938T10.3 18.3zm9.5-3q0 1.05-.475 1.988t-1.25 1.537q-.25.15-.513.013T14 15.1V8.85q0-.3.263-.437t.512.012q.775.625 1.25 1.575t.475 2"/></svg>
+											<svg class="mxpill__icon mxpill-hidden" data-mxpill-icon-vol-off viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.775 19.575q-.275.175-.55.325t-.575.275q-.375.175-.762 0t-.538-.575q-.15-.375.038-.737t.562-.538q.1-.05.188-.1t.187-.1L12 14.8v2.775q0 .675-.612.938T10.3 18.3L7 15H4q-.425 0-.712-.288T3 14v-4q0-.425.288-.712T4 9h2.2L2.1 4.9q-.275-.275-.275-.7t.275-.7t.7-.275t.7.275l17 17q.275.275.275.7t-.275.7t-.7.275t-.7-.275zm2.225-7.6q0-2.075-1.1-3.787t-2.95-2.563q-.375-.175-.55-.537t-.05-.738q.15-.4.538-.575t.787 0Q18.1 4.85 19.55 7.05T21 11.975q0 .825-.15 1.638t-.425 1.562q-.2.55-.612.688t-.763.012t-.562-.45t-.013-.75q.275-.65.4-1.312T19 11.975m-4.225-3.55Q15.6 8.95 16.05 10t.45 2v.25q0 .125-.025.25q-.05.325-.35.425t-.55-.15L14.3 11.5q-.15-.15-.225-.337T14 10.775V8.85q0-.3.263-.437t.512.012M9.75 6.95Q9.6 6.8 9.6 6.6t.15-.35l.55-.55q.475-.475 1.087-.213t.613.938V8q0 .35-.3.475t-.55-.125z"/></svg>
+										</button>
+										<div class="mxpill__volume-pop" data-mxpill-volume-pop>
+											<svg class="mxpill__icon mxpill__icon--md mxpill__volume-icon mxpill__volume-icon--start" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 15H6q-.425 0-.712-.288T5 14v-4q0-.425.288-.712T6 9h3l3.3-3.3q.475-.475 1.088-.213t.612.938v11.15q0 .675-.612.938T12.3 18.3zm9.5-3q0 1.05-.475 1.988t-1.25 1.537q-.25.15-.512.013T16 15.1V8.85q0-.3.263-.437t.512.012q.775.625 1.25 1.575t.475 2"/></svg>
+											<div
+												class="mxpill__volume-track"
+												data-mxpill-volume-track
+												role="slider"
+												aria-label="音量"
+												aria-orientation="horizontal"
+												aria-valuemin="0"
+												aria-valuemax="100"
+												aria-valuenow="70"
+											>
+												<div class="mxpill__volume-bar"></div>
+												<div class="mxpill__volume-thumb"></div>
+												<span class="mxpill__volume-bubble" data-mxpill-volume-bubble aria-hidden="true">70%</span>
+											</div>
+											<svg class="mxpill__icon mxpill__icon--md mxpill__volume-icon mxpill__volume-icon--end" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19 11.975q0-2.075-1.1-3.787t-2.95-2.563q-.375-.175-.55-.537t-.05-.738q.15-.4.538-.575t.787 0Q18.1 4.85 19.55 7.063T21 11.974t-1.45 4.913t-3.875 3.287q-.4.175-.788 0t-.537-.575q-.125-.375.05-.737t.55-.538q1.85-.85 2.95-2.562t1.1-3.788M7 15H4q-.425 0-.712-.288T3 14v-4q0-.425.288-.712T4 9h3l3.3-3.3q.475-.475 1.088-.213t.612.938v11.15q0 .675-.612.938T10.3 18.3zm9.5-3q0 1.05-.475 1.988t-1.25 1.537q-.25.15-.513.013T14 15.1V8.85q0-.3.263-.437t.512.012q.775.625 1.25 1.575t.475 2"/></svg>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<!-- 唱片：三态复用的圆碟，位置随形态过渡 -->
+						<button class="mxpill__disc" data-mxpill-disc type="button" aria-label="音乐">
+							<svg class="mxpill__icon mxpill__icon--lg mxpill__disc-placeholder" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.175 19.825Q6 18.65 6 17t1.175-2.825T10 13q.575 0 1.063.138t.937.412V4q0-.425.288-.712T13 3h4q.425 0 .713.288T18 4v2q0 .425-.288.713T17 7h-3v10q0 1.65-1.175 2.825T10 21t-2.825-1.175"/></svg>
+							<img class="mxpill__disc-img is-empty" data-mxpill-disc-img src="" alt="" draggable="false" />
+						</button>
+					</div>
+					<!-- 尺寸探针：据此读各形态的目标尺寸，按目标占位夹取位置（同 mmz 做法） -->
+					<span class="mxpill__probe" aria-hidden="true">
+						<span class="mxpill__probe-bar"></span>
+						<span class="mxpill__probe-rise"></span>
+					</span>
+				</div>
+			</div>
+			<audio data-mxmp-audio preload="none" />
+			<script
+				type="application/json"
+				data-mxmp-config
+				set:html={JSON.stringify({
+					playlists: fpPlaylists,
+					quality,
+					metingApi: meting.metingApi,
+					metingSources: meting.metingSources,
+				})}
+			/>
+		</div>
+	)
+}
+
+<style>
+	#mingxin-music-player {
+		position: fixed;
+		left: 1.25rem;
+		bottom: 1.25rem;
+		z-index: 80;
+		color: var(--on-surface, #1f2430);
+	}
+	/* ── 双形态视图门：config 在首帧决定渲染哪张皮，未命中的一支整支不显示 ── */
+	#mingxin-music-player[data-mxmp-variant="sidebar"] .mxmp-view--pill {
+		display: none;
+	}
+	#mingxin-music-player[data-mxmp-variant="pill"] .mxmp-view--sidebar {
+		display: none;
+	}
+	.mxmp-entry {
+		position: relative;
+		width: 3.25rem;
+		height: 3.25rem;
+		border-radius: var(--shape-corner-full, 999px);
+		background: var(--surface-container-high, rgb(255 255 255 / 0.92));
+		box-shadow:
+			0 0 0 1.5px var(--surface-container-lowest, transparent),
+			0 0 0 2.5px
+				color-mix(in oklab, var(--primary, #333) 20%, var(--outline-variant, #bbb) 80%),
+			0 2px 6px rgb(0 0 0 / 0.18);
+		cursor: grab;
+		touch-action: none;
+		padding: 0;
+	}
+	.mxmp-entry-cover {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		border-radius: var(--shape-corner-full, 999px);
+		object-fit: cover;
+		-webkit-user-drag: none;
+		user-select: none;
+	}
+	.mxmp-entry-glyph {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 1.25rem;
+	}
+	.mxmp-entry-state {
+		position: absolute;
+		right: -2px;
+		bottom: -2px;
+		width: 1.15rem;
+		height: 1.15rem;
+		border-radius: 999px;
+		background: var(--primary, #333);
+		color: var(--on-primary, #fff);
+		font-size: 0.55rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	/* ── 以下 .music-player 结构照 Shirone musicSidebarStyles 的侧栏版移植 ── */
+	.music-player {
+		width: min(20.5rem, calc(100vw - 2rem));
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding: 1rem;
+		border-radius: var(--shape-corner-xl, 1.75rem);
+		background: var(--surface-container-low, rgb(255 255 255 / 0.94));
+		box-shadow: 0 12px 32px rgb(0 0 0 / 0.22);
+		color: var(--on-surface, #1f2430);
+	}
+	.music-player__track {
+		display: grid;
+		grid-template-columns: 3.25rem minmax(0, 1fr);
+		align-items: center;
+		gap: 0.75rem;
+		min-width: 0;
+		cursor: grab;
+		touch-action: none;
+	}
+	/* 拖动中：全局抓手 + 禁选文本 */
+	#mingxin-music-player.mxmp-dragging {
+		user-select: none;
+	}
+	#mingxin-music-player.mxmp-dragging .mxmp-entry,
+	#mingxin-music-player.mxmp-dragging .music-player__track {
+		cursor: grabbing;
+	}
+	/* 卡片被限高（矮视口/按钮区避让）时内部滚动，滚动条与歌单/歌词同口径藏起 */
+	.music-player {
+		scrollbar-width: none;
+	}
+	.music-player::-webkit-scrollbar {
+		display: none;
+	}
+	.music-player__cover {
+		position: relative;
+		width: 3.25rem;
+		height: 3.25rem;
+		display: grid;
+		place-items: center;
+		border-radius: var(--shape-corner-full, 999px);
+		background: var(--secondary-container, var(--surface-container-high, #eee));
+		color: var(--on-secondary-container, inherit);
+		box-shadow:
+			0 0 0 1.5px var(--surface-container-lowest, transparent),
+			0 0 0 2.5px
+				color-mix(in oklab, var(--primary, #333) 20%, var(--outline-variant, #bbb) 80%),
+			0 2px 6px rgb(0 0 0 / 0.12);
+		transition: box-shadow var(--m3e-duration-medium, 400ms)
+			var(--m3e-easing-standard, cubic-bezier(0.2, 0, 0, 1));
+		animation: mxmp-cover-playing 14s linear infinite;
+		animation-play-state: paused;
+	}
+	.music-player__cover::before {
+		content: "";
+		position: absolute;
+		inset: -2px;
+		border-radius: var(--shape-corner-full, 999px);
+		border: 1.5px solid var(--primary, #333);
+		opacity: 0;
+		pointer-events: none;
+		z-index: 1;
+	}
+	.music-player__cover img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		border-radius: var(--shape-corner-full, 999px);
+		-webkit-user-drag: none;
+		user-select: none;
+	}
+	.music-player__cover-glyph {
+		font-size: 1.5rem;
+	}
+	.music-player__cover--playing {
+		animation-play-state: running;
+		box-shadow:
+			0 0 0 1.5px var(--surface-container-lowest, transparent),
+			0 0 0 2.5px var(--primary, #333),
+			0 3px 10px rgb(0 0 0 / 0.18);
+	}
+	.music-player__cover--playing::before {
+		animation: mxmp-cover-ripple 3.2s cubic-bezier(0.1, 0.8, 0.2, 1) infinite;
+	}
+	.music-player__cover--playing img {
+		animation: mxmp-cover-bounce 3.2s ease-in-out infinite;
+	}
+	@keyframes mxmp-cover-playing {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+	@keyframes mxmp-cover-ripple {
+		0% {
+			transform: scale(1);
+			opacity: 0.65;
+		}
+		28% {
+			transform: scale(1.18);
+			opacity: 0;
+		}
+		100% {
+			transform: scale(1.18);
+			opacity: 0;
+		}
+	}
+	@keyframes mxmp-cover-bounce {
+		0%,
+		100% {
+			transform: scale(1);
+		}
+		14% {
+			transform: scale(1.035);
+		}
+		28% {
+			transform: scale(1);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.music-player__cover,
+		.music-player__cover::before,
+		.music-player__cover img {
+			animation: none;
+		}
+	}
+	.music-player__metadata {
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+	}
+	.music-player__metadata strong,
+	.music-player__metadata > span {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.music-player__metadata strong {
+		font-size: 0.875rem;
+		font-weight: 700;
+	}
+	.music-player__metadata > span {
+		font-size: 0.75rem;
+		color: var(--on-surface-variant, #666);
+	}
+	.music-player__submeta {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.375rem;
+		margin-top: 0.125rem;
+		min-height: 1.5rem;
+	}
+	.music-player__volume-inline {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+	.music-player__volume-slider-wrap {
+		position: relative;
+		width: 4.25rem;
+		height: 1.25rem;
+		display: flex;
+		align-items: center;
+	}
+	.music-player__volume-slider {
+		appearance: none;
+		-webkit-appearance: none;
+		width: 100%;
+		height: 0.25rem;
+		margin: 0;
+		padding: 0;
+		border: none;
+		border-radius: var(--shape-corner-full, 999px);
+		background: linear-gradient(
+			to right,
+			var(--primary, #333) 0%,
+			var(--primary, #333) var(--vol-pct, 70%),
+			var(--surface-container-highest, #ddd) var(--vol-pct, 70%),
+			var(--surface-container-highest, #ddd) 100%
+		);
+		cursor: pointer;
+		outline: none;
+	}
+	.music-player__volume-slider::-webkit-slider-thumb {
+		appearance: none;
+		-webkit-appearance: none;
+		width: 0.5rem;
+		height: 0.5rem;
+		border: none;
+		border-radius: var(--shape-corner-full, 999px);
+		background: var(--primary, #333);
+		box-shadow: 0 0 0 1px var(--surface-container-lowest, #fff);
+	}
+	.music-player__volume-slider::-moz-range-thumb {
+		width: 0.5rem;
+		height: 0.5rem;
+		border: none;
+		border-radius: var(--shape-corner-full, 999px);
+		background: var(--primary, #333);
+	}
+	.music-player__lyrics-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+		flex-shrink: 0;
+	}
+	.mxmp-status {
+		font-size: 0.68rem;
+		color: var(--on-surface-variant, #666);
+		white-space: nowrap;
+	}
+	.mxmp-icon-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		padding: 0;
+		border: none;
+		border-radius: var(--shape-corner-full, 999px);
+		background: transparent;
+		color: var(--on-surface-variant, #555);
+		font-size: 0.85rem;
+		cursor: pointer;
+	}
+	.mxmp-icon-btn:hover {
+		color: var(--primary, #111);
+		background: rgb(128 128 128 / 0.12);
+	}
+	.mxmp-icon-btn--filled {
+		background: var(--primary, #333);
+		color: var(--on-primary, #fff);
+		width: 2.5rem;
+		height: 2.5rem;
+		font-size: 1rem;
+	}
+	.mxmp-icon-btn--filled:hover {
+		color: var(--on-primary, #fff);
+		background: var(--primary, #333);
+		opacity: 0.88;
+	}
+	.mxmp-icon-btn[aria-expanded="true"],
+	.mxmp-icon-btn.mxmp-on {
+		color: var(--primary, #111);
+		background: var(--secondary-container, rgb(128 128 128 / 0.16));
+	}
+	.music-player__progress {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+	}
+	.music-player__time-cap {
+		flex-shrink: 0;
+		font-size: 0.68rem;
+		font-variant-numeric: tabular-nums;
+		color: var(--on-surface-variant, #666);
+	}
+	.music-player__progress-control {
+		position: relative;
+		flex: 1;
+		min-width: 0;
+		height: 1.25rem;
+		display: flex;
+		align-items: center;
+	}
+	.mxmp-progress-slider {
+		appearance: none;
+		-webkit-appearance: none;
+		width: 100%;
+		height: 0.25rem;
+		margin: 0;
+		padding: 0;
+		border: none;
+		border-radius: var(--shape-corner-full, 999px);
+		background: linear-gradient(
+			to right,
+			var(--primary, #333) 0%,
+			var(--primary, #333) var(--pct, 0%),
+			var(--surface-container-highest, #ddd) var(--pct, 0%),
+			var(--surface-container-highest, #ddd) 100%
+		);
+		cursor: pointer;
+		outline: none;
+	}
+	.mxmp-progress-slider::-webkit-slider-thumb {
+		appearance: none;
+		-webkit-appearance: none;
+		width: 0.65rem;
+		height: 0.65rem;
+		border: none;
+		border-radius: var(--shape-corner-full, 999px);
+		background: var(--primary, #333);
+		box-shadow: 0 0 0 1px var(--surface-container-lowest, #fff);
+	}
+	.mxmp-progress-slider::-moz-range-thumb {
+		width: 0.65rem;
+		height: 0.65rem;
+		border: none;
+		border-radius: var(--shape-corner-full, 999px);
+		background: var(--primary, #333);
+	}
+	.music-player__controls {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0 0.25rem;
+	}
+	.music-player__lyrics-panel {
+		overflow: hidden;
+	}
+	.music-player__lyrics-empty {
+		margin: 0;
+		padding: 1rem;
+		color: var(--on-surface-variant, #666);
+		font-size: 0.75rem;
+		text-align: center;
+	}
+	.music-player__lyrics-list {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.375rem;
+		max-height: 11rem;
+		margin-top: 0.25rem;
+		padding: 5.5rem 0.5rem;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		scrollbar-width: none;
+		-webkit-mask-image: linear-gradient(
+			to bottom,
+			transparent 0,
+			black 2.5rem,
+			black calc(100% - 2.5rem),
+			transparent 100%
+		);
+		mask-image: linear-gradient(
+			to bottom,
+			transparent 0,
+			black 2.5rem,
+			black calc(100% - 2.5rem),
+			transparent 100%
+		);
+	}
+	.music-player__lyrics-list::-webkit-scrollbar {
+		display: none;
+	}
+	:global(.mxmp-lyric-line) {
+		width: 100%;
+		padding: 0.25rem 0.5rem;
+		border: none;
+		border-radius: var(--shape-corner-s, 0.5rem);
+		background: transparent;
+		color: var(--on-surface-variant, #666);
+		font-size: 0.75rem;
+		line-height: 1.55;
+		text-align: center;
+		cursor: pointer;
+		opacity: 0.72;
+		transition:
+			color 200ms,
+			opacity 200ms,
+			transform 200ms;
+	}
+	:global(.mxmp-lyric-line:hover) {
+		color: var(--primary, #111);
+	}
+	:global(.mxmp-lyric-line--active) {
+		color: var(--primary, #111);
+		font-weight: 700;
+		opacity: 1;
+		transform: scale(1.06);
+	}
+	.music-player__playlist-panel {
+		overflow: hidden;
+	}
+	.music-player__playlist {
+		list-style: none;
+		max-height: 12rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		margin: 0;
+		padding: 0.25rem 0 0;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		scrollbar-width: none;
+	}
+	.music-player__playlist::-webkit-scrollbar {
+		display: none;
+	}
+	:global(.mxmp-playlist-item) {
+		width: 100%;
+		min-height: 2.75rem;
+		display: grid;
+		grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.375rem 0.5rem;
+		border: none;
+		border-radius: var(--shape-corner-s, 0.5rem);
+		background: transparent;
+		color: var(--on-surface, inherit);
+		text-align: left;
+		cursor: pointer;
+	}
+	:global(.mxmp-playlist-item:hover) {
+		background: rgb(128 128 128 / 0.1);
+	}
+	:global(.mxmp-playlist-item--current) {
+		background: var(--secondary-container, rgb(128 128 128 / 0.16));
+	}
+	:global(.mxmp-playlist-item--failed) {
+		opacity: 0.45;
+	}
+	:global(.mxmp-playlist-index) {
+		display: grid;
+		place-items: center;
+		font-size: 0.72rem;
+		font-variant-numeric: tabular-nums;
+		text-align: center;
+	}
+	:global(.mxmp-playlist-copy) {
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+	}
+	:global(.mxmp-playlist-copy strong),
+	:global(.mxmp-playlist-copy span) {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	:global(.mxmp-playlist-copy strong) {
+		font-size: 0.83rem;
+		font-weight: 600;
+	}
+	:global(.mxmp-playlist-copy span) {
+		font-size: 0.72rem;
+		opacity: 0.75;
+	}
+	:global(.mxmp-playlist-src) {
+		font-size: 0.62rem;
+		padding: 0.1rem 0.4rem;
+		border-radius: 999px;
+		background: rgb(128 128 128 / 0.14);
+		white-space: nowrap;
+	}
+	.music-player__empty {
+		margin: 0;
+		padding: 0.75rem;
+		border-radius: var(--shape-corner-s, 0.5rem);
+		font-size: 0.83rem;
+		background: var(--surface-container, #f2f2f2);
+		color: var(--on-surface-variant, #666);
+		text-align: center;
+	}
+
+	/* ════════════════════════════════════════════════════════════════════
+	   胶囊皮（第二形态）：移植自 mmz 最新版 MusicPlayer 的三态 morph
+	   （disc / pill / bar）+ 单一展开卡（歌单面板 / 信息层）+ 音量 popover。
+	   类名统一 mxpill 前缀；设计令牌映射到本站 M3 变量（--deep-text →
+	   --on-surface、--content-meta → --on-surface-variant、--music-surface →
+	   --surface-container-low、--float-panel-bg → --surface-container-lowest）。
+	   border-radius / 高度 / grid-rows 一律用无过冲的 --mxpill-motion，
+	   弹性过冲 --mxpill-spring 只用于宽度与唱片位移（同原作注意事项）。
+	   位置仍由外层壳的 place()/relayout() 驱动，本皮只管自身形态尺寸。
+	   ════════════════════════════════════════════════════════════════════ */
+	@keyframes mxpill-spin {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
+	}
+	/* 胶囊歌词超宽跑马灯，偏移量与时长由控制器写 CSS 变量 */
+	@keyframes mxpill-marquee {
+		0%,
+		12% {
+			transform: translate3d(0, 0, 0);
+		}
+		88%,
+		100% {
+			transform: translate3d(var(--mxpill-marquee-offset, 0px), 0, 0);
+		}
+	}
+	/* 歌单条目逐项入场：错峰时长由控制器写在条目上的 --mxpill-i */
+	@keyframes mxpill-track-in {
+		from {
+			opacity: 0;
+			transform: translate3d(0, 0.5rem, 0);
+			filter: blur(3px);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+			filter: blur(0);
+		}
+	}
+	.mxpill .mxpill-hidden {
+		display: none !important;
+	}
+	.mxpill__icon {
+		width: 1.25rem;
+		height: 1.25rem;
+		flex: none;
+	}
+	.mxpill__icon--sm {
+		width: 0.875rem;
+		height: 0.875rem;
+	}
+	.mxpill__icon--md {
+		width: 1.125rem;
+		height: 1.125rem;
+	}
+	.mxpill__icon--lg {
+		width: 1.5rem;
+		height: 1.5rem;
+	}
+	.mxpill__icon--xl {
+		width: 1.875rem;
+		height: 1.875rem;
+	}
+
+	.mxpill {
+		--mxpill-bar-h: 4rem;
+		--mxpill-disc: 5rem;
+		--mxpill-inset: 1.25rem;
+		/* 唱片距 dock 左缘：pill / bar 两态共用，展开时只做垂直位移 */
+		--mxpill-disc-left: 0.875rem;
+		/* 歌词（pill）态唱片距 dock 底缘的间隙，探出顶的量由它派生 */
+		--mxpill-disc-gap: 0.25rem;
+		--mxpill-disc-rise: calc(
+			var(--mxpill-disc-gap) + var(--mxpill-disc) - var(--mxpill-bar-h)
+		);
+		/* 文本起排位 = 唱片右缘再让开一点，两态与唱片的净间隙恒定 */
+		--mxpill-slot-pad: calc(
+			var(--mxpill-disc) + var(--mxpill-disc-left) + 0.5rem
+		);
+		--mxpill-width: min(25rem, calc(100vw - 1rem));
+		--mxpill-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+		--mxpill-motion: cubic-bezier(0.22, 1, 0.36, 1);
+		--mxpill-border: color-mix(
+			in oklab,
+			var(--on-surface, #1f2430) 28%,
+			transparent
+		);
+		--mxpill-surface: var(--surface-container-low, rgb(255 255 255 / 0.94));
+		--mxpill-panel-bg: var(--surface-container-lowest, #fff);
+
+		position: relative;
+		width: var(--mxpill-disc);
+		display: flex;
+		flex-direction: column;
+		transition: width 450ms var(--mxpill-spring);
+	}
+	.mxpill:not([data-state="disc"]) {
+		width: var(--mxpill-width);
+	}
+	/* 拖拽中：关掉宽度过渡避免手感发黏（外层壳另有 mxmp-dragging 禁选文本） */
+	#mingxin-music-player.mxmp-dragging .mxpill {
+		transition: none;
+	}
+
+	/* 尺寸探针：不可见但参与布局，供控制器读取各形态的目标尺寸 */
+	.mxpill__probe {
+		position: absolute;
+		top: 0;
+		left: 0;
+		visibility: hidden;
+		pointer-events: none;
+	}
+	.mxpill__probe > span {
+		display: block;
+		width: var(--mxpill-width);
+	}
+	.mxpill__probe-bar {
+		height: var(--mxpill-bar-h);
+	}
+	.mxpill__probe-rise {
+		height: var(--mxpill-disc-rise);
+	}
+
+	/* ═══ 展开卡：面板 + 信息层共用一张表面，左右始终缩进 --mxpill-inset ═══ */
+	.mxpill__card {
+		position: relative;
+		margin-inline: var(--mxpill-inset);
+		background: color-mix(in srgb, var(--mxpill-surface) 82%, transparent);
+		backdrop-filter: blur(1.25rem) saturate(1.4);
+		-webkit-backdrop-filter: blur(1.25rem) saturate(1.4);
+		border-radius: 1.25rem;
+		box-shadow: 0 0.65rem 1.8rem rgb(0 0 0 / 12%);
+		opacity: 0;
+		transition: opacity 200ms ease;
+	}
+	.mxpill[data-state="bar"] .mxpill__card {
+		opacity: 1;
+	}
+
+	/* ═══ 上展面板（歌单 / 歌词双 tab） ═══ */
+	.mxpill__panel {
+		display: grid;
+		grid-template-rows: 0fr;
+		transition: grid-template-rows 420ms var(--mxpill-motion);
+	}
+	.mxpill[data-panel="open"] .mxpill__panel {
+		grid-template-rows: 1fr;
+	}
+	.mxpill__panel-clip {
+		overflow: hidden;
+		min-height: 0;
+	}
+	.mxpill__panel-body {
+		display: flex;
+		flex-direction: column;
+		height: min(18rem, 40vh);
+		opacity: 0;
+		transform: translate3d(0, 0.75rem, 0);
+		filter: blur(3px);
+		transition:
+			opacity 220ms ease,
+			transform 420ms var(--mxpill-motion),
+			filter 260ms ease;
+	}
+	.mxpill[data-panel="open"] .mxpill__panel-body {
+		opacity: 1;
+		transform: none;
+		filter: blur(0);
+		transition-delay: 80ms;
+	}
+	.mxpill__panel-tabs {
+		position: relative;
+		display: flex;
+		gap: 0.25rem;
+		padding: 0.5rem 0.75rem 1px;
+		flex-shrink: 0;
+	}
+	.mxpill__panel-tabs::after {
+		content: "";
+		position: absolute;
+		inset-inline: 0.75rem;
+		bottom: 0;
+		height: 1px;
+		background: color-mix(
+			in oklab,
+			var(--on-surface, #1f2430) 12%,
+			transparent
+		);
+	}
+	/* 活跃 tab 下划线：由控制器按 tab 实测位置写 transform / width，切换时滑动 */
+	.mxpill__tab-indicator {
+		position: absolute;
+		left: 0;
+		bottom: 0;
+		z-index: 1;
+		width: 0;
+		height: 2px;
+		border-radius: 9999px;
+		background: var(--primary, #333);
+		pointer-events: none;
+		transition:
+			transform 380ms var(--mxpill-motion),
+			width 380ms var(--mxpill-motion);
+	}
+	.mxpill__tab {
+		padding: 0.375rem 0.75rem 0.5rem;
+		border: none;
+		background: transparent;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--on-surface-variant, #666);
+		cursor: pointer;
+		transition: color 200ms ease;
+	}
+	.mxpill__tab:hover {
+		color: var(--on-surface, #1f2430);
+	}
+	.mxpill__tab.is-active {
+		color: var(--primary, #333);
+	}
+	.mxpill__panel-views {
+		position: relative;
+		flex: 1;
+		min-height: 0;
+	}
+	.mxpill__playlist-view,
+	.mxpill__lyrics-view {
+		position: absolute;
+		inset: 0;
+		opacity: 0;
+		visibility: hidden;
+		transform: translate3d(0, 0.5rem, 0) scale(0.98);
+		filter: blur(3px);
+		transition:
+			opacity 180ms ease,
+			transform 320ms var(--mxpill-motion),
+			filter 200ms ease,
+			visibility 0s linear 320ms;
+	}
+	.mxpill__playlist-view.is-active,
+	.mxpill__lyrics-view.is-active {
+		opacity: 1;
+		visibility: visible;
+		transform: none;
+		filter: blur(0);
+		transition:
+			opacity 200ms ease,
+			transform 360ms var(--mxpill-motion),
+			filter 200ms ease;
+	}
+	.mxpill__playlist-list {
+		height: 100%;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		padding: 0.5rem;
+		scrollbar-width: none;
+	}
+	.mxpill__playlist-list::-webkit-scrollbar {
+		display: none;
+	}
+	:global(.mxpill__playlist-list.is-entering .mxpill__track) {
+		animation: mxpill-track-in 340ms var(--mxpill-motion) backwards;
+		animation-delay: calc(var(--mxpill-i, 0) * 26ms);
+	}
+	.mxpill__lyrics-list {
+		height: 100%;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.125rem;
+		text-align: center;
+		/* 上下留白保证当前行可滚动到垂直居中 */
+		padding: 3rem 0.75rem;
+		scroll-behavior: smooth;
+		scrollbar-width: none;
+	}
+	.mxpill__lyrics-list::-webkit-scrollbar {
+		display: none;
+	}
+	:global(.mxpill__lyrics-placeholder) {
+		color: var(--on-surface-variant, #666);
+		font-size: 0.8125rem;
+		padding: 2.5rem 0;
+	}
+	:global(.mxpill__lrc-line) {
+		font-size: 0.8125rem;
+		color: var(--on-surface-variant, #666);
+		padding: 0.25rem 0.5rem;
+		border-radius: 0.375rem;
+		cursor: pointer;
+		transition:
+			color 200ms ease,
+			font-size 200ms ease;
+	}
+	:global(.mxpill__lrc-line:hover) {
+		color: var(--primary, #333);
+	}
+	:global(.mxpill__lrc-line.is-active) {
+		color: var(--primary, #333);
+		font-weight: 700;
+		font-size: 0.9375rem;
+	}
+
+	/* ═══ 舞台与信息层 ═══ */
+	.mxpill__stage {
+		position: relative;
+	}
+	/* 信息层：常驻展开卡底部，唱片骑在其左下角 */
+	.mxpill__info {
+		display: grid;
+		grid-template-rows: 0fr;
+		transition: grid-template-rows 420ms var(--mxpill-motion);
+	}
+	.mxpill[data-state="bar"] .mxpill__info {
+		grid-template-rows: 1fr;
+	}
+	.mxpill__info-clip {
+		overflow: hidden;
+		min-height: 0;
+	}
+	/* 左内边距让开唱片：曲名文本始终从 --mxpill-slot-pad 处起排 */
+	.mxpill__info-surface {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		padding: 0.5rem var(--mxpill-inset) 1.5rem
+			calc(var(--mxpill-slot-pad) - var(--mxpill-inset));
+		cursor: grab;
+		touch-action: none;
+	}
+	.mxpill__title {
+		margin: 0;
+		font-size: 0.9375rem;
+		font-weight: 700;
+		color: var(--on-surface, #1f2430);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.mxpill__artist {
+		margin: 0;
+		font-size: 0.75rem;
+		color: var(--on-surface-variant, #666);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.mxpill__progress-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 0.375rem;
+	}
+	.mxpill__time-current,
+	.mxpill__time-total {
+		font-size: 0.6875rem;
+		font-family: ui-monospace, SFMono-Regular, monospace;
+		font-variant-numeric: tabular-nums;
+		color: var(--on-surface-variant, #666);
+		flex-shrink: 0;
+	}
+	.mxpill__progress {
+		position: relative;
+		flex: 1;
+		height: 0.25rem;
+		border-radius: 9999px;
+		background: color-mix(
+			in oklab,
+			var(--on-surface, #1f2430) 14%,
+			transparent
+		);
+		cursor: pointer;
+		touch-action: none;
+	}
+	.mxpill__progress-bar {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: 0%;
+		border-radius: inherit;
+		background: var(--primary, #333);
+	}
+	.mxpill__progress-thumb {
+		position: absolute;
+		top: 50%;
+		left: 0%;
+		width: 0.75rem;
+		height: 0.75rem;
+		margin: -0.375rem 0 0 -0.375rem;
+		border-radius: 9999px;
+		background: var(--primary, #333);
+		box-shadow: 0 0 0 2px var(--mxpill-panel-bg);
+		opacity: 0;
+		transition: opacity 180ms ease;
+	}
+	.mxpill__progress:hover .mxpill__progress-thumb,
+	.mxpill__progress.is-dragging .mxpill__progress-thumb {
+		opacity: 1;
+	}
+
+	/* ═══ 工具栏层：胶囊歌词槽与工具栏交叉淡入 ═══ */
+	.mxpill__bar {
+		position: relative;
+		height: var(--mxpill-bar-h);
+		margin-top: 0;
+		background: var(--mxpill-surface);
+		border-radius: 1.25rem;
+		box-shadow: 0 0.65rem 1.8rem rgb(0 0 0 / 12%);
+		cursor: grab;
+		touch-action: none;
+		transition:
+			height 450ms var(--mxpill-motion),
+			margin-top 450ms var(--mxpill-motion),
+			opacity 220ms ease,
+			transform 220ms ease;
+	}
+	.mxpill[data-state="bar"] .mxpill__bar {
+		margin-top: -1.5rem;
+	}
+	.mxpill[data-state="disc"] .mxpill__bar {
+		opacity: 0;
+		transform: scale(0.72);
+		pointer-events: none;
+	}
+	.mxpill__slot {
+		position: relative;
+		height: 100%;
+		padding-left: var(--mxpill-slot-pad);
+		padding-right: 0.625rem;
+	}
+	.mxpill__pill-text {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: var(--mxpill-slot-pad);
+		right: 1.25rem;
+		display: flex;
+		align-items: center;
+		overflow: hidden;
+		opacity: 0;
+		transform: translate3d(-0.5rem, 0, 0);
+		pointer-events: none;
+		transition:
+			opacity 200ms ease,
+			transform 260ms var(--mxpill-motion);
+	}
+	.mxpill[data-state="pill"] .mxpill__pill-text {
+		opacity: 1;
+		transform: none;
+	}
+	.mxpill__pill-label {
+		display: inline-block;
+		white-space: nowrap;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--on-surface, #1f2430);
+		will-change: transform;
+	}
+	.mxpill__pill-label.is-marquee {
+		animation: mxpill-marquee var(--mxpill-marquee-duration, 7s) ease-in-out
+			infinite alternate;
+	}
+	.mxpill__toolbar {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		/* 键宽 2.25rem、图标 1.25rem 居中，两侧各空 0.5rem：
+		   左移这个内缩距，首键图标左缘才和上方曲名同一条竖线 */
+		left: calc(var(--mxpill-slot-pad) - 0.5rem);
+		right: 0.625rem;
+		display: flex;
+		align-items: center;
+		justify-content: flex-start;
+		gap: 0.125rem;
+		opacity: 0;
+		transform: translate3d(0, 0.375rem, 0);
+		pointer-events: none;
+		transition:
+			opacity 200ms ease,
+			transform 260ms var(--mxpill-motion);
+	}
+	.mxpill[data-state="bar"] .mxpill__toolbar {
+		opacity: 1;
+		transform: none;
+		pointer-events: auto;
+	}
+
+	/* 工具栏按钮 */
+	.mxpill__btn {
+		position: relative;
+		width: 2.25rem;
+		height: 2.25rem;
+		flex-shrink: 0;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		border: none;
+		background: transparent;
+		border-radius: 9999px;
+		color: var(--on-surface-variant, #666);
+		cursor: pointer;
+		transition:
+			background-color 200ms ease,
+			color 200ms ease,
+			transform 150ms ease;
+	}
+	.mxpill__btn:hover {
+		background: rgb(128 128 128 / 0.12);
+		color: var(--primary, #333);
+	}
+	.mxpill__btn:active {
+		transform: scale(0.92);
+	}
+	.mxpill__btn.is-active {
+		color: var(--primary, #333);
+	}
+	.mxpill__btn--play {
+		width: 2.75rem;
+		height: 2.75rem;
+		color: var(--on-surface, #1f2430);
+	}
+	.mxpill__btn--play:hover {
+		color: var(--primary, #333);
+	}
+	/* 工具提示：图标正上方浮现 */
+	.mxpill__btn::after {
+		content: attr(data-tooltip);
+		position: absolute;
+		bottom: calc(100% + 0.5rem);
+		left: 50%;
+		padding: 0.25rem 0.5rem;
+		border-radius: var(--shape-corner-s, 0.5rem);
+		background: var(--on-surface, #1f2430);
+		color: var(--mxpill-panel-bg);
+		font-size: 0.75rem;
+		line-height: 1.3;
+		white-space: nowrap;
+		opacity: 0;
+		pointer-events: none;
+		transform: translate(-50%, 0.25rem);
+		transition:
+			opacity 180ms ease,
+			transform 180ms ease,
+			visibility 180ms ease;
+		visibility: hidden;
+		z-index: 5;
+	}
+	.mxpill__btn:hover::after,
+	.mxpill__btn:focus-visible::after {
+		opacity: 1;
+		visibility: visible;
+		transform: translate(-50%, 0);
+	}
+	/* 音量条弹出时提示让位，避免与其在上方重叠 */
+	.mxpill__volume:hover .mxpill__btn--volume::after,
+	.mxpill__volume:focus-within .mxpill__btn--volume::after {
+		opacity: 0;
+		visibility: hidden;
+	}
+
+	/* 音量 popover：悬停 / 聚焦弹出拖拽条 */
+	.mxpill__volume {
+		position: relative;
+		display: flex;
+	}
+	/* 按钮与 popover 间隙的悬停桥接，防止移入途中弹层消失 */
+	.mxpill__volume::before {
+		content: "";
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 100%;
+		height: 0.75rem;
+	}
+	.mxpill__volume-pop {
+		--mxpill-vol: 70;
+		--mxpill-vol-over: 0px;
+		--mxpill-vol-stretch: 0;
+		--mxpill-vol-press: 0;
+		--mxpill-vol-thick: calc(1 + var(--mxpill-vol-press) * 0.5);
+
+		position: absolute;
+		bottom: calc(100% + 0.375rem);
+		left: 50%;
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.625rem 0.75rem;
+		background: var(--mxpill-surface);
+		border-radius: 9999px;
+		box-shadow: 0 0.5rem 1.2rem rgb(0 0 0 / 12%);
+		opacity: 0;
+		transform: translate3d(-50%, 0.25rem, 0) scale(0.94);
+		transform-origin: 50% 100%;
+		pointer-events: none;
+		transition:
+			opacity 180ms ease,
+			transform 240ms var(--mxpill-spring);
+	}
+	/* 拖拽中指针纵向游走出胶囊也会丢掉 :hover，用 data-dragging 把弹层钉住 */
+	.mxpill__volume:hover .mxpill__volume-pop,
+	.mxpill__volume:focus-within .mxpill__volume-pop,
+	.mxpill__volume:has(.mxpill__volume-pop[data-dragging]) .mxpill__volume-pop {
+		opacity: 1;
+		transform: translate3d(-50%, 0, 0);
+		pointer-events: auto;
+	}
+	.mxpill__volume-pop[data-dragging] {
+		--mxpill-vol-press: 1;
+	}
+	.mxpill__volume-icon {
+		flex: none;
+		color: var(--on-surface, #1f2430);
+		opacity: 0.55;
+	}
+	.mxpill__volume-icon--start {
+		transform: translateX(clamp(-0.375rem, var(--mxpill-vol-over), 0px));
+	}
+	.mxpill__volume-icon--end {
+		transform: translateX(clamp(0px, var(--mxpill-vol-over), 0.375rem));
+	}
+	/* 横向音量条：--mxpill-vol 是已提交位置，--mxpill-vol-over 是橡皮筋越界位移 */
+	.mxpill__volume-track {
+		position: relative;
+		width: 6.5rem;
+		height: 0.375rem;
+		border-radius: 9999px;
+		cursor: pointer;
+		touch-action: none;
+	}
+	.mxpill__volume-track::before {
+		content: "";
+		position: absolute;
+		inset: 0;
+		border-radius: 9999px;
+		background: color-mix(
+			in oklab,
+			var(--on-surface, #1f2430) 14%,
+			transparent
+		);
+		transform: scaleY(var(--mxpill-vol-thick));
+	}
+	.mxpill__volume-bar {
+		position: absolute;
+		inset: 0 auto 0 0;
+		width: max(0px, calc(var(--mxpill-vol) * 1% + var(--mxpill-vol-over)));
+		border-radius: 9999px;
+		background: var(--primary, #333);
+		transform: scaleY(
+			calc(var(--mxpill-vol-thick) - var(--mxpill-vol-stretch) * 0.32)
+		);
+		transition:
+			width 260ms var(--mxpill-spring),
+			transform 220ms var(--mxpill-spring);
+	}
+	.mxpill__volume-thumb {
+		position: absolute;
+		top: 50%;
+		left: calc(var(--mxpill-vol) * 1% + var(--mxpill-vol-over));
+		width: 1rem;
+		height: 1rem;
+		transform: translate(-50%, -50%)
+			scale(calc(1 + var(--mxpill-vol-press) * 0.28));
+		border-radius: 9999px;
+		background: var(--primary, #333);
+		box-shadow: 0 0 0 2px var(--mxpill-surface);
+		transition:
+			left 260ms var(--mxpill-spring),
+			transform 220ms var(--mxpill-spring);
+	}
+	/* 拖拽中位置 1:1 跟手，只保留形变过渡 */
+	.mxpill__volume-pop[data-dragging] .mxpill__volume-bar,
+	.mxpill__volume-pop[data-dragging] .mxpill__volume-thumb {
+		transition: transform 220ms var(--mxpill-spring);
+	}
+	/* 数值气泡：浮在胶囊上沿之外，吊着滑块走 */
+	.mxpill__volume-bubble {
+		position: absolute;
+		left: calc(var(--mxpill-vol) * 1% + var(--mxpill-vol-over));
+		bottom: calc(100% + 1.5rem);
+		min-width: 1.75rem;
+		padding: 0.0625rem 0.3125rem;
+		border-radius: 9999px;
+		background: var(--primary, #333);
+		color: var(--mxpill-surface);
+		font-size: 0.6875rem;
+		font-weight: 600;
+		line-height: 1.4;
+		font-variant-numeric: tabular-nums;
+		text-align: center;
+		white-space: nowrap;
+		opacity: 0;
+		transform: translate(-50%, 0.25rem) scale(0.7);
+		pointer-events: none;
+		transition:
+			left 180ms var(--mxpill-motion),
+			opacity 140ms ease,
+			transform 200ms var(--mxpill-spring);
+	}
+	.mxpill__volume-pop[data-bubble] .mxpill__volume-bubble {
+		opacity: 1;
+		transform: translate(-50%, 0) scale(1);
+	}
+
+	/* ═══ 唱片圆碟：三态复用，两态 left 同为 --mxpill-disc-left，展开时只做垂直位移 ═══ */
+	.mxpill__disc {
+		position: absolute;
+		left: 0;
+		bottom: 0;
+		z-index: 2;
+		width: var(--mxpill-disc);
+		height: var(--mxpill-disc);
+		padding: 0;
+		border-radius: 9999px;
+		overflow: hidden;
+		cursor: grab;
+		touch-action: none;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: color-mix(
+			in oklab,
+			var(--on-surface, #1f2430) 10%,
+			var(--mxpill-panel-bg)
+		);
+		border: 0.25rem solid
+			color-mix(in oklab, var(--mxpill-panel-bg) 90%, transparent);
+		box-shadow: 0 0.4rem 1rem rgb(0 0 0 / 16%);
+		transition:
+			left 450ms var(--mxpill-spring),
+			bottom 450ms var(--mxpill-spring);
+	}
+	.mxpill[data-state="pill"] .mxpill__disc {
+		left: var(--mxpill-disc-left);
+		bottom: var(--mxpill-disc-gap);
+	}
+	.mxpill[data-state="bar"] .mxpill__disc {
+		left: var(--mxpill-disc-left);
+		bottom: calc(var(--mxpill-bar-h) - var(--mxpill-disc) / 2);
+	}
+	/* 唱片中心孔 */
+	.mxpill__disc::after {
+		content: "";
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		width: 0.875rem;
+		height: 0.875rem;
+		margin: -0.4375rem 0 0 -0.4375rem;
+		border-radius: 9999px;
+		background: var(--mxpill-panel-bg);
+		border: 1px solid var(--mxpill-border);
+	}
+	.mxpill__disc-placeholder {
+		color: var(--on-surface-variant, #666);
+		opacity: 0.5;
+	}
+	.mxpill__disc-img {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		-webkit-user-drag: none;
+		user-select: none;
+		animation: mxpill-spin 12s linear infinite;
+		animation-play-state: paused;
+	}
+	.mxpill__disc-img.is-empty {
+		opacity: 0;
+	}
+	.mxpill[data-playing="true"] .mxpill__disc-img {
+		animation-play-state: running;
+	}
+
+	/* ═══ 歌单条目 ═══ */
+	:global(.mxpill__track) {
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
+		padding: 0.375rem 0.5rem;
+		border-radius: 0.625rem;
+		cursor: pointer;
+		transition: background-color 150ms ease;
+	}
+	:global(.mxpill__track:hover),
+	:global(.mxpill__track.is-active) {
+		background: rgb(128 128 128 / 0.12);
+	}
+	:global(.mxpill__track-cover-wrap) {
+		position: relative;
+		width: 2rem;
+		height: 2rem;
+		flex-shrink: 0;
+		border-radius: 0.375rem;
+		overflow: hidden;
+		background: color-mix(
+			in oklab,
+			var(--on-surface, #1f2430) 10%,
+			transparent
+		);
+	}
+	:global(.mxpill__track-cover) {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	:global(.mxpill__track-active) {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: color-mix(in oklab, var(--primary, #333) 25%, transparent);
+		color: var(--primary, #333);
+	}
+	:global(.mxpill__track-meta) {
+		flex: 1;
+		min-width: 0;
+	}
+	:global(.mxpill__track-title) {
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: var(--on-surface, #1f2430);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		transition: color 150ms ease;
+	}
+	:global(.mxpill__track:hover .mxpill__track-title) {
+		color: var(--primary, #333);
+	}
+	:global(.mxpill__track.is-active .mxpill__track-title) {
+		color: var(--primary, #333);
+	}
+	:global(.mxpill__track-artist) {
+		font-size: 0.6875rem;
+		color: var(--on-surface-variant, #666);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	/* ═══ 加载指示：只占信息层那一块，不给整个组件蒙遮罩 ═══ */
+	.mxpill__loading {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--primary, #333);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 250ms ease;
+	}
+	.mxpill__info-surface > * {
+		transition: opacity 220ms ease;
+	}
+	.mxpill.is-loading .mxpill__info-surface > :not(.mxpill__loading) {
+		opacity: 0;
+	}
+	.mxpill.is-loading .mxpill__loading {
+		opacity: 1;
+		pointer-events: auto;
+	}
+	.mxpill.is-loading .mxpill__loading svg {
+		animation: mxpill-spin 1.2s linear infinite;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.mxpill,
+		.mxpill *,
+		.mxpill *::before,
+		.mxpill *::after {
+			transition-duration: 0.01ms !important;
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+		}
+	}
+</style>
+
+<script>
+	import { isArticleDetailPage } from "@/utils/url-utils";
+
+	(() => {
+		const root = document.getElementById("mingxin-music-player");
+		if (!root) return;
+		// 播放器形态由 config 在首帧写进 data-mxmp-variant；两张皮共用本引擎，
+		// 皮只是视图——切皮（改配置重构建）不重启、不暂停播放状态机本身
+		const isPillVariant = root.dataset.mxmpVariant === "pill";
+
+		const cfgEl = root.querySelector("[data-mxmp-config]");
+		let cfg = {
+			playlists: [] as { platform: string; id: string; label: string }[],
+			quality: "320k",
+			metingApi: "",
+			metingSources: [] as { server: string; type: string; id: string; label: string }[],
+		};
+		try {
+			cfg = JSON.parse(cfgEl?.textContent || "{}");
+		} catch {}
+		if (!cfg.playlists?.length) return;
+
+		const $ = (s: string) => root.querySelector(s) as HTMLElement;
+		const audio = root.querySelector("[data-mxmp-audio]") as HTMLAudioElement;
+		const entry = $("[data-mxmp-entry]");
+		const card = $("[data-mxmp-card]");
+		const entryCover = root.querySelector("[data-mxmp-entry-cover]") as HTMLImageElement;
+		const entryGlyph = $("[data-mxmp-entry-glyph]");
+		const entryState = $("[data-mxmp-entry-state]");
+		const coverWrap = $("[data-mxmp-cover-wrap]");
+		const coverEl = root.querySelector("[data-mxmp-cover]") as HTMLImageElement;
+		const coverGlyph = $("[data-mxmp-cover-glyph]");
+		const titleEl = $("[data-mxmp-title]");
+		const artistEl = $("[data-mxmp-artist]");
+		const statusEl = $("[data-mxmp-status]");
+		const toggleBtn = $("[data-mxmp-toggle]");
+		const modeBtn = $("[data-mxmp-mode]");
+		const volumeEl = root.querySelector("[data-mxmp-volume]") as HTMLInputElement;
+		const muteBtn = $("[data-mxmp-mute]");
+		const progressEl = root.querySelector("[data-mxmp-progress]") as HTMLInputElement;
+		const timeCur = $("[data-mxmp-time-cur]");
+		const timeDur = $("[data-mxmp-time-dur]");
+		const listPanel = $("[data-mxmp-list-panel]");
+		const listEl = $("[data-mxmp-list]");
+		const listToggle = $("[data-mxmp-list-toggle]");
+		const lyricsPanel = $("[data-mxmp-lyrics-panel]");
+		const lyricsList = $("[data-mxmp-lyrics-list]");
+		const lyricsToggle = $("[data-mxmp-lyrics-toggle]");
+
+		// 形态门：只在明信现身；切走只藏不暂停（站长口径：切形态不断播）。
+		const applyModeGate = () => {
+			root.hidden =
+				document.documentElement.getAttribute("data-site-mode") !== "mingxin";
+		};
+		applyModeGate();
+		window.addEventListener("siteModeChange", applyModeGate);
+
+		// 与浮动播放器互让：璨夜那边开始播时这边让行，避免双声。
+		const fpAudio = document.querySelector(
+			"#floating-player audio",
+		) as HTMLAudioElement | null;
+		fpAudio?.addEventListener("play", () => {
+			if (!audio.paused) audio.pause();
+		});
+
+		// ── 位置管理（站长 2026-11-01 定）：可自由拖动、位置存 mxMusicPosV1；
+		// 默认右下，但绝不遮挡右下角悬浮按钮栈（尤其返回顶部，文章页同位置也有）。
+		// 手感照浮动播放器/肥鱼先例：>6px 判拖动、拖后抑制一次点击、4px 贴边钳制。
+		const POS_KEY = "mxMusicPosV1";
+		const CLEAR = 14; // 按钮区膨胀量：净距 12px + 入口角标外溢 2px
+		const EDGE = 4;
+		// 默认落位照原站 mmz：左下角，距左/底各 1.25rem（其 --mp-edge），与黑猫
+		// 同角共存（原站 doll 亦贴左下角、播放器 z 在其上）；两张皮共用此锚点。
+		// 仅「无拖动存档」时生效，savedPos 存在时一律以存档/现状为准。
+		const DEFAULT_INSET = 20;
+		let savedPos: { x: number; y: number } | null = null;
+		try {
+			const p = JSON.parse(localStorage.getItem(POS_KEY) || "null");
+			if (p && typeof p.x === "number" && typeof p.y === "number") savedPos = p;
+		} catch {}
+
+		// 右下按钮栈的禁区：按「全部展开」的最坏高度重建——
+		// .floating-btn 隐藏时高度塌成 0，按展开尺寸（与任一可见按钮同尺寸）计入；
+		// 栈底以容器底边（恒为 bottom:4rem）为准向上堆叠，含 0.5rem 间隔。
+		function stackZone(): { left: number; right: number; top: number; bottom: number } | null {
+			const btn = document.getElementById("back-to-top-btn");
+			const box = btn?.closest(".floating-controls-container") as HTMLElement | null;
+			if (!btn || !box) return null;
+			const cr = box.getBoundingClientRect();
+			if (cr.right === 0 && cr.bottom === 0) return null;
+			const shownBtn = box.querySelector(
+				".floating-btn:not(.hide)",
+			) as HTMLElement | null;
+			const shownRect = shownBtn?.getBoundingClientRect();
+			const btnH =
+				shownRect && shownRect.height > 0
+					? shownRect.height
+					: window.innerWidth <= 480
+						? 40
+						: 48;
+			const btnW =
+				shownRect && shownRect.width > 0 ? shownRect.width : btnH;
+			let stackH = 0;
+			let stackW = 0;
+			let n = 0;
+			const path = window.location.pathname.replace(/\/$/, "") || "/";
+			for (const child of Array.from(box.children) as HTMLElement[]) {
+				if (getComputedStyle(child).display === "none") continue;
+				// 只数真正的悬浮按钮（本体或内含 .floating-btn 的包裹层）；
+				// 栈里混着的抽屉/面板（如沉浸目录的离画布层）不是按钮栈成员，不计
+				const btnEl = (
+					child.classList.contains("floating-btn")
+						? child
+						: child.querySelector(".floating-btn")
+				) as HTMLElement | null;
+				if (!btnEl) continue;
+				// 结构上在本页永不出现的按钮不占位（与各按钮自身的显隐口径一致）：
+				// 回首页钮在首页恒隐藏；悬浮目录钮只在文章详情页出现
+				if (btnEl.id === "back-to-home-btn" && path === "/") continue;
+				if (
+					btnEl.id === "floating-toc-btn" &&
+					!isArticleDetailPage(window.location.pathname)
+				)
+					continue;
+				const r = child.getBoundingClientRect();
+				stackH += Math.max(r.height, btnH);
+				stackW = Math.max(stackW, Math.max(r.width, btnW));
+				n++;
+			}
+			if (!n) return null;
+			stackH += 8 * (n - 1);
+			return {
+				left: cr.right - stackW,
+				right: cr.right,
+				top: cr.bottom - stackH,
+				bottom: cr.bottom,
+			};
+		}
+
+		function place(
+			x: number,
+			y: number,
+			opts: { zone?: boolean; save?: boolean; w?: number; h?: number } = {},
+		) {
+			// 胶囊皮可按「目标形态占位」传入尺寸覆盖：形态切换动画期间实测尺寸
+			// 尚在过渡中，按目标尺寸夹取落点才不会被旧尺寸带偏（同 mmz 的 probe 做法）
+			const w = opts.w ?? root.offsetWidth;
+			const h = opts.h ?? root.offsetHeight;
+			if (!w || !h) return;
+			let nx = Math.min(
+				Math.max(EDGE, x),
+				Math.max(EDGE, window.innerWidth - w - EDGE),
+			);
+			let ny = Math.min(
+				Math.max(EDGE, y),
+				Math.max(EDGE, window.innerHeight - h - EDGE),
+			);
+			if (opts.zone !== false) {
+				const z = stackZone();
+				if (
+					z &&
+					nx < z.right + CLEAR &&
+					nx + w > z.left - CLEAR &&
+					ny < z.bottom + CLEAR &&
+					ny + h > z.top - CLEAR
+				) {
+					// 优先上移到底边停在按钮区上方；放不下再左移；都不行贴顶保底
+					const upY = z.top - CLEAR - h;
+					if (upY >= EDGE) ny = upY;
+					else {
+						const leftX = z.left - CLEAR - w;
+						if (leftX >= EDGE) nx = leftX;
+						else ny = Math.max(EDGE, upY);
+					}
+				}
+			}
+			root.style.left = `${nx}px`;
+			root.style.top = `${ny}px`;
+			root.style.right = "auto";
+			root.style.bottom = "auto";
+			if (opts.save) {
+				savedPos = { x: Math.round(nx), y: Math.round(ny) };
+				try {
+					localStorage.setItem(POS_KEY, JSON.stringify(savedPos));
+				} catch {}
+			}
+		}
+
+		// 尺寸变化（开/合、歌单/歌词展开、窗口缩放）后重排：保住原底边，
+		// 与按钮区横向重叠且总高放不下时给卡片限高、内部滚动（歌单/歌词自带滚动不受影响）。
+		function relayout(keepBottom?: number) {
+			// 胶囊皮有自己的占位/限高逻辑（relayoutPill），侧栏的重排不掺和
+			if (isPillVariant) return;
+			if (root.hidden || root.offsetWidth === 0) return;
+			card.style.maxHeight = "";
+			card.style.overflowY = "";
+			const vh = window.innerHeight;
+			const rect = root.getBoundingClientRect();
+			const positioned = root.style.left !== "";
+			const w = root.offsetWidth;
+			let h = root.offsetHeight;
+			const x = savedPos
+				? positioned
+					? rect.left
+					: savedPos.x
+				: DEFAULT_INSET;
+			const z = stackZone();
+			const overlapsX = z
+				? x < z.right + CLEAR && x + w > z.left - CLEAR
+				: false;
+			const availH =
+				overlapsX && z
+					? Math.min(vh - EDGE * 2, z.top - CLEAR - EDGE)
+					: vh - EDGE * 2;
+			if (!card.hidden && h > availH) {
+				const cap = Math.max(120, availH - (h - card.offsetHeight));
+				card.style.maxHeight = `${cap}px`;
+				card.style.overflowY = "auto";
+				h = root.offsetHeight;
+			}
+			let y: number;
+			if (keepBottom !== undefined) y = keepBottom - h;
+			else if (savedPos) y = positioned ? rect.top : savedPos.y;
+			else y = vh - DEFAULT_INSET - h;
+			place(x, y);
+		}
+
+		// 拖动：收起态拖入口钮本身，展开态拖封面/标题行（避开行内按钮与滑杆）；
+		// 拖动过程只做视口钳制，落点再过按钮区避让并存盘。
+		let dragSt: {
+			dx: number;
+			dy: number;
+			sx: number;
+			sy: number;
+			moved: boolean;
+		} | null = null;
+		let suppressEntryClick = false;
+		// 胶囊皮的唱片 click 同读这面抑制旗（拖动收尾后 80ms 内的 click 不算点击）
+		let suppressPillClick = false;
+		const beginDrag = (e: PointerEvent) => {
+			if (e.button !== 0) return;
+			// 封面图的原生拖拽已由 CSS -webkit-user-drag:none 挡掉，不动 click 链
+			const r = root.getBoundingClientRect();
+			dragSt = {
+				dx: e.clientX - r.left,
+				dy: e.clientY - r.top,
+				sx: e.clientX,
+				sy: e.clientY,
+				moved: false,
+			};
+		};
+		entry.addEventListener("pointerdown", beginDrag);
+		const trackEl = root.querySelector(
+			".music-player__track",
+		) as HTMLElement | null;
+		trackEl?.addEventListener("pointerdown", (e) => {
+			if ((e.target as HTMLElement).closest("button, input, a, select, textarea"))
+				return;
+			beginDrag(e);
+		});
+		window.addEventListener("pointermove", (e) => {
+			if (!dragSt) return;
+			if (
+				!dragSt.moved &&
+				Math.hypot(e.clientX - dragSt.sx, e.clientY - dragSt.sy) < 6
+			)
+				return;
+			dragSt.moved = true;
+			root.classList.add("mxmp-dragging");
+			e.preventDefault();
+			place(e.clientX - dragSt.dx, e.clientY - dragSt.dy, { zone: false });
+		});
+		window.addEventListener("pointerup", () => {
+			if (!dragSt) return;
+			const wasDrag = dragSt.moved;
+			dragSt = null;
+			root.classList.remove("mxmp-dragging");
+			if (wasDrag) {
+				const r = root.getBoundingClientRect();
+				place(r.left, r.top, { save: true });
+				suppressEntryClick = true;
+				suppressPillClick = true;
+				window.setTimeout(() => {
+					suppressEntryClick = false;
+					suppressPillClick = false;
+				}, 80);
+			}
+		});
+		window.addEventListener("pointercancel", () => {
+			dragSt = null;
+			root.classList.remove("mxmp-dragging");
+		});
+		window.addEventListener("resize", () => relayout());
+		window.addEventListener("load", () => relayout());
+		window.addEventListener("siteModeChange", () =>
+			requestAnimationFrame(() => relayout()),
+		);
+		relayout();
+
+		interface Track {
+			name: string;
+			artist: string;
+			pic: string;
+			source: "chain" | "meting";
+			platform?: string;
+			id?: string;
+			url?: string;
+			lrc?: string;
+			label: string;
+		}
+		const PLATFORM_LABELS: Record<string, string> = {
+			wy: "网易",
+			tx: "QQ",
+			kw: "酷我",
+			kg: "酷狗",
+			mg: "咪咕",
+		};
+		const METING_SERVER_TO_PLATFORM: Record<string, string> = {
+			netease: "wy",
+			tencent: "tx",
+			kugou: "kg",
+		};
+		const PLATFORM_TO_METING_SERVER: Record<string, string> = {
+			wy: "netease",
+			tx: "tencent",
+			kg: "kugou",
+		};
+
+		const tracks: Track[] = [];
+		const seenKeys = new Set<string>();
+		let index = -1;
+		let mode: "sequence" | "one" | "random" = "sequence";
+		let expanded = false;
+		let lyrics: { time: number; text: string }[] = [];
+		let lyricIndex = -1;
+		let lyricsToken = 0;
+
+		const dedupeKey = (name: string, artist: string) =>
+			`${name}::${artist}`.toLowerCase().replace(/[\s\p{P}]+/gu, "");
+		const setStatus = (t: string) => (statusEl.textContent = t);
+		const fmtTime = (s: number) => {
+			if (!isFinite(s) || s < 0) s = 0;
+			const m = Math.floor(s / 60);
+			const sec = Math.floor(s % 60);
+			return `${m}:${String(sec).padStart(2, "0")}`;
+		};
+
+		// —— 移动端 Dock 门面事件（明信 Dock 订阅，见 MingxinMobileDock）——
+		function emitMxState() {
+			window.dispatchEvent(new Event("mxmusic:state"));
+		}
+		function emitMxTime() {
+			window.dispatchEvent(new Event("mxmusic:time"));
+		}
+
+		function renderList() {
+			listEl.innerHTML = "";
+			if (!tracks.length) {
+				listEl.innerHTML = '<li class="music-player__empty">歌单是空的</li>';
+				emitMxState();
+				return;
+			}
+			tracks.forEach((t, i) => {
+				const li = document.createElement("li");
+				const btn = document.createElement("button");
+				btn.type = "button";
+				btn.className =
+					"mxmp-playlist-item" + (i === index ? " mxmp-playlist-item--current" : "");
+				const idx = document.createElement("span");
+				idx.className = "mxmp-playlist-index";
+				idx.textContent = i === index && !audio.paused ? "▶" : String(i + 1);
+				const copy = document.createElement("span");
+				copy.className = "mxmp-playlist-copy";
+				const name = document.createElement("strong");
+				name.textContent = t.name;
+				const artist = document.createElement("span");
+				artist.textContent = t.artist;
+				copy.append(name, artist);
+				const src = document.createElement("span");
+				src.className = "mxmp-playlist-src";
+				src.textContent = t.label;
+				btn.append(idx, copy, src);
+				btn.addEventListener("click", () => play(i));
+				li.appendChild(btn);
+				listEl.appendChild(li);
+			});
+			pillSyncList();
+			// 歌单在展开态下增删行会改变总高，跟住底边重新避让
+			if (!card.hidden) relayout();
+			emitMxState();
+		}
+
+		function mergeTracks(incoming: Track[]) {
+			let added = 0;
+			for (const t of incoming) {
+				if (!t.name) continue;
+				const key = dedupeKey(t.name, t.artist);
+				if (seenKeys.has(key)) continue;
+				seenKeys.add(key);
+				tracks.push(t);
+				added++;
+			}
+			if (added > 0) renderList();
+			return added;
+		}
+
+		async function loadChainPlaylists() {
+			for (const p of cfg.playlists) {
+				try {
+					const res = await fetch(
+						`/api/music/playlist?platform=${p.platform}&id=${encodeURIComponent(p.id)}`,
+					);
+					const data = await res.json();
+					if (!res.ok || !Array.isArray(data.tracks)) continue;
+					mergeTracks(
+						data.tracks.map(
+							(t: { id: string; name: string; artist: string; pic: string }) => ({
+								name: t.name,
+								artist: t.artist,
+								pic: t.pic,
+								source: "chain" as const,
+								platform: p.platform,
+								id: t.id,
+								label: p.label,
+							}),
+						),
+					);
+				} catch {
+					// 逐源静默降级：一个歌单拉不到不挡其他源
+				}
+			}
+		}
+
+		const metingUrl = (server: string, type: string, id: string) =>
+			(cfg.metingApi || "")
+				.replace(":server", server)
+				.replace(":type", type)
+				.replace(":id", encodeURIComponent(id));
+
+		async function loadMetingSources() {
+			if (!cfg.metingApi || !cfg.metingSources?.length) return;
+			await Promise.allSettled(
+				cfg.metingSources.map(async (s) => {
+					try {
+						const res = await fetch(metingUrl(s.server, s.type, s.id));
+						const data = await res.json();
+						if (!Array.isArray(data)) return;
+						mergeTracks(
+							data.map(
+								(t: {
+									name?: string;
+									title?: string;
+									artist?: string;
+									author?: string;
+									url?: string;
+									pic?: string;
+									lrc?: string;
+								}) => ({
+									name: t.name || t.title || "",
+									artist: t.artist || t.author || "",
+									pic: t.pic || "",
+									source: "meting" as const,
+									platform: METING_SERVER_TO_PLATFORM[s.server] || "",
+									url: t.url || "",
+									lrc: t.lrc || "",
+									label: s.label,
+								}),
+							),
+						);
+					} catch {
+						// 静默降级
+					}
+				}),
+			);
+		}
+
+		// ── 歌词：LRC 解析照 Shirone lyrics.ts 的口径（多时间标签、排序、去空行） ──
+		function parseLrc(text: string): { time: number; text: string }[] {
+			const out: { time: number; text: string }[] = [];
+			for (const rawLine of (text || "").split("\n")) {
+				const line = rawLine.trim();
+				if (!line) continue;
+				const tags = [...line.matchAll(/\[(\d+):(\d+)(?:[.:](\d+))?\]/g)];
+				if (!tags.length) continue;
+				const content = line.replace(/\[[^\]]*\]/g, "").trim();
+				if (!content) continue;
+				for (const tag of tags) {
+					const min = Number(tag[1]);
+					const sec = Number(tag[2]);
+					const frac = tag[3] ? Number(`0.${tag[3]}`) : 0;
+					out.push({ time: min * 60 + sec + frac, text: content });
+				}
+			}
+			out.sort((a, b) => a.time - b.time);
+			return out;
+		}
+
+		function renderLyrics(state: "loading" | "empty" | "failed" | "ready") {
+			pillRenderLyrics(state);
+			lyricsList.innerHTML = "";
+			if (state !== "ready") {
+				const p = document.createElement("p");
+				p.className = "music-player__lyrics-empty";
+				p.textContent =
+					state === "loading"
+						? "歌词加载中…"
+						: state === "failed"
+							? "歌词加载失败"
+							: "暂无歌词";
+				lyricsList.appendChild(p);
+				return;
+			}
+			lyrics.forEach((line, i) => {
+				const btn = document.createElement("button");
+				btn.type = "button";
+				btn.className = "mxmp-lyric-line";
+				btn.textContent = line.text;
+				btn.addEventListener("click", () => {
+					audio.currentTime = line.time;
+				});
+				lyricsList.appendChild(btn);
+			});
+		}
+
+		async function loadLyrics(t: Track) {
+			const token = ++lyricsToken;
+			lyrics = [];
+			lyricIndex = -1;
+			renderLyrics("loading");
+			try {
+				let lrcUrl = t.lrc || "";
+				if (!lrcUrl && t.source === "chain" && t.id) {
+					// 浮动链条目自带不了歌词，按平台 + id 去 Meting 补查一次
+					const server = PLATFORM_TO_METING_SERVER[t.platform || ""];
+					if (server && cfg.metingApi) {
+						const res = await fetch(metingUrl(server, "song", t.id));
+						const data = await res.json();
+						lrcUrl = Array.isArray(data) ? data[0]?.lrc || "" : "";
+					}
+				}
+				if (!lrcUrl) {
+					if (token === lyricsToken) renderLyrics("empty");
+					return;
+				}
+				const res = await fetch(lrcUrl);
+				if (!res.ok) throw new Error("lrc fetch failed");
+				const text = await res.text();
+				if (token !== lyricsToken) return;
+				lyrics = parseLrc(text);
+				renderLyrics(lyrics.length ? "ready" : "empty");
+			} catch {
+				if (token === lyricsToken) renderLyrics("failed");
+			}
+		}
+
+		function syncLyricHighlight() {
+			if (!lyrics.length) return;
+			const t = audio.currentTime;
+			let next = -1;
+			for (let i = 0; i < lyrics.length; i++) {
+				if (lyrics[i].time <= t) next = i;
+				else break;
+			}
+			if (next === lyricIndex) return;
+			lyricIndex = next;
+			pillSyncLyric();
+			emitMxState();
+			const lines = lyricsList.querySelectorAll(".mxmp-lyric-line");
+			lines.forEach((el, i) =>
+				el.classList.toggle("mxmp-lyric-line--active", i === lyricIndex),
+			);
+			if (lyricIndex >= 0) {
+				(lines[lyricIndex] as HTMLElement | undefined)?.scrollIntoView({
+					block: "center",
+					behavior: "smooth",
+				});
+			}
+		}
+
+		async function play(i: number) {
+			if (i < 0 || i >= tracks.length) return;
+			index = i;
+			const t = tracks[i];
+			pillSyncTrack();
+			pillSetLoading(true);
+			titleEl.textContent = t.name;
+			titleEl.title = t.name;
+			artistEl.textContent = t.artist;
+			artistEl.title = t.artist;
+			if (t.pic) {
+				coverEl.src = t.pic;
+				coverEl.hidden = false;
+				coverGlyph.style.display = "none";
+				entryCover.src = t.pic;
+				entryCover.hidden = false;
+				entryGlyph.style.display = "none";
+			} else {
+				coverEl.hidden = true;
+				coverGlyph.style.display = "";
+				entryCover.hidden = true;
+				entryGlyph.style.display = "";
+			}
+			renderList();
+			void loadLyrics(t);
+			try {
+				if (t.source === "meting" && t.url) {
+					audio.src = t.url;
+					await audio.play();
+					setStatus("");
+				} else {
+					setStatus("解析直链…");
+					const q = new URLSearchParams({
+						platform: t.platform || "wy",
+						id: t.id || "",
+						name: t.name,
+						singer: t.artist,
+						quality: cfg.quality || "320k",
+					});
+					const res = await fetch(`/api/music/resolve?${q}`);
+					const data = await res.json();
+					if (!res.ok || !data.url) throw new Error(data.error || "解析失败");
+					audio.src = data.url;
+					await audio.play();
+					if (data.swapped) {
+						setStatus(
+							"已换源 · " +
+								(PLATFORM_LABELS[data.servedPlatform] || data.servedPlatform || ""),
+						);
+						const myIndex = i;
+						setTimeout(() => {
+							if (index === myIndex) setStatus("");
+						}, 3500);
+					} else setStatus("");
+				}
+				pillSetLoading(false);
+			} catch {
+				pillSetLoading(false);
+				setStatus("这首拿不到直链，跳下一首");
+				const rows = listEl.querySelectorAll(".mxmp-playlist-item");
+				rows[i]?.classList.add("mxmp-playlist-item--failed");
+				setTimeout(() => {
+					if (tracks.length > 1) play((i + 1) % tracks.length);
+				}, 600);
+			}
+			emitMxState();
+		}
+
+		const pickNext = (dir: 1 | -1) => {
+			if (!tracks.length) return;
+			if (mode === "random" && dir === 1 && tracks.length > 1) {
+				let n = index;
+				while (n === index) n = Math.floor(Math.random() * tracks.length);
+				play(n);
+				return;
+			}
+			play((index + dir + tracks.length) % tracks.length);
+		};
+
+		toggleBtn.addEventListener("click", async () => {
+			if (index === -1) {
+				if (tracks.length) play(0);
+				return;
+			}
+			if (audio.paused) audio.play();
+			else audio.pause();
+		});
+		$("[data-mxmp-next]").addEventListener("click", () => pickNext(1));
+		$("[data-mxmp-prev]").addEventListener("click", () => pickNext(-1));
+		// 播放模式循环：侧栏与胶囊皮共用同一状态机，两边的钮都走这里
+		const cycleMode = () => {
+			mode =
+				mode === "sequence" ? "one" : mode === "one" ? "random" : "sequence";
+			modeBtn.textContent = mode === "sequence" ? "🔁" : mode === "one" ? "🔂" : "🔀";
+			modeBtn.setAttribute(
+				"aria-label",
+				"播放模式：" +
+					(mode === "sequence"
+						? "顺序播放"
+						: mode === "one"
+							? "单曲循环"
+							: "随机播放"),
+			);
+			modeBtn.classList.toggle("mxmp-on", mode !== "sequence");
+			pillSyncMode();
+			emitMxState();
+		};
+		modeBtn.addEventListener("click", cycleMode);
+		listToggle.addEventListener("click", () => {
+			const bottom = root.getBoundingClientRect().bottom;
+			const open = listPanel.hidden;
+			listPanel.hidden = !open;
+			listToggle.setAttribute("aria-expanded", String(open));
+			listToggle.classList.toggle("mxmp-on", open);
+			relayout(bottom);
+		});
+		lyricsToggle.addEventListener("click", () => {
+			const bottom = root.getBoundingClientRect().bottom;
+			const open = lyricsPanel.hidden;
+			lyricsPanel.hidden = !open;
+			lyricsToggle.setAttribute("aria-expanded", String(open));
+			lyricsToggle.classList.toggle("mxmp-on", open);
+			relayout(bottom);
+		});
+		entry.addEventListener("click", () => {
+			if (suppressEntryClick) return; // 刚拖完的那一下点击不算开合
+			const bottom = root.getBoundingClientRect().bottom;
+			expanded = !expanded;
+			card.hidden = !expanded;
+			relayout(bottom);
+		});
+
+		// 音量（存 localStorage，与浮动播放器互不干扰）
+		const VOL_KEY = "mxMusicVolume";
+		let lastVolume = 0.7;
+		try {
+			const saved = Number(localStorage.getItem(VOL_KEY));
+			if (saved > 0 && saved <= 1) lastVolume = saved;
+		} catch {}
+		audio.volume = lastVolume;
+		volumeEl.value = String(lastVolume);
+		volumeEl.style.setProperty("--vol-pct", `${Math.round(lastVolume * 100)}%`);
+		volumeEl.addEventListener("input", () => {
+			const v = Number(volumeEl.value);
+			audio.volume = v;
+			if (v > 0) lastVolume = v;
+			volumeEl.style.setProperty("--vol-pct", `${Math.round(v * 100)}%`);
+			muteBtn.textContent = v === 0 ? "🔇" : "🔊";
+			try {
+				localStorage.setItem(VOL_KEY, String(v));
+			} catch {}
+			pillSyncVolume();
+			emitMxState();
+		});
+		muteBtn.addEventListener("click", () => {
+			const target = audio.volume === 0 ? lastVolume || 0.7 : 0;
+			volumeEl.value = String(target);
+			volumeEl.dispatchEvent(new Event("input"));
+		});
+
+		// 进度
+		let scrubbing = false;
+		progressEl.addEventListener("input", () => {
+			scrubbing = true;
+			const d = audio.duration || 0;
+			const t = (Number(progressEl.value) / 1000) * d;
+			timeCur.textContent = fmtTime(t);
+			progressEl.style.setProperty("--pct", `${Number(progressEl.value) / 10}%`);
+		});
+		progressEl.addEventListener("change", () => {
+			const d = audio.duration || 0;
+			audio.currentTime = (Number(progressEl.value) / 1000) * d;
+			scrubbing = false;
+		});
+		audio.addEventListener("timeupdate", () => {
+			const d = audio.duration;
+			if (!scrubbing && d > 0 && isFinite(d)) {
+				progressEl.value = String(Math.round((audio.currentTime / d) * 1000));
+				progressEl.style.setProperty(
+					"--pct",
+					`${(audio.currentTime / d) * 100}%`,
+				);
+			}
+			timeCur.textContent = fmtTime(audio.currentTime);
+			syncLyricHighlight();
+			pillSyncProgress();
+			emitMxTime();
+		});
+		audio.addEventListener("loadedmetadata", () => {
+			timeDur.textContent = fmtTime(audio.duration);
+			pillSyncDuration();
+			emitMxState();
+		});
+		audio.addEventListener("play", () => {
+			pillApplyPlayState(true);
+			toggleBtn.textContent = "⏸";
+			toggleBtn.setAttribute("aria-label", "暂停");
+			entryState.textContent = "⏸";
+			coverWrap.classList.add("music-player__cover--playing");
+			renderList();
+			emitMxState();
+		});
+		audio.addEventListener("pause", () => {
+			pillApplyPlayState(false);
+			toggleBtn.textContent = "▶";
+			toggleBtn.setAttribute("aria-label", "播放");
+			entryState.textContent = "▶";
+			coverWrap.classList.remove("music-player__cover--playing");
+			renderList();
+			emitMxState();
+		});
+		audio.addEventListener("ended", () => {
+			if (mode === "one") {
+				audio.currentTime = 0;
+				audio.play();
+				return;
+			}
+			pickNext(1);
+		});
+		// 断流自愈：直链被掐断时重解析一次（仅浮动链条目，同浮动播放器口径）
+		let healing = false;
+		audio.addEventListener("error", async () => {
+			if (index < 0 || healing || !audio.src) return;
+			const t = tracks[index];
+			if (t.source !== "chain") return;
+			healing = true;
+			setStatus("直链断了，重新解析…");
+			try {
+				await play(index);
+			} catch {}
+			healing = false;
+		});
+
+		// —— 移动端 Dock 门面：Dock 读同一状态、调同一状态机，绝不另起播放器 ——
+		(window as any).__mingxinMusic = {
+			getState() {
+				const item = index >= 0 ? tracks[index] : null;
+				return {
+					isPlaying: !audio.paused && !audio.ended,
+					currentIndex: index,
+					track: item
+						? { name: item.name, artist: item.artist, pic: item.pic || "" }
+						: null,
+					playlist: tracks.map((t) => ({
+						name: t.name,
+						artist: t.artist,
+						pic: t.pic || "",
+					})),
+					currentTime: audio.currentTime || 0,
+					duration: audio.duration || 0,
+					currentTimeStr: fmtTime(audio.currentTime || 0),
+					durationStr: fmtTime(audio.duration || 0),
+					progress:
+						audio.duration > 0
+							? Math.min(
+									100,
+									((audio.currentTime || 0) / audio.duration) * 100,
+								)
+							: 0,
+					mode,
+					volume: audio.volume,
+					isMuted: audio.volume === 0,
+					lyric:
+						lyricIndex >= 0 && lyrics[lyricIndex] ? lyrics[lyricIndex].text : "",
+				};
+			},
+			togglePlay() {
+				// 走 toggleBtn 本体，复用其播放/暂停与空索引自愈逻辑
+				toggleBtn.click();
+			},
+			playNext() {
+				pickNext(1);
+			},
+			playPrev() {
+				pickNext(-1);
+			},
+			playTrackByIndex(i: number) {
+				void play(i);
+			},
+			cycleMode() {
+				cycleMode();
+			},
+			seek(ratio: number) {
+				if (audio.duration > 0)
+					audio.currentTime =
+						Math.max(0, Math.min(1, ratio)) * audio.duration;
+			},
+			toggleMute() {
+				// 走 muteBtn 本体：其内部派发 volume input，状态事件随之发出
+				muteBtn.click();
+			},
+		};
+		emitMxState();
+
+		// ════════════════════════════════════════════════════════════════
+		// 胶囊皮（第二形态）视图层：移植自 mmz 最新版 MusicPlayer 的形态机
+		// （disc / pill / bar 三态 + 歌单面板 + 音量橡皮筋拖拽 + 胶囊跑马灯）。
+		// 引擎仍是上面这一套（tracks / play / parseLrc / resolve 换源链），
+		// 本节只是第二个视图：引擎各关键点调 pill* 同步函数把状态推过来，
+		// 非胶囊形态下这些函数全部空转（isPillVariant 门）。
+		// ════════════════════════════════════════════════════════════════
+		const pillEl = root.querySelector("[data-mxpill]") as HTMLElement | null;
+		const pillQ = <T extends HTMLElement = HTMLElement>(s: string) =>
+			pillEl?.querySelector(s) as T | null;
+		type PillShape = "disc" | "pill" | "bar";
+		let pillShape: PillShape = "disc";
+		let pillPanelOpen = false;
+		let pillTab: "playlist" | "lyrics" = "playlist";
+		let pillHovering = false;
+		let pillCollapseTimer: number | undefined;
+		let pillSettleTimer: number | undefined;
+		let pillSeeking = false;
+		let pillListSig = -1;
+		let pillRenderedCount = 0;
+		let pillLyricsEnabled = true;
+		try {
+			pillLyricsEnabled = localStorage.getItem("mxMusicPillLyrics") !== "0";
+		} catch {}
+		let pillUserScrolledLyrics = false;
+		let pillLyricsResumeTimer: number | undefined;
+		let pillPrevH = 0;
+		const PILL_LIST_BATCH = 30;
+		const PILL_BAR_COLLAPSE_DELAY = 160;
+		const PILL_LYRICS_RESUME_DELAY = 3000;
+		const PILL_VOLUME_STRETCH = 20;
+
+		const pillRestingShape = (): PillShape =>
+			pillLyricsEnabled ? "pill" : "disc";
+
+		function pillSetLoading(on: boolean) {
+			pillEl?.classList.toggle("is-loading", on);
+		}
+
+		// ── 占位与重排：按目标形态的尺寸夹取落点，长动画落定后再校准一次 ──
+		function pillFootprint(): { w: number; h: number } {
+			if (!pillEl) return { w: 0, h: 0 };
+			const probeBar = pillQ(".mxpill__probe-bar");
+			const discEl = pillQ(".mxpill__disc");
+			const infoSurface = pillQ("[data-mxpill-info]");
+			const panelBody = pillQ("[data-mxpill-panel-body]");
+			const barH = probeBar?.offsetHeight ?? 64;
+			const wideW = probeBar?.offsetWidth ?? pillEl.offsetWidth;
+			const discW = discEl?.offsetWidth ?? 80;
+			// disc 态根盒高只有 barH：唱片比 bar 高出的部分是向上溢出的
+			// （--mp-disc-rise），不占根盒；按 discW 算会把底边锚点多垫高一截
+			if (pillShape === "disc") return { w: discW, h: barH };
+			// pill 态根盒同样只有 barH：歌词行与唱片一样向上溢出、不占根盒
+			// （与 disc 同理，量过根盒实高为准）；bar 态的信息面才是真入流撑高
+			let h = barH;
+			if (pillShape === "bar") h += infoSurface?.offsetHeight ?? 0;
+			if (pillPanelOpen) h += panelBody?.offsetHeight ?? 0;
+			return { w: wideW, h };
+		}
+
+		function relayoutPill() {
+			if (!isPillVariant || !pillEl || root.hidden) return;
+			const panelBody = pillQ("[data-mxpill-panel-body]");
+			if (panelBody) panelBody.style.height = "";
+			let fp = pillFootprint();
+			const vh = window.innerHeight;
+			const rect = root.getBoundingClientRect();
+			const positioned = root.style.left !== "";
+			const x = savedPos
+				? positioned
+					? rect.left
+					: savedPos.x
+				: DEFAULT_INSET;
+			if (!positioned && savedPos && pillPrevH === 0) pillPrevH = fp.h;
+			// 底边锚点按「上次目标高度」建模（rect.top + pillPrevH），不能读动画
+			// 进行中的 rect.bottom：高度过渡期间 bottom 逐帧下移，按它锚定会让
+			// 每次展开都把整个播放器向上顶一截（实测教训）
+			const bottom = savedPos
+				? positioned
+					? rect.top + (pillPrevH || fp.h)
+					: savedPos.y + pillPrevH
+				: vh - DEFAULT_INSET;
+			const z = stackZone();
+			const overlapsX = z
+				? x < z.right + CLEAR && x + fp.w > z.left - CLEAR
+				: false;
+			const availH =
+				overlapsX && z
+					? Math.min(vh - EDGE * 2, z.top - CLEAR - EDGE)
+					: vh - EDGE * 2;
+			// 面板打开后总高放不下：把面板体限高、内部滚动（同侧栏卡的兜底口径）
+			if (pillPanelOpen && panelBody && fp.h > availH) {
+				const natural = panelBody.offsetHeight;
+				const capped = Math.max(120, natural - (fp.h - availH));
+				panelBody.style.height = `${capped}px`;
+				fp = pillFootprint();
+			}
+			place(x, bottom - fp.h, { w: fp.w, h: fp.h });
+			pillPrevH = fp.h;
+		}
+
+		function pillSettleRelayout() {
+			window.clearTimeout(pillSettleTimer);
+			pillSettleTimer = window.setTimeout(() => relayoutPill(), 480);
+		}
+
+		function setPillShape(next: PillShape) {
+			if (!pillEl || pillShape === next) {
+				if (pillEl) relayoutPill();
+				return;
+			}
+			pillShape = next;
+			pillEl.dataset.state = next;
+			relayoutPill();
+			pillSettleRelayout();
+		}
+
+		function setPillTab(tab: "playlist" | "lyrics", force = false) {
+			if (!pillEl) return;
+			if (pillTab === tab && !force) return;
+			pillTab = tab;
+			pillEl
+				.querySelectorAll("[data-mxpill-tab]")
+				.forEach((el) =>
+					el.classList.toggle(
+						"is-active",
+						(el as HTMLElement).dataset.mxpillTab === tab,
+					),
+				);
+			pillEl
+				.querySelectorAll("[data-mxpill-view]")
+				.forEach((el) =>
+					el.classList.toggle(
+						"is-active",
+						(el as HTMLElement).dataset.mxpillView === tab,
+					),
+				);
+			pillPositionTabIndicator();
+		}
+
+		function pillPositionTabIndicator() {
+			const indicator = pillQ("[data-mxpill-tab-indicator]");
+			const active = pillEl?.querySelector(
+				`[data-mxpill-tab="${pillTab}"]`,
+			) as HTMLElement | null;
+			if (!indicator || !active) return;
+			indicator.style.width = `${active.offsetWidth}px`;
+			indicator.style.transform = `translateX(${active.offsetLeft}px)`;
+		}
+
+		function setPillPanelOpen(open: boolean) {
+			if (!pillEl || pillPanelOpen === open) {
+				if (pillEl) relayoutPill();
+				return;
+			}
+			pillPanelOpen = open;
+			pillEl.dataset.panel = open ? "open" : "closed";
+			if (open) {
+				// 打开歌单先回列表页签，并重放一遍条目入场错峰（同 mmz）
+				setPillTab("playlist", true);
+				requestAnimationFrame(() => pillPositionTabIndicator());
+				const list = pillQ("[data-mxpill-list]");
+				if (list && pillRenderedCount > 0) {
+					list.classList.remove("is-entering");
+					void list.offsetWidth;
+					list.classList.add("is-entering");
+					window.setTimeout(() => list.classList.remove("is-entering"), 800);
+				}
+			}
+			relayoutPill();
+			pillSettleRelayout();
+		}
+
+		// ── 胶囊文案：当前歌词行优先，其次「歌名 - 歌手」，超宽走跑马灯 ──
+		function pillScheduleMarquee() {
+			const label = pillQ("[data-mxpill-pill-label]");
+			const slot = pillQ("[data-mxpill-pill-text]");
+			if (!label || !slot) return;
+			requestAnimationFrame(() => {
+				const overflow = label.scrollWidth - slot.clientWidth;
+				if (overflow > 4) {
+					label.style.setProperty(
+						"--mxpill-marquee-offset",
+						`${-overflow}px`,
+					);
+					label.style.setProperty(
+						"--mxpill-marquee-duration",
+						`${Math.min(12, Math.max(4, overflow / 22))}s`,
+					);
+					label.classList.add("is-marquee");
+				} else {
+					label.classList.remove("is-marquee");
+				}
+			});
+		}
+
+		function pillUpdateText() {
+			const label = pillQ("[data-mxpill-pill-label]");
+			if (!label) return;
+			const line =
+				lyricIndex >= 0 && lyrics[lyricIndex] ? lyrics[lyricIndex].text : "";
+			const t = index >= 0 ? tracks[index] : undefined;
+			let text = "暂无播放";
+			if (line) text = line;
+			else if (t)
+				text = pillLyricsEnabled ? `${t.name} - ${t.artist}` : t.name;
+			if (label.textContent !== text) label.textContent = text;
+			pillScheduleMarquee();
+		}
+
+		// ── 引擎 → 胶囊皮的同步点 ──
+		function pillSyncTrack() {
+			if (!isPillVariant || !pillEl) return;
+			const t = index >= 0 ? tracks[index] : undefined;
+			const title = pillQ("[data-mxpill-title]");
+			const artist = pillQ("[data-mxpill-artist]");
+			if (title) {
+				title.textContent = t ? t.name : "音乐播放器";
+				title.title = t ? t.name : "";
+			}
+			if (artist) artist.textContent = t ? t.artist : "";
+			const img = pillQ<HTMLImageElement>("[data-mxpill-disc-img]");
+			if (img) {
+				if (t?.pic) {
+					img.src = t.pic;
+					img.classList.remove("is-empty");
+				} else {
+					img.removeAttribute("src");
+					img.classList.add("is-empty");
+				}
+			}
+			const bar = pillQ("[data-mxpill-progress-bar]");
+			const thumb = pillQ("[data-mxpill-progress-thumb]");
+			if (bar) bar.style.width = "0%";
+			if (thumb) thumb.style.left = "0%";
+			const cur = pillQ("[data-mxpill-time-cur]");
+			const dur = pillQ("[data-mxpill-time-dur]");
+			if (cur) cur.textContent = "0:00";
+			if (dur) dur.textContent = "0:00";
+			pillUpdateText();
+			pillSyncList();
+		}
+
+		function pillSyncList() {
+			if (!isPillVariant || !pillEl) return;
+			const list = pillQ("[data-mxpill-list]");
+			if (!list) return;
+			if (pillListSig !== tracks.length) {
+				pillListSig = tracks.length;
+				pillRenderedCount = Math.min(PILL_LIST_BATCH, tracks.length);
+				list.innerHTML = "";
+				for (let i = 0; i < pillRenderedCount; i++)
+					list.appendChild(pillBuildTrackRow(i));
+				if (pillPanelOpen) {
+					list.classList.remove("is-entering");
+					void list.offsetWidth;
+					list.classList.add("is-entering");
+					window.setTimeout(() => list.classList.remove("is-entering"), 800);
+				}
+			}
+			list.querySelectorAll(".mxpill__track").forEach((row, i) => {
+				const el = row as HTMLElement;
+				el.classList.toggle("is-active", i === index);
+				const overlay = el.querySelector(".mxpill__track-active");
+				if (overlay) {
+					const show = i === index && !audio.paused;
+					(overlay as HTMLElement).style.display = show ? "flex" : "none";
+				}
+			});
+		}
+
+		function pillBuildTrackRow(i: number): HTMLElement {
+			const t = tracks[i];
+			const row = document.createElement("div");
+			row.className = "mxpill__track";
+			row.setAttribute("role", "option");
+			row.style.setProperty("--mxpill-i", String(Math.min(i, 12)));
+			const wrap = document.createElement("span");
+			wrap.className = "mxpill__track-cover-wrap";
+			if (t.pic) {
+				const img = document.createElement("img");
+				img.className = "mxpill__track-cover";
+				img.src = t.pic;
+				img.alt = "";
+				img.loading = "lazy";
+				wrap.appendChild(img);
+			}
+			const overlay = document.createElement("span");
+			overlay.className = "mxpill__track-active";
+			overlay.style.display = "none";
+			overlay.innerHTML =
+				'<svg class="mxpill__icon mxpill__icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 17V7q0-.425.288-.712T8 6t.713.288T9 7v10q0 .425-.288.713T8 18t-.712-.288T7 17m4 4V3q0-.425.288-.712T12 2t.713.288T13 3v18q0 .425-.288.713T12 22t-.712-.288T11 21m-8-8v-2q0-.425.288-.712T4 10t.713.288T5 11v2q0 .425-.288.713T4 14t-.712-.288T3 13m12 4V7q0-.425.288-.712T16 6t.713.288T17 7v10q0 .425-.288.713T16 18t-.712-.288T15 17m4-4v-2q0-.425.288-.712T20 10t.713.288T21 11v2q0 .425-.288.713T20 14t-.712-.288T19 13"/></svg>';
+			wrap.appendChild(overlay);
+			const meta = document.createElement("span");
+			meta.className = "mxpill__track-meta";
+			const name = document.createElement("div");
+			name.className = "mxpill__track-title";
+			name.textContent = t.name;
+			const artist = document.createElement("div");
+			artist.className = "mxpill__track-artist";
+			artist.textContent = t.artist;
+			meta.append(name, artist);
+			row.append(wrap, meta);
+			row.addEventListener("click", () => play(i));
+			return row;
+		}
+
+		function pillRenderLyrics(state: "loading" | "empty" | "failed" | "ready") {
+			if (!isPillVariant || !pillEl) return;
+			const list = pillQ("[data-mxpill-lyrics-list]");
+			if (!list) return;
+			list.innerHTML = "";
+			pillUserScrolledLyrics = false;
+			if (state !== "ready") {
+				const ph = document.createElement("div");
+				ph.className = "mxpill__lyrics-placeholder";
+				ph.textContent =
+					state === "loading"
+						? "歌词加载中…"
+						: state === "failed"
+							? "歌词加载失败"
+							: "暂无歌词";
+				list.appendChild(ph);
+				return;
+			}
+			lyrics.forEach((line) => {
+				const div = document.createElement("div");
+				div.className = "mxpill__lrc-line";
+				div.textContent = line.text;
+				div.addEventListener("click", () => {
+					audio.currentTime = line.time;
+				});
+				list.appendChild(div);
+			});
+		}
+
+		function pillSyncLyric() {
+			if (!isPillVariant || !pillEl) return;
+			const list = pillQ("[data-mxpill-lyrics-list]");
+			if (list) {
+				const lines = list.querySelectorAll(".mxpill__lrc-line");
+				lines.forEach((el, i) =>
+					el.classList.toggle("is-active", i === lyricIndex),
+				);
+				if (lyricIndex >= 0 && !pillUserScrolledLyrics) {
+					(lines[lyricIndex] as HTMLElement | undefined)?.scrollIntoView({
+						block: "center",
+						behavior: "smooth",
+					});
+				}
+			}
+			pillUpdateText();
+		}
+
+		function pillSyncProgress() {
+			if (!isPillVariant || !pillEl || pillSeeking) return;
+			const d = audio.duration;
+			if (!d || !isFinite(d)) return;
+			const pct = (audio.currentTime / d) * 100;
+			const bar = pillQ("[data-mxpill-progress-bar]");
+			const thumb = pillQ("[data-mxpill-progress-thumb]");
+			const progress = pillQ("[data-mxpill-progress]");
+			if (bar) bar.style.width = `${pct}%`;
+			if (thumb) thumb.style.left = `${pct}%`;
+			if (progress)
+				progress.setAttribute("aria-valuenow", String(Math.round(pct)));
+			const cur = pillQ("[data-mxpill-time-cur]");
+			if (cur) cur.textContent = fmtTime(audio.currentTime);
+		}
+
+		function pillSyncDuration() {
+			if (!isPillVariant || !pillEl) return;
+			const dur = pillQ("[data-mxpill-time-dur]");
+			if (dur) dur.textContent = fmtTime(audio.duration);
+		}
+
+		function pillSyncMode() {
+			if (!isPillVariant || !pillEl) return;
+			const btn = pillQ("[data-mxpill-mode]");
+			if (!btn) return;
+			const label =
+				mode === "sequence"
+					? "顺序播放"
+					: mode === "one"
+						? "单曲循环"
+						: "随机播放";
+			btn.dataset.tooltip = `播放模式：${label}`;
+			btn.setAttribute("aria-label", `播放模式：${label}`);
+			btn.classList.toggle("is-active", mode !== "sequence");
+			pillQ("[data-mxpill-icon-mode-list]")?.classList.toggle(
+				"mxpill-hidden",
+				mode !== "sequence",
+			);
+			pillQ("[data-mxpill-icon-mode-one]")?.classList.toggle(
+				"mxpill-hidden",
+				mode !== "one",
+			);
+			pillQ("[data-mxpill-icon-mode-shuffle]")?.classList.toggle(
+				"mxpill-hidden",
+				mode !== "random",
+			);
+		}
+
+		function pillSyncVolume() {
+			if (!isPillVariant || !pillEl) return;
+			const pop = pillQ("[data-mxpill-volume-pop]");
+			const pct = Math.round(audio.volume * 100);
+			if (pop) pop.style.setProperty("--mxpill-vol", String(pct));
+			const bubble = pillQ("[data-mxpill-volume-bubble]");
+			if (bubble) bubble.textContent = `${pct}%`;
+			const track = pillQ("[data-mxpill-volume-track]");
+			if (track) track.setAttribute("aria-valuenow", String(pct));
+			const muted = audio.volume === 0;
+			pillQ("[data-mxpill-icon-vol-on]")?.classList.toggle(
+				"mxpill-hidden",
+				muted,
+			);
+			pillQ("[data-mxpill-icon-vol-off]")?.classList.toggle(
+				"mxpill-hidden",
+				!muted,
+			);
+		}
+
+		function pillApplyPlayState(playing: boolean) {
+			if (!isPillVariant || !pillEl) return;
+			pillEl.dataset.playing = String(playing);
+			const playBtn = pillQ("[data-mxpill-play]");
+			pillQ("[data-mxpill-icon-play]")?.classList.toggle(
+				"mxpill-hidden",
+				playing,
+			);
+			pillQ("[data-mxpill-icon-pause]")?.classList.toggle(
+				"mxpill-hidden",
+				!playing,
+			);
+			if (playBtn) {
+				playBtn.dataset.tooltip = playing ? "暂停" : "播放";
+				playBtn.setAttribute("aria-label", playing ? "暂停" : "播放");
+			}
+			// 形态机：播放中静置回 pill（关了歌词则 disc），暂停从 pill 升到 bar
+			if (playing) {
+				if (pillShape !== "bar")
+					setPillShape(pillHovering || pillPanelOpen ? "bar" : pillRestingShape());
+			} else if (pillShape === "pill") {
+				setPillShape("bar");
+			}
+			pillSyncList();
+		}
+
+		// ── 胶囊皮交互接线（仅胶囊形态装配） ──
+		if (isPillVariant && pillEl) {
+			const disc = pillQ("[data-mxpill-disc]");
+			const playBtn = pillQ("[data-mxpill-play]");
+			const progressEl2 = pillQ("[data-mxpill-progress]");
+			const volTrack = pillQ("[data-mxpill-volume-track]");
+			const volPop = pillQ("[data-mxpill-volume-pop]");
+			const listEl2 = pillQ("[data-mxpill-list]");
+			const lyricsListEl2 = pillQ("[data-mxpill-lyrics-list]");
+
+			// 悬停展开 / 离开 160ms 收回（播放中、面板关着才收）
+			pillEl.addEventListener("pointerenter", () => {
+				pillHovering = true;
+				window.clearTimeout(pillCollapseTimer);
+				if (pillShape !== "bar") setPillShape("bar");
+			});
+			pillEl.addEventListener("pointerleave", () => {
+				pillHovering = false;
+				if (audio.paused || pillPanelOpen) return;
+				if (pillShape !== "bar") return;
+				window.clearTimeout(pillCollapseTimer);
+				pillCollapseTimer = window.setTimeout(() => {
+					if (!pillHovering && !pillPanelOpen && !audio.paused)
+						setPillShape(pillRestingShape());
+				}, PILL_BAR_COLLAPSE_DELAY);
+			});
+
+			// 唱片点击：展开 / 收回（拖动收尾的那一下被抑制旗挡掉）
+			disc?.addEventListener("click", () => {
+				if (suppressPillClick) return;
+				if (pillShape === "bar")
+					setPillShape(audio.paused ? "disc" : pillRestingShape());
+				else setPillShape("bar");
+			});
+
+			// 点组件外：关面板 + 收回形态（返回顶部等站内悬浮钮不受影响，照常可点）
+			document.addEventListener("pointerdown", (e) => {
+				if (root.hidden) return;
+				if (e.target instanceof Node && root.contains(e.target)) return;
+				if (pillPanelOpen) setPillPanelOpen(false);
+				if (pillShape === "bar" && !pillHovering)
+					setPillShape(audio.paused ? "disc" : pillRestingShape());
+			});
+
+			// 播放控制行
+			playBtn?.addEventListener("click", () => {
+				if (index === -1) {
+					if (tracks.length) play(0);
+					return;
+				}
+				if (audio.paused) audio.play();
+				else audio.pause();
+			});
+			pillQ("[data-mxpill-prev]")?.addEventListener("click", () =>
+				pickNext(-1),
+			);
+			pillQ("[data-mxpill-next]")?.addEventListener("click", () =>
+				pickNext(1),
+			);
+			pillQ("[data-mxpill-mode]")?.addEventListener("click", cycleMode);
+			pillQ("[data-mxpill-list-toggle]")?.addEventListener("click", () =>
+				setPillPanelOpen(!pillPanelOpen),
+			);
+			pillEl.querySelectorAll("[data-mxpill-tab]").forEach((el) =>
+				el.addEventListener("click", () =>
+					setPillTab(
+						(el as HTMLElement).dataset.mxpillTab === "lyrics"
+							? "lyrics"
+							: "playlist",
+					),
+				),
+			);
+
+			// 胶囊歌词开关：关掉时 pill 只显曲名，静置形态也回落到纯唱片
+			const lrcBtn = pillQ("[data-mxpill-lrc-toggle]");
+			const syncLrcBtn = () => {
+				if (!lrcBtn) return;
+				lrcBtn.classList.toggle("is-active", pillLyricsEnabled);
+				lrcBtn.setAttribute("aria-pressed", String(pillLyricsEnabled));
+				pillQ("[data-mxpill-icon-lrc-on]")?.classList.toggle(
+					"mxpill-hidden",
+					!pillLyricsEnabled,
+				);
+				pillQ("[data-mxpill-icon-lrc-off]")?.classList.toggle(
+					"mxpill-hidden",
+					pillLyricsEnabled,
+				);
+			};
+			syncLrcBtn();
+			lrcBtn?.addEventListener("click", () => {
+				pillLyricsEnabled = !pillLyricsEnabled;
+				try {
+					localStorage.setItem(
+						"mxMusicPillLyrics",
+						pillLyricsEnabled ? "1" : "0",
+					);
+				} catch {}
+				syncLrcBtn();
+				pillUpdateText();
+				if (!pillLyricsEnabled && pillShape === "pill" && !pillHovering)
+					setPillShape("disc");
+				if (pillLyricsEnabled && !audio.paused && pillShape === "disc")
+					setPillShape("pill");
+			});
+
+			// 拖拽基元：指针捕获在元素上，move/up 都绑元素（同 mmz bindDrag）
+			const pillBindDrag = (
+				el: HTMLElement,
+				handlers: {
+					start?: (e: PointerEvent) => void;
+					move: (ratio: number, e: PointerEvent) => void;
+					end?: () => void;
+				},
+			) => {
+				el.addEventListener("pointerdown", (e) => {
+					e.preventDefault();
+					try {
+						el.setPointerCapture(e.pointerId);
+					} catch {}
+					const rect = el.getBoundingClientRect();
+					handlers.start?.(e);
+					handlers.move((e.clientX - rect.left) / rect.width, e);
+					const onMove = (ev: PointerEvent) =>
+						handlers.move((ev.clientX - rect.left) / rect.width, ev);
+					const onUp = () => {
+						el.removeEventListener("pointermove", onMove);
+						el.removeEventListener("pointerup", onUp);
+						el.removeEventListener("pointercancel", onUp);
+						handlers.end?.();
+					};
+					el.addEventListener("pointermove", onMove);
+					el.addEventListener("pointerup", onUp);
+					el.addEventListener("pointercancel", onUp);
+				});
+			};
+			const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+			const rubberBand = (distance: number, limit: number) => {
+				if (!distance) return 0;
+				return (
+					Math.sign(distance) *
+					(1 - 1 / ((Math.abs(distance) * 0.55) / limit + 1)) *
+					limit
+				);
+			};
+
+			// 进度拖拽：拖动中直接写 currentTime（同 mmz 的 onSeek 口径）
+			if (progressEl2) {
+				const paintSeek = (ratio: number) => {
+					const d = audio.duration;
+					if (!d || !isFinite(d)) return;
+					audio.currentTime = clamp01(ratio) * d;
+					const pct = clamp01(ratio) * 100;
+					const bar = pillQ("[data-mxpill-progress-bar]");
+					const thumb = pillQ("[data-mxpill-progress-thumb]");
+					if (bar) bar.style.width = `${pct}%`;
+					if (thumb) thumb.style.left = `${pct}%`;
+					const cur = pillQ("[data-mxpill-time-cur]");
+					if (cur) cur.textContent = fmtTime(audio.currentTime);
+				};
+				pillBindDrag(progressEl2, {
+					start: () => {
+						pillSeeking = true;
+						progressEl2.classList.add("is-dragging");
+					},
+					move: (ratio) => paintSeek(ratio),
+					end: () => {
+						pillSeeking = false;
+						progressEl2.classList.remove("is-dragging");
+					},
+				});
+			}
+
+			// 音量拖拽：提交值走侧栏的 input 链（audio.volume/localStorage/两皮同步
+			// 都在那条链上），越界段只做橡皮筋形变、不提交
+			if (volTrack && volPop) {
+				let bubbleTimer: number | undefined;
+				pillBindDrag(volTrack, {
+					start: () => {
+						volPop.dataset.dragging = "";
+						volPop.dataset.bubble = "";
+						window.clearTimeout(bubbleTimer);
+					},
+					move: (ratio, e) => {
+						const rect = volTrack.getBoundingClientRect();
+						const overPx =
+							ratio < 0
+								? rubberBand(ratio * rect.width, PILL_VOLUME_STRETCH)
+								: ratio > 1
+									? rubberBand(
+											(ratio - 1) * rect.width,
+											PILL_VOLUME_STRETCH,
+										)
+									: 0;
+						volPop.style.setProperty(
+							"--mxpill-vol-over",
+							`${overPx.toFixed(1)}px`,
+						);
+						volPop.style.setProperty(
+							"--mxpill-vol-stretch",
+							String(Math.min(1, Math.abs(overPx) / PILL_VOLUME_STRETCH)),
+						);
+						void e;
+						volumeEl.value = String(clamp01(ratio));
+						volumeEl.dispatchEvent(new Event("input"));
+					},
+					end: () => {
+						delete volPop.dataset.dragging;
+						volPop.style.setProperty("--mxpill-vol-over", "0px");
+						volPop.style.setProperty("--mxpill-vol-stretch", "0");
+						bubbleTimer = window.setTimeout(() => {
+							delete volPop.dataset.bubble;
+						}, 700);
+					},
+				});
+				// 点音量钮静音/恢复（走侧栏静音钮的同一逻辑）
+				pillQ("[data-mxpill-volume-btn]")?.addEventListener("click", () => {
+					muteBtn.dispatchEvent(new Event("click"));
+				});
+			}
+
+			// 歌单滚动到底续批（同 mmz 的分批渲染，避免几百首一次铺满）
+			listEl2?.addEventListener("scroll", () => {
+				if (pillRenderedCount >= tracks.length) return;
+				if (
+					listEl2.scrollTop + listEl2.clientHeight >=
+					listEl2.scrollHeight - 48
+				) {
+					const from = pillRenderedCount;
+					pillRenderedCount = Math.min(
+						tracks.length,
+						pillRenderedCount + PILL_LIST_BATCH,
+					);
+					for (let i = from; i < pillRenderedCount; i++)
+						listEl2.appendChild(pillBuildTrackRow(i));
+					pillSyncList();
+				}
+			});
+
+			// 歌词视图：用户手动滚动后暂停自动居中，3 秒无操作恢复（同 mmz）
+			const markLyricsScrolled = () => {
+				pillUserScrolledLyrics = true;
+				window.clearTimeout(pillLyricsResumeTimer);
+				pillLyricsResumeTimer = window.setTimeout(() => {
+					pillUserScrolledLyrics = false;
+				}, PILL_LYRICS_RESUME_DELAY);
+			};
+			lyricsListEl2?.addEventListener("wheel", markLyricsScrolled, {
+				passive: true,
+			});
+			lyricsListEl2?.addEventListener("touchmove", markLyricsScrolled, {
+				passive: true,
+			});
+
+			// 拖动入口：唱片与胶囊本体（信息层/卡身）可拖，按钮/滑杆/列表除外，
+			// 复用外层壳的 beginDrag（同一套落点避让 + mxMusicPosV1 存盘）
+			pillEl.addEventListener("pointerdown", (e) => {
+				if (
+					(e.target as HTMLElement).closest(
+						".mxpill__btn, .mxpill__progress, .mxpill__volume, .mxpill__tab, .mxpill__playlist-list, .mxpill__lyrics-list",
+					)
+				)
+					return;
+				beginDrag(e);
+			});
+
+			window.addEventListener("resize", () => {
+				relayoutPill();
+				pillScheduleMarquee();
+				pillPositionTabIndicator();
+			});
+			window.addEventListener("siteModeChange", () =>
+				requestAnimationFrame(() => relayoutPill()),
+			);
+
+			// 首帧同步：模式/音量/文案/占位都按引擎当前状态对齐一次
+			pillSyncMode();
+			pillSyncVolume();
+			pillUpdateText();
+			relayoutPill();
+		}
+
+		// 装配顺序：浮动歌单先行（先渲染先可播），Meting 扩展源后台合并
+		(async () => {
+			await loadChainPlaylists();
+			if (tracks.length) {
+				artistEl.textContent = `共 ${tracks.length} 首`;
+				setStatus("");
+			} else {
+				artistEl.textContent = "歌单暂时拉不到";
+			}
+			await loadMetingSources();
+			if (tracks.length) artistEl.textContent = `共 ${tracks.length} 首`;
+		})();
+	})();
+</script>

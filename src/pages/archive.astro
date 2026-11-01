@@ -3,8 +3,30 @@ import ArchivePanel from "@components/controls/ArchivePanel.astro";
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
+import { getCategoryList } from "@/utils/content-utils";
+
+/* 明信分类色系统（原站 getCategoryHue：FNV-1a 哈希分类名取色相）：
+ * 归档行分类签与时间线圆点在明信下按分类本色上色，色相在构建期按分类逐条
+ * 写成 --mx-cat-hue（消费规则在 mingxin-mode.css，其他形态不消费此变量） */
+function getCategoryHue(category: string): number {
+	let hash = 2166136261;
+	for (let index = 0; index < category.length; index++) {
+		hash ^= category.charCodeAt(index);
+		hash = Math.imul(hash, 16777619);
+	}
+	return (hash >>> 0) % 360;
+}
+
+const categories = await getCategoryList();
+const categoryHueCss = categories
+	.map(
+		(category) =>
+			`.archive-post[data-category="${category.name.replace(/"/g, '\\"')}"] { --mx-cat-hue: ${getCategoryHue(category.name)}; }`,
+	)
+	.join("\n");
 ---
 
 <MainGridLayout title={i18n(I18nKey.archive)}>
   <ArchivePanel />
+  {categoryHueCss && <style set:html={categoryHueCss}></style>}
 </MainGridLayout>

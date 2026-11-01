@@ -10,6 +10,8 @@ import PaperPortal from "@/components/widget/PaperPortal.astro";
 import SideBar from "@components/layout/SideBar.astro";
 import type { MarkdownHeading } from "astro";
 import FloatingControls from "@/components/controls/FloatingControls.astro";
+import ArticleMindmap from "@/components/controls/ArticleMindmap.astro";
+import MingxinTocPanel from "@/components/layout/MingxinTocPanel.astro";
 import CategoryBar from "@/components/layout/CategoryBar.astro";
 import SidebarColumn from "@/components/layout/SidebarColumn.astro";
 import AstralAlbumPoster from "@/components/widget/AstralAlbumPoster.astro";
@@ -199,6 +201,13 @@ const {
 </div>
 
 <FloatingControls headings={headings} encrypted={encrypted} />
+
+{/* 文章思维导图弹窗：只在带标题树的文章页挂载，与悬浮控件一样在 swup 容器之外常驻 */}
+{(headings.length > 0 || encrypted) && <ArticleMindmap title={title} />}
+
+{/* 明信文章页常驻目录栏（原站 ArticleTocPanel 移植）：默认隐藏（main.css 守卫），
+    仅明信 + 宽屏点亮；其余形态/窄屏由悬浮目录抽屉承担，脚本自理显隐 */}
+{(headings.length > 0 || encrypted) && <MingxinTocPanel title={title} />}
 
 <!-- 移动端导航抽屉：渲染为 <body> 直系子元素，脱离导航栏的 transform 包含块才能铺满视口 -->
 <NavMenuPanel links={resolveNavMenuLinks()} />

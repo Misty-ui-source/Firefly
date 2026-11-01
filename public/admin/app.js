@@ -744,7 +744,7 @@ function navDefs() {
     dashboard: '🏠 首页', stats: '📊 写作', search: '🔍 搜索', medialib: '🗂 媒体库', tags: '🏷 标签', fonts: '🔤 字体',
     theme: '🎨 主题', images: '🖼 图片', music: '🎵 音乐', gallery: '📷 相册',
     announce: '📢 公告', friends: '🔗 友链', booknav: '🔖 书签', navmgr: '🧭 导航', videos: '🎬 视频', profile: '👤 简介', banner: '🖼️ 横幅',
-    timeline: '🕘 时间线', thoughts: '💭 碎碎念', sitenav: '🌐 站点导航',
+    timeline: '🕘 时间线', thoughts: '💭 碎碎念', sitenav: '🌐 站点导航', mingxin: '✉️ 明信素材',
     blog: '🌐 博客', waline: '💬 评论', umami: '📈 数据统计',
   };
   for (const [k, c] of Object.entries(CFG.collections)) defs[k] = c.label;
@@ -5225,11 +5225,12 @@ routes.timeline = async () => {
   }
   view.innerHTML = `<div class="toolbar">
       <button class="btn" id="btn-tladd">＋ 新增节点</button>
+      <button class="btn" id="btn-tlsort">🕘 按时间排序</button>
       <span class="spacer"></span>
       <button class="btn btn-ghost hidden" id="btn-tldiscard" type="button">🗑 丢弃草稿</button>
       <button class="btn btn-ghost hidden" id="btn-tlrestore" type="button">↩ 仍用旧草稿</button>
       <button class="btn" id="btn-tlsave" disabled>💾 保存到仓库</button></div>
-    <p class="hint">时间线显示在博客首页。↑↓ 排序，新增的节点默认排最前面。保存后重新构建生效。</p>
+    <p class="hint">时间线页面按这里的顺序原样显示。↑↓ 手动排序，或点「按时间排序」按日期从新到旧一键重排（同日保持相对顺序）；新增的节点默认排最前面。保存后重新构建生效。</p>
     <div id="tl-list"></div>`;
   render();
   if (tlSaved && !tlSaved.stale) {
@@ -5247,6 +5248,31 @@ routes.timeline = async () => {
     toast(`时间线已在其他地方更新过，${new Date(tlSaved.ts).toLocaleString()} 的旧草稿没有自动恢复`, true);
   }
   $('#btn-tladd').onclick = () => openEditor(-1);
+  $('#btn-tlsort').onclick = () => {
+    /* 按真日期倒序（新→旧）：先把 "2026.9.28" 这类不齐格式解析成数值再比，
+       不许字符串直接比（'9' > '1' 会让 9 月排到 10 月前面，就是页面旧 bug 的根源）。
+       同日保持相对顺序；无法解析的日期保留在末尾不丢数据。 */
+    const parseDateVal = (s) => {
+      const m = String(s || '').trim().match(/^(\d{4})[.\/-](\d{1,2})(?:[.\/-](\d{1,2}))?/);
+      if (!m) return null;
+      return (+m[1]) * 10000 + (+m[2]) * 100 + (+(m[3] || 0));
+    };
+    let bad = 0;
+    const decorated = items.map((it, idx) => {
+      const v = parseDateVal(it.date);
+      if (v === null) bad++;
+      return { it, idx, v };
+    });
+    decorated.sort((a, b) => {
+      if (a.v === null && b.v === null) return a.idx - b.idx;
+      if (a.v === null) return 1;
+      if (b.v === null) return -1;
+      return b.v - a.v || a.idx - b.idx;
+    });
+    items = decorated.map((d) => d.it);
+    markDirty(); render();
+    toast(bad ? `已按时间从新到旧排序；${bad} 条日期格式无法识别，已保留在末尾` : '已按时间从新到旧排序');
+  };
   $('#btn-tlsave').onclick = async () => {
     const btn = $('#btn-tlsave'); btn.disabled = true;
     try {
@@ -6463,6 +6489,7 @@ routes.theme = async () => {
   const P_SITE = 'src/config/siteConfig.ts';
   const P_BGW = 'src/config/backgroundWallpaper.ts';
   const P_FX = 'src/config/effectsConfig.ts';
+  const P_MX = 'src/config/mingxinConfig.ts';
   /* 在对象的某个块内读/写某个 key：先按 key 名定位块的左花括号，再数花括号找块尾，只动块内第一处匹配 */
   function blockOf(text, keyRe) {
     const m = text.match(keyRe);
@@ -6548,6 +6575,16 @@ routes.theme = async () => {
     const gM = getIn(t, gr, /mobile\s*:\s*(true|false)/);
     if (!mm || homeTitle === null || carousel === null || wD === null || gD === null || linksEnable === null) return null;
     return { mode: mm[1], homeTitle: homeTitle === 'true', carousel: carousel === 'true', waves: wD === 'true' && wM !== 'false', gradient: gD === 'true' && gM !== 'false', bannerEnable: linksEnable === 'true', bannerLinks };
+  }
+  /* 明信播放器形态：mingxinConfig 的 music.playerVariant。值行以逗号结尾，
+     接口里的类型行以分号结尾，正则带上逗号不会误配类型行 */
+  function parseMx(t) {
+    const m = t.match(/playerVariant\s*:\s*"(\w+)"\s*,/);
+    return m ? { mxPlayerVariant: m[1] } : null;
+  }
+  function applyMx(t, s) {
+    if (!/playerVariant\s*:\s*"\w+"\s*,/.test(t)) return null;
+    return t.replace(/playerVariant\s*:\s*"\w+"\s*,/, `playerVariant: "${s.mxPlayerVariant}",`);
   }
   function parseFx(t) {
     const keys = ['sakura', 'snow', 'firefly', 'notes', 'rain', 'meteor', 'bubbles', 'hearts', 'leaves', 'click'];
@@ -6642,17 +6679,18 @@ routes.theme = async () => {
     }
     return out;
   }
-  let siteT, bgwT, fxT;
+  let siteT, bgwT, fxT, mxT;
   try {
-    [siteT, bgwT, fxT] = await Promise.all([
+    [siteT, bgwT, fxT, mxT] = await Promise.all([
       ghGetFile(P_SITE).then((d) => d.text),
       ghGetFile(P_BGW).then((d) => d.text),
       ghGetFile(P_FX).then((d) => d.text),
+      ghGetFile(P_MX).then((d) => d.text),
     ]);
   } catch (e) { view.innerHTML = `<p class="hint">读取失败：${esc(e.message)}</p>`; return; }
-  const pSite = parseSite(siteT), pBgw = parseBgw(bgwT), pFx = parseFx(fxT);
-  if (!pSite || !pBgw || !pFx) { view.innerHTML = '<p class="hint">配置文件格式对不上（某个默认值没找到），已中止，没有改动任何文件。</p>'; return; }
-  let st = { ...pSite, ...pBgw, ...pFx };
+  const pSite = parseSite(siteT), pBgw = parseBgw(bgwT), pFx = parseFx(fxT), pMx = parseMx(mxT);
+  if (!pSite || !pBgw || !pFx || !pMx) { view.innerHTML = '<p class="hint">配置文件格式对不上（某个默认值没找到），已中止，没有改动任何文件。</p>'; return; }
+  let st = { ...pSite, ...pBgw, ...pFx, ...pMx };
   let orig = JSON.stringify(st);
   const MODES = [
     { id: 'banner', icon: '🖼️', name: '横幅模式', desc: '顶部一条横幅，内容在下方滚动（现在用的就是它）' },
@@ -6712,6 +6750,8 @@ routes.theme = async () => {
       <p class="hint">只在站点形态 = 璨夜时生效：璨夜 = 现行首页瓷砖矩阵（bento）；经典 = Firefly 经典版式（横幅 + 侧栏 + 文章流），只保留璨夜皮肤。访客可以在调色板外观页签、璨夜主题下方自己切换，那是访客本地的选择，不改这里的全站默认。</p></div>
       <div class="field"><label>纸舟默认主题</label><div class="pills">${seg('paperTheme', 'ink', '📄 纸面')}${seg('paperTheme', 'manual', '📐 手册')}</div>
       <p class="hint">只在站点形态 = 纸舟时生效：纸舟里装着两套独立主题——纸面 = 轻笑Chuckle 的纸底墨线（纸白 / 墨字 / 墨绿）；手册 = 终末地工业手册风（高亮黄 / 切角 / 去图化）。访客可以在调色板外观页签、站点形态下方自己切换，那是访客本地的选择，不改这里的全站默认。</p></div>
+      <div class="field"><label>明信播放器形态</label><div class="pills">${seg('mxPlayerVariant', 'sidebar', '🎵 侧栏式')}${seg('mxPlayerVariant', 'pill', '💊 胶囊式')}</div>
+      <p class="hint">只在站点形态 = 明信时生效：侧栏式 = Shirone 音乐侧栏的样子（点右下角圆钮展开整张卡）；胶囊式 = mmz 的圆碟胶囊（静置一颗碟、播放时出一条歌词、悬停展开成小卡、歌单向上长成面板）。两式共用同一个播放引擎与歌单，切形态不会断播；这里改的是全站默认，保存后重新构建生效。</p></div>
       <div class="field"><label id="th-paper-hue-label">纸面默认主题色（色相 0–360，现在 ${st.paperHue}）</label>
         <div class="hue-bar"></div>
         <div class="toolbar"><input type="range" id="th-paper-hue" min="0" max="360" step="1" value="${st.paperHue}" style="flex:1">
@@ -6750,7 +6790,7 @@ routes.theme = async () => {
     <div class="card">
       <div class="toolbar">
         <button class="btn" id="theme-save" ${dirty() ? '' : 'disabled'}>💾 保存到仓库</button>
-        <span class="hint">一次保存 = 一次提交（最多动 siteConfig / backgroundWallpaper / effectsConfig 三个文件，没改的不动）；重新构建后生效。</span>
+        <span class="hint">一次保存 = 一次提交（最多动 siteConfig / backgroundWallpaper / effectsConfig / mingxinConfig 四个文件，没改的不动）；重新构建后生效。</span>
       </div>
     </div>`;
     view.querySelectorAll('[data-k]').forEach((cb) => {
@@ -6840,15 +6880,17 @@ routes.theme = async () => {
       saveBtn.disabled = true;
       saveBtn.textContent = '保存中…';
       try {
-        const [fSite, fBgw, fFx] = await Promise.all([ghGetFile(P_SITE), ghGetFile(P_BGW), ghGetFile(P_FX)]);
+        const [fSite, fBgw, fFx, fMx] = await Promise.all([ghGetFile(P_SITE), ghGetFile(P_BGW), ghGetFile(P_FX), ghGetFile(P_MX)]);
         const nSite = applySite(fSite.text, st);
         const nBgw = applyBgw(fBgw.text, st);
         const nFx = applyFx(fFx.text, st);
-        if (nSite === null || nBgw === null || nFx === null) throw new Error('配置文件格式对不上，已中止，没有改动任何文件');
+        const nMx = applyMx(fMx.text, st);
+        if (nSite === null || nBgw === null || nFx === null || nMx === null) throw new Error('配置文件格式对不上，已中止，没有改动任何文件');
         const files = [];
         if (nSite !== fSite.text) files.push({ path: P_SITE, content: nSite, encoding: 'utf-8' });
         if (nBgw !== fBgw.text) files.push({ path: P_BGW, content: nBgw, encoding: 'utf-8' });
         if (nFx !== fFx.text) files.push({ path: P_FX, content: nFx, encoding: 'utf-8' });
+        if (nMx !== fMx.text) files.push({ path: P_MX, content: nMx, encoding: 'utf-8' });
         if (!files.length) throw new Error('没有实际改动');
         /* 操作日志与配置文件同 1 个 commit（同 saveWithLog 的做法） */
         try {

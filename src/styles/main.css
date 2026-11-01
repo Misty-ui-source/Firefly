@@ -753,4 +753,42 @@ html {
   .post-card-words {
     display: none;
   }
+  /* 明信首页根节点：只在明信点亮（点亮规则在 mingxin-mode.css） */
+  .mingxin-home {
+    display: none;
+  }
+  /* 明信文章页常驻目录栏：只在明信 + 宽屏点亮（点亮规则在 mingxin-mode.css） */
+  .mx-toc-panel {
+    display: none;
+  }
+  /* 明信文章列表（页头/置顶轮播/卡片网格）：只在明信点亮 */
+  .mxlist {
+    display: none;
+  }
+  /* 明信背景纹理层：常驻壳层渲染，仅明信下点亮 */
+  #mingxin-texture-canvas {
+    display: none;
+  }
+  /* 明信顶栏（原站移植，顶栏内）：只在明信点亮 */
+  .mxnav {
+    display: none;
+  }
+  /* 明信资料卡：挂载时会被控制器挪到 body 末尾，守卫必须按类名跟着它走 */
+  .mxnav-profile-dropdown {
+    display: none;
+  }
+  /* 明信移动端底部 Dock 与遮罩：只在「明信 + ≤768px」点亮（点亮规则在组件内） */
+  .mxdock,
+  .mxdock-overlay {
+    display: none;
+  }
+  /* 明信下撤全部既有看板娘（黑猫是明信唯一角落角色，二期）：
+     主 Live2D / 小伙伴靠标记类隐藏且组件脚本守卫不初始化（同璨夜口径），
+     Spine 本体与它的消息气泡在这里一并藏掉，脚本侧另有初始化守卫。 */
+  html[data-site-mode="mingxin"] .l2d-main-root,
+  html[data-site-mode="mingxin"] .l2d-buddy,
+  html[data-site-mode="mingxin"] #spine-model-container,
+  html[data-site-mode="mingxin"] .model-message-container {
+    display: none !important;
+  }
 }

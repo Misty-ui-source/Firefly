@@ -148,6 +148,21 @@ html.dark[data-site-mode="paper"][data-paper-theme="manual"] {
 	--page-bg: #191919;
 }
 
+/* ---------- 数据色豁免（站长 2026-11-01 边界）：访客活跃时间热力图 ----------
+ * 壳归手册、数据色豁免：azuma 统计的活跃热力图 ramp 以 --analytics-blue
+ * （= var(--primary)）与 --card-bg 按 20/38/58/78/100% 混色生成 5 阶，
+ * 而手册令牌桥把 --primary 改成了墨色，ramp 整条变灰、数据编码失效。
+ * 只在 .analytics-activity 子树内把 --analytics-blue 还原为基座主色
+ * （variables.styl 的 --primary 原值，色相仍跟访客 --hue），格子与图例
+ * 一并恢复；面板之外的手册压色不动。classic 版热力图是内联硬编码色，
+ * 不受令牌影响，无需处理。 */
+html[data-site-mode="paper"][data-paper-theme="manual"] .analytics-activity {
+	--analytics-blue: oklch(0.70 0.14 var(--hue));
+}
+html.dark[data-site-mode="paper"][data-paper-theme="manual"] .analytics-activity {
+	--analytics-blue: oklch(0.75 0.14 var(--hue));
+}
+
 @layer components {
 
 /* ================================================================

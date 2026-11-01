@@ -15,6 +15,8 @@ import ParticleEffects from "@components/features/ParticleEffects.astro";
 import DanmakuLayer from "@components/features/DanmakuLayer.astro";
 import FloatingPlayer from "@components/features/FloatingPlayer.astro";
 import FloatingFish from "@components/features/FloatingFish.astro";
+import MingxinMusicPlayer from "@components/features/MingxinMusicPlayer.astro";
+import MingxinMobileDock from "@components/layout/MingxinMobileDock.astro";
 import { featuresConfig } from "@/config/featuresConfig";
 import WavesEffect from "@components/features/WavesEffect.astro";
 import ConfigCarrier from "@components/layout/ConfigCarrier.astro";
@@ -25,6 +27,7 @@ import {
 	commentConfig,
 	displaySettingsConfig,
 	expressiveCodeConfig,
+	mingxinConfig,
 	musicPlayerConfig,
 	navbarMode,
 	profileConfig,
@@ -55,6 +58,8 @@ import harmonyModeCssUrl from "@/styles/harmony-mode.css?url";
 import brickModeCssUrl from "@/styles/brick-mode.css?url";
 import astralModeCssUrl from "@/styles/astral-mode.css?url";
 import paperModeCssUrl from "@/styles/paper-mode.css?url";
+import mingxinModeCssUrl from "@/styles/mingxin-mode.css?url";
+import mingxinDatalayerCssUrl from "@/styles/mingxin-datalayer.css?url";
 import "@/styles/variables.styl";
 import "@rehype-callouts-theme";
 
@@ -170,7 +175,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
 ---
 
 <!doctype html>
-<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"} data-navbar-style={siteConfig.navbar.navbarStyle ?? "classic"} data-site-mode={siteConfig.siteMode ?? "full"} data-harmony-font={siteConfig.harmonyFont ?? "default"} data-brick-font={siteConfig.brickFont ?? "default"} data-star-font={siteConfig.starFont ?? "default"} data-astral-theme={siteConfig.astralTheme ?? "solid"} data-paper-theme={siteConfig.paperTheme ?? "ink"} data-astral-layout={siteConfig.astralLayout ?? "bento"}>
+<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"} data-navbar-style={siteConfig.navbar.navbarStyle ?? "classic"} data-site-mode={siteConfig.siteMode ?? "full"} data-harmony-font={siteConfig.harmonyFont ?? "default"} data-brick-font={siteConfig.brickFont ?? "default"} data-star-font={siteConfig.starFont ?? "default"} data-astral-theme={siteConfig.astralTheme ?? "solid"} data-paper-theme={siteConfig.paperTheme ?? "ink"} data-astral-layout={siteConfig.astralLayout ?? "bento"} data-texture-preset={mingxinConfig.texturePreset ?? "jigsaw"} data-mingxin-afterglow={mingxinConfig.afterglowDefault ?? "hero"}>
   <head>
     <meta charset="UTF-8" />
     {commentConfig?.type === "waline" && commentConfig?.waline?.serverURL && (
@@ -378,6 +383,9 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
         isNavbarStyleSwitchable:
           displaySettingsConfig.navbarStyleSwitchable,
         defaultSiteMode: siteConfig.siteMode ?? "full",
+        defaultMingxinTexture: mingxinConfig.texturePreset ?? "jigsaw",
+        mingxinConfigTextureOpacity: mingxinConfig.textureOpacity ?? 0.12,
+        defaultMingxinAfterglow: mingxinConfig.afterglowDefault ?? "hero",
         isSiteModeSwitchable: displaySettingsConfig.siteModeSwitchable,
         defaultAstralTheme: siteConfig.astralTheme ?? "solid",
         defaultPaperTheme: siteConfig.paperTheme ?? "ink",
@@ -493,12 +501,39 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
       if (!isSiteModeSwitchable) {
         localStorage.removeItem("siteMode");
       }
-      const resolvedSiteMode = ["full", "pure", "harmony", "brick", "astral", "paper"].includes(siteModeStored)
+      const resolvedSiteMode = ["full", "pure", "harmony", "brick", "astral", "paper", "mingxin"].includes(siteModeStored)
         ? siteModeStored
         : defaultSiteMode;
       document.documentElement.setAttribute(
         "data-site-mode",
         resolvedSiteMode
+      );
+
+      // 初始化明信背景纹理预设 - 优先 localStorage（日后调色板/控制台改过时），否则用 mingxinConfig 默认；
+      // 属性只在 html[data-site-mode="mingxin"] 作用域内被 mingxin-mode.css 消费，其他形态下挂着不生效
+      const mingxinTextureStored = localStorage.getItem("mingxinTexture");
+      const resolvedMingxinTexture = mingxinTextureStored || defaultMingxinTexture;
+      document.documentElement.setAttribute(
+        "data-texture-preset",
+        resolvedMingxinTexture
+      );
+      document.documentElement.style.setProperty(
+        "--texture-opacity",
+        String(mingxinConfigTextureOpacity)
+      );
+
+      // 初始化明信终幕内容区变体 - 优先 localStorage（日后调色板明信段/控制台主题卡切换），
+      // 否则用 mingxinConfig 默认（hero=「Hero」/ classic=「经典」）；切换 UI 在三期，
+      // 一期只接属性与首帧脚本（照纸舟子主题同款模式）
+      const mingxinAfterglowStored = localStorage.getItem("mingxinAfterglow");
+      const resolvedMingxinAfterglow = ["hero", "classic"].includes(
+        mingxinAfterglowStored
+      )
+        ? mingxinAfterglowStored
+        : defaultMingxinAfterglow;
+      document.documentElement.setAttribute(
+        "data-mingxin-afterglow",
+        resolvedMingxinAfterglow
       );
 
       // 初始化璨夜子主题 - 优先 localStorage（调色板外观页签、站点形态下方改过时），否则用配置默认；
@@ -703,6 +738,8 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
     <link rel="stylesheet" href={brickModeCssUrl} />
     <link rel="stylesheet" href={astralModeCssUrl} />
     <link rel="stylesheet" href={paperModeCssUrl} />
+    <link rel="stylesheet" href={mingxinModeCssUrl} />
+    <link rel="stylesheet" href={mingxinDatalayerCssUrl} />
     <script is:inline>
       // 样式已静态就位：setting-utils 切换时调用的确保钩子直接放行（立即翻属性）
       window.__ensureSiteModeCss = function () {
@@ -737,6 +774,116 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
       href={`${Astro.site}atom.xml`}
     />
 
+    <!-- 明信图片槽轮换池（站长 2026-11-01 立规）：每槽「当前图 + 池 + 模式」
+         manual 用当前图（服务端直出 src，本脚本零介入）/ random 每次打开
+         页面从「当前+池」随机一张 / daily 按访客本地日期确定性轮换。
+         非 manual 的图服务端不写 src、只挂 data-mx-pick，本脚本在 head 里
+         先算好全部选图、再用 MutationObserver 在节点解析到的瞬间写 src，
+         保证首帧即定图、不闪不跳。统计卡底图与作者卡横幅同为 banner 键，
+         读同一份选图（共用一槽，不另开字段）。 -->
+    <script is:inline define:vars={{
+      mxPoolData: {
+        reveal: { cur: mingxinConfig.revealImage, pool: mingxinConfig.revealPool ?? [], mode: mingxinConfig.revealMode ?? "manual" },
+        mosaic: { cur: mingxinConfig.mosaicImage, pool: mingxinConfig.mosaicPool ?? [], mode: mingxinConfig.mosaicMode ?? "manual" },
+        banner: { cur: mingxinConfig.profileBanner ?? "", pool: mingxinConfig.profileBannerPool ?? [], mode: mingxinConfig.profileBannerMode ?? "manual" },
+        doll: { cur: mingxinConfig.dollImage, pool: mingxinConfig.dollPool ?? [], mode: mingxinConfig.dollMode ?? "manual" },
+        scenes: mingxinConfig.scenes.map((s) => ({ cur: s.image, pool: s.pool ?? [], mode: s.mode ?? "manual" })),
+        stands: mingxinConfig.standImages.map((src, i) => ({ cur: src, pool: (mingxinConfig.standPools ?? [])[i] ?? [], mode: (mingxinConfig.standModes ?? [])[i] ?? "manual" })),
+      },
+    }}>
+      (function () {
+        var D = mxPoolData;
+        if (!D) return;
+        var anyAuto = [D.reveal, D.mosaic, D.banner, D.doll]
+          .concat(D.scenes || [], D.stands || [])
+          .some(function (s) { return s && s.mode && s.mode !== "manual"; });
+        if (!anyAuto) return;
+        function cands(s) {
+          var out = [];
+          var all = [s.cur].concat(s.pool || []);
+          for (var i = 0; i < all.length; i++) {
+            var v = all[i];
+            if (v && out.indexOf(v) < 0) out.push(v);
+          }
+          return out;
+        }
+        function hashStr(str) {
+          var h = 5381;
+          for (var i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+          return Math.abs(h);
+        }
+        function todayKey() {
+          var d = new Date();
+          return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+        }
+        function pick(s, salt) {
+          var c = cands(s);
+          if (!c.length) return "";
+          if (s.mode === "random" && c.length > 1)
+            return c[Math.floor(Math.random() * c.length)];
+          if (s.mode === "daily" && c.length > 1)
+            return c[hashStr(todayKey() + "|" + salt) % c.length];
+          return s.cur || c[0];
+        }
+        var picks = {};
+        function compute() {
+          picks.reveal = pick(D.reveal, "reveal");
+          picks.mosaic = pick(D.mosaic, "mosaic");
+          var bc = cands(D.banner);
+          picks.banner =
+            D.banner.mode !== "manual" && bc.length
+              ? pick(D.banner, "banner")
+              : D.banner.cur || picks.reveal;
+          picks.doll = pick(D.doll, "doll");
+          picks.scenes = (D.scenes || []).map(function (s, i) { return pick(s, "scene-" + i); });
+          picks.stands = (D.stands || []).map(function (s, i) { return pick(s, "stand-" + i); });
+          window.__MX_PICKS__ = picks;
+        }
+        function urlFor(key) {
+          if (key === "reveal" || key === "mosaic" || key === "banner" || key === "doll")
+            return picks[key] || "";
+          var m = /^(scene|stand)-(\d+)$/.exec(key);
+          if (m) return (m[1] === "scene" ? picks.scenes : picks.stands)[Number(m[2])] || "";
+          return "";
+        }
+        function applyEl(el) {
+          var u = urlFor(el.getAttribute("data-mx-pick") || "");
+          if (u && el.getAttribute("src") !== u) el.setAttribute("src", u);
+        }
+        function applyAll() {
+          var nodes = document.querySelectorAll("[data-mx-pick]");
+          for (var i = 0; i < nodes.length; i++) applyEl(nodes[i]);
+        }
+        compute();
+        var mo = new MutationObserver(function (muts) {
+          for (var i = 0; i < muts.length; i++) {
+            var added = muts[i].addedNodes;
+            for (var j = 0; j < added.length; j++) {
+              var n = added[j];
+              if (n.nodeType !== 1) continue;
+              if (n.hasAttribute && n.hasAttribute("data-mx-pick")) applyEl(n);
+              if (n.querySelectorAll) {
+                var inner = n.querySelectorAll("[data-mx-pick]");
+                for (var k = 0; k < inner.length; k++) applyEl(inner[k]);
+              }
+            }
+          }
+        });
+        mo.observe(document.documentElement, { childList: true, subtree: true });
+        document.addEventListener("DOMContentLoaded", applyAll);
+        // swup 软导航 = 新的一次「打开页面」：random 重挑、daily 按日稳定
+        document.addEventListener("swup:page:view", function () {
+          compute();
+          applyAll();
+        });
+        // 页内切到明信形态时 DOM 不新增节点，靠属性变化补一遍应用
+        new MutationObserver(function () { applyAll(); }).observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ["data-site-mode"],
+        });
+      })();
+    </script>
+
     <!-- Font Setup (Astro Font API) -->
     <FontSetup />
   </head>
@@ -765,6 +912,10 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
     </script>
 
     <div id="progress-bar"></div>
+
+    <!-- 明信背景纹理层（常驻壳层）：仅 html[data-site-mode="mingxin"] 时由
+         mingxin-mode.css 点亮，其余形态下 display:none（main.css 守卫） -->
+    <div id="mingxin-texture-canvas" aria-hidden="true"></div>
 
     {/* 会话级开屏：每会话只播一次。判定脚本紧跟标记同步执行（sessionStorage splashSeen），
          已播 / 减动效时当场移除节点，不闪内容；控制台主题页关掉 splashEnabled 时整块不渲染。
@@ -873,6 +1024,12 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
     <!-- 全局浮动播放器 + 肥鱼（第三批，常驻层；总闸在 featuresConfig） -->
     {featuresConfig.floatingPlayer && <FloatingPlayer />}
     {featuresConfig.fish && <FloatingFish />}
+
+    <!-- 明信音乐播放器（二期，常驻层；只在明信现身、切形态不断播） -->
+    <MingxinMusicPlayer />
+
+    <!-- 明信移动端底部 Dock（仅明信 + ≤768px 点亮；移动端播放器交接给它） -->
+    <MingxinMobileDock />
 
     <!-- Water Waves Effect -->
     <WavesEffect />

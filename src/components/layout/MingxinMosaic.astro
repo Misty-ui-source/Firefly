@@ -1,0 +1,663 @@
+---
+/**
+ * 明信马赛克 Hero 前段（可选加项，mingxinConfig.mosaicHero 开关）：
+ * part="layer" 渲染舞台内的前段层（拼图底纹 + 巨字标题 + 碎片照片框 +
+ * 介绍票签 + 玻璃雨），part="section" 渲染流内的滚动段（高度由控制器
+ * 按原站距离公式回写）。两处都只在开关开启时由 MingxinHome 挂载；
+ * 关闭时零 DOM、零脚本。
+ *
+ * 移植自原站 MmzMing/my-blog 的 HomeHero + HeroMosaic（类名 home-hero-
+ * → mingxin-mosaic-），机制与数值照原站：静止碎片按 initialLayout 浮在
+ * 拼图底纹上，滚动逐块拼回完整照片；拼完导引线铺开、纯色底淡入，
+ * 照片落位成 -3° 相框（描边自四角蔓延）、右侧三张介绍票签错峰倒下、
+ * 玻璃雨在画幅内落下；最后一段是本站交接：照片放大回正 + 整层交叉
+ * 淡化，把舞台交还揭示段。
+ * 与原版的差异（本站结构/站长定版）：
+ * - 照片用 mingxinConfig.mosaicImage（与揭示图独立，站长日后自备），
+ *   碎片改用等大 <img> 在碎片内反向偏移切图（原版 background-position，
+ *   效果等价：照片在框内按自然比例完整呈现、零裁切）；
+ * - 标题 = siteConfig.title（"Alexander"，与顶栏品牌同源），副标题行
+ *   （原站 __occupation 位）读 mingxinConfig.profileTagline 身份行
+ *   （与作者卡同款字段，方括号由样式层 ::before/::after 加、不写进
+ *   配置值；座右铭只留页脚 footerMotto，站长 2026-11-01 定）；巨字
+ *   字标动画已整套移植（home-mosaic-wordmark.ts：
+ *   镜头扫掠/指针跟随时字母变虚线描边轮廓 + 选择框锚点与巡游小方块，
+ *   字母可拖离基线弹簧回位；时间线 0.72 后由控制器冻结静止帧退场）；
+ *   字体与原站同为经典 Roboto Black（自托管 900 静态子集、CSS 仍写
+ *   字重 760 同原站一样落到 900，见下方 @font-face）；右下 contact
+ *   熔字仍未移植（独立子系统）；
+ * - 介绍票签照原站散文风（站长 2026-11-01 定）：壹 = 简介散文
+ *   （mingxinConfig.introBio）、贰 = 站点数据、叁 = 联系散文
+ *   （mingxinConfig.introContact，GitHub/邮箱/RSS 三处为真链接），
+ *   由 MingxinHome 装配后经 intro prop 传入；
+ * - 原站照片叠图（overlay 第二张照片）本站无对应素材，未渲染。
+ */
+import { mingxinConfig, siteConfig } from "@/config";
+import {
+	createMingxinPuzzleLayout,
+	createMingxinTileLayout,
+} from "@/scripts/mingxin/home-mosaic";
+
+interface Props {
+	part: "layer" | "section";
+	/** 介绍票签内容（MingxinHome 按真实数据装配；缺省不渲染票签） */
+	intro?: {
+		bio: string;
+		stats: string[];
+		contact: { text: string; href?: string }[];
+	};
+}
+
+const { part, intro } = Astro.props;
+/* 轮换池：非 manual 时图不直出 src，挂 data-mx-pick 由 Layout 首帧脚本定图 */
+const mxMosaicPick = (mingxinConfig.mosaicMode ?? "manual") !== "manual";
+const mosaic = mingxinConfig.mosaic;
+const tiles = createMingxinTileLayout(mosaic);
+const puzzle = createMingxinPuzzleLayout();
+const runtime = {
+	rows: mosaic.rows,
+	columns: mosaic.columns,
+	idleVisible: mosaic.idleVisible,
+	seed: mosaic.seed,
+	initialLayout: mosaic.initialLayout,
+	scrub: mosaic.scrub,
+	desktopScrollDistance: mosaic.desktopScrollDistance,
+	desktopMinViewports: mosaic.desktopMinViewports,
+	tailDistance: mosaic.tailDistance,
+	handoffDistance: mosaic.handoffDistance,
+	rain: mosaic.rain,
+};
+
+const introCards = intro
+	? [
+			{ index: "壹", kind: "bio" as const },
+			{ index: "贰", kind: "stats" as const },
+			{ index: "叁", kind: "contact" as const },
+		]
+	: [];
+---
+
+{
+	part === "layer" && (
+		<div
+			class="mingxin-mosaic"
+			data-mosaic-layer
+			aria-hidden="true"
+			style={`opacity: 0; --mxm-cols: ${mosaic.columns}; --mxm-rows: ${mosaic.rows}`}
+		>
+			<svg
+				class="mingxin-mosaic__puzzle"
+				data-mosaic-puzzle
+				viewBox={puzzle.viewBox}
+				preserveAspectRatio="xMidYMid slice"
+				aria-hidden="true"
+			>
+				<rect class="mingxin-mosaic__puzzle-bg" width={puzzle.width} height={puzzle.height} />
+				{puzzle.seams.map((d) => (
+					<path class="mingxin-mosaic__puzzle-seam" d={d} vector-effect="non-scaling-stroke" />
+				))}
+			</svg>
+
+			{/* 拼合完成后淡入的纯色底：盖掉拼图缝线，让照片态背景干净（原站 __backdrop） */}
+			<div class="mingxin-mosaic__backdrop" data-mosaic-backdrop />
+
+			{/* 通栏画幅量尺：控制器按它算照片落位的高度约束，自身不绘制（原站 __mosaic-target） */}
+			<div class="mingxin-mosaic__target" data-mosaic-target />
+
+			{/* 井字导引线（原站 HomeGuideFrame）：竖线压在内容列左右边界、横线落在纵向内边距处；
+			    首帧两组线都收在中点，拼合完成后由控制器 clip-path 铺开 */}
+			<svg
+				class="mingxin-mosaic__guide mingxin-mosaic__guide--v"
+				data-mosaic-guide-v
+				preserveAspectRatio="none"
+				aria-hidden="true"
+			>
+				<line class="mx-g-guide" x1="0" y1="0" x2="0" y2="100%" />
+				<line class="mx-g-guide" x1="100%" y1="0" x2="100%" y2="100%" />
+			</svg>
+
+			{/* 照片框：拼合前是碎片网格的容器，拼合后整框被控制器平移/缩放/倾斜到落位态 */}
+			<div class="mingxin-mosaic__frame" data-mosaic-frame>
+				<div class="mingxin-mosaic__grid" data-mosaic-grid>
+					{tiles.map((tile) => (
+						<span
+							class:list={[
+								"mingxin-mosaic__tile",
+								{ "is-idle-visible": tile.initiallyVisible },
+							]}
+							data-mosaic-tile
+							data-row={tile.row}
+							data-column={tile.column}
+							data-order={tile.order}
+							data-offset-x={tile.offsetX}
+							data-offset-y={tile.offsetY}
+							data-rotation={tile.rotation}
+							data-scale={tile.scale}
+							data-blur={tile.blur}
+							data-idle-visible={String(tile.initiallyVisible)}
+							style={`left: ${(tile.column / mosaic.columns) * 100}%; top: ${(tile.row / mosaic.rows) * 100}%; width: ${100 / mosaic.columns}%; height: ${100 / mosaic.rows}%; z-index: ${mosaic.idleVisible - tile.idleDepth}; --mxm-col: ${tile.column}; --mxm-row: ${tile.row};`}
+						>
+							<span class="mingxin-mosaic__tile-clip">
+								<img
+									class="mingxin-mosaic__tile-img"
+									data-mosaic-tile-img
+									src={mxMosaicPick ? undefined : mingxinConfig.mosaicImage}
+									data-mx-pick={mxMosaicPick ? "mosaic" : undefined}
+									alt=""
+									loading="eager"
+									decoding="async"
+									draggable="false"
+								/>
+							</span>
+						</span>
+					))}
+				</div>
+				<div class="mingxin-mosaic__complete" data-mosaic-complete>
+					<img
+						class="mingxin-mosaic__complete-img"
+						data-mosaic-complete-img
+						src={mxMosaicPick ? undefined : mingxinConfig.mosaicImage}
+						data-mx-pick={mxMosaicPick ? "mosaic" : undefined}
+						alt=""
+						loading="eager"
+						fetchpriority="high"
+						decoding="async"
+						draggable="false"
+					/>
+				</div>
+				{/* 照片描边：8 条笔画从四角向边中点蔓延，d 由控制器按实测尺寸写入
+				    （pathLength=1000 与原站同：避免 dashoffset 补间被取整成跳变） */}
+				<svg class="mingxin-mosaic__photo-frame" data-mosaic-photo-frame aria-hidden="true">
+					{Array.from({ length: 8 }, () => <path pathLength="1000" />)}
+				</svg>
+			</div>
+
+			<svg
+				class="mingxin-mosaic__guide mingxin-mosaic__guide--h"
+				data-mosaic-guide-h
+				preserveAspectRatio="none"
+				aria-hidden="true"
+			>
+				<line class="mx-g-guide" x1="0" y1="0" x2="100%" y2="0" />
+				<line class="mx-g-guide" x1="0" y1="100%" x2="100%" y2="100%" />
+			</svg>
+
+			{/* 左上巨字标题 + 副标题行（原站 __identity / __title / __occupation）：
+			    字标 = 占位文字撑盒 + canvas 接手矢量描边动画（原站 __wordmark 同构） */}
+			<header class="mingxin-mosaic__identity" data-mosaic-identity>
+				<h1 class="mingxin-mosaic__title">
+					<span class="mingxin-mosaic__wordmark" data-mosaic-wordmark data-mosaic-title-text>
+						<span class="mingxin-mosaic__wordmark-text" data-mosaic-wordmark-text>{siteConfig.title}</span>
+						<canvas class="mingxin-mosaic__wordmark-canvas" aria-hidden="true"></canvas>
+					</span>
+				</h1>
+				<p class="mingxin-mosaic__occupation" data-mosaic-occupation>{mingxinConfig.profileTagline}</p>
+			</header>
+
+			{/* 玻璃雨画布：盒子即导引线围出的画幅（原站 __rain） */}
+			<canvas class="mingxin-mosaic__rain" data-mosaic-rain aria-hidden="true" />
+
+			{/* 介绍票签（原站 __intro）：照片落位后在右侧列错峰倒下；
+			    内容 = 简介散文 / 站点数据 / 联系散文；舞台层整体不拦截指针，
+			    唯叁里的真链接单独开 pointer-events 可点 */}
+			{intro && (
+				<div class="mingxin-mosaic__intro" data-mosaic-intro>
+					<svg class="mingxin-mosaic__intro-defs" aria-hidden="true" focusable="false">
+						<defs>
+							<clipPath id="mingxin-intro-paper" clipPathUnits="objectBoundingBox">
+								<path d="M0.0516 0.0893H0.9484Q0.9547 0.2589 0.9844 0.2857V0.7143Q0.9547 0.7411 0.9484 0.9107H0.0516Q0.0453 0.7411 0.0156 0.7143V0.2857Q0.0453 0.2589 0.0516 0.0893Z" />
+							</clipPath>
+						</defs>
+					</svg>
+					{introCards.map((card) => (
+						<div class="mingxin-mosaic__intro-card" data-mosaic-intro-card>
+							<svg
+								class="mingxin-mosaic__intro-frame"
+								viewBox="0 0 640 112"
+								preserveAspectRatio="none"
+								aria-hidden="true"
+								focusable="false"
+							>
+								<path class="mingxin-mosaic__intro-outline" d="M26 3H614Q614 25 637 25V87Q614 87 614 109H26Q26 87 3 87V25Q26 25 26 3Z" />
+								<path class="mingxin-mosaic__intro-paper" d="M33 10H607Q611 29 630 32V80Q611 83 607 102H33Q29 83 10 80V32Q29 29 33 10Z" />
+							</svg>
+							<span class="mingxin-mosaic__intro-index" aria-hidden="true">{card.index}</span>
+							{card.kind === "bio" && (
+								<p class="mingxin-mosaic__intro-text">{intro.bio}</p>
+							)}
+							{card.kind === "stats" && (
+								<p class="mingxin-mosaic__intro-text">
+									{intro.stats.map((line) => (
+										<span class="mingxin-mosaic__intro-line">{line}</span>
+									))}
+								</p>
+							)}
+							{card.kind === "contact" && (
+								<p class="mingxin-mosaic__intro-text">
+									{intro.contact.map((seg) =>
+										seg.href ? (
+											<a
+												class="mingxin-mosaic__intro-link"
+												href={seg.href}
+												{...(seg.href.startsWith("http")
+													? { target: "_blank", rel: "noopener noreferrer" }
+													: {})}
+											>
+												{seg.text}
+											</a>
+										) : (
+											seg.text
+										),
+									)}
+								</p>
+							)}
+						</div>
+					))}
+				</div>
+			)}
+
+			<script
+				type="application/json"
+				data-mosaic-config
+				is:inline
+				set:html={JSON.stringify(runtime)}
+			/>
+		</div>
+	)
+}
+{
+	part === "section" && (
+		<section
+			class="mingxin-mosaic-scroll"
+			data-mosaic-section
+			aria-hidden="true"
+			style={`height: calc(100vh + ${mosaic.desktopScrollDistance + mosaic.tailDistance + mosaic.handoffDistance}px)`}
+		/>
+	)
+}
+
+<style>
+	/* 前段层：盖住舞台背景，交接完成后由控制器整层撤下。
+	   令牌与原站同名同义：底色 --page-bg、墨色 --deep-text，明信
+	   亮/暗两态由这两个令牌自动反相（与原站口径一致）。 */
+	.mingxin-mosaic {
+		/* 井字导引线列宽与纵向内边距（原站 home-data-layer 与 hero 共用的一份） */
+		--mx-guide-col: clamp(20rem, 94%, 84rem);
+		--mx-layer-pad: clamp(1.5rem, 4.5vh, 3.25rem);
+		/* 照片落位宽度：控制器实测后回写精确 px，这里是 JS 接管前的兜底
+		   （按占位图宽高比 1277/1054 ≈ 1.2116 估算，换图后以实测为准） */
+		--mx-photo-w: min(58vw, 52rem, calc((100svh - 2 * var(--mx-layer-pad)) * 1.2116));
+		/* 导引线墨色（原站 --guide-frame-ink） */
+		--mx-frame-ink: color-mix(in srgb, var(--deep-text) 40%, transparent);
+		/* 照片描边（原站 --home-hero-photo-edge，随主题反相）与照片阴影 */
+		--mx-photo-edge: color-mix(in oklch, var(--deep-text) 92%, transparent);
+		--mx-photo-shadow: color-mix(in oklch, oklch(0.075 0 0) 70%, transparent);
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		overflow: hidden;
+		background: var(--page-bg);
+		pointer-events: none;
+	}
+	.mingxin-mosaic__puzzle {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		width: 100%;
+		height: 100%;
+	}
+	.mingxin-mosaic__puzzle-bg {
+		fill: var(--page-bg);
+	}
+	.mingxin-mosaic__puzzle-seam {
+		fill: none;
+		stroke: color-mix(in oklch, var(--deep-text) 13%, transparent);
+		stroke-width: 1;
+		stroke-linecap: round;
+	}
+	/* 拼合完成后淡入的纯色底：把缝线遮干净（原站 __backdrop） */
+	.mingxin-mosaic__backdrop {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		background: var(--page-bg);
+		opacity: 0;
+	}
+	/* 通栏画幅量尺（原站 __mosaic-target）：纵向落在两条横线之间 */
+	.mingxin-mosaic__target {
+		position: absolute;
+		inset: var(--mx-layer-pad) 0;
+		visibility: hidden;
+	}
+	/* 井字导引线（原站 HomeGuideFrame + hero 覆写）：竖线容器宽 = 内容列宽居中，
+	   横线容器落在纵向内边距处；首帧两组线都用 clip-path 收在中点。
+	   粗描边 + 长划（原站 .g-guide：4px / 14 12） */
+	.mingxin-mosaic__guide {
+		position: absolute;
+		overflow: visible;
+		pointer-events: none;
+	}
+	.mingxin-mosaic__guide--v {
+		top: 0;
+		left: 50%;
+		z-index: 0;
+		width: var(--mx-guide-col);
+		height: 100%;
+		transform: translateX(-50%) scaleY(-1);
+		clip-path: inset(50% -5px 50% -5px);
+	}
+	.mingxin-mosaic__guide--h {
+		top: var(--mx-layer-pad);
+		left: 0;
+		z-index: 21;
+		width: 100%;
+		height: calc(100% - 2 * var(--mx-layer-pad));
+		clip-path: inset(-5px 50% -5px 50%);
+	}
+	.mx-g-guide {
+		fill: none;
+		stroke: var(--mx-frame-ink);
+		stroke-width: 4px;
+		stroke-dasharray: 14 12;
+	}
+	/* 竖线虚线从底边起算、以空隙开头（原站同款相位处理） */
+	.mingxin-mosaic__guide--v .mx-g-guide {
+		stroke-dashoffset: 13;
+	}
+	/* 照片框（原站 __mosaic-frame）：底锚、通栏宽，高度由照片自然比例决定；
+	   transform 只交给滚动动画（落位/交接） */
+	.mingxin-mosaic__frame {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: clamp(1rem, 3vh, 2.75rem);
+		z-index: 1;
+		width: min(84vw, 90rem);
+		margin-inline: auto;
+		transform-origin: 50% 50%;
+		will-change: transform;
+	}
+	.mingxin-mosaic__grid {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		width: 100%;
+		height: 100%;
+	}
+	.mingxin-mosaic__tile {
+		position: absolute;
+		display: block;
+		opacity: 0;
+		visibility: hidden;
+		will-change: transform, opacity;
+	}
+	.mingxin-mosaic__tile-clip {
+		position: relative;
+		display: block;
+		width: 100%;
+		height: 100%;
+		overflow: hidden;
+	}
+	/* 等大整图在碎片内反向偏移：盒子 = 整个照片框，框内按自然比例
+	   完整呈现（无裁切），碎片拼合时与整图逐像素对齐 */
+	.mingxin-mosaic__tile-img {
+		position: absolute;
+		left: calc(var(--mxm-col) * -100%);
+		top: calc(var(--mxm-row) * -100%);
+		width: calc(var(--mxm-cols) * 100%);
+		height: calc(var(--mxm-rows) * 100%);
+		max-width: none;
+		object-fit: cover;
+		display: block;
+		user-select: none;
+		-webkit-user-drag: none;
+	}
+	.mingxin-mosaic__complete {
+		position: relative;
+		z-index: 1;
+		display: block;
+		opacity: 0;
+		visibility: hidden;
+		overflow: hidden;
+		border-radius: 0.75rem;
+		box-shadow: 0 2.4rem 4.8rem -1.6rem var(--mx-photo-shadow);
+	}
+	.mingxin-mosaic__complete-img {
+		display: block;
+		width: 100%;
+		height: auto;
+		user-select: none;
+		-webkit-user-drag: none;
+	}
+	/* 照片描边（原站 __photo-frame）：8 条 pathLength=1000 的笔画，
+	   dashoffset 由控制器从 1000 推到 0，自四角向四边中点蔓延闭合 */
+	.mingxin-mosaic__photo-frame {
+		position: absolute;
+		inset: 0;
+		z-index: 2;
+		width: 100%;
+		height: 100%;
+		overflow: visible;
+		pointer-events: none;
+	}
+	.mingxin-mosaic__photo-frame path {
+		fill: none;
+		stroke: var(--mx-photo-edge);
+		stroke-width: 0.5rem;
+		stroke-dasharray: 1000;
+		stroke-dashoffset: 1000;
+	}
+	/* 左上身份区（原站 __identity）：占上半屏高度、内容垂直居中 */
+	.mingxin-mosaic__identity {
+		position: absolute;
+		top: 0;
+		left: clamp(2rem, 4.5vw, 5rem);
+		z-index: 3;
+		display: flex;
+		height: 50svh;
+		max-width: calc(100vw - 4rem);
+		flex-direction: column;
+		justify-content: center;
+		margin: 0;
+		color: var(--deep-text);
+		will-change: transform, opacity;
+	}
+	/* 巨字字体：原站 --font-sans 首位是经典 Roboto（静态字重只有
+	   400/500/700/900），CSS 写 font-weight 760 时按字体匹配规则落到
+	   900 Black，所以原站渲染是硬朗黑体。自托管经典 Roboto Black
+	   900 静态 latin 子集（Google Fonts 官方分发；Apache 2.0 许可见
+	   public/fonts/Roboto-LICENSE.txt），族名用字体本名 "Roboto Black"
+	   避免与全站 "Roboto" 引用互相干扰；标题仍写 760、与原站同样落
+	   900。只被这条 font-family 引用，非明信访客不触发下载。
+	   （此前用 Roboto Flex 变量字体在 760 真插值，又轻又圆，站长
+	   2026-11-01 看图点名后换回经典版。） */
+	@font-face {
+		font-family: "Roboto Black";
+		font-style: normal;
+		font-display: swap;
+		font-weight: 900;
+		src: url("/fonts/roboto-latin-900.woff2") format("woff2");
+		unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+			U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+			U+2212, U+2215, U+FEFF, U+FFFD;
+	}
+	/* 巨字标题（原站 __title）：字阶/字重/行高照原站 */
+	.mingxin-mosaic__title {
+		margin: 0;
+		font-family: "Roboto Black", "Roboto", ui-sans-serif, system-ui, sans-serif;
+		font-size: clamp(7.5rem, 10.8vw, 9.5rem);
+		font-weight: 760;
+		line-height: 1.08;
+		letter-spacing: 0;
+		text-wrap: balance;
+		overflow: visible;
+	}
+	/* 字标（原站 __wordmark）：占位文字撑出与静态版式一致的盒子并兜底
+	   无 JS 场景，挂载后由 canvas 接手；padding 给选择框与闪烁小方块
+	   留出画布余量，等值负 margin 把多出来的尺寸从布局里扣掉。
+	   舞台层 pointer-events 全关，字标单独开（原站同款：字母可悬停/拖拽，
+	   touch-action: pan-y 保住纵向滚动） */
+	.mingxin-mosaic__wordmark {
+		position: relative;
+		display: inline-block;
+		padding: 4rem 6rem;
+		margin: -4rem -6rem;
+		color: var(--deep-text);
+		touch-action: pan-y;
+		user-select: none;
+		pointer-events: auto;
+	}
+	.mingxin-mosaic__wordmark-canvas {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		opacity: 0;
+		pointer-events: none;
+	}
+	.mingxin-mosaic__wordmark.is-mounted .mingxin-mosaic__wordmark-text {
+		color: transparent;
+	}
+	.mingxin-mosaic__wordmark.is-mounted .mingxin-mosaic__wordmark-canvas {
+		opacity: 1;
+	}
+	/* 副标题行（原站 __occupation）：标题墨色的 64%；方括号照原站版式
+	   由样式层补（原站是写进配置值的，本站配置保持干净、括号在此加） */
+	.mingxin-mosaic__occupation {
+		margin: 1rem 0 0;
+		color: color-mix(in oklch, var(--deep-text) 64%, transparent);
+		font-size: 2rem;
+		font-weight: 500;
+		letter-spacing: 0;
+	}
+	.mingxin-mosaic__occupation::before {
+		content: "[";
+	}
+	.mingxin-mosaic__occupation::after {
+		content: "]";
+	}
+	/* 玻璃雨（原站 __rain）：盒子 = 导引线围出的画幅，激活时淡入 */
+	.mingxin-mosaic__rain {
+		position: absolute;
+		inset: var(--mx-layer-pad) auto auto;
+		left: calc(50% - var(--mx-guide-col) / 2);
+		z-index: 20;
+		width: var(--mx-guide-col);
+		height: calc(100% - 2 * var(--mx-layer-pad));
+		pointer-events: none;
+		opacity: 0;
+		transition: opacity 240ms ease;
+	}
+	.mingxin-mosaic__rain.is-active {
+		opacity: 1;
+	}
+	/* 介绍票签列（原站 __intro）：贴在右导引线内侧，宽 = 列宽 − 照片宽 − 1.5rem */
+	.mingxin-mosaic__intro {
+		--intro-ink: var(--deep-text);
+		--intro-paper: color-mix(in oklch, var(--page-bg) 92%, var(--deep-text));
+		--intro-stagger: clamp(0.75rem, 1.5vw, 1.75rem);
+		position: absolute;
+		top: 50%;
+		right: calc(50% - var(--mx-guide-col) / 2);
+		z-index: 25;
+		display: grid;
+		gap: clamp(1.5rem, 5svh, 3.5rem);
+		width: calc(var(--mx-guide-col) - var(--mx-photo-w) - 1.5rem);
+		transform: translateY(-50%);
+		pointer-events: none;
+	}
+	.mingxin-mosaic__intro-card {
+		position: relative;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		align-items: center;
+		min-width: 0;
+		min-height: clamp(5.5rem, 10svh, 7rem);
+		margin: 0;
+		padding: 1.25rem 11%;
+		padding-left: calc(clamp(4rem, 5.5vw, 6rem) + 0.75rem);
+		color: var(--intro-ink);
+		isolation: isolate;
+		font-size: clamp(0.9rem, 1.05vw, 1.125rem);
+		font-weight: 600;
+		line-height: 1.75;
+		opacity: 0;
+		visibility: hidden;
+		transform-origin: 100% 100%;
+		will-change: transform, opacity;
+	}
+	.mingxin-mosaic__intro-card:nth-child(odd) {
+		margin-right: var(--intro-stagger);
+	}
+	.mingxin-mosaic__intro-card:nth-child(even) {
+		margin-left: var(--intro-stagger);
+	}
+	.mingxin-mosaic__intro-frame {
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		width: 100%;
+		height: 100%;
+		overflow: visible;
+		fill: none;
+		stroke: var(--intro-ink);
+		stroke-width: 1.25;
+	}
+	.mingxin-mosaic__intro-frame path {
+		vector-effect: non-scaling-stroke;
+	}
+	.mingxin-mosaic__intro-frame .mingxin-mosaic__intro-paper {
+		fill: var(--intro-paper);
+	}
+	.mingxin-mosaic__intro-frame .mingxin-mosaic__intro-outline {
+		stroke-width: 2;
+	}
+	.mingxin-mosaic__intro-defs {
+		position: absolute;
+		width: 0;
+		height: 0;
+		overflow: hidden;
+	}
+	/* 序号大字（原站 __intro-index）：嵌进票签左边线，沿内框纸面裁切、右侧溶进纸面 */
+	.mingxin-mosaic__intro-index {
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-items: center start;
+		clip-path: url(#mingxin-intro-paper);
+		color: color-mix(in oklch, var(--intro-ink) 34%, var(--intro-paper));
+		font-family: "KaiTi", "STKaiti", "Kaiti SC", "Songti SC", "SimSun", serif;
+		font-size: clamp(4.5rem, 6vw, 6.5rem);
+		font-weight: 700;
+		line-height: 1;
+		mask-image: linear-gradient(to right, #000 0, transparent 0.92em);
+		-webkit-mask-image: linear-gradient(to right, #000 0, transparent 0.92em);
+		user-select: none;
+	}
+	.mingxin-mosaic__intro-text {
+		margin: 0;
+		overflow-wrap: anywhere;
+		text-wrap: pretty;
+	}
+	.mingxin-mosaic__intro-line {
+		display: block;
+	}
+	/* 叁票签里的真链接：与散文同色不抢眼，悬停才出下划线；
+	   舞台层 pointer-events 全关，唯链接单独开 */
+	.mingxin-mosaic__intro-link {
+		color: inherit;
+		text-decoration: none;
+		pointer-events: auto;
+	}
+	.mingxin-mosaic__intro-link:hover {
+		text-decoration: underline;
+		text-underline-offset: 0.18em;
+	}
+	/* 滚动段本身只是高度占位（近似值，控制器挂载后按实测视口回写精确值）：
+	   舞台是 fixed，段内无任何可见元素；占位段在命中顺序上压着舞台，
+	   指针穿透掉它，叁票签的真链接才点得到（段自身无任何可交互内容） */
+	.mingxin-mosaic-scroll {
+		position: relative;
+		pointer-events: none;
+	}
+</style>

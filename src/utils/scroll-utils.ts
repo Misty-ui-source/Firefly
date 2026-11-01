@@ -12,6 +12,10 @@ const navbar = document.getElementById("navbar-wrapper");
 
 // 动态导航栏：记录上一次滚动位置，用于判断滚动方向（下滑隐藏 / 上滑显示）
 let lastScrollTop = 0;
+// 动态导航栏方向锚点：只有越过锚点足够距离才翻转显隐，避免临界点附近小幅抖动反复横跳。
+// 下滑需累计 8px 才藏（防误触），上滑 2px 即显（保持「一上滑就回来」的手感）
+let dynamicAnchorTop = 0;
+let dynamicHidden = false;
 
 /** 优化的滚动处理函数（从 Layout.astro 迁出；visit:end 切页后也会调用） */
 export function scrollFunction(): void {
@@ -64,11 +68,27 @@ export function scrollFunction(): void {
 			const isSegmentStyle =
 				document.documentElement.getAttribute("data-navbar-style") ===
 				"segment";
-			if (overHero || delta < 0 || scrollTop <= 80 || isSegmentStyle) {
-				navbar.classList.remove("navbar-hidden");
-			} else if (delta > 0 && scrollTop > 150) {
-				navbar.classList.add("navbar-hidden");
+			if (overHero || scrollTop <= 80 || isSegmentStyle) {
+				dynamicHidden = false;
+				dynamicAnchorTop = scrollTop;
+			} else if (
+				!dynamicHidden &&
+				scrollTop - dynamicAnchorTop >= 8 &&
+				scrollTop > 150
+			) {
+				dynamicHidden = true;
+				dynamicAnchorTop = scrollTop;
+			} else if (dynamicHidden && dynamicAnchorTop - scrollTop >= 2) {
+				dynamicHidden = false;
+				dynamicAnchorTop = scrollTop;
+			} else if (!dynamicHidden) {
+				// 保持显示时锚点跟随最低点，上滑判定不被历史高位干扰
+				dynamicAnchorTop = Math.min(dynamicAnchorTop, scrollTop);
+			} else {
+				// 保持隐藏时锚点跟随最高点，下滑途中回拉 2px 即触发显示
+				dynamicAnchorTop = Math.max(dynamicAnchorTop, scrollTop);
 			}
+			navbar.classList.toggle("navbar-hidden", dynamicHidden);
 			document.body.classList.toggle(
 				"dynamic-navbar-hidden",
 				navbar.classList.contains("navbar-hidden"),

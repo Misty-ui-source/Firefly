@@ -143,14 +143,14 @@ function serializeMenus(menus: Props["config"]["menus"]) {
 		},
 	};
 
-	// 璨夜（astral）与素简（pure）形态下不设看板娘：astral-mode.css / pure-mode.css
-	// 都把 widget 容器 display:none，初始化纯属白下载引擎。守卫跳过 createWidget
+	// 璨夜（astral）、素简（pure）与明信（mingxin）形态下不设看板娘：各形态
+	// CSS 都把 widget 容器 display:none，初始化纯属白下载引擎。守卫跳过 createWidget
 	// （引擎 chunk 也不拉），切到其他形态时由 siteModeChange 监听懒补初始化；
-	// 已经初始化过的，切进这两个形态靠 CSS 隐藏（形态切换是实时改
+	// 已经初始化过的，切进这些形态靠 CSS 隐藏（形态切换是实时改
 	// data-site-mode、不刷新页面，两条路都要有）。
 	const isNoMascotMode = () => {
 		const m = document.documentElement.dataset.siteMode;
-		return m === "astral" || m === "pure";
+		return m === "astral" || m === "pure" || m === "mingxin";
 	};
 	let widgetInitialized = false;
 

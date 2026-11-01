@@ -1,0 +1,3552 @@
+/* ============================================================
+ * 站点形态 · 明信（mingxin）样式
+ * ------------------------------------------------------------
+ * 第七形态：零饱和中性门户 + 明信片影像层首页，视觉参考 mmz
+ * （Shirone 变体）。皮肤思路照其 theme.css：表面族全去色相、
+ * 影像保留原色、页面区块按原站口径退化为透明无框，真正独立的小卡
+ * 才走 1px 表面公式；壳层照站长 2026-11-01 拍板：全站砍双侧栏、
+ * 标准主列收回原站 64rem、顶栏收成居中胶囊。机制同其余形态：siteConfig 定默认、访客覆盖存
+ * localStorage、Layout 头部脚本绘制前写好 data-site-mode；
+ * 本文件由 Layout 以真实 <link> 静态加载。
+ * 形态专属元素的默认隐藏守卫在 main.css 常加载主包里（.mingxin-home、
+ * #mingxin-texture-canvas），本文件只负责点亮与皮肤。
+ * 整文件 @layer components（与 main.css 同层靠特异性竞争）；
+ * 变量重定义例外放在 layer 外（html 属性选择器特异性高于 :root）。
+ * ============================================================ */
+
+/* ---------- 零饱和令牌（layer 外：需压过 variables.styl 的 :root） ---------- */
+html[data-site-mode="mingxin"] {
+	/* 表面族（照 mmz theme.css §A，C=0 灰阶） */
+	--surface: oklch(0.97 0 0);
+	--surface-dim: oklch(0.94 0 0);
+	--surface-bright: oklch(0.99 0 0);
+	--surface-container-lowest: oklch(1 0 0);
+	--surface-container-low: oklch(0.98 0 0);
+	--surface-container: oklch(0.965 0 0);
+	--surface-container-high: oklch(0.95 0 0);
+	--surface-container-highest: oklch(0.93 0 0);
+	--surface-variant: oklch(0.93 0 0);
+	--on-surface: oklch(0.18 0 0);
+	--on-surface-variant: oklch(0.44 0 0);
+	--outline: oklch(0.55 0 0);
+	--outline-variant: oklch(0.87 0 0);
+	--on-primary: oklch(0.99 0 0);
+	--primary-container: oklch(0.9 0 0);
+	--on-primary-container: oklch(0.18 0 0);
+	--secondary: oklch(0.4 0 0);
+	--tertiary: oklch(0.32 0 0);
+	/* Firefly 本体令牌按原站 variables.styl 校准（上层组件读这组）。
+	   --card-bg 例外保留实体色：Firefly 与明信自有组件把它当局部表面色
+	   消费（终幕面板、徽标底等），原站的“透明”口径落在 .card-base /
+	   .btn-card 的实际计算值上，不靠把令牌改透明实现。 */
+	--page-width: 64rem !important;
+	--radius-large: 0.75rem;
+	--radius-medium: 0.5rem;
+	--radius-small: 0.25rem;
+	--page-bg: oklch(1 0 0);
+	--card-bg: oklch(1 0 0);
+	--card-surface: color-mix(in oklab, var(--deep-text) 5%, var(--page-bg));
+	--card-surface-hover: color-mix(
+		in oklab,
+		var(--deep-text) 11%,
+		var(--page-bg)
+	);
+	--card-border: color-mix(in oklab, var(--deep-text) 14%, transparent);
+	--card-border-hover: color-mix(in oklab, var(--deep-text) 30%, transparent);
+	--article-surface-bg: #f5f5f5;
+	--float-panel-bg: oklch(1 0 0);
+	--primary: oklch(0.3 0 0);
+	--deep-text: oklch(0.1 0 0);
+	--content-meta: oklch(0.45 0 0);
+	--line-divider: oklch(0.85 0 0);
+	--line-color: oklch(0.85 0 0);
+	--title-active: oklch(0.3 0 0);
+	--btn-content: oklch(0.3 0 0);
+	--btn-regular-bg: transparent;
+	--btn-regular-bg-hover: oklch(0.94 0 0);
+	--btn-regular-bg-active: oklch(0.9 0 0);
+	--btn-plain-bg-hover: oklch(0.94 0 0);
+	--btn-plain-bg-active: oklch(0.9 0 0);
+	--btn-card-bg-hover: oklch(0.96 0 0);
+	--btn-card-bg-active: oklch(0.92 0 0);
+	--enter-btn-bg: transparent;
+	--enter-btn-bg-hover: oklch(0.94 0 0);
+	--enter-btn-bg-active: oklch(0.9 0 0);
+	--license-block-bg: oklch(0.97 0 0);
+	--muted: oklch(0.93 0 0);
+	--selection-bg: oklch(0.85 0 0);
+	--link-underline: oklch(0.85 0 0);
+	--link-hover: oklch(0.94 0 0);
+	--link-active: oklch(0.9 0 0);
+	--inline-code-bg: oklch(0.95 0 0);
+	--inline-code-color: oklch(0.2 0 0);
+	--shadow-md: none;
+	--shadow-navbar: none;
+	--shadow-navbar-dark: none;
+	/* M3 形状 / 动效 / 等宽字体令牌（明信组件内部消费，数值照 M3 规范） */
+	--shape-corner-xs: 0.25rem;
+	--shape-corner-s: 0.5rem;
+	--shape-corner-m: 0.75rem;
+	--shape-corner-l: 1rem;
+	--shape-corner-xl: 1.75rem;
+	--shape-corner-full: 999px;
+	--m3e-duration-short: 200ms;
+	--m3e-duration-medium: 400ms;
+	--m3e-duration-long: 600ms;
+	--m3e-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+	--m3e-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+	--m3e-font-mono-family:
+		ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+	--m3e-elevation-2:
+		0 1px 2px rgb(0 0 0 / 0.08), 0 4px 12px rgb(0 0 0 / 0.08);
+	--m3e-elevation-3:
+		0 4px 8px rgb(0 0 0 / 0.1), 0 12px 28px rgb(0 0 0 / 0.12);
+	--m3e-elevation-4:
+		0 8px 16px rgb(0 0 0 / 0.12), 0 20px 44px rgb(0 0 0 / 0.16);
+}
+
+html.dark[data-site-mode="mingxin"] {
+	--surface: oklch(0.14 0 0);
+	--surface-dim: oklch(0.11 0 0);
+	--surface-bright: oklch(0.22 0 0);
+	--surface-container-lowest: oklch(0.1 0 0);
+	--surface-container-low: oklch(0.15 0 0);
+	--surface-container: oklch(0.18 0 0);
+	--surface-container-high: oklch(0.21 0 0);
+	--surface-container-highest: oklch(0.25 0 0);
+	--surface-variant: oklch(0.28 0 0);
+	--on-surface: oklch(0.93 0 0);
+	--on-surface-variant: oklch(0.72 0 0);
+	--outline: oklch(0.5 0 0);
+	--outline-variant: oklch(0.3 0 0);
+	--on-primary: oklch(0.12 0 0);
+	--primary-container: oklch(0.32 0 0);
+	--on-primary-container: oklch(0.92 0 0);
+	--secondary: oklch(0.8 0 0);
+	--tertiary: oklch(0.74 0 0);
+	--page-bg: #101010;
+	--card-bg: oklch(0.15 0 0);
+	--article-surface-bg: #161616;
+	--float-panel-bg: #161616;
+	--primary: #dadada;
+	--deep-text: #dadada;
+	--content-meta: #999999;
+	--line-divider: #2e2e2e;
+	--line-color: #2e2e2e;
+	--title-active: #dadada;
+	--btn-content: #dadada;
+	--btn-regular-bg: transparent;
+	--btn-regular-bg-hover: #212121;
+	--btn-regular-bg-active: #282828;
+	--btn-plain-bg-hover: #212121;
+	--btn-plain-bg-active: #282828;
+	--btn-card-bg-hover: #212121;
+	--btn-card-bg-active: #282828;
+	--enter-btn-bg: transparent;
+	--enter-btn-bg-hover: #212121;
+	--enter-btn-bg-active: #282828;
+	--license-block-bg: #161616;
+	--muted: oklch(0.28 0 0);
+	--selection-bg: #333333;
+	--link-underline: #2e2e2e;
+	--link-hover: #212121;
+	--link-active: #282828;
+	--inline-code-bg: #333333;
+	--inline-code-color: #dadada;
+}
+
+/* 明信顶栏常驻（layer 外，压过 utilities 层的 .navbar-hidden）：原作只有
+   收放没有消失——基座 dynamic 顶栏的下滑隐藏会把整条三段胶囊藏走、
+   头像球状态无从验起；明信下中和该位移，其他形态不受影响。 */
+html[data-site-mode="mingxin"] #navbar-wrapper.navbar-hidden {
+	translate: none;
+}
+
+@layer components {
+	/* ---------- 点亮守卫管辖的元素 ---------- */
+	html[data-site-mode="mingxin"] .mingxin-home {
+		display: block;
+	}
+
+	/* 标准首页内容让位：仅首页且明信首页在场时（分页页无 .mingxin-home，不受影响） */
+	html[data-site-mode="mingxin"] body.is-home:has(.mingxin-home) .std-home {
+		display: none;
+	}
+
+	/* ---------- 全站壳层：砍双侧栏 + 内容全宽居中（站长 2026-11-01 拍板） ---------- */
+	/* 网格几何变量由 MainGridLayout 内联写在 #content-panel-inner 上，
+	   这里用 !important 变量覆盖把三列塌成单列（沿用本站变量机制，不改结构） */
+	html[data-site-mode="mingxin"] #content-panel-inner {
+		--cols-md: minmax(0, 1fr) !important;
+		--cols-xl: minmax(0, 1fr) !important;
+		--left-display-md: none !important;
+		--left-display-xl: none !important;
+		--right-display-md: none !important;
+		--right-display-xl: none !important;
+		--content-ratio-md: 1 !important;
+		--content-ratio-xl: 1 !important;
+	}
+	/* 内容上限照原站 grid.css / MainGridLayout：--page-width 64rem，
+	   主网格横向留白 1rem、≥48rem 时 1.5rem，桌面内容盒 976px。 */
+	html[data-site-mode="mingxin"] #main-grid {
+		max-width: 64rem;
+		margin-inline: auto;
+		padding-inline: 1rem !important;
+	}
+	@media (min-width: 48rem) {
+		html[data-site-mode="mingxin"] #main-grid {
+			padding-inline: 1.5rem !important;
+		}
+	}
+	/* ---------- 文章页：阅读列收窄到 55rem（照原站 markdown.css 文章详情口径） ---------- */
+	/* 原站 .post-hero/.post-accordion/#post-cover/#post-container/.post-pager-row
+	   同列 55rem（880px），评论同宽；本站封面/标题/系列导航都在
+	   #post-container 内，随容器一并收窄，无独立 hero/cover 块。
+	   本单把 #post-container 按原站 .card-base 口径退化为 0 边框后，
+	   宽度补偿只剩本站保留的内边距：px-6（<md，合计 3rem）/
+	   md:px-9（合计 4.5rem）；不再按粗框开关分两档。
+	   width 用 !important：要压过卡片自带的 w-full（@layer utilities）。 */
+	html[data-site-mode="mingxin"] #post-container {
+		width: min(calc(55rem + 3rem), 100%) !important;
+		margin-inline: auto;
+	}
+	@media (min-width: 48rem) {
+		html[data-site-mode="mingxin"] #post-container {
+			width: min(calc(55rem + 4.5rem), 100%) !important;
+		}
+	}
+	/* 正文外层照原站：flex 全宽、12px 圆角裁切、下边距 0.5rem。
+	   外层本身不是卡片，表面仍由退化后的 #post-container 决定。 */
+	html[data-site-mode="mingxin"]
+		#content-wrapper
+		> div:has(> #post-container) {
+		border-radius: var(--radius-large);
+		overflow: hidden;
+		margin-bottom: 0.5rem;
+	}
+	/* 上/下一篇翻页行与评论卡同列 55rem；两者在本站无专属钩子，
+	   按 #content-wrapper 内结构定位，仅在文章页（#post-container 在场）生效 */
+	html[data-site-mode="mingxin"]
+		#content-wrapper:has(#post-container)
+		> div:has(> a > .btn-card),
+	html[data-site-mode="mingxin"]
+		#content-wrapper:has(#post-container)
+		> #post-comments {
+		width: min(55rem, 100%) !important;
+		margin-inline: auto;
+	}
+	/* 移动端底部侧栏组件与分类条一并让位（与参考站 theme.css 同口径） */
+	html[data-site-mode="mingxin"] #mobile-bottom-sidebar {
+		display: none !important;
+	}
+	html[data-site-mode="mingxin"] #category-bar-wrapper {
+		display: none;
+	}
+
+	/* ---------- 顶栏：原站 mmz 三件套直接移植（2026-11-01 站长改定） ----------
+	   结构/数值/动效照原站 navbar-new.css + navbar-profile-card.css，类名换
+	   mxnav- 前缀防撞本站标准顶栏；令牌映射：--navbar-bg → --mxnav-bg
+	   （本站磨砂玻璃口径）、--navbar-highlight-* → 深字 8% 染（与原作灰阶
+	   高亮同关系）、--page-width → 64rem（原站主列）。标准顶栏整条隐藏，
+	   明信只走 .mxnav；行为层在 scripts/mingxin-navbar.ts + mingxin-dropdown.ts。 */
+	html[data-site-mode="mingxin"] #navbar {
+		background: transparent;
+		box-shadow: none;
+	}
+	html[data-site-mode="mingxin"] #navbar .navbar-bar {
+		display: none;
+	}
+	html[data-site-mode="mingxin"] .mxnav {
+		display: block;
+	}
+
+	.mxnav {
+		--mxnav-bg: color-mix(
+			in oklab,
+			var(--surface-container-low) 86%,
+			transparent
+		);
+		--mxnav-highlight-bg: color-mix(in oklch, var(--deep-text) 8%, transparent);
+		--mxnav-highlight-text: var(--deep-text);
+		position: relative;
+		padding-top: 0.6rem;
+	}
+
+	/* ── 三段式容器 ── */
+	.mxnav-segments {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: calc(100% - 2rem);
+		max-width: 64rem;
+		min-height: 2.75rem;
+		margin-inline: auto;
+		position: relative;
+	}
+
+	/* ── 椭圆段通用样式：磨砂玻璃（令牌映射，关系照原作） ── */
+	.mxnav-seg {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		border-radius: 9999px;
+		padding: 0.25rem 0.5rem;
+		background-color: var(--mxnav-bg);
+		border: 1px solid var(--outline-variant);
+		box-shadow: var(--m3e-elevation-2);
+		-webkit-backdrop-filter: blur(14px) saturate(1.4);
+		backdrop-filter: blur(14px) saturate(1.4);
+		transition:
+			max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+			width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+			height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+			padding 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+			border-radius 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+			left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+			transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	/* 左段：默认贴最左 */
+	.mxnav-seg--left {
+		position: absolute;
+		left: 0;
+		top: 50%;
+		transform: translateY(-50%);
+		justify-content: flex-start;
+	}
+
+	/* 中段：绝对定位居中，永远不受左右段宽度变化影响 */
+	.mxnav-seg--center {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		transform: translate(-50%, -50%);
+		justify-content: center;
+		z-index: 20;
+		transition: padding 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	/* 右段：默认贴最右，只有一颗工具钮（+ 窄屏菜单钮） */
+	.mxnav-seg--right {
+		position: absolute;
+		left: 100%;
+		right: auto;
+		top: 50%;
+		transform: translate(-100%, -50%);
+		justify-content: flex-end;
+		gap: 0.25rem;
+	}
+
+	/* 移动端：中段隐藏，左右段恢复 flex 排列 */
+	@media (max-width: 1023px) {
+		.mxnav-segments {
+			justify-content: space-between;
+		}
+		.mxnav-seg--left,
+		.mxnav-seg--right {
+			position: relative;
+			left: auto;
+			right: auto;
+			top: auto;
+			transform: none;
+		}
+		.mxnav-seg--center {
+			display: none;
+		}
+		.mxnav.is-scrolled .mxnav-seg--left,
+		.mxnav.is-scrolled .mxnav-seg--right {
+			left: auto;
+			right: auto;
+			transform: none;
+		}
+	}
+
+	/* ── 品牌胶囊：头像 + 站名（站长改定，无 logo 图形） ── */
+	.mxnav-brand {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+		height: 2.25rem;
+		padding: 0 0.4rem 0 0.25rem;
+		position: relative;
+		z-index: 10;
+		text-decoration: none;
+		color: var(--deep-text);
+		border-radius: 9999px;
+	}
+	.mxnav-brand__avatar {
+		width: 1.8rem;
+		height: 1.8rem;
+		border-radius: 9999px;
+		object-fit: cover;
+		flex: none;
+	}
+	/* 站名：滚动后淡出收缩（左段成球，原作 logo-text 同法） */
+	.mxnav-brand__text {
+		display: inline-block;
+		max-width: 12rem;
+		overflow: hidden;
+		white-space: nowrap;
+		font-size: 0.95rem;
+		font-weight: 700;
+		opacity: 1;
+		transform: translateX(0);
+		transition:
+			opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+			transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+			max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+			margin 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.mxnav.is-scrolled .mxnav-seg--left {
+		width: 2.25rem;
+		min-width: 2.25rem;
+		max-width: 2.25rem;
+		height: 2.25rem;
+		min-height: 2.25rem;
+		max-height: 2.25rem;
+		padding: 0;
+		border-radius: 9999px;
+		overflow: hidden;
+	}
+	.mxnav.is-scrolled .mxnav-brand__text {
+		max-width: 0;
+		opacity: 0;
+		transform: translateX(-6px);
+		margin-left: 0 !important;
+	}
+	.mxnav.is-scrolled .mxnav-brand {
+		padding: 0;
+		width: 100%;
+		justify-content: center;
+	}
+
+	/* ── 中段导航菜单 ── */
+	.mxnav-nav {
+		display: none;
+		align-items: center;
+		gap: 0.125rem;
+		white-space: nowrap;
+		position: relative;
+	}
+	@media (min-width: 1024px) {
+		.mxnav-nav {
+			display: flex;
+		}
+	}
+	.mxnav-item {
+		position: relative;
+		z-index: 1;
+	}
+	.mxnav-trigger {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		height: 2.25rem;
+		/* 原站 px-3（0.75rem）在本站 8 项下中段过宽、与左段间隙仅 0.2px，
+		   微收 0.05rem/侧换段间呼吸（见 ≤1152 紧凑档，两步合力保各档 gap ≥ 8） */
+		padding: 0 0.7rem;
+		border: 0;
+		border-radius: 9999px;
+		background: none;
+		font: inherit;
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: var(--deep-text);
+		text-decoration: none;
+		white-space: nowrap;
+		cursor: pointer;
+		position: relative;
+		z-index: 1;
+	}
+	.mxnav-trigger-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 0.95rem;
+		height: 0.95rem;
+		flex: none;
+	}
+	/* 紧凑档（1024–1152）：容器随视口收窄后中段再让一档，
+	   保证最窄桌面档左段间隙仍 ≥ 8px、不重叠（原站项少无此档） */
+	@media (min-width: 1024px) and (max-width: 1152px) {
+		.mxnav-trigger {
+			padding: 0 0.55rem;
+			font-size: 0.85rem;
+		}
+	}
+	.mxnav-trigger-icon svg {
+		display: block;
+		width: 100%;
+		height: 100%;
+	}
+	.mxnav-trigger__chevron {
+		font-size: 1rem;
+		opacity: 0.55;
+		transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	.mxnav-item.is-dropdown-open .mxnav-trigger__chevron {
+		transform: rotate(180deg);
+	}
+	.mxnav-trigger__external {
+		font-size: 0.7rem;
+		opacity: 0.4;
+	}
+
+	/* 收缩状态：右段成球，只保留工具按钮（原作同法） */
+	.mxnav.is-scrolled .mxnav-seg--right {
+		width: 2.25rem;
+		min-width: 2.25rem;
+		max-width: 2.25rem;
+		height: 2.25rem;
+		min-height: 2.25rem;
+		max-height: 2.25rem;
+		padding: 0;
+		border-radius: 9999px;
+		overflow: hidden;
+	}
+	@media (min-width: 1024px) {
+		.mxnav.is-scrolled .mxnav-seg--left {
+			left: var(--mxnav-compact-left, 0px);
+			transform: translate(-100%, -50%);
+		}
+		.mxnav.is-scrolled .mxnav-seg--right {
+			left: var(--mxnav-compact-right, 100%);
+			right: auto;
+			transform: translateY(-50%);
+		}
+	}
+	/* 移动端：滚动收缩不触发（左右段保持展开，原作同法） */
+	@media (max-width: 1023px) {
+		.mxnav.is-scrolled .mxnav-seg--left,
+		.mxnav.is-scrolled .mxnav-seg--right {
+			width: auto;
+			min-width: auto;
+			max-width: none;
+			height: auto;
+			min-height: auto;
+			max-height: none;
+			padding: 0.25rem 0.5rem;
+		}
+		.mxnav.is-scrolled .mxnav-brand__text {
+			max-width: 12rem;
+			opacity: 1;
+			transform: translateX(0);
+		}
+		.mxnav.is-scrolled .mxnav-brand {
+			padding: 0 0.4rem 0 0.25rem;
+			width: auto;
+		}
+		.mxnav.is-scrolled .mxnav-segments {
+			justify-content: space-between;
+		}
+		.mxnav.is-scrolled .mxnav-seg--center {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			transform: translate(-50%, -50%);
+		}
+	}
+
+	/* ── hover 滑动高亮指示器（无边框，纯背景，原作同法） ── */
+	.mxnav-hover-highlight {
+		position: absolute;
+		height: 2.25rem;
+		border-radius: 9999px;
+		border: none;
+		background-color: var(--mxnav-highlight-bg);
+		opacity: 0;
+		transition:
+			left 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+			width 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+			height 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+			top 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+			opacity 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+			background-color 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+		pointer-events: none;
+		z-index: 0;
+	}
+	.mxnav-nav .mxnav-item.is-highlighted > a,
+	.mxnav-nav .mxnav-item.is-highlighted > button {
+		color: var(--mxnav-highlight-text) !important;
+	}
+	/* 当前栏目图标：独立于各导航项移动，避免布局宽度参与动画（原作同法） */
+	.mxnav-moving-icon {
+		position: absolute;
+		display: grid;
+		place-items: center;
+		color: var(--deep-text);
+		opacity: 0;
+		pointer-events: none;
+		z-index: 30;
+		will-change: transform, opacity;
+	}
+	.mxnav-nav:has(.mxnav-item.is-highlighted.is-active-item) .mxnav-moving-icon {
+		color: var(--mxnav-highlight-text);
+	}
+	.mxnav-moving-icon__glyph {
+		display: inline-flex;
+		grid-area: 1 / 1;
+		align-items: center;
+		justify-content: center;
+		width: 100%;
+		height: 100%;
+		will-change: opacity;
+	}
+	.mxnav-moving-icon__glyph--next {
+		opacity: 0;
+	}
+	.mxnav-moving-icon svg {
+		display: block;
+		width: 0.9rem;
+		height: 0.9rem;
+	}
+	.mxnav-nav:hover .mxnav-hover-highlight,
+	.mxnav-nav.has-active-item .mxnav-hover-highlight {
+		opacity: 1;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.mxnav-hover-highlight {
+			transition-duration: 0.01ms;
+		}
+		.mxnav-moving-icon,
+		.mxnav-moving-icon__glyph {
+			animation: none !important;
+			transition: none !important;
+		}
+	}
+
+	/* ── 共享下拉面板（原作控制器几何；箱体语言与工具箱同源：
+	   1.5px 深字描边 + 浮层底 + 箭头方块，页交叉淡换、箱宽高过渡） ── */
+	.mxnav-dropdown-panel {
+		position: absolute;
+		top: 100%;
+		left: 0;
+		width: max-content;
+		/* 与导航行拉开距离，桥区在面板内，悬停路径不断（原作同法） */
+		padding-top: 1rem;
+		opacity: 0;
+		visibility: hidden;
+		pointer-events: none;
+		transform: scale(0.95);
+		transform-origin: 50% top;
+		transition:
+			opacity 0.1s cubic-bezier(0.4, 0, 1, 1),
+			transform 0.1s cubic-bezier(0.4, 0, 1, 1),
+			visibility 0.1s linear;
+		z-index: 50;
+	}
+	.mxnav-dropdown-panel.is-open {
+		opacity: 1;
+		visibility: visible;
+		pointer-events: auto;
+		transform: scale(1);
+		transition:
+			opacity 0.16s ease-out,
+			transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+			visibility 0s;
+	}
+	.mxnav-dropdown-arrow {
+		position: absolute;
+		top: calc(1rem - 0.45rem + 1.5px);
+		left: 0;
+		width: 0.75rem;
+		height: 0.75rem;
+		border-top: 1.5px solid var(--deep-text);
+		border-left: 1.5px solid var(--deep-text);
+		background: var(--float-panel-bg);
+		transform: rotate(45deg);
+		transition: left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+		z-index: 1;
+	}
+	.mxnav-dropdown-box {
+		position: relative;
+		border: 1.5px solid var(--deep-text);
+		border-radius: 0.75rem;
+		background: var(--float-panel-bg);
+		color: var(--deep-text);
+		overflow: hidden;
+		transition:
+			width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+			height 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	.mxnav-dropdown-page {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: max-content;
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		padding: 0.5rem;
+		opacity: 0;
+		visibility: hidden;
+		transition:
+			opacity 0.18s ease,
+			visibility 0.18s;
+	}
+	.mxnav-dropdown-page.is-active {
+		opacity: 1;
+		visibility: visible;
+	}
+	.mxnav-dropdown-highlight {
+		position: absolute;
+		top: 0;
+		right: 0.5rem;
+		left: 0.5rem;
+		height: var(--mxnav-dropdown-hl-h, 0);
+		border-radius: 0.5rem;
+		background-color: color-mix(in oklch, var(--deep-text) 8%, transparent);
+		opacity: 0;
+		pointer-events: none;
+		transform: translateY(var(--mxnav-dropdown-hl-y, 0));
+		transition:
+			transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+			height 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+			opacity 0.12s ease-out;
+	}
+	.mxnav-dropdown-page.is-hovered .mxnav-dropdown-highlight {
+		opacity: 1;
+	}
+	.mxnav-dropdown-item {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		align-items: center;
+		height: 2.25rem;
+		padding: 0 0.75rem;
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--deep-text);
+		text-decoration: none;
+		white-space: nowrap;
+	}
+	.mxnav-dropdown-item:hover,
+	.mxnav-dropdown-item:focus-visible {
+		color: var(--primary);
+	}
+	.mxnav-dropdown-item__icon {
+		font-size: 1.2rem;
+		margin-right: 0.75rem;
+		flex: none;
+	}
+	.mxnav-dropdown-item__external {
+		font-size: 0.7rem;
+		margin-left: auto;
+		padding-left: 0.75rem;
+		opacity: 0.4;
+	}
+
+	/* ── 右段工具钮 + 悬停工具面板（原作同法：挂在 segments 下避开裁剪，
+	   定位由控制器实测，--mxnav-tools-anchor-x 共用指针与缩放原点） ── */
+	.mxnav-tools-btn,
+	.mxnav-menu-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.25rem;
+		height: 2.25rem;
+		padding: 0;
+		border: 0;
+		border-radius: 9999px;
+		background: transparent;
+		color: var(--deep-text);
+		cursor: pointer;
+		flex: none;
+	}
+	.mxnav-tools-btn__icon {
+		font-size: 1.4rem;
+	}
+	.mxnav-menu-btn__icon {
+		font-size: 1.2rem;
+	}
+	@media (min-width: 1024px) {
+		.mxnav-menu-btn {
+			display: none;
+		}
+	}
+	.mxnav-tools-panel {
+		position: absolute;
+		top: 100%;
+		left: 0;
+		width: max-content;
+		/* 与导航栏拉开距离，保留悬停过渡区防止面板收起（原作同法） */
+		padding-top: 1rem;
+		opacity: 0;
+		visibility: hidden;
+		pointer-events: none;
+		transform: scale(0.95);
+		transform-origin: var(--mxnav-tools-anchor-x, 6rem) top;
+		transition:
+			opacity 0.1s cubic-bezier(0.4, 0, 1, 1),
+			transform 0.1s cubic-bezier(0.4, 0, 1, 1),
+			visibility 0.1s linear;
+		z-index: 50;
+	}
+	.mxnav-tools-panel.is-open {
+		opacity: 1;
+		visibility: visible;
+		pointer-events: auto;
+		transform: scale(1);
+		transition:
+			opacity 0.16s ease-out,
+			transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+			visibility 0s;
+	}
+	.mxnav-tools-box {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		min-width: 15.5rem;
+		padding: 0.5rem;
+		border: 1.5px solid var(--deep-text);
+		border-radius: 0.75rem;
+		background: var(--float-panel-bg);
+		color: var(--deep-text);
+	}
+	.mxnav-tools-box::before {
+		position: absolute;
+		top: -0.45rem;
+		left: 0;
+		width: 0.75rem;
+		height: 0.75rem;
+		border-top: 1.5px solid var(--deep-text);
+		border-left: 1.5px solid var(--deep-text);
+		background: var(--float-panel-bg);
+		content: "";
+		transform: translateX(
+			calc(var(--mxnav-tools-anchor-x, 6rem) - 1.5px - 0.375rem)
+		) rotate(45deg);
+	}
+	.mxnav-tools-highlight {
+		position: absolute;
+		top: 0;
+		right: 0.5rem;
+		left: 0.5rem;
+		height: var(--mxnav-tools-hl-h, 0);
+		opacity: 0;
+		border-radius: 0.5rem;
+		background-color: color-mix(in oklch, var(--deep-text) 8%, transparent);
+		pointer-events: none;
+		transform: translateY(var(--mxnav-tools-hl-y, 0));
+		transition:
+			transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+			height 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+			opacity 0.12s ease-out;
+	}
+	.mxnav-tools-highlight.is-on {
+		opacity: 1;
+	}
+	.mxnav-tools-item {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
+		width: 100%;
+		height: 2.25rem;
+		padding: 0 0.75rem;
+		border: 0;
+		border-radius: 0.5rem;
+		background: none;
+		font: inherit;
+		color: var(--deep-text);
+		font-size: 0.875rem;
+		font-weight: 500;
+		text-align: start;
+		white-space: nowrap;
+		cursor: pointer;
+		opacity: 0;
+		transform: translateY(3px);
+		transition:
+			color 0.15s ease-out,
+			opacity 0.2s ease-out var(--mxnav-tools-row-delay, 0s),
+			transform 0.2s cubic-bezier(0.22, 1, 0.36, 1)
+				var(--mxnav-tools-row-delay, 0s);
+	}
+	.mxnav-tools-panel.is-open .mxnav-tools-item {
+		--mxnav-tools-row-delay: calc(
+			0.03s + var(--mxnav-tools-row-index, 0) * 0.016s
+		);
+		opacity: 1;
+		transform: none;
+	}
+	.mxnav-tools-item__icon {
+		flex-shrink: 0;
+		font-size: 1.15rem;
+	}
+	.mxnav-tools-item:hover,
+	.mxnav-tools-item:focus-visible {
+		color: var(--primary);
+	}
+	.mxnav-tools-keys {
+		margin-left: auto;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		flex-shrink: 0;
+		font-size: 0.8125rem;
+		line-height: 1;
+		color: color-mix(in oklch, var(--deep-text) 45%, transparent);
+	}
+	.mxnav-tools-chevron {
+		margin-left: auto;
+		font-size: 1.1rem;
+		opacity: 0.6;
+		transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	.mxnav-tools-item[aria-expanded="true"] .mxnav-tools-chevron {
+		transform: rotate(180deg);
+	}
+	/* 公告内联展开区（本站单条公告的数据适配，行逻辑照原作） */
+	.mxnav-tools-notice {
+		padding: 0.55rem 0.75rem;
+		border-radius: 0.5rem;
+		background: color-mix(in oklch, var(--deep-text) 5%, transparent);
+		font-size: 0.82rem;
+		line-height: 1.55;
+		color: var(--deep-text);
+	}
+	.mxnav-tools-notice[hidden] {
+		display: none;
+	}
+	.mxnav-tools-notice p {
+		margin: 0;
+	}
+	.mxnav-tools-notice a {
+		display: inline-block;
+		margin-top: 0.3rem;
+		font-weight: 600;
+		color: var(--primary);
+	}
+	/* 主题三段滑块：整行是一个组，滑块只靠 --mxnav-tools-seg-index 位移（原作同法） */
+	.mxnav-tools-segments {
+		position: relative;
+		display: flex;
+		flex-shrink: 0;
+		margin-left: auto;
+		padding: 2px;
+		border-radius: 9999px;
+		background-color: color-mix(in oklch, var(--deep-text) 8%, transparent);
+	}
+	.mxnav-tools-thumb {
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: calc((100% - 4px) / 3);
+		height: calc(100% - 4px);
+		border-radius: 9999px;
+		background-color: color-mix(in oklch, var(--deep-text) 18%, transparent);
+		transform: translateX(calc(var(--mxnav-tools-seg-index, 0) * 100%));
+		transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	.mxnav-tools-segment {
+		position: relative;
+		z-index: 1;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.75rem;
+		height: 1.5rem;
+		padding: 0;
+		border: 0;
+		border-radius: 9999px;
+		background: none;
+		color: var(--deep-text);
+		cursor: pointer;
+		opacity: 0.55;
+		transition: opacity 0.15s ease-out;
+	}
+	.mxnav-tools-segment:hover {
+		opacity: 0.8;
+	}
+	.mxnav-tools-segment[aria-checked="true"] {
+		opacity: 1;
+	}
+	.mxnav-tools-segment__icon {
+		font-size: 0.95rem;
+	}
+
+	/* ── 外观段：主题行下方同箱体的一节（不是另一只盒子）。
+	   展开 = 行高展开动画，触发挂在主题行与外观段共同的悬停组上：
+	   工具钮 → 面板 → 主题行 → 形态格，指针全程在同一只箱子内不断线 ── */
+	.mxnav-appearance {
+		display: grid;
+		grid-template-rows: 0fr;
+		opacity: 0;
+		transition:
+			grid-template-rows 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+			opacity 0.25s ease;
+	}
+	.mxnav-appearance__clip {
+		min-height: 0;
+		overflow: hidden;
+	}
+	@media (hover: hover) and (min-width: 1024px) {
+		.mxnav-tools-theme-wrap:hover .mxnav-appearance,
+		.mxnav-tools-theme-wrap:focus-within .mxnav-appearance {
+			grid-template-rows: 1fr;
+			opacity: 1;
+		}
+	}
+	/* 控制器以真实 pointerenter/focusin 挂的展开态（无 hover 介质时的同一路径） */
+	.mxnav-tools-theme-wrap.is-expanded .mxnav-appearance {
+		grid-template-rows: 1fr;
+		opacity: 1;
+	}
+	.mxnav-appearance__label {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		margin: 0;
+		padding: 0.55rem 0.25rem 0.45rem;
+		font-size: 0.72rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		color: color-mix(in oklch, var(--deep-text) 55%, transparent);
+	}
+	.mxnav-appearance__current {
+		font-weight: 500;
+		letter-spacing: 0;
+	}
+	.mxnav-appearance__modes {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 0.35rem;
+	}
+	.mxnav-appearance__chip {
+		padding: 0.42rem 0;
+		border: 1px solid color-mix(in oklch, var(--deep-text) 16%, transparent);
+		border-radius: 0.55rem;
+		background: none;
+		font: inherit;
+		font-size: 0.8rem;
+		font-weight: 600;
+		color: var(--deep-text);
+		text-align: center;
+		cursor: pointer;
+		transition:
+			background-color 0.15s ease,
+			border-color 0.15s ease;
+	}
+	.mxnav-appearance__chip:hover {
+		background: color-mix(in oklch, var(--deep-text) 7%, transparent);
+	}
+	.mxnav-appearance__chip[aria-checked="true"] {
+		border-color: var(--deep-text);
+		background: color-mix(in oklch, var(--deep-text) 13%, transparent);
+		box-shadow: inset 0 0 0 1px var(--deep-text);
+		font-weight: 800;
+	}
+	.mxnav-appearance__more {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		width: 100%;
+		margin-top: 0.35rem;
+		padding: 0.5rem 0.25rem 0.2rem;
+		border: 0;
+		background: none;
+		font: inherit;
+		font-size: 0.82rem;
+		font-weight: 600;
+		color: var(--deep-text);
+		cursor: pointer;
+	}
+	.mxnav-appearance__more:hover {
+		color: var(--primary);
+	}
+	.mxnav-appearance__more-icon {
+		font-size: 1rem;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.mxnav-tools-panel,
+		.mxnav-tools-item,
+		.mxnav-tools-highlight,
+		.mxnav-tools-thumb,
+		.mxnav-dropdown-panel {
+			transition: none !important;
+		}
+		.mxnav-tools-panel,
+		.mxnav-tools-item {
+			transform: none !important;
+		}
+	}
+
+	/* ── 资料卡（原站 navbar-profile-card.css 移植：四层单列，
+	   横幅+头像堆叠 / 名字+社交 / 热力图；站点面板与周文章展开是原作的
+	   运行时数据功能，本站无对应数据源，不移植） ── */
+	.mxprofile-card {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		padding: 1rem 1.25rem;
+		border-radius: var(--mxprofile-radius);
+		background: var(--float-panel-bg);
+		color: var(--deep-text);
+		box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 0.16);
+		--mxprofile-radius: 0.75rem;
+		--mxprofile-avatar-size: 5rem;
+		--mxprofile-content-max: 14rem;
+		/* 站点浮层与卡片边缘的间距，控制器 SITES_INSET 须与此同值 */
+		--mxprofile-sites-inset: 12px;
+	}
+	.mxprofile-card__header {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+	.mxprofile-card__banner {
+		position: relative;
+		align-self: stretch;
+		margin: -1rem -1.25rem 0;
+		aspect-ratio: 2.6 / 1;
+		overflow: hidden;
+		border-radius: var(--mxprofile-radius) var(--mxprofile-radius) 0 0;
+		background: color-mix(in oklch, var(--deep-text) 8%, transparent);
+	}
+	.mxprofile-card__banner-slot {
+		position: absolute;
+		inset: 0;
+	}
+	.mxprofile-card__banner-slot img {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	/* 垫底层：头像模糊放大（原作同法） */
+	.mxprofile-card__banner-slot--blur {
+		inset: -1rem;
+		opacity: 0.68;
+		filter: blur(0.9rem) saturate(1.1);
+		transform: scale(1.12);
+	}
+	.mxprofile-card__banner-slot--main {
+		z-index: 1;
+	}
+	.mxprofile-card__avatar {
+		display: inline-flex;
+		position: relative;
+		z-index: 2;
+		align-self: center;
+		width: var(--mxprofile-avatar-size);
+		height: var(--mxprofile-avatar-size);
+		flex-shrink: 0;
+		margin-top: calc(var(--mxprofile-avatar-size) * -2 / 3);
+		overflow: hidden;
+		border: 2px solid var(--btn-plain-bg-hover);
+		border-radius: 9999px;
+		background: var(--btn-plain-bg-hover);
+		box-shadow: 0 0 0 0.25rem var(--float-panel-bg);
+		color: inherit;
+		text-decoration: none;
+	}
+	.mxprofile-card__avatar-img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.mxprofile-card__avatar-mask {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: oklch(1 0 0);
+		background: rgb(0 0 0 / 58%);
+		opacity: 0;
+		transition: opacity 0.15s ease;
+	}
+	.mxprofile-card__avatar:hover .mxprofile-card__avatar-mask,
+	.mxprofile-card__avatar:focus-visible .mxprofile-card__avatar-mask {
+		opacity: 1;
+	}
+	.mxprofile-card__avatar-mask-text {
+		font-size: 1.05rem;
+		font-weight: 700;
+		line-height: 1;
+	}
+	.mxprofile-card__identity {
+		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.8rem;
+		color: inherit;
+		text-decoration: none;
+		border-radius: 0.75rem;
+	}
+	.mxprofile-card__identity-text {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.15rem;
+		min-width: 0;
+	}
+	.mxprofile-card__name {
+		font-size: 0.95rem;
+		font-weight: 700;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		transition: color 0.15s ease;
+	}
+	.mxprofile-card__identity:hover .mxprofile-card__name {
+		color: var(--primary);
+	}
+	/* 方括号身份行（原站 occupation 位）：数值照原站（0.66rem / opacity .6），
+	   方括号由 ::before/::after 加、配置只存括号内文案（同 heroSubtitle 处理） */
+	.mxprofile-card__tagline {
+		font-size: 0.66rem;
+		opacity: 0.6;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.mxprofile-card__tagline::before {
+		content: "[";
+	}
+	.mxprofile-card__tagline::after {
+		content: "]";
+	}
+	.mxprofile-card__socials {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+	}
+	.mxprofile-card__social-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.15rem;
+		height: 2.15rem;
+		color: inherit;
+		text-decoration: none;
+		border-radius: 9999px;
+		font-size: 1.35rem;
+		opacity: 0.82;
+		transition:
+			background-color 0.15s ease,
+			color 0.15s ease,
+			opacity 0.15s ease;
+	}
+	.mxprofile-card__social-btn:hover {
+		color: var(--primary);
+		background: color-mix(in oklch, var(--primary) 12%, transparent);
+		opacity: 1;
+	}
+	.mxprofile-card__content {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		max-height: var(--mxprofile-content-max);
+		padding: 0 0.15rem;
+		overflow-y: auto;
+		overflow-x: hidden;
+		overscroll-behavior: contain;
+		scrollbar-width: thin;
+	}
+	/* 热力图：12 列（月）× 4 行（月内切块），列头月份名（原作同几何） */
+	.mxprofile-card__heatmap {
+		display: grid;
+		grid-template-columns: repeat(12, minmax(0, 1fr));
+		gap: 0.28rem;
+	}
+	.mxprofile-card__heat-col {
+		display: flex;
+		flex-direction: column;
+		gap: 0.28rem;
+		min-width: 0;
+	}
+	.mxprofile-card__heat-month {
+		font-size: 0.55rem;
+		line-height: 1;
+		white-space: nowrap;
+		opacity: 0.55;
+		font-variant-numeric: tabular-nums;
+	}
+	.mxprofile-card__heat-cell {
+		display: block;
+		width: 100%;
+		aspect-ratio: 1;
+		border-radius: 0.2rem;
+		background: color-mix(in oklch, var(--deep-text) 10%, transparent);
+	}
+	.mxprofile-card__heat-cell.is-level-1 {
+		background: color-mix(in oklch, var(--primary) 35%, transparent);
+	}
+	.mxprofile-card__heat-cell.is-level-2 {
+		background: color-mix(in oklch, var(--primary) 60%, transparent);
+	}
+	.mxprofile-card__heat-cell.is-level-3 {
+		background: color-mix(in oklch, var(--primary) 90%, transparent);
+	}
+	/* 有站点面板时给底部浮层腾出折叠条的高度（原站同值） */
+	.mxprofile-card--has-sites {
+		padding-bottom: 4.75rem;
+	}
+	/* ── 其他站点浮层（原站站点面板移植）：贴在卡片底部的绝对定位层，
+	   展开时向上长高盖住内容区；height 由控制器写像素值
+	   （折叠=头部条高，展开=卡片高减去两端间距），CSS 只管过渡 ── */
+	.mxprofile-card__sites {
+		position: absolute;
+		inset: auto var(--mxprofile-sites-inset) var(--mxprofile-sites-inset);
+		z-index: 5;
+		overflow: hidden;
+		border-radius: 0.9rem;
+		--mxprofile-sites-bg: color-mix(in oklch, var(--deep-text) 6%, var(--float-panel-bg));
+		background: var(--mxprofile-sites-bg);
+		transition: height 360ms cubic-bezier(0.32, 0.72, 0.29, 1);
+	}
+	.mxprofile-card__sites-bar {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.7rem 0.85rem;
+	}
+	.mxprofile-card__sites-label {
+		flex: 1;
+		min-width: 0;
+		font-size: 0.78rem;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.mxprofile-card__sites-stack {
+		display: flex;
+		flex: none;
+	}
+	/* 展开后堆叠让位，同一批图标由控制器 FLIP 到列表行首 */
+	.mxprofile-card__sites[data-mxprofile-sites-open="true"] .mxprofile-card__sites-stack {
+		display: none;
+	}
+	.mxprofile-card__site-avatar {
+		position: relative;
+		display: grid;
+		place-items: center;
+		width: 1.75rem;
+		height: 1.75rem;
+		flex: none;
+		overflow: hidden;
+		border-radius: 9999px;
+		background: color-mix(in oklch, var(--deep-text) 12%, var(--mxprofile-sites-bg));
+		/* 同色分离环，把相邻两枚堆叠头像择开 */
+		box-shadow: 0 0 0 2px var(--mxprofile-sites-bg);
+	}
+	/* 垫底的本站叶片标（顶栏品牌 logo）：favicon 缺位/失败时露它，按亮暗换图 */
+	.mxprofile-card__site-avatar-leaf {
+		width: 74%;
+		height: 74%;
+		object-fit: contain;
+		pointer-events: none;
+	}
+	.mxprofile-card__site-avatar-leaf--dark {
+		display: none;
+	}
+	html.dark .mxprofile-card__site-avatar-leaf--dark {
+		display: block;
+	}
+	html.dark .mxprofile-card__site-avatar-leaf--light {
+		display: none;
+	}
+	.mxprofile-card__sites-stack .mxprofile-card__site-avatar + .mxprofile-card__site-avatar {
+		margin-left: -0.5rem;
+	}
+	/* 叶片标垫底，配了 icon 才压上 favicon img。img 默认不可见，加载成功
+	   加 is-loaded 才亮出；失败被标记后直接撤下——未加载成功的 img 永远
+	   不露面，浏览器破图标记在任何情况下都不会出现 */
+	.mxprofile-card__site-avatar-img {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		opacity: 0;
+	}
+	.mxprofile-card__site-avatar-img.is-loaded {
+		opacity: 1;
+	}
+	.mxprofile-card__site-avatar-img[data-avatar-failed="true"] {
+		display: none;
+	}
+	.mxprofile-card__sites-toggle {
+		display: grid;
+		place-items: center;
+		width: 1.75rem;
+		height: 1.75rem;
+		flex: none;
+		padding: 0;
+		border: none;
+		border-radius: 9999px;
+		background: transparent;
+		color: color-mix(in oklch, var(--deep-text) 45%, transparent);
+		cursor: pointer;
+		transition:
+			color 0.15s ease,
+			background-color 0.15s ease;
+	}
+	.mxprofile-card__sites-toggle:hover {
+		color: var(--primary);
+		background: color-mix(in oklch, var(--primary) 12%, transparent);
+	}
+	.mxprofile-card__sites-toggle:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+	.mxprofile-card__sites-chevron {
+		width: 100%;
+		height: 100%;
+		transition: transform 360ms cubic-bezier(0.32, 0.72, 0.29, 1);
+	}
+	.mxprofile-card__sites[data-mxprofile-sites-open="true"] .mxprofile-card__sites-chevron {
+		transform: rotate(180deg);
+	}
+	/* 列表靠 visibility 而非 hidden 收起：关闭动画期间仍占位、被 overflow 裁掉，
+	   淡出收尾才摘出可访问性树与 Tab 序列 */
+	.mxprofile-card__sites-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		margin: 0;
+		padding: 0 0.35rem 0.4rem;
+		list-style: none;
+		opacity: 0;
+		transform: translateY(1rem);
+		visibility: hidden;
+		transition:
+			opacity 200ms ease-out,
+			transform 200ms ease-out,
+			visibility 0s linear 200ms;
+	}
+	.mxprofile-card__sites[data-mxprofile-sites-open="true"] .mxprofile-card__sites-list {
+		opacity: 1;
+		transform: translateY(0);
+		visibility: visible;
+		transition:
+			opacity 200ms ease-out 90ms,
+			transform 200ms ease-out 90ms,
+			visibility 0s;
+	}
+	.mxprofile-card__site-row {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin: 0 0.15rem;
+		padding: 0.5rem 0.55rem;
+		color: inherit;
+		text-decoration: none;
+		border-radius: 0.6rem;
+		transition:
+			background-color 0.15s ease,
+			color 0.15s ease;
+	}
+	.mxprofile-card__site-row:hover {
+		background: color-mix(in oklch, var(--deep-text) 8%, transparent);
+		color: var(--primary);
+	}
+	.mxprofile-card__site-row:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: -2px;
+	}
+	.mxprofile-card__site-name {
+		flex: 1;
+		min-width: 0;
+		font-size: 0.8rem;
+		font-weight: 500;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.mxprofile-card__site-arrow {
+		flex: none;
+		font-size: 0.7rem;
+		opacity: 0.6;
+	}
+	/* 桌面端：导航左段下方的单列卡片（.is-open 与锚点由控制器驱动） */
+	@media (min-width: 1024px) {
+		html[data-site-mode="mingxin"] .mxnav-profile-dropdown {
+			display: block;
+			/* body 级 fixed：left/top 由控制器打开时实测左段位置写入 */
+			position: fixed;
+			/* 与导航栏拉开距离，桥区在面板内，悬停路径不断（原作同法） */
+			padding-top: 1.25rem;
+			opacity: 0;
+			visibility: hidden;
+			pointer-events: none;
+			transform: translateY(-8px);
+			transition:
+				opacity 0.2s ease-out,
+				visibility 0.2s ease-out,
+				transform 0.2s ease-out;
+			z-index: 50;
+		}
+		html[data-site-mode="mingxin"] .mxnav-profile-dropdown.is-open {
+			opacity: 1;
+			visibility: visible;
+			pointer-events: auto;
+			transform: translateY(0);
+		}
+		.mxnav-profile-mask {
+			display: none;
+		}
+		.mxprofile-card {
+			position: relative;
+			width: min(21rem, calc(100vw - 2rem));
+			--mxprofile-content-max: min(14rem, 38vh);
+		}
+	}
+	/* 移动端：底部半屏卡片 + 遮罩（原作同法） */
+	@media (max-width: 1023.98px) {
+		html[data-site-mode="mingxin"] .mxnav-profile-dropdown {
+			display: block;
+			position: fixed;
+			inset: 0;
+			z-index: 90;
+			opacity: 1;
+			visibility: hidden;
+			pointer-events: none;
+			transition: visibility 0s linear 0.3s;
+		}
+		html[data-site-mode="mingxin"] .mxnav-profile-dropdown.is-open {
+			visibility: visible;
+			pointer-events: auto;
+			transition-delay: 0s;
+		}
+		.mxnav-profile-mask {
+			display: block;
+			position: absolute;
+			inset: 0;
+			background: rgb(0 0 0 / 45%);
+			opacity: 0;
+			transition: opacity 0.25s ease-out;
+		}
+		html[data-site-mode="mingxin"] .mxnav-profile-dropdown.is-open .mxnav-profile-mask {
+			opacity: 1;
+		}
+		.mxprofile-card {
+			position: absolute;
+			left: 0.75rem;
+			right: 0.75rem;
+			bottom: 0.75rem;
+			max-height: min(85vh, 44rem);
+			overflow-y: auto;
+			transform: translateY(calc(100% + 1rem));
+			transition: transform 0.3s cubic-bezier(0.32, 0.72, 0.29, 1);
+			--mxprofile-radius: 1rem;
+			--mxprofile-content-max: min(14rem, 42vh);
+		}
+		html[data-site-mode="mingxin"] .mxnav-profile-dropdown.is-open .mxprofile-card {
+			transform: translateY(0);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.mxnav-profile-dropdown,
+		.mxnav-profile-mask,
+		.mxprofile-card,
+		.mxprofile-card__avatar-mask,
+		.mxprofile-card__heat-cell,
+		.mxprofile-card__sites,
+		.mxprofile-card__sites-chevron,
+		.mxprofile-card__sites-list {
+			transition-duration: 0.01ms;
+		}
+	}
+
+	/* ---------- 终幕内容区双变体切换（一期只接属性，切换 UI 在三期） ---------- */
+	html[data-mingxin-afterglow="classic"] [data-afterglow-variant="hero"] {
+		display: none;
+	}
+	html:not([data-mingxin-afterglow="classic"])
+		[data-afterglow-variant="classic"] {
+		display: none;
+	}
+
+	/* ---------- 卡片体系：照原站 main.css 的分层口径 ----------
+	   1) 页面区块 .card-base 不是实体卡：透明、0 边、0 圆角、无阴影、
+	      无毛玻璃、overflow visible；用 !important 压掉全站
+	      .enable-card-border 的 3px 纯黑粗框，只在明信作用域生效。
+	   2) 真正独立的小卡才走 --card-surface + 1px --card-border 公式。
+	   3) 浮层走 --float-panel-bg + 1px --line-divider，无阴影。 */
+	html[data-site-mode="mingxin"] .card-base,
+	html[data-site-mode="mingxin"] .card-base-transparent {
+		background-color: transparent !important;
+		border: 0 !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+		backdrop-filter: none !important;
+		-webkit-backdrop-filter: none !important;
+		overflow: visible !important;
+	}
+	html[data-site-mode="mingxin"] .btn-card {
+		background-color: transparent !important;
+		border: 0 !important;
+		box-shadow: none !important;
+	}
+	html[data-site-mode="mingxin"] .btn-card:hover {
+		background-color: var(--btn-card-bg-hover) !important;
+	}
+	html[data-site-mode="mingxin"] .btn-card:active {
+		background-color: var(--btn-card-bg-active) !important;
+	}
+	html[data-site-mode="mingxin"] .float-panel {
+		background-color: var(--float-panel-bg) !important;
+		border: 1px solid var(--line-divider) !important;
+		box-shadow: none !important;
+	}
+	html[data-site-mode="mingxin"] .dropdown-content {
+		background-color: color-mix(
+			in oklab,
+			var(--float-panel-bg) 92%,
+			transparent
+		) !important;
+		border: 1px solid
+			color-mix(in oklab, var(--deep-text) 28%, transparent) !important;
+		border-radius: var(--radius-large) !important;
+		box-shadow: none !important;
+	}
+	/* 独立小卡例外：整块本身就是链接/弹层时不能跟着页面区块一起透明，
+	   改走原站表面公式（朋友/工具卡在原站另有专属柔影，本站 DOM 不同构，
+	   这里只对齐表面、描边与圆角，不搬其动效）。 */
+	html[data-site-mode="mingxin"] a.card-base,
+	html[data-site-mode="mingxin"] .lock-card.card-base,
+	html[data-site-mode="mingxin"] .post-link-card.card-base,
+	html[data-site-mode="mingxin"] .about-link-card,
+	html[data-site-mode="mingxin"] .friend-card,
+	html[data-site-mode="mingxin"] .booknav-card,
+	html[data-site-mode="mingxin"] .media-card {
+		background-color: var(--card-surface) !important;
+		border: 1px solid var(--card-border) !important;
+		border-radius: var(--radius-large) !important;
+		box-shadow: none !important;
+		overflow: hidden !important;
+	}
+	html[data-site-mode="mingxin"] a.card-base:hover,
+	html[data-site-mode="mingxin"] .lock-card.card-base:hover,
+	html[data-site-mode="mingxin"] .post-link-card.card-base:hover,
+	html[data-site-mode="mingxin"] .about-link-card:hover,
+	html[data-site-mode="mingxin"] .friend-card:hover,
+	html[data-site-mode="mingxin"] .booknav-card:hover,
+	html[data-site-mode="mingxin"] .media-card:hover {
+		background-color: var(--card-surface-hover) !important;
+		border-color: var(--card-border-hover) !important;
+		transform: none !important;
+	}
+
+	/* ---------- 文章页细节：正文、分享/版权、上下篇、相关文章 ---------- */
+	/* 非封面标题左侧的主色竖条是 Firefly 文章模板装饰，原站 Hero 没有；
+	   在明信下撤掉（封面 overlay 标题不在此选择器内，不受影响）。 */
+	html[data-site-mode="mingxin"]
+		#post-container
+		> .relative
+		> [data-pagefind-meta="title"]::before {
+		content: none !important;
+		display: none !important;
+	}
+	/* 原站正文链接色（markdown.css）：浅 #23786f / 暗 #7fcfc4。
+	   只改颜色与下划线关系，不覆盖本站字体与标题层级。 */
+	html[data-site-mode="mingxin"] #post-container .custom-md a:not(.no-styling) {
+		color: #23786f;
+		text-decoration-color: color-mix(in oklab, #23786f 55%, transparent);
+	}
+	html.dark[data-site-mode="mingxin"]
+		#post-container
+		.custom-md
+		a:not(.no-styling) {
+		color: #7fcfc4;
+		text-decoration-color: color-mix(in oklab, #7fcfc4 55%, transparent);
+	}
+	/* 行内代码：深字 8% 底 + 1px --card-border + 6/2px 内边距。 */
+	html[data-site-mode="mingxin"] #post-container .custom-md code {
+		background-color: color-mix(
+			in oklab,
+			var(--deep-text) 8%,
+			transparent
+		) !important;
+		border: 1px solid var(--card-border);
+		border-radius: var(--radius-large);
+		padding: 0.125rem 0.375rem;
+	}
+	/* 代码块里的 code 不是行内代码，撤掉上面那套小芯片口径。 */
+	html[data-site-mode="mingxin"] #post-container .custom-md pre code,
+	html[data-site-mode="mingxin"] #post-container .custom-md .expressive-code code {
+		background-color: transparent !important;
+		border: 0;
+		border-radius: 0;
+		padding: 0;
+	}
+	/* 引用：原站无左色条，改大号衬线引号与 1.14em / 1.7 的呼吸。 */
+	html[data-site-mode="mingxin"] #post-container .custom-md blockquote {
+		margin: 1.6em 0;
+		padding: 0.4em 1.2em 0.4em 1.6em;
+		font-size: 1.14em;
+		line-height: 1.7;
+	}
+	html[data-site-mode="mingxin"] #post-container .custom-md blockquote::before {
+		content: "“";
+		left: 0.1em;
+		top: -0.18em;
+		width: auto;
+		height: auto;
+		border-radius: 0;
+		background: transparent;
+		color: var(--content-meta);
+		font-family: Georgia, "Times New Roman", serif;
+		font-size: 2.2em;
+		line-height: 1;
+	}
+	/* 表格：去竖线与单元格底色，只留行间 1px 横线；偶数行深字 3%。 */
+	html[data-site-mode="mingxin"] #post-container .custom-md table,
+	html[data-site-mode="mingxin"]
+		#post-container
+		.custom-md
+		.horizontal-scroll-container {
+		border-radius: 0;
+	}
+	html[data-site-mode="mingxin"] #post-container .custom-md th,
+	html[data-site-mode="mingxin"] #post-container .custom-md td {
+		background-color: transparent !important;
+		border-right: 0 !important;
+		border-bottom: 1px solid var(--line-divider);
+	}
+	html[data-site-mode="mingxin"]
+		#post-container
+		.custom-md
+		tr:nth-child(even)
+		td {
+		background-color: color-mix(
+			in oklab,
+			var(--deep-text) 3%,
+			transparent
+		) !important;
+	}
+	/* 分享块与版权块：原站 License 是无普通描边的纸面。本站 DOM 是
+	   分享动作块 + License 两块，分别用 --card-surface /
+	   --article-surface-bg 近似内容层与动作层，均压平圆角与阴影。 */
+	html[data-site-mode="mingxin"]
+		#post-container
+		div:has(> div[class*="bg-(--license-block-bg)"]) {
+		border-radius: 0 !important;
+		box-shadow: none !important;
+	}
+	html[data-site-mode="mingxin"]
+		#post-container
+		div:has(> div[class*="bg-(--license-block-bg)"])
+		> div {
+		background-color: var(--card-surface) !important;
+		border: 0 !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+	}
+	html[data-site-mode="mingxin"] #post-container .license-container {
+		background-color: var(--article-surface-bg) !important;
+		border: 0 !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+	}
+	/* 上下篇：从两张 60px 按钮卡改成原站 .post-pager 文字链。 */
+	html[data-site-mode="mingxin"]
+		#content-wrapper:has(#post-container)
+		> div:has(> a > .btn-card) {
+		display: flex !important;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		gap: 0.75rem 2rem;
+		margin-bottom: 2rem;
+		overflow: visible;
+	}
+	html[data-site-mode="mingxin"]
+		#content-wrapper:has(#post-container)
+		> div:has(> a > .btn-card)
+		> a {
+		width: auto !important;
+		max-width: 45%;
+		flex: 0 1 auto;
+	}
+	html[data-site-mode="mingxin"]
+		#content-wrapper:has(#post-container)
+		> div:has(> a > .btn-card)
+		.btn-card {
+		height: auto !important;
+		padding: 0 !important;
+		gap: 0.5rem;
+		border-radius: 0 !important;
+		color: var(--content-meta);
+		font-size: 0.875rem;
+		font-weight: 500;
+	}
+	html[data-site-mode="mingxin"]
+		#content-wrapper:has(#post-container)
+		> div:has(> a > .btn-card)
+		.btn-card
+		> div {
+		color: var(--content-meta) !important;
+	}
+	html[data-site-mode="mingxin"]
+		#content-wrapper:has(#post-container)
+		> div:has(> a > .btn-card)
+		.btn-card
+		svg {
+		font-size: 1.25rem;
+		color: var(--content-meta);
+	}
+	@media (max-width: 47.999rem) {
+		html[data-site-mode="mingxin"]
+			#content-wrapper:has(#post-container)
+			> div:has(> a > .btn-card)
+			> a {
+			max-width: 100%;
+		}
+	}
+	/* 相关/随机：外层双组面板随 .card-base 退化；组内每条改成原站
+	   related-card 的无边小卡（--article-surface-bg、12px 圆角）。 */
+	html[data-site-mode="mingxin"]
+		#content-wrapper:has(#post-container)
+		> div:has(> .card-base):not(:has(> #post-container)) {
+		width: min(55rem, 100%) !important;
+		margin-inline: auto;
+		gap: 0.75rem !important;
+	}
+	html[data-site-mode="mingxin"]
+		#content-wrapper:has(#post-container)
+		> div:has(> .card-base):not(:has(> #post-container))
+		> .card-base {
+		padding: 0 !important;
+	}
+	html[data-site-mode="mingxin"]
+		#content-wrapper:has(#post-container)
+		> div:has(> .card-base):not(:has(> #post-container))
+		> .card-base
+		> a,
+	html[data-site-mode="mingxin"] #random-posts-list > a {
+		background-color: var(--article-surface-bg) !important;
+		border: 0 !important;
+		border-radius: var(--radius-large) !important;
+		box-shadow: none !important;
+		margin: 0 0 0.75rem !important;
+		padding: 0.6rem 0.75rem !important;
+	}
+	html[data-site-mode="mingxin"]
+		#content-wrapper:has(#post-container)
+		> div:has(> .card-base):not(:has(> #post-container))
+		> .card-base
+		> a:last-child,
+	html[data-site-mode="mingxin"] #random-posts-list > a:last-child {
+		margin-bottom: 0 !important;
+	}
+
+	/* ---------- 列表页：照原站 article-list.css 映射 PostPage/PostCard ----------
+	   只在 .grid-mode（本站默认列表形态）里改几何；访客手动切到
+	   .list-mode 时保留本站横向卡功能，不把布局开关做死。 */
+	html[data-site-mode="mingxin"] #post-list-container.grid-mode {
+		display: grid !important;
+		grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+		column-gap: 1.5rem !important;
+		row-gap: 1.25rem !important;
+	}
+	html[data-site-mode="mingxin"]
+		#post-list-container.grid-mode
+		.post-card-wrapper {
+		flex-direction: column-reverse !important;
+		gap: 0.75rem;
+		height: 100%;
+		padding: 0 !important;
+	}
+	html[data-site-mode="mingxin"]
+		#post-list-container.grid-mode
+		.post-card-image {
+		position: relative !important;
+		inset: auto !important;
+		width: 100% !important;
+		margin: 0 !important;
+		aspect-ratio: 16 / 10 !important;
+		border-radius: var(--radius-medium) !important;
+		overflow: hidden !important;
+		background-color: var(--btn-card-bg-hover);
+	}
+	html[data-site-mode="mingxin"]
+		#post-list-container.grid-mode
+		.post-card-content {
+		width: 100% !important;
+		padding: 0 !important;
+		gap: 0;
+	}
+	html[data-site-mode="mingxin"]
+		#post-list-container.grid-mode
+		.post-card-title {
+		order: 1;
+		margin: 0 !important;
+		font-size: 1.125rem !important;
+		font-weight: 800 !important;
+		line-height: 1.4 !important;
+	}
+	html[data-site-mode="mingxin"]
+		#post-list-container.grid-mode
+		.post-card-title::before {
+		display: none !important;
+	}
+	html[data-site-mode="mingxin"]
+		#post-list-container.grid-mode
+		.description {
+		order: 2;
+		height: 4.95em;
+		max-height: 4.95em;
+		margin: 0 !important;
+		font-size: 0.875rem !important;
+		font-weight: 500;
+		line-height: 1.65 !important;
+		-webkit-line-clamp: 3 !important;
+		line-clamp: 3 !important;
+	}
+	html[data-site-mode="mingxin"]
+		#post-list-container.grid-mode
+		.post-meta {
+		order: 3;
+		margin: 0.75rem 0 0 !important;
+		font-size: 0.75rem !important;
+		font-weight: 650;
+		line-height: 1.45 !important;
+	}
+	html[data-site-mode="mingxin"]
+		#post-list-container.grid-mode
+		.post-card-bottom-tags,
+	html[data-site-mode="mingxin"] #post-list-container.grid-mode .stats {
+		order: 4;
+		margin-top: 0.75rem !important;
+		padding-top: 0.75rem !important;
+		border-top: 1px solid var(--line-divider);
+		font-size: 0.75rem !important;
+		line-height: 1.45 !important;
+	}
+	html[data-site-mode="mingxin"]
+		#post-list-container.grid-mode
+		.no-cover
+		.post-card-content {
+		width: 100% !important;
+		padding-right: 0 !important;
+	}
+	html[data-site-mode="mingxin"]
+		#post-list-container.grid-mode
+		.post-card-enter-btn {
+		display: none !important;
+	}
+	@media (max-width: 47.999rem) {
+		html[data-site-mode="mingxin"] #post-list-container.grid-mode {
+			grid-template-columns: minmax(0, 1fr) !important;
+			gap: 1.5rem !important;
+		}
+		html[data-site-mode="mingxin"]
+			#post-list-container.grid-mode
+			.post-card-title {
+			font-size: 1.0625rem !important;
+		}
+		html[data-site-mode="mingxin"]
+			#post-list-container.grid-mode
+			.description {
+			font-size: 0.8125rem !important;
+		}
+	}
+	/* 分页：原站 36px 高、6px 圆角、14px；当前页是 1px 深字 28% 边
+	   + 12% 底，不再用主色实心块。 */
+	html[data-site-mode="mingxin"] .pagination-wrapper {
+		margin-top: 2rem !important;
+	}
+	html[data-site-mode="mingxin"] .pagination-wrapper .desktop-pagination,
+	html[data-site-mode="mingxin"] .pagination-wrapper .mobile-pagination {
+		gap: 0.5rem !important;
+	}
+	html[data-site-mode="mingxin"] .pagination-wrapper .btn-card {
+		height: 2.25rem !important;
+		min-height: 2.25rem !important;
+		border-radius: 0.375rem !important;
+		font-size: 0.875rem !important;
+	}
+	html[data-site-mode="mingxin"] .pagination-wrapper a.btn-card,
+	html[data-site-mode="mingxin"] .pagination-wrapper .btn-card.w-11 {
+		width: 2.25rem !important;
+	}
+	html[data-site-mode="mingxin"]
+		.pagination-wrapper
+		[aria-current="page"] {
+		width: 2.25rem !important;
+		height: 2.25rem !important;
+		border: 1px solid
+			color-mix(in oklab, var(--deep-text) 28%, transparent) !important;
+		border-radius: 0.375rem !important;
+		background-color: color-mix(
+			in oklab,
+			var(--deep-text) 12%,
+			transparent
+		) !important;
+		box-shadow: none !important;
+		color: var(--deep-text) !important;
+		font-size: 0.875rem !important;
+		font-weight: 600 !important;
+	}
+	@media (max-width: 47.999rem) {
+		html[data-site-mode="mingxin"] .pagination-wrapper {
+			margin-top: 1.5rem !important;
+		}
+	}
+
+	/* ---------- 归档页：外层与行量对齐，树形视图差异只在对照表说明 ---------- */
+	html[data-site-mode="mingxin"] archive-panel.card-base {
+		padding: 1.5rem 1rem !important;
+	}
+	@media (min-width: 48rem) {
+		html[data-site-mode="mingxin"] archive-panel.card-base {
+			padding-inline: 2.25rem !important;
+		}
+	}
+	html[data-site-mode="mingxin"] .archive-year-toggle {
+		height: 3.5rem !important;
+		min-height: 3.5rem !important;
+		border-radius: var(--radius-medium) !important;
+	}
+	html[data-site-mode="mingxin"] .archive-year-toggle > div:first-child {
+		font-size: 1.5rem !important;
+		font-weight: 600 !important;
+	}
+	html[data-site-mode="mingxin"] .archive-year-count {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.1rem 0.35rem;
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-small);
+		font-family: var(--m3e-font-mono-family);
+		font-size: 0.6875rem;
+		line-height: 1.3;
+	}
+	html[data-site-mode="mingxin"] .archive-post {
+		height: 4rem !important;
+		min-height: 4rem !important;
+		padding-block: 0.75rem !important;
+		border-radius: var(--radius-medium) !important;
+	}
+	html[data-site-mode="mingxin"] .archive-post .flex > div:nth-of-type(3) {
+		font-size: 0.9375rem !important;
+		font-weight: 500 !important;
+		line-height: 1.65 !important;
+	}
+	/* 通用列表页头：横向内边距跟原站 section 的 36px 走。 */
+	html[data-site-mode="mingxin"] .page-header {
+		padding-inline: 2.25rem !important;
+	}
+	@media (max-width: 47.999rem) {
+		html[data-site-mode="mingxin"] .page-header {
+			padding: 1.5rem 1rem !important;
+		}
+	}
+
+	/* ---------- 首页壳层调整（仅明信首页在场时） ---------- */
+	/* 明信签名页脚跟原站页脚 inner 一样收回 64rem；结构仍用站长定版。 */
+	html[data-site-mode="mingxin"] .mingxin-footer {
+		max-width: 64rem !important;
+	}
+	/* 壁纸横幅让位给影像层舞台 */
+	html[data-site-mode="mingxin"] body.is-home:has(.mingxin-home)
+		#wallpaper-wrapper {
+		display: none;
+	}
+	/* 内容面板从视口顶开始（影像层自带满屏舞台） */
+	html[data-site-mode="mingxin"] body.is-home:has(.mingxin-home) {
+		--content-top: 0 !important;
+	}
+	/* onload 入场动画残留 transform 会成为 fixed 舞台的包含块，首页停用；
+	   注意 .onload-animation 的 opacity:0 在未分层样式表里，普通声明
+	   压不过它（分层规则对普通声明优先级更低），三件都须 !important */
+	html[data-site-mode="mingxin"] body.is-home:has(.mingxin-home)
+		#content-wrapper.onload-animation {
+		animation: none !important;
+		opacity: 1 !important;
+		transform: none !important;
+	}
+	/* 站点页脚让位给明信页脚（签名版），避免首页两套页脚 */
+	html[data-site-mode="mingxin"] body.is-home:has(.mingxin-home) .site-footer {
+		display: none;
+	}
+	/* 影像层 100vw 出血在带经典滚动条的系统上会多出横向滚动，首页裁掉 */
+	html[data-site-mode="mingxin"]:has(.mingxin-home) {
+		overflow-x: hidden;
+	}
+
+	/* ---------- 背景纹理层（照 Shirone textures.css 的 #m3e-texture-canvas） ---------- */
+	html[data-site-mode="mingxin"] #mingxin-texture-canvas {
+		display: block;
+		position: fixed;
+		inset: 0;
+		z-index: -20;
+		pointer-events: none;
+		opacity: var(--texture-opacity, 0.12);
+		transform: translateZ(0);
+	}
+	html[data-site-mode="mingxin"][data-texture-preset="none"]
+		#mingxin-texture-canvas {
+		display: none;
+	}
+	/* 网格 */
+	html[data-site-mode="mingxin"][data-texture-preset="grid"]
+		#mingxin-texture-canvas {
+		background: linear-gradient(
+			135deg,
+			var(--on-surface) 0%,
+			var(--on-surface-variant) 100%
+		);
+		-webkit-mask-image:
+			linear-gradient(to right, black 1px, transparent 1px),
+			linear-gradient(to bottom, black 1px, transparent 1px);
+		mask-image:
+			linear-gradient(to right, black 1px, transparent 1px),
+			linear-gradient(to bottom, black 1px, transparent 1px);
+		-webkit-mask-size: 56px 56px;
+		mask-size: 56px 56px;
+		-webkit-mask-repeat: repeat;
+		mask-repeat: repeat;
+	}
+	/* 点阵 */
+	html[data-site-mode="mingxin"][data-texture-preset="dots"]
+		#mingxin-texture-canvas {
+		background: linear-gradient(
+			135deg,
+			var(--on-surface) 0%,
+			var(--on-surface-variant) 100%
+		);
+		-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Ccircle cx='12' cy='12' r='1.6' fill='black'/%3E%3Ccircle cx='36' cy='36' r='1.6' fill='black'/%3E%3C/svg%3E");
+		mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Ccircle cx='12' cy='12' r='1.6' fill='black'/%3E%3Ccircle cx='36' cy='36' r='1.6' fill='black'/%3E%3C/svg%3E");
+		-webkit-mask-size: 48px 48px;
+		mask-size: 48px 48px;
+		-webkit-mask-repeat: repeat;
+		mask-repeat: repeat;
+	}
+	/* 噪点 */
+	html[data-site-mode="mingxin"][data-texture-preset="noise"]
+		#mingxin-texture-canvas {
+		background: var(--on-surface);
+		-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+		mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+		-webkit-mask-size: 160px 160px;
+		mask-size: 160px 160px;
+		-webkit-mask-repeat: repeat;
+		mask-repeat: repeat;
+	}
+	/* 斜纹 */
+	html[data-site-mode="mingxin"][data-texture-preset="diagonal"]
+		#mingxin-texture-canvas {
+		background: linear-gradient(
+			135deg,
+			var(--on-surface) 0%,
+			var(--on-surface-variant) 100%
+		);
+		-webkit-mask-image: repeating-linear-gradient(
+			45deg,
+			black 0 1.5px,
+			transparent 1.5px 14px
+		);
+		mask-image: repeating-linear-gradient(
+			45deg,
+			black 0 1.5px,
+			transparent 1.5px 14px
+		);
+	}
+	/* 波纹（等高线，SVG 与参考站 textures.css 的 topography 同构） */
+	html[data-site-mode="mingxin"][data-texture-preset="waves"]
+		#mingxin-texture-canvas {
+		background: linear-gradient(
+			180deg,
+			var(--on-surface) 0%,
+			var(--on-surface-variant) 100%
+		);
+		-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cpath d='M0 40 Q60 10 120 40 T240 40 M0 80 Q60 50 120 80 T240 80 M0 120 Q60 90 120 120 T240 120 M0 160 Q60 130 120 160 T240 160 M0 200 Q60 170 120 200 T240 200' fill='none' stroke='black' stroke-width='1.2' opacity='0.7' stroke-dasharray='4 4'/%3E%3Cpath d='M0 60 Q60 90 120 60 T240 60 M0 100 Q60 130 120 100 T240 100 M0 140 Q60 170 120 140 T240 140 M0 180 Q60 210 120 180 T240 180 M0 220 Q60 250 120 220 T240 220' fill='none' stroke='black' stroke-width='1.2' opacity='0.85'/%3E%3C/svg%3E");
+		mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cpath d='M0 40 Q60 10 120 40 T240 40 M0 80 Q60 50 120 80 T240 80 M0 120 Q60 90 120 120 T240 120 M0 160 Q60 130 120 160 T240 160 M0 200 Q60 170 120 200 T240 200' fill='none' stroke='black' stroke-width='1.2' opacity='0.7' stroke-dasharray='4 4'/%3E%3Cpath d='M0 60 Q60 90 120 60 T240 60 M0 100 Q60 130 120 100 T240 100 M0 140 Q60 170 120 140 T240 140 M0 180 Q60 210 120 180 T240 180 M0 220 Q60 250 120 220 T240 220' fill='none' stroke='black' stroke-width='1.2' opacity='0.85'/%3E%3C/svg%3E");
+		-webkit-mask-size: 240px 240px;
+		mask-size: 240px 240px;
+		-webkit-mask-repeat: repeat;
+		mask-repeat: repeat;
+	}
+	/* 拼图（224px 周期、pattern 112、块 56；几何与站内 puzzle.svg 一致，
+	   内联自包含 data URI，照参考站 textures.css 的 jigsaw 预设） */
+	html[data-site-mode="mingxin"][data-texture-preset="jigsaw"]
+		#mingxin-texture-canvas {
+		background: linear-gradient(
+			135deg,
+			var(--on-surface) 0%,
+			var(--on-surface-variant) 100%
+		);
+		-webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22224%22%20height%3D%22224%22%20viewBox%3D%220%200%20224%20224%22%3E%3Cdefs%3E%3Cpath%20id%3D%22edge%22%20d%3D%22M0%200H18C21%200%2023%202%2021%204C18%207%2018%2012%2023%2013C26%2014%2030%2014%2033%2013C38%2012%2038%207%2035%204C33%202%2035%200%2038%200H74C77%200%2079-2%2077-4C74-7%2074-12%2079-13C82-14%2086-14%2089-13C94-12%2094-7%2091-4C89-2%2091%200%2094%200H112%22%2F%3E%3Cpattern%20id%3D%22puzzle%22%20width%3D%22112%22%20height%3D%22112%22%20patternUnits%3D%22userSpaceOnUse%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%220.8%22%20stroke-linejoin%3D%22round%22%3E%3Cuse%20href%3D%22%23edge%22%2F%3E%3Cuse%20href%3D%22%23edge%22%20transform%3D%22translate(0%2056)%20scale(1%20-1)%22%2F%3E%3Cuse%20href%3D%22%23edge%22%20transform%3D%22translate(0%20112)%22%2F%3E%3Cuse%20href%3D%22%23edge%22%20transform%3D%22rotate(90)%22%2F%3E%3Cuse%20href%3D%22%23edge%22%20transform%3D%22translate(56%200)%20rotate(90)%20scale(1%20-1)%22%2F%3E%3Cuse%20href%3D%22%23edge%22%20transform%3D%22translate(112%200)%20rotate(90)%22%2F%3E%3C%2Fg%3E%3C%2Fpattern%3E%3C%2Fdefs%3E%3Cpath%20fill%3D%22url(%23puzzle)%22%20d%3D%22M0%200H224V224H0Z%22%2F%3E%3C%2Fsvg%3E");
+		mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22224%22%20height%3D%22224%22%20viewBox%3D%220%200%20224%20224%22%3E%3Cdefs%3E%3Cpath%20id%3D%22edge%22%20d%3D%22M0%200H18C21%200%2023%202%2021%204C18%207%2018%2012%2023%2013C26%2014%2030%2014%2033%2013C38%2012%2038%207%2035%204C33%202%2035%200%2038%200H74C77%200%2079-2%2077-4C74-7%2074-12%2079-13C82-14%2086-14%2089-13C94-12%2094-7%2091-4C89-2%2091%200%2094%200H112%22%2F%3E%3Cpattern%20id%3D%22puzzle%22%20width%3D%22112%22%20height%3D%22112%22%20patternUnits%3D%22userSpaceOnUse%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%220.8%22%20stroke-linejoin%3D%22round%22%3E%3Cuse%20href%3D%22%23edge%22%2F%3E%3Cuse%20href%3D%22%23edge%22%20transform%3D%22translate(0%2056)%20scale(1%20-1)%22%2F%3E%3Cuse%20href%3D%22%23edge%22%20transform%3D%22translate(0%20112)%22%2F%3E%3Cuse%20href%3D%22%23edge%22%20transform%3D%22rotate(90)%22%2F%3E%3Cuse%20href%3D%22%23edge%22%20transform%3D%22translate(56%200)%20rotate(90)%20scale(1%20-1)%22%2F%3E%3Cuse%20href%3D%22%23edge%22%20transform%3D%22translate(112%200)%20rotate(90)%22%2F%3E%3C%2Fg%3E%3C%2Fpattern%3E%3C%2Fdefs%3E%3Cpath%20fill%3D%22url(%23puzzle)%22%20d%3D%22M0%200H224V224H0Z%22%2F%3E%3C%2Fsvg%3E");
+		-webkit-mask-size: 224px 224px;
+		mask-size: 224px 224px;
+		-webkit-mask-repeat: repeat;
+		mask-repeat: repeat;
+	}
+
+	/* ================= 文章页常驻目录栏（原站 ArticleTocPanel 移植） =================
+	 * 数值照原站 article-toc-panel.css：栏宽 18rem、top 8rem 起、max-height
+	 * min(40rem, 100dvh-10rem)、树字号 .82rem、圆点 .55/.45/.38rem、虚线轨 1.25。
+	 * 两处按本站几何修正：①本站文章列总宽 59.5rem（原站 56.5rem），栏左缘 =
+	 * 50% + 29.75rem + 1rem；②栏宽 18rem 在 96rem 视口放不下（右缘溢出 24px），
+	 * 点亮断点顺延到 100rem，1536–1599px 之间仍由悬浮目录抽屉承担。 */
+	@media (min-width: 100rem) and (hover: hover) and (pointer: fine) {
+		html[data-site-mode="mingxin"] .mx-toc-panel {
+			--mx-toc-active: #0e7490;
+			--mx-toc-panel-bg: var(--page-bg);
+			--mx-toc-panel-text: var(--deep-text);
+			--mx-toc-panel-muted: var(--content-meta);
+			--mx-toc-panel-hover: var(--btn-plain-bg-hover);
+			--mx-toc-line: rgb(0 0 0 / 28%);
+			--mx-toc-dot: rgb(0 0 0 / 40%);
+			--mx-toc-max-height: min(40rem, calc(100dvh - 10rem));
+
+			position: fixed;
+			top: 8rem;
+			left: calc(50% + 29.75rem + 1rem);
+			z-index: 30;
+			display: block;
+			width: 18rem;
+			max-height: var(--mx-toc-max-height);
+			background: transparent;
+			border: 0;
+			box-shadow: none;
+		}
+
+		html.dark[data-site-mode="mingxin"] .mx-toc-panel {
+			--mx-toc-active: #67e8f9;
+			--mx-toc-line: rgb(255 255 255 / 22%);
+			--mx-toc-dot: rgb(255 255 255 / 40%);
+		}
+
+		html[data-site-mode="mingxin"] .mx-toc-panel[hidden] {
+			display: none;
+		}
+
+		html[data-site-mode="mingxin"] .mx-toc-panel.is-pending {
+			opacity: 0;
+			pointer-events: none;
+		}
+
+		/* 目录栏在场时，右缘悬浮目录抽屉让位（其余悬浮钮在右下角，不冲突） */
+		html[data-site-mode="mingxin"] body:has(.mx-toc-panel) #floating-toc-wrapper {
+			display: none !important;
+		}
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__view {
+		position: relative;
+		isolation: isolate;
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+		min-width: 0;
+		max-height: var(--mx-toc-max-height, min(40rem, calc(100dvh - 10rem)));
+		background: transparent;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__toolbar {
+		display: flex;
+		flex: none;
+		justify-content: space-between;
+		gap: 0.5rem;
+		align-items: center;
+		padding-bottom: 0.25rem;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__heading {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0;
+		padding: 0;
+		border: 0;
+		color: var(--mx-toc-panel-text, var(--deep-text));
+		font-size: 1.05rem;
+		font-weight: 600;
+		line-height: 1.5;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__tools {
+		display: flex;
+		flex: none;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__tool-btn {
+		position: relative;
+		display: grid;
+		place-items: center;
+		width: 2rem;
+		height: 2rem;
+		padding: 0;
+		border: 0;
+		border-radius: var(--radius-medium);
+		background: transparent;
+		color: var(--mx-toc-panel-muted, var(--content-meta));
+		cursor: pointer;
+		transition:
+			background-color 160ms ease,
+			color 160ms ease;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__tool-btn:hover,
+	html[data-site-mode="mingxin"] .mx-toc-panel__tool-btn:focus-visible {
+		color: var(--mx-toc-panel-text, var(--deep-text));
+		background: var(--mx-toc-panel-hover, var(--btn-plain-bg-hover));
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__tool-btn[data-mxtoc-auto-btn][aria-pressed="true"] {
+		background: var(--mx-toc-panel-hover, var(--btn-plain-bg-hover));
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__tool-btn .mx-toc-panel__tool-icon.is-collapse {
+		display: none;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__tool-btn[aria-pressed="true"] .mx-toc-panel__tool-icon.is-expand {
+		display: none;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__tool-btn[aria-pressed="true"] .mx-toc-panel__tool-icon.is-collapse {
+		display: block;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__tool-btn::after {
+		position: absolute;
+		bottom: calc(100% + 0.5rem);
+		right: 0;
+		padding: 0.25rem 0.5rem;
+		border-radius: var(--radius-small);
+		background: var(--mx-toc-panel-text, var(--deep-text));
+		color: var(--mx-toc-panel-bg, var(--page-bg));
+		content: attr(data-tooltip);
+		font-size: 0.72rem;
+		line-height: 1.3;
+		white-space: nowrap;
+		opacity: 0;
+		pointer-events: none;
+		transform: translateY(0.25rem);
+		transition:
+			opacity 160ms ease,
+			transform 160ms ease,
+			visibility 160ms ease;
+		visibility: hidden;
+		z-index: 5;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__tool-btn:hover::after,
+	html[data-site-mode="mingxin"] .mx-toc-panel__tool-btn:focus-visible::after {
+		opacity: 1;
+		transform: translateY(0);
+		visibility: visible;
+	}
+
+	/* ---------- 节点树 ---------- */
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__highlight {
+		position: absolute;
+		top: 0;
+		left: 0;
+		z-index: -1;
+		border-radius: var(--radius-medium);
+		background: var(--mx-toc-panel-hover, var(--btn-plain-bg-hover));
+		opacity: 0;
+		pointer-events: none;
+		transition:
+			transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+			width 320ms cubic-bezier(0.22, 1, 0.36, 1),
+			height 320ms cubic-bezier(0.22, 1, 0.36, 1),
+			opacity 140ms ease;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__view[data-mxtoc-highlighted] > .mx-toc-panel__highlight {
+		opacity: 1;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__tree {
+		position: relative;
+		flex: 0 1 auto;
+		min-height: 0;
+		padding: 0.25rem 0;
+		overflow-y: auto;
+		overflow-x: hidden;
+		overscroll-behavior-y: contain;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__lines {
+		position: absolute;
+		top: 0;
+		left: 0;
+		z-index: 0;
+		overflow: hidden;
+		pointer-events: none;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__track-base {
+		fill: none;
+		stroke: var(--mx-toc-line, rgb(0 0 0 / 28%));
+		stroke-width: 1.25;
+		stroke-dasharray: 2 5;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__track-progress {
+		fill: none;
+		stroke: var(--mx-toc-active, #0e7490);
+		stroke-width: 1.25;
+		stroke-linejoin: round;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__item {
+		min-width: 0;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__children {
+		display: grid;
+		grid-template-rows: 1fr;
+		transition: grid-template-rows 220ms ease;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__children > .mx-toc-panel__list {
+		min-height: 0;
+		overflow: hidden;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__row.is-collapsed + .mx-toc-panel__children {
+		grid-template-rows: 0fr;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__row {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		gap: 0.3rem;
+		align-items: center;
+		min-width: 0;
+		padding: 0.28rem 0.5rem;
+		padding-left: calc((1.25rem - 0.55rem) / 2 + var(--toc-level, 0) * 0.95rem);
+		border-radius: var(--radius-medium);
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__link {
+		display: inline-flex;
+		flex: 0 1 auto;
+		gap: 0.5rem;
+		align-items: center;
+		min-width: 0;
+		color: var(--mx-toc-panel-muted, var(--content-meta));
+		font-size: 0.82rem;
+		line-height: 1.5;
+		text-decoration: none;
+		transition: color 160ms ease;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__row--root .mx-toc-panel__link {
+		color: var(--mx-toc-panel-text, var(--deep-text));
+		font-weight: 700;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__row:hover .mx-toc-panel__link,
+	html[data-site-mode="mingxin"] .mx-toc-panel__row:focus-within .mx-toc-panel__link {
+		color: var(--mx-toc-panel-text, var(--deep-text));
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__row.is-active .mx-toc-panel__link {
+		color: var(--mx-toc-active, #0e7490);
+		font-weight: 650;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__link:focus-visible {
+		outline: 1px solid var(--mx-toc-active, #0e7490);
+		outline-offset: -1px;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__text {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__dot {
+		flex: none;
+		box-sizing: border-box;
+		width: 0.55rem;
+		height: 0.55rem;
+		border: 1.5px solid var(--mx-toc-dot, rgb(0 0 0 / 40%));
+		border-radius: 999px;
+		background: var(--mx-toc-panel-bg, var(--page-bg));
+		transition:
+			border-color 160ms ease,
+			background-color 160ms ease,
+			opacity 120ms ease;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__row[data-toc-level="2"] .mx-toc-panel__dot {
+		width: 0.45rem;
+		height: 0.45rem;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__row[data-toc-level="3"] .mx-toc-panel__dot {
+		width: 0.38rem;
+		height: 0.38rem;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__row--root .mx-toc-panel__dot {
+		border-color: var(--mx-toc-active, #0e7490);
+		background: var(--mx-toc-active, #0e7490);
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__row.is-active > .mx-toc-panel__link .mx-toc-panel__dot {
+		border-color: var(--mx-toc-active, #0e7490);
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__dot.is-covered {
+		border-color: var(--mx-toc-active, #0e7490);
+		background: var(--mx-toc-active, #0e7490);
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__toggle {
+		display: grid;
+		flex: none;
+		place-items: center;
+		width: 1.35rem;
+		height: 1.35rem;
+		padding: 0;
+		border: 0;
+		border-radius: var(--radius-medium);
+		background: transparent;
+		color: var(--mx-toc-panel-muted, var(--content-meta));
+		cursor: pointer;
+		transition:
+			color 160ms ease,
+			background-color 160ms ease;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__toggle:hover,
+	html[data-site-mode="mingxin"] .mx-toc-panel__toggle:focus-visible {
+		color: var(--mx-toc-panel-text, var(--deep-text));
+		background: var(--mx-toc-panel-hover, var(--btn-plain-bg-hover));
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__toggle::before {
+		content: "";
+		width: 0.32rem;
+		height: 0.32rem;
+		border-right: 1.5px solid currentColor;
+		border-bottom: 1.5px solid currentColor;
+		transform: rotate(45deg) translate(-10%, -10%);
+		transition: transform 160ms ease;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__toggle[aria-expanded="false"]::before {
+		transform: rotate(-45deg) translate(-10%, -10%);
+	}
+
+	/* ---------- 操作条（分享 + 阅读进度） ---------- */
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__actions {
+		position: relative;
+		z-index: 3;
+		display: flex;
+		flex: none;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: 0.5rem;
+		padding: 0.25rem;
+		border: 1px solid var(--card-border);
+		border-radius: var(--radius-large);
+		background: var(--card-surface);
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__actions::before,
+	html[data-site-mode="mingxin"] .mx-toc-panel__actions::after {
+		position: absolute;
+		top: 100%;
+		width: 1px;
+		height: calc(1rem + 1px);
+		background: var(--line-divider);
+		content: "";
+		pointer-events: none;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__actions::before {
+		left: 27%;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__actions::after {
+		right: 27%;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__action-buttons {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__action-btn {
+		display: grid;
+		place-items: center;
+		width: 2rem;
+		height: 2rem;
+		padding: 0;
+		border: 0;
+		border-radius: var(--radius-medium);
+		background: transparent;
+		color: var(--mx-toc-panel-muted, var(--content-meta));
+		font-size: 0.8rem;
+		text-decoration: none;
+		cursor: pointer;
+		transition:
+			background-color 160ms ease,
+			color 160ms ease;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__action-btn:hover,
+	html[data-site-mode="mingxin"] .mx-toc-panel__action-btn:focus-visible {
+		background: var(--mx-toc-panel-hover, var(--btn-plain-bg-hover));
+		color: var(--mx-toc-panel-text, var(--deep-text));
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__progress {
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		overflow: hidden;
+		pointer-events: none;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__progress-label {
+		position: relative;
+		z-index: 1;
+		padding-inline: 0.75rem;
+		color: var(--mx-toc-panel-text, var(--deep-text));
+		font-family: "JetBrains Mono Variable", ui-monospace, monospace;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		font-size: 0.75rem;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__progress-fill {
+		display: block;
+		width: 100%;
+		height: 100%;
+		background: color-mix(in oklab, var(--deep-text) 14%, transparent);
+		transform: scaleX(var(--mx-toc-reading-progress, 0));
+		transform-origin: left center;
+		transition: transform 120ms linear;
+	}
+
+	/* ---------- 站点统计卡（轮换文案 + 共用横幅图淡化底） ---------- */
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__stats {
+		flex: none;
+		margin-top: 1rem;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__stats-card {
+		position: relative;
+		padding: 0.75rem;
+		border: 1px solid var(--card-border);
+		border-radius: var(--radius-large);
+		background: var(--card-surface);
+		overflow: hidden;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__stats-background {
+		position: absolute;
+		inset: 0 0 0 25%;
+		opacity: 0.65;
+		-webkit-mask-image: linear-gradient(
+			to right,
+			transparent,
+			rgb(0 0 0 / 25%) 45%,
+			rgb(0 0 0 / 100%)
+		);
+		mask-image: linear-gradient(
+			to right,
+			transparent,
+			rgb(0 0 0 / 25%) 45%,
+			rgb(0 0 0 / 100%)
+		);
+		pointer-events: none;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__stats-background img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: 65% center;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__stats-heading {
+		position: relative;
+		width: 75%;
+		margin: 0 0 0.5rem;
+		color: var(--mx-toc-panel-text, var(--deep-text));
+		font-size: 0.85rem;
+		font-weight: 600;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__stats-viewport {
+		--mx-toc-stats-row-height: 1.5rem;
+
+		position: relative;
+		width: 75%;
+		height: var(--mx-toc-stats-row-height);
+		overflow: hidden;
+		-webkit-mask-image: linear-gradient(
+			to bottom,
+			transparent,
+			rgb(0 0 0 / 100%) 0.25rem,
+			rgb(0 0 0 / 100%) calc(100% - 0.25rem),
+			transparent
+		);
+		mask-image: linear-gradient(
+			to bottom,
+			transparent,
+			rgb(0 0 0 / 100%) 0.25rem,
+			rgb(0 0 0 / 100%) calc(100% - 0.25rem),
+			transparent
+		);
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__stats-card:focus-visible {
+		outline: 1px solid var(--mx-toc-panel-text, var(--deep-text));
+		outline-offset: 0.25rem;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__stats-messages[data-stats-count="3"] {
+		animation: mx-toc-stats-three 12s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__stats-messages[data-stats-count="2"] {
+		animation: mx-toc-stats-two 8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__stats-card:hover .mx-toc-panel__stats-messages,
+	html[data-site-mode="mingxin"] .mx-toc-panel__stats-card:focus-within .mx-toc-panel__stats-messages {
+		animation-play-state: paused;
+	}
+
+	html[data-site-mode="mingxin"] .mx-toc-panel__stats-message {
+		height: var(--mx-toc-stats-row-height);
+		margin: 0;
+		color: var(--mx-toc-panel-text, var(--deep-text));
+		font-size: 0.8rem;
+		font-variant-numeric: tabular-nums;
+		line-height: var(--mx-toc-stats-row-height);
+		white-space: nowrap;
+	}
+
+	@keyframes mx-toc-stats-three {
+		0%,
+		29% {
+			transform: translateY(0);
+		}
+		33.333%,
+		62.333% {
+			transform: translateY(calc(var(--mx-toc-stats-row-height, 1.5rem) * -1));
+		}
+		66.666%,
+		95.666% {
+			transform: translateY(calc(var(--mx-toc-stats-row-height, 1.5rem) * -2));
+		}
+		100% {
+			transform: translateY(calc(var(--mx-toc-stats-row-height, 1.5rem) * -3));
+		}
+	}
+
+	@keyframes mx-toc-stats-two {
+		0%,
+		45% {
+			transform: translateY(0);
+		}
+		50%,
+		95% {
+			transform: translateY(calc(var(--mx-toc-stats-row-height, 1.5rem) * -1));
+		}
+		100% {
+			transform: translateY(calc(var(--mx-toc-stats-row-height, 1.5rem) * -2));
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		html[data-site-mode="mingxin"] .mx-toc-panel__stats-viewport {
+			height: auto;
+			-webkit-mask-image: none;
+			mask-image: none;
+		}
+
+		html[data-site-mode="mingxin"] .mx-toc-panel__stats-messages[data-stats-count] {
+			animation: none;
+		}
+
+		html[data-site-mode="mingxin"] .mx-toc-panel__stats-message {
+			height: auto;
+			white-space: normal;
+		}
+
+		html[data-site-mode="mingxin"] .mx-toc-panel__stats-message[aria-hidden="true"] {
+			display: none;
+		}
+
+		html[data-site-mode="mingxin"] .mx-toc-panel__tool-btn,
+		html[data-site-mode="mingxin"] .mx-toc-panel__tool-btn::after,
+		html[data-site-mode="mingxin"] .mx-toc-panel__highlight,
+		html[data-site-mode="mingxin"] .mx-toc-panel__link,
+		html[data-site-mode="mingxin"] .mx-toc-panel__dot,
+		html[data-site-mode="mingxin"] .mx-toc-panel__toggle,
+		html[data-site-mode="mingxin"] .mx-toc-panel__toggle::before,
+		html[data-site-mode="mingxin"] .mx-toc-panel__progress-fill,
+		html[data-site-mode="mingxin"] .mx-toc-panel__action-btn,
+		html[data-site-mode="mingxin"] .mx-toc-panel__children {
+			transition-duration: 1ms;
+			transition-delay: 0ms;
+		}
+	}
+
+	/* ================= 文章列表（原站 ArticleListPage 移植） =================
+	 * 页头/置顶/卡片/分页数值照原站 article-list.css + page-title.css（stacked）。
+	 * 分类色系统：色相 = FNV-1a(分类名) % 360（组件前置计算写 --mx-cat-hue），
+	 * 颜色 = oklch(0.42 0.15 hue) 浅 / oklch(0.75 0.13 hue) 暗，与原站同值。 */
+
+	html[data-site-mode="mingxin"] .mxlist {
+		--mx-title-marker: #23786f;
+		--mx-pinned-accent: oklch(0.52 0.2 25);
+		--mx-cat-l: 0.42;
+		--mx-cat-c: 0.15;
+
+		display: block;
+		width: 100%;
+		padding: 0 1rem;
+	}
+
+	html.dark[data-site-mode="mingxin"] .mxlist {
+		--mx-title-marker: #7fcfc4;
+		--mx-pinned-accent: oklch(0.72 0.16 25);
+		--mx-cat-l: 0.75;
+		--mx-cat-c: 0.13;
+	}
+
+	@media (min-width: 48rem) {
+		html[data-site-mode="mingxin"] .mxlist {
+			padding: 0 2.25rem;
+		}
+	}
+
+	/* 明信列表在场时，本站 PostPage 网格与旧分页让位
+	 * （PostPage 的 .post-grid-auto 是无层全局样式，层内规则必须 !important 才压得住） */
+	html[data-site-mode="mingxin"] .std-home:has(> .mxlist) > #post-list-container,
+	html[data-site-mode="mingxin"] .std-home:has(> .mxlist) > .pagination-wrapper {
+		display: none !important;
+	}
+
+	/* ---------- 页头（PageTitle stacked 口径；原站的 SVG 手写描边动画未搬） ---------- */
+
+	html[data-site-mode="mingxin"] .mxlist__header {
+		margin-top: 2rem;
+		margin-bottom: 1.5rem;
+	}
+
+	@media (max-width: 48rem) {
+		html[data-site-mode="mingxin"] .mxlist__header {
+			margin-top: 1.25rem;
+			margin-bottom: 1.25rem;
+		}
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__eyebrow {
+		display: block;
+		margin-bottom: 0.4rem;
+		color: var(--content-meta);
+		font-family:
+			ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+			"Liberation Mono", monospace;
+		font-size: clamp(0.8rem, 1.5vw, 0.95rem);
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__title {
+		margin: 0;
+		color: var(--deep-text);
+		font-size: clamp(2rem, 4vw, 2.85rem);
+		font-weight: 900;
+		line-height: 1.06;
+	}
+
+	@media (max-width: 48rem) {
+		html[data-site-mode="mingxin"] .mxlist__title {
+			font-size: clamp(1.85rem, 9vw, 2.45rem);
+		}
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__desc {
+		max-width: 46rem;
+		margin: 0.9rem 0 0;
+		color: var(--content-meta);
+		font-size: 0.95rem;
+		line-height: 1.75;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__desc::before,
+	html[data-site-mode="mingxin"] .mxlist__desc::after {
+		color: var(--deep-text);
+		font-family: Georgia, "Times New Roman", serif;
+		font-size: 1.55em;
+		line-height: 0;
+		opacity: 0.42;
+		vertical-align: -0.3em;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__desc::before {
+		margin-right: 0.14em;
+		content: "\201C";
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__desc::after {
+		margin-left: 0.08em;
+		content: "\201D";
+	}
+
+	/* ---------- 分区题与工具栏 ---------- */
+
+	html[data-site-mode="mingxin"] .mxlist__section-title {
+		display: inline-flex;
+		min-width: 0;
+		align-items: center;
+		gap: 0.625rem;
+		margin: 0;
+		color: var(--deep-text);
+		font-size: 1.375rem;
+		font-weight: 800;
+		line-height: 1.4;
+		white-space: nowrap;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__section-title::before {
+		display: block;
+		width: 4px;
+		height: 1.2em;
+		border-radius: 9999px;
+		background: var(--mx-title-marker);
+		content: "";
+		flex: 0 0 4px;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__toolbar {
+		display: flex;
+		width: 100%;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		padding-bottom: 0.75rem;
+		border-bottom: 1px solid var(--line-divider);
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__summary {
+		display: flex;
+		min-width: 0;
+		align-items: flex-end;
+		gap: 0.5rem;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__total {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		color: var(--content-meta);
+		font-size: 0.875rem;
+		white-space: nowrap;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__total strong {
+		color: var(--deep-text);
+		font-size: 1.125rem;
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* ---------- 置顶轮播 ---------- */
+
+	html[data-site-mode="mingxin"] .mxlist-pinned {
+		margin: 0 0 1rem;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned .mxlist__section-title {
+		margin-bottom: 0.75rem;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__collection {
+		display: flex;
+		width: 100%;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--line-divider);
+		flex-direction: column;
+		gap: 1.25rem;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__collection.is-carousel-slides {
+		display: grid;
+		grid-template-areas: "slide";
+		gap: 0;
+		overflow: hidden;
+		touch-action: pan-y;
+		user-select: none;
+	}
+
+	html[data-site-mode="mingxin"] .is-carousel-slides > .mxlist-pinned__item {
+		grid-area: slide;
+	}
+
+	html[data-site-mode="mingxin"] .is-carousel-slides > .mxlist-pinned__item:not([data-pinned-active]) {
+		visibility: hidden;
+	}
+
+	html[data-site-mode="mingxin"] .is-carousel-slides > .mxlist-pinned__item.is-pinned-sliding {
+		visibility: visible;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__dots {
+		display: flex;
+		justify-content: center;
+		gap: 0.5rem;
+		margin-top: 1rem;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__dots button {
+		width: 0.5rem;
+		height: 0.5rem;
+		padding: 0;
+		border: 0;
+		border-radius: 9999px;
+		background: var(--deep-text);
+		opacity: 0.32;
+		cursor: pointer;
+		transition:
+			width 280ms cubic-bezier(0.16, 1, 0.3, 1),
+			height 280ms cubic-bezier(0.16, 1, 0.3, 1),
+			opacity 180ms ease;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__dots button:hover {
+		opacity: 0.6;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__dots button[aria-current="true"],
+	html[data-site-mode="mingxin"] .mxlist-pinned__dots button[aria-current="true"]:hover {
+		opacity: 1;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__dots button[aria-current="true"] {
+		width: 1.45rem;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__dots button:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 3px;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__item {
+		position: relative;
+		display: grid;
+		min-width: 0;
+		align-items: center;
+		grid-template-areas: "content cover";
+		grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.45fr);
+		gap: 1.5rem;
+		padding: 0;
+		background: transparent;
+		border: 0;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__content {
+		grid-area: content;
+		min-width: 0;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__cover-wrap,
+	html[data-site-mode="mingxin"] .mxlist-card__cover-wrap {
+		position: relative;
+		display: block;
+		overflow: hidden;
+		border-radius: var(--radius-medium);
+		background: var(--btn-plain-bg-hover);
+		line-height: 0;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__cover-wrap {
+		grid-area: cover;
+		width: 100%;
+		aspect-ratio: 2 / 1;
+	}
+
+	/* 封面走本站 CoverImage 组件（容器 + LQIP/加载态），此处只定尺寸与悬停缩放 */
+	html[data-site-mode="mingxin"] .mxlist-pinned__cover,
+	html[data-site-mode="mingxin"] .mxlist-card__cover {
+		display: block;
+		width: 100%;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__cover {
+		height: 100%;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__cover img,
+	html[data-site-mode="mingxin"] .mxlist-card__cover img {
+		transform-origin: center;
+		transition: transform 220ms ease;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__item:hover .mxlist-pinned__cover img,
+	html[data-site-mode="mingxin"] .mxlist-pinned__item:focus-within .mxlist-pinned__cover img,
+	html[data-site-mode="mingxin"] .mxlist-card:hover .mxlist-card__cover img,
+	html[data-site-mode="mingxin"] .mxlist-card:focus-within .mxlist-card__cover img {
+		transform: scale(1.025);
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__title {
+		position: relative;
+		display: flex;
+		min-width: 0;
+		flex: 1 1 auto;
+		align-items: baseline;
+		gap: 0.4rem;
+		margin: 0;
+		padding-left: 0.625rem;
+		color: var(--deep-text);
+		font-size: 1.25rem;
+		font-weight: 800;
+		line-height: 1.4;
+		overflow-wrap: anywhere;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__title::before {
+		position: absolute;
+		top: 0.18em;
+		left: 0;
+		width: 4px;
+		height: 1.15em;
+		border-radius: 9999px;
+		background: var(--mx-pinned-accent);
+		content: "";
+		transform-origin: center;
+		transition: transform 180ms ease;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__item:hover .mxlist-pinned__title::before,
+	html[data-site-mode="mingxin"] .mxlist-pinned__item:focus-within .mxlist-pinned__title::before {
+		transform: scaleY(1.12);
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__title-text {
+		display: block;
+		min-width: 0;
+		flex: 1 1 auto;
+		overflow: hidden;
+		color: inherit;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__surface-link {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		cursor: pointer;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__surface-link:focus-visible {
+		border-radius: var(--radius-small);
+		outline: 2px solid var(--primary);
+		outline-offset: -2px;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__lock {
+		display: inline-flex;
+		margin-left: 0.25rem;
+		align-items: center;
+		color: var(--content-meta);
+		vertical-align: middle;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__meta,
+	html[data-site-mode="mingxin"] .mxlist-card__meta {
+		display: flex;
+		min-width: 0;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.45rem 0.65rem;
+		color: var(--content-meta);
+		font-size: 0.75rem;
+		font-weight: 650;
+		line-height: 1.45;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__meta {
+		margin-top: 0.5rem;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__meta-item {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		white-space: nowrap;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__taxonomy {
+		display: inline-flex;
+		align-items: center;
+		flex: 0 0 auto;
+		font-size: 0.75rem;
+		font-weight: 800;
+		line-height: 1.45;
+		white-space: nowrap;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__meta .mxlist__taxonomy {
+		font-size: 0.8125rem;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__taxonomy--category {
+		color: oklch(var(--mx-cat-l) var(--mx-cat-c) var(--mx-cat-hue, 0));
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__taxonomy--tag {
+		color: var(--content-meta);
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pinned__desc {
+		display: -webkit-box;
+		height: 3.3em;
+		min-height: 3.3em;
+		max-height: 3.3em;
+		margin: 0.75rem 0 0;
+		overflow: hidden;
+		overflow-wrap: anywhere;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		color: var(--content-meta);
+		font-size: 0.875rem;
+		font-weight: 500;
+		line-height: 1.65;
+	}
+
+	/* ---------- 文章卡网格 ---------- */
+
+	html[data-site-mode="mingxin"] .mxlist__grid {
+		position: relative;
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 1.25rem 1.5rem;
+		isolation: isolate;
+		margin-top: 1.25rem;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__highlight {
+		--mxlist-highlight-gap: 0.75rem;
+		position: absolute;
+		inset: 0 auto auto 0;
+		z-index: -1;
+		box-sizing: content-box;
+		padding: var(--mxlist-highlight-gap);
+		margin: calc(var(--mxlist-highlight-gap) * -1);
+		border-radius: calc(var(--radius-medium) + var(--mxlist-highlight-gap));
+		background: var(--btn-plain-bg-active);
+		opacity: 0;
+		pointer-events: none;
+		transition:
+			transform 280ms ease,
+			width 280ms ease,
+			height 280ms ease,
+			opacity 160ms ease;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist__grid[data-highlighted] > .mxlist__highlight {
+		opacity: 1;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-card {
+		position: relative;
+		display: flex;
+		min-width: 0;
+		flex-direction: column;
+		gap: 0.75rem;
+		background: transparent;
+		border: 0;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-card__cover {
+		height: 100%;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-card__content {
+		display: flex;
+		min-width: 0;
+		flex: 1 1 auto;
+		flex-direction: column;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-card__title-row {
+		display: flex;
+		min-width: 0;
+		align-items: flex-start;
+		gap: 0.75rem;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-card__title {
+		position: relative;
+		display: flex;
+		min-width: 0;
+		flex: 1 1 auto;
+		align-items: flex-start;
+		gap: 0.4rem;
+		margin: 0;
+		padding-left: 0.625rem;
+		color: var(--deep-text);
+		font-size: 1.125rem;
+		font-weight: 800;
+		line-height: 1.4;
+		overflow-wrap: anywhere;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-card__title::before {
+		position: absolute;
+		top: 0.18em;
+		left: 0;
+		width: 4px;
+		height: 1.15em;
+		border-radius: 9999px;
+		background: oklch(var(--mx-cat-l) var(--mx-cat-c) var(--mx-cat-hue, 0));
+		content: "";
+		transform-origin: center;
+		transition: transform 180ms ease;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-card:hover .mxlist-card__title::before,
+	html[data-site-mode="mingxin"] .mxlist-card:focus-within .mxlist-card__title::before {
+		transform: scaleY(1.12);
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-card__title-text {
+		display: block;
+		min-width: 0;
+		flex: 1 1 auto;
+		overflow: hidden;
+		color: inherit;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-card__views {
+		display: inline-flex;
+		align-items: center;
+		flex: 0 0 auto;
+		margin-top: 0.12rem;
+		gap: 0.25rem;
+		color: var(--content-meta);
+		font-size: 0.8125rem;
+		font-weight: 800;
+		line-height: 1.5;
+		white-space: nowrap;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-card__meta {
+		margin-top: 0.75rem;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-card__rule {
+		width: 100%;
+		margin: 0.75rem 0;
+		border-top: 1px solid var(--line-divider);
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-card__desc {
+		display: -webkit-box;
+		height: 4.95em;
+		min-height: 4.95em;
+		max-height: 4.95em;
+		margin: 0;
+		overflow: hidden;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 3;
+		color: var(--content-meta);
+		font-size: 0.875rem;
+		font-weight: 500;
+		line-height: 1.65;
+	}
+
+	/* ---------- 分页（原站 article-list-pagination 口径） ---------- */
+
+	html[data-site-mode="mingxin"] .mxlist-pagination {
+		display: flex;
+		justify-content: center;
+		margin-top: 2rem;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pagination__inner,
+	html[data-site-mode="mingxin"] .mxlist-pagination__pages {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		max-width: 100%;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pagination__btn,
+	html[data-site-mode="mingxin"] .mxlist-pagination__page {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		height: 2.25rem;
+		border: 0;
+		border-radius: 0.375rem;
+		background: transparent;
+		color: var(--deep-text);
+		font-size: 0.875rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition:
+			color 160ms ease,
+			border-color 160ms ease,
+			background-color 160ms ease,
+			opacity 160ms ease;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pagination__btn {
+		gap: 0.375rem;
+		padding: 0 0.5rem;
+		text-decoration: none;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pagination__page {
+		width: 2.25rem;
+		min-width: 2.25rem;
+		padding: 0;
+		text-decoration: none;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pagination__btn:not(.is-disabled):hover,
+	html[data-site-mode="mingxin"] .mxlist-pagination__btn:not(.is-disabled):focus-visible,
+	html[data-site-mode="mingxin"] .mxlist-pagination__page:not(.is-active):hover,
+	html[data-site-mode="mingxin"] .mxlist-pagination__page:not(.is-active):focus-visible {
+		background: color-mix(in oklch, var(--deep-text) 8%, transparent);
+		color: var(--deep-text);
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pagination__page.is-active {
+		border: 1px solid color-mix(in oklch, var(--deep-text) 28%, transparent);
+		background: color-mix(in oklch, var(--deep-text) 12%, transparent);
+		font-weight: 600;
+		cursor: default;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pagination__btn:focus-visible,
+	html[data-site-mode="mingxin"] .mxlist-pagination__page:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	html[data-site-mode="mingxin"] .mxlist-pagination__btn.is-disabled {
+		opacity: 0.3;
+		cursor: not-allowed;
+	}
+
+	@media (max-width: 520px) {
+		html[data-site-mode="mingxin"] .mxlist-pagination__label {
+			display: none;
+		}
+	}
+
+	/* ---------- 列表响应式（原站 ≤768px 口径） ---------- */
+
+	@media (max-width: 48rem) {
+		html[data-site-mode="mingxin"] .mxlist__section-title {
+			gap: 0.5rem;
+			font-size: 1.25rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxlist-pinned__collection {
+			gap: 1rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxlist-pinned__item {
+			grid-template-areas:
+				"cover"
+				"content";
+			grid-template-columns: minmax(0, 1fr);
+			gap: 1rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxlist-pinned__title {
+			font-size: 1.125rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxlist-card__title {
+			font-size: 1.0625rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxlist-card__views,
+		html[data-site-mode="mingxin"] .mxlist__taxonomy {
+			font-size: 0.75rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxlist-pinned__desc,
+		html[data-site-mode="mingxin"] .mxlist-card__desc {
+			font-size: 0.8125rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxlist__grid {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 1.5rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxlist-pagination {
+			margin-top: 1.5rem;
+		}
+	}
+
+	/* ================= 归档行分类签：并入分类色系统 =================
+	 * 复核结论（2026-11-01）：改前分类签底色是 Firefly 通用 hue 染色
+	 * （oklch 0.95/0.025/var(--hue)，全站同一抹淡青绿），不是分类映射；
+	 * 原站口径是「分类自带色」（FNV-1a 色相），明信下统一为该系统：
+	 * 签底 = 该分类色 12% 淡染、签字 = 分类本色；时间线圆点同色。
+	 * --mx-cat-hue 由归档页内联样式块按分类逐条写入（构建期真值）。 */
+	html[data-site-mode="mingxin"] .archive-post .dash-line > div {
+		background: oklch(0.42 0.15 var(--mx-cat-hue, 190)) !important;
+	}
+
+	html[data-site-mode="mingxin"] .archive-post div:nth-of-type(3) > span:not(.truncate) {
+		background: color-mix(
+			in oklab,
+			oklch(0.42 0.15 var(--mx-cat-hue, 190)) 13%,
+			transparent
+		) !important;
+		color: oklch(0.42 0.15 var(--mx-cat-hue, 190)) !important;
+	}
+
+	html.dark[data-site-mode="mingxin"] .archive-post .dash-line > div {
+		background: oklch(0.75 0.13 var(--mx-cat-hue, 190)) !important;
+	}
+
+	html.dark[data-site-mode="mingxin"] .archive-post div:nth-of-type(3) > span:not(.truncate) {
+		background: color-mix(
+			in oklab,
+			oklch(0.75 0.13 var(--mx-cat-hue, 190)) 16%,
+			transparent
+		) !important;
+		color: oklch(0.75 0.13 var(--mx-cat-hue, 190)) !important;
+	}
+}

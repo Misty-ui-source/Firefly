@@ -49,11 +49,11 @@
 
 	async function startBuddies() {
 		if (buddiesStarted) return;
-		// 璨夜（astral）与素简（pure）形态下不设看板娘：两套形态 CSS 都把
-		// .l2d-buddy 隐藏，初始化纯属白下载。跳过；切到其他形态时由下方
+		// 璨夜（astral）、素简（pure）与明信（mingxin）形态下不设看板娘：各形态
+		// CSS 都把 .l2d-buddy 隐藏，初始化纯属白下载。跳过；切到其他形态时由下方
 		// siteModeChange 监听补启。已初始化的，切回去靠 CSS 标记类隐藏。
 		const mode = document.documentElement.dataset.siteMode;
-		if (mode === "astral" || mode === "pure") return;
+		if (mode === "astral" || mode === "pure" || mode === "mingxin") return;
 		// 移动端直接不初始化
 		if (window.innerWidth <= 768) return;
 		buddiesStarted = true;
@@ -96,7 +96,7 @@
 	// 无看板娘形态 → 其他形态：补上被守卫跳过的初始化
 	window.addEventListener("siteModeChange", (e) => {
 		const mode = (e as CustomEvent).detail?.mode;
-		if (mode && mode !== "astral" && mode !== "pure")
+		if (mode && mode !== "astral" && mode !== "pure" && mode !== "mingxin")
 			setTimeout(startBuddies, 1500);
 	});
 </script>

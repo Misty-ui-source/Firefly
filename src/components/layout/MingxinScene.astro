@@ -1,0 +1,546 @@
+---
+/**
+ * 明信影像层单幕：双吊线 + 前后木夹 + 模切编号贴纸 + 4:3 图框 + 底栏。
+ * 移植自参考站 BlindsScene（几何/CSS 值照原样，类名 mmz- → mingxin-）；
+ * 几何量由父级 `.mingxin-blinds__scenes` 注入。
+ */
+interface Props {
+	index: number;
+	item: {
+		composite: boolean;
+		image: string;
+		/** 轮换模式（mingxinConfig.scenes[].mode 透传；非 manual 时挂 data-mx-pick 定图） */
+		poolMode?: string;
+		alt: string;
+		title: string;
+		date: string;
+		description: string;
+	};
+	/** 首幕由固定舞台背景合成，图框不重复加载同一张图 */
+	composite?: boolean;
+}
+
+const { index, item, composite = false } = Astro.props;
+
+// 五幕统一为明信片版式：单数幕挂高（垂直中心落在视口 42% 处），双数幕垂直居中
+const isRaised = index % 2 === 1;
+
+// 数字保留真实笔顺，描线时不用测字形轮廓，也不依赖客户端字体。
+// 笔顺数据与原站一致只到 5；第 6 幕起没有笔顺，贴纸改印印刷体数字
+// （随填色组一起显影，不走描线），见下方 numberStrokes.length === 0 分支。
+const numberStrokes =
+	[
+		["M42 38L55 28L55 68", "M42 70H68"],
+		["M36 38C38 23 66 24 68 38C70 49 47 57 36 70H70"],
+		[
+			"M37 31C49 25 68 28 67 39C67 46 59 49 49 49C63 48 72 54 68 63C64 74 44 74 35 66",
+		],
+		["M56 29L35 55H70", "M61 29V71"],
+		["M69 29H40L37 49C49 42 69 46 69 59C69 74 45 76 35 66"],
+	][index] ?? [];
+const stickerEdge =
+	"M18 9L85 6Q93 5 97 15L100 37L97 43L102 49V64L82 88L21 92Q11 93 10 83L5 24Q4 13 18 9Z";
+---
+
+<article
+	class:list={["mingxin-blind-scene", { "mingxin-blind-scene--raised": isRaised }]}
+	data-scene-index={index}
+	aria-label={item.title}
+>
+	<div class="mingxin-blind-scene__swing" data-scene-swing>
+		<!-- 木夹分前后两层：后木臂被纸面遮住，前夹口压在照片上 -->
+		{
+			["left", "right"].map((side) => (
+				<div
+					class={`mingxin-blind-scene__hanger mingxin-blind-scene__hanger--${side}`}
+					aria-hidden="true"
+				>
+					<span class="mingxin-blind-scene__string" />
+					<svg
+						class="mingxin-blind-scene__clip mingxin-blind-scene__clip--back"
+						viewBox="0 0 84 182"
+						fill="none"
+					>
+						<g transform="translate(0 182) rotate(-90)">
+							<path
+								class="mingxin-blind-scene__clip-back"
+								d="M21 69L173 30Q179 28 177 34L75 70L25 78Q19 79 21 69Z"
+							/>
+							<path
+								class="mingxin-blind-scene__clip-bevel"
+								d="M25 74L75 66L175 31L177 34L75 70L25 78Z"
+							/>
+							<path
+								class="mingxin-blind-scene__clip-grain"
+								d="M84 62L158 36M42 70L68 66"
+							/>
+						</g>
+					</svg>
+					<svg
+						class="mingxin-blind-scene__clip mingxin-blind-scene__clip--front"
+						viewBox="0 0 84 182"
+						fill="none"
+					>
+						<g transform="translate(0 182) rotate(-90)">
+							<path
+								class="mingxin-blind-scene__clip-shadow"
+								d="M10 43L163 7Q168 6 166 11L120 40L111 39Q105 38 105 43L59 58C62 51 60 43 53 41C45 39 39 45 40 53C41 61 47 63 53 61L23 72L7 50Q4 46 10 43Z"
+								transform="translate(-2 3)"
+							/>
+							<path
+								class="mingxin-blind-scene__clip-wood"
+								d="M10 43L163 7Q168 6 166 11L120 40L111 39Q105 38 105 43L59 58C62 51 60 43 53 41C45 39 39 45 40 53C41 61 47 63 53 61L23 72L7 50Q4 46 10 43Z"
+							/>
+							<path
+								class="mingxin-blind-scene__clip-bevel"
+								d="M7 50L23 72L53 61L48 61L24 67L9 47ZM60 54L105 40V43L59 58Z"
+							/>
+							<path
+								class="mingxin-blind-scene__clip-highlight"
+								d="M13 45L157 11M25 65L35 61"
+							/>
+							<path
+								class="mingxin-blind-scene__clip-grain"
+								d="M68 36L141 16M83 39L128 24M18 49L34 45M24 55L34 52M64 45L88 38"
+							/>
+							<path
+								class="mingxin-blind-scene__clip-wire-shadow"
+								d="M115 43L80 63L57 61M113 31L102 26"
+							/>
+							<path
+								class="mingxin-blind-scene__clip-wire"
+								d="M115 43L80 63L57 61M113 31L102 26"
+							/>
+							<circle
+								class="mingxin-blind-scene__clip-coil-base"
+								cx="119"
+								cy="36"
+								r="8"
+							/>
+							<circle class="mingxin-blind-scene__clip-coil" cx="119" cy="36" r="6" />
+						</g>
+					</svg>
+				</div>
+			))
+		}
+
+		<div class="mingxin-blind-scene__card">
+			<svg
+				class="mingxin-blind-scene__sticker"
+				viewBox="0 0 112 100"
+				fill="none"
+				aria-hidden="true"
+				data-scene-sticker
+			>
+				<g data-scene-sticker-fill>
+					<path
+						class="mingxin-blind-scene__sticker-shadow"
+						d={stickerEdge}
+						transform="translate(1 4)"
+					/>
+					<path class="mingxin-blind-scene__sticker-paper" d={stickerEdge} />
+					<path
+						class="mingxin-blind-scene__sticker-face"
+						d="M21 17L84 13Q88 12 90 20L93 37L90 43L95 50V62L77 81L23 85Q18 86 18 80L12 25Q11 19 21 17Z"
+					/>
+					<path
+						class="mingxin-blind-scene__sticker-fold"
+						d="M82 88L79 72Q78 66 85 65L102 64Z"
+					/>
+					{
+						numberStrokes.length === 0 && (
+							<text
+								class="mingxin-blind-scene__sticker-number-print"
+								x="52"
+								y="67"
+								text-anchor="middle"
+							>
+								{index + 1}
+							</text>
+						)
+					}
+				</g>
+				<path
+					class="mingxin-blind-scene__sticker-outline"
+					d={stickerEdge}
+					pathLength="1"
+					data-scene-sticker-outline
+				/>
+				{
+					numberStrokes.map((d) => (
+						<path
+							class="mingxin-blind-scene__sticker-number"
+							d={d}
+							pathLength="1"
+							data-scene-sticker-ink
+						/>
+					))
+				}
+				<path
+					class="mingxin-blind-scene__sticker-crease"
+					d="M82 88L79 72Q78 66 85 65L102 64"
+					pathLength="1"
+					data-scene-sticker-ink
+				/>
+				<path
+					class="mingxin-blind-scene__sticker-glint"
+					d="M81 24L80 33M76 29L85 28"
+					pathLength="1"
+					data-scene-sticker-ink
+				/>
+			</svg>
+
+			<div class="mingxin-blind-scene__frame" data-scene-frame>
+				<img
+					class="mingxin-blind-scene__image"
+					src={item.poolMode && item.poolMode !== "manual" ? undefined : item.image}
+					data-mx-pick={item.poolMode && item.poolMode !== "manual" ? `scene-${index}` : undefined}
+					alt={item.alt}
+					loading={composite ? undefined : "lazy"}
+					decoding="async"
+				/>
+			</div>
+
+			<!-- 标题与完整日期各占一层，保留独立节点供入场动效错峰显示 -->
+			<div class="mingxin-blind-scene__band">
+				<div class="mingxin-blind-scene__band-id">
+					<p class="mingxin-blind-scene__band-title" data-scene-title>
+						{item.title}
+					</p>
+					{
+						item.date && (
+							<p class="mingxin-blind-scene__band-date" data-scene-date>
+								{item.date}
+							</p>
+						)
+					}
+				</div>
+				<span
+					class="mingxin-blind-scene__band-divider"
+					data-scene-band-divider
+					aria-hidden="true"
+				></span>
+				<p class="mingxin-blind-scene__band-note" data-scene-note>
+					{item.description}
+				</p>
+			</div>
+		</div>
+	</div>
+</article>
+
+<style>
+	.mingxin-blind-scene {
+		--mingxin-blind-clip-tilt: -8deg;
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		width: var(--mingxin-blind-width);
+		height: var(--mingxin-blind-height);
+		color: var(--on-surface);
+		opacity: 0;
+		visibility: hidden;
+		will-change: transform, opacity;
+	}
+
+	/* 单数幕挂高：垂直中心落在视口 42% 处，与双数幕（50%）错落 */
+	.mingxin-blind-scene--raised {
+		top: 42%;
+		--mingxin-blind-string-length: calc(
+			42vh - var(--mingxin-blind-height) / 2 + 8rem
+		);
+	}
+
+	/* 左右挂点各带一根线和一只木夹，用同一个横坐标避免摆动时接头错位 */
+	.mingxin-blind-scene__hanger {
+		position: absolute;
+		top: 0;
+		left: 20%;
+		width: 0;
+		height: 0;
+	}
+
+	.mingxin-blind-scene__hanger--right {
+		--mingxin-blind-clip-tilt: 8deg;
+		left: 80%;
+	}
+
+	/* 吊线顶端上探到视窗外，底端藏在木夹后，与卡身一起绕挂点倾斜 */
+	.mingxin-blind-scene__string {
+		position: absolute;
+		top: calc(-1 * var(--mingxin-blind-string-length));
+		left: 0;
+		z-index: 0;
+		width: 2px;
+		height: var(--mingxin-blind-string-length);
+		margin-left: -1px;
+		background: color-mix(in srgb, var(--on-surface) 44%, transparent);
+	}
+
+	.mingxin-blind-scene__swing {
+		position: absolute;
+		inset: 0;
+		/* 双吊线以顶部中点为共用摆轴，线、木夹与卡整体倾斜 */
+		transform-origin: 50% calc(-1 * var(--mingxin-blind-string-length));
+		will-change: transform;
+	}
+
+	/* 明信片纸面：厚纸边 + 底部介绍区 */
+	.mingxin-blind-scene__card {
+		position: absolute;
+		inset: 0;
+		/* 后木臂在 0 层，纸面在 1 层，前夹口在 2 层 */
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		box-sizing: border-box;
+		padding: var(--mingxin-blind-pad);
+		padding-bottom: 0;
+		border: var(--mingxin-blind-edge) solid var(--on-surface);
+		background: var(--mingxin-blind-paper);
+		box-shadow:
+			0 1.1rem 2.4rem rgb(0 0 0 / 0.22),
+			0 0.25rem 0.7rem rgb(0 0 0 / 0.14);
+	}
+
+	.mingxin-blind-scene__frame {
+		position: relative;
+		flex: none;
+		width: 100%;
+		height: var(--mingxin-blind-photo-height);
+		overflow: hidden;
+		background: var(--page-bg);
+	}
+
+	.mingxin-blind-scene__image {
+		position: absolute;
+		inset: 0;
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: center;
+		user-select: none;
+		-webkit-user-drag: none;
+	}
+
+	/* 两片木臂分别处在纸面前后；侧面的咬口凹槽与银灰弹簧保留参考木夹的结构 */
+	.mingxin-blind-scene__clip,
+	.mingxin-blind-scene__sticker {
+		color: oklch(from var(--mingxin-blind-ink) l 0 h);
+	}
+
+	.mingxin-blind-scene__clip {
+		position: absolute;
+		top: calc(var(--mingxin-blind-clip-height) * -0.52);
+		left: 0;
+		width: calc(var(--mingxin-blind-clip-height) * 84 / 182);
+		height: var(--mingxin-blind-clip-height);
+		overflow: visible;
+		transform: translateX(-50%) rotate(var(--mingxin-blind-clip-tilt));
+		transform-origin: 50% 52%;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	/* 前后木臂一起镜像，夹口与弹簧才能相对卡片中线左右对称 */
+	.mingxin-blind-scene__hanger--right .mingxin-blind-scene__clip {
+		transform: translateX(-50%) rotate(var(--mingxin-blind-clip-tilt)) scaleX(-1);
+	}
+
+	.mingxin-blind-scene__clip--back {
+		z-index: 0;
+	}
+
+	.mingxin-blind-scene__clip--front {
+		z-index: 2;
+	}
+
+	.mingxin-blind-scene__clip-shadow {
+		fill: currentColor;
+		opacity: 0.2;
+	}
+
+	.mingxin-blind-scene__clip-back,
+	.mingxin-blind-scene__clip-wood {
+		stroke: currentColor;
+		stroke-width: 1.4;
+	}
+
+	.mingxin-blind-scene__clip-back {
+		fill: color-mix(in srgb, var(--mingxin-blind-wood) 75%, currentColor);
+	}
+
+	.mingxin-blind-scene__clip-wood {
+		fill: var(--mingxin-blind-wood);
+	}
+
+	.mingxin-blind-scene__clip-bevel {
+		fill: color-mix(in srgb, currentColor 65%, transparent);
+	}
+
+	.mingxin-blind-scene__clip-highlight {
+		stroke: color-mix(in srgb, var(--mingxin-blind-highlight) 45%, transparent);
+		stroke-width: 1.2;
+	}
+
+	.mingxin-blind-scene__clip-grain {
+		stroke: color-mix(in srgb, currentColor 32%, transparent);
+		stroke-width: 1;
+	}
+
+	.mingxin-blind-scene__clip-wire-shadow,
+	.mingxin-blind-scene__clip-coil-base {
+		stroke: currentColor;
+		stroke-width: 4.5;
+	}
+
+	.mingxin-blind-scene__clip-wire,
+	.mingxin-blind-scene__clip-coil {
+		stroke: color-mix(in srgb, var(--mingxin-blind-highlight) 78%, currentColor);
+		stroke-width: 2.5;
+	}
+
+	.mingxin-blind-scene__clip-coil-base {
+		fill: currentColor;
+	}
+
+	/* 左上角模切贴纸：纸边、折角与手写序号均为 SVG 路径 */
+	.mingxin-blind-scene__sticker {
+		position: absolute;
+		top: calc(-0.7 * var(--mingxin-blind-pad));
+		left: calc(-0.7 * var(--mingxin-blind-pad));
+		z-index: 3;
+		display: block;
+		width: clamp(3rem, 4.2vw, 4.4rem);
+		height: auto;
+		overflow: visible;
+		transform: rotate(-8deg);
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		/* 入场前保持不可见；描线与填色由控制器的分层入场推进 */
+		opacity: 0;
+		visibility: hidden;
+	}
+
+	.mingxin-blind-scene__sticker-shadow {
+		fill: currentColor;
+		opacity: 0.2;
+	}
+
+	.mingxin-blind-scene__sticker-paper,
+	.mingxin-blind-scene__sticker-fold {
+		fill: var(--mingxin-blind-highlight);
+	}
+
+	.mingxin-blind-scene__sticker-face {
+		fill: var(--mingxin-blind-wood);
+	}
+
+	.mingxin-blind-scene__sticker-outline,
+	.mingxin-blind-scene__sticker-crease {
+		stroke: currentColor;
+		stroke-width: 1.6;
+	}
+
+	.mingxin-blind-scene__sticker-number {
+		stroke: var(--mingxin-blind-highlight);
+		stroke-width: 6;
+	}
+
+	/* 第 6 幕起无笔顺数据：印刷体数字随贴纸填色组显影，位置/字号对齐手写笔顺的占位 */
+	.mingxin-blind-scene__sticker-number-print {
+		fill: var(--mingxin-blind-highlight);
+		font-size: 34px;
+		font-weight: 700;
+		letter-spacing: 0;
+	}
+
+	.mingxin-blind-scene__sticker-glint {
+		stroke: var(--mingxin-blind-highlight);
+		stroke-width: 1.8;
+	}
+
+	/* 贴纸填色组初始隐藏，描线与手写序号从虚线偏移推进 */
+	[data-scene-sticker-fill] {
+		opacity: 0;
+	}
+
+	[data-scene-sticker-outline],
+	[data-scene-sticker-ink] {
+		stroke-dasharray: 1;
+		stroke-dashoffset: 1;
+	}
+
+	/* 明信片底部介绍区：左列标题 + 数字日期，竖杠分隔，右栏说明最多两行 */
+	.mingxin-blind-scene__band {
+		position: relative;
+		display: flex;
+		flex: 1 1 auto;
+		align-items: center;
+		gap: clamp(0.6rem, 1.2vw, 0.95rem);
+		min-height: 0;
+		margin-top: 0;
+	}
+
+	.mingxin-blind-scene__band-id {
+		flex: 0 0 auto;
+		display: flex;
+		flex-direction: column;
+		gap: 0.14rem;
+	}
+
+	.mingxin-blind-scene__band-title {
+		margin: 0;
+		color: var(--mingxin-blind-ink);
+		font-size: clamp(0.92rem, 1.25vw, 1.18rem);
+		font-weight: 800;
+		letter-spacing: 0.1em;
+		line-height: 1.15;
+		white-space: nowrap;
+		opacity: 0;
+		visibility: hidden;
+	}
+
+	.mingxin-blind-scene__band-date {
+		margin: 0;
+		color: color-mix(in srgb, var(--mingxin-blind-ink) 58%, transparent);
+		font-size: clamp(0.6rem, 0.78vw, 0.72rem);
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		line-height: 1;
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+		opacity: 0;
+		visibility: hidden;
+	}
+
+	/* 分隔竖杠：随左右两列中较高的一根拉满，不额外占宽 */
+	.mingxin-blind-scene__band-divider {
+		flex: 0 0 1px;
+		align-self: stretch;
+		background: color-mix(in srgb, var(--mingxin-blind-ink) 22%, transparent);
+		opacity: 0;
+		visibility: hidden;
+		transform: scaleY(0);
+	}
+
+	/* 右栏说明：固定两行，超出以省略号截断 */
+	.mingxin-blind-scene__band-note {
+		margin: 0;
+		flex: 1 1 auto;
+		min-width: 0;
+		color: color-mix(in srgb, var(--mingxin-blind-ink) 86%, transparent);
+		font-size: clamp(0.7rem, 0.88vw, 0.84rem);
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		line-height: 1.5;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		text-overflow: ellipsis;
+		overflow: hidden;
+		opacity: 0;
+		visibility: hidden;
+	}
+</style>

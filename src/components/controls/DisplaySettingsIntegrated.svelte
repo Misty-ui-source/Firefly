@@ -202,6 +202,7 @@ const siteModeOptions = [
 	{ value: "brick", labelKey: I18nKey.siteModeBrick },
 	{ value: "astral", labelKey: I18nKey.siteModeAstral },
 	{ value: "paper", labelKey: I18nKey.siteModePaper },
+	{ value: "mingxin", labelKey: I18nKey.siteModeMingxin },
 ] as const;
 // 素简下调色板精简：只留站点形态（华彩切换）、字体与特效（樱花/萤火虫），壁纸整页签收起；
 // 文章布局（列表/网格）在素简下不出现——素简是单列列表、根本排不了网格（2026-10-28 用户定），原位置改放特效
@@ -1033,6 +1034,21 @@ onMount(() => {
 			"wallpaperModeChange",
 			handleWallpaperModeChange,
 		);
+	};
+});
+
+onMount(() => {
+	// 外部切换站点形态时同步本地状态（如明信顶栏外观段的形态格）：
+	// 否则面板仍以为当前是挂载时的形态，再点目标形态会变成无操作赋值，
+	// 出现「点了切不动」的假死。赋同值时 Svelte 不触发 effect，不会成环。
+	const handleSiteModeChange = () => {
+		siteMode = getStoredSiteMode();
+	};
+
+	window.addEventListener("siteModeChange", handleSiteModeChange);
+
+	return () => {
+		window.removeEventListener("siteModeChange", handleSiteModeChange);
 	};
 });
 

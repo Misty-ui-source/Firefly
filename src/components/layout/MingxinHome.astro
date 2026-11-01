@@ -1,0 +1,2307 @@
+---
+import { getCollection } from "astro:content";
+import { Icon } from "astro-icon/components";
+import {
+	analyticsConfig,
+	announcementConfig,
+	mingxinConfig,
+	navBarConfig,
+	profileConfig,
+	siteConfig,
+} from "@/config";
+import {
+	getCategoryList,
+	getSortedPosts,
+	getSortedPostsList,
+	getTagList,
+} from "@/utils/content-utils";
+import { dynamicSlug, sortDynamics } from "@/utils/dynamic-utils";
+import { loadLocalImage } from "@/utils/schema-image";
+import { getPostUrlBySlug, getTagUrl, url } from "@/utils/url-utils";
+import MingxinMosaic from "./MingxinMosaic.astro";
+import MingxinScene from "./MingxinScene.astro";
+
+/**
+ * 明信首页（第七形态专属）：个人信息卡 + 明信片影像层 + 内容区 + 签名页脚。
+ * 移植自参考站 mmz Home（结构/几何照原样，类名 mmz- → mingxin-），差异：
+ * 五幕文案走 mingxinConfig 固定编年（站长审定，不从文章派生）；
+ * 气泡/台词一期只装配进运行时配置（二期渲染）；移动端与减弱动效不用
+ * 参考站的独立移动首页，改静态明信片堆叠回退（任务书口径）。
+ * 显隐由 main.css 守卫 + mingxin-mode.css 点亮控制：非明信形态整根隐藏。
+ */
+
+const fmtDate = (d: Date) =>
+	`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const fmtSlash = (d: Date) =>
+	`${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
+
+/* 封面解析：frontmatter 的 ./cover.* 是与文章同目录的相对路径，须经
+   schema-image 的构建期 glob 解析成真实 URL（与 PostCard 同口径），
+   直接当 src 用会 404；远程/根路径/data 原样，解析不到返回 null 走无封面式 */
+const resolveCover = async (post: {
+	data: { image?: unknown };
+	filePath?: string;
+}): Promise<string | null> => {
+	const raw = post.data.image;
+	if (!raw) return null;
+	if (typeof raw !== "string") {
+		return (raw as { src?: string }).src ?? null;
+	}
+	if (
+		/^(https?:)?\/\//.test(raw) ||
+		raw.startsWith("/") ||
+		raw.startsWith("data:")
+	) {
+		return raw;
+	}
+	const filePath = (post.filePath ?? "")
+		.replace(/^\.\//, "")
+		.replace(/^src\//, "");
+	const basePath = filePath.slice(0, filePath.lastIndexOf("/"));
+	const meta = await loadLocalImage(raw, basePath);
+	return meta?.src ?? null;
+};
+
+/* ---------------- 数据装配：近期文章（置顶优先，getSortedPostsList 已排序） ---------------- */
+const allPosts = await getSortedPostsList();
+const afterglowPosts = await Promise.all(
+	allPosts.slice(0, 12).map(async (post) => ({
+		title: post.data.title,
+		href: url(`/posts/${post.id}/`),
+		date: fmtDate(post.data.published),
+		description: post.data.description ?? "",
+		category: post.data.category || "未分类",
+		cover: (await resolveCover(post)) ?? undefined,
+	})),
+);
+
+/* ---------------- 数据装配：我的动态（最新在前） ---------------- */
+const stripMarkdown = (text: string) =>
+	text
+		.replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+		.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+		.replace(/[*_#>`=~]/g, "")
+		.replace(/\s+/g, " ")
+		.trim();
+const dynamics = sortDynamics(await getCollection("dynamic"));
+const momentItems = dynamics.slice(0, 8).map((entry) => {
+	const text = stripMarkdown(entry.body ?? "");
+	return {
+		excerpt: text.length > 96 ? `${text.slice(0, 96)}…` : text,
+		date: fmtDate(entry.data.published),
+		iso: entry.data.published.toISOString(),
+		pinned: entry.data.pinned || false,
+		href: url(`/dynamic/${dynamicSlug(entry.id)}/`),
+	};
+});
+
+/* ---------------- 快速前往：现有导航配置拍平（分组取子项，跳过占位与主页） ---------------- */
+type QuickLink = { name: string; href: string; icon?: string; external?: boolean };
+const quickLinks: QuickLink[] = [];
+for (const link of navBarConfig.links) {
+	const leaves = link.children?.length ? link.children : [link];
+	for (const leaf of leaves) {
+		if (!leaf.url || leaf.url === "#" || leaf.url === "/") continue;
+		quickLinks.push({
+			name: leaf.name,
+			href: leaf.external ? leaf.url : url(leaf.url),
+			icon: leaf.icon,
+			external: leaf.external,
+		});
+	}
+}
+const navQuickLinks = quickLinks.slice(0, 12);
+
+/* ---------------- 公告：复用 announcementConfig 静态文案 ---------------- */
+const noticeText = announcementConfig.content.trim();
+const noticeLink =
+	noticeText &&
+	announcementConfig.link?.enable &&
+	announcementConfig.link.text &&
+	announcementConfig.link.url
+		? announcementConfig.link
+		: null;
+
+/* ---------------- 个人简介（页脚标语用） ----------------
+   作者卡本体已按站长 2026-11-01 改定移入顶栏左段胶囊（MingxinNavbar.astro
+   的 .mxnav-brand + 资料卡，此处不再装配个人信息卡数据与热力图）。 */
+const profileBio = profileConfig.bio;
+const isExternalHref = (href: string) => /^(?:https?:)?\/\//i.test(href);
+
+/* ---------------- 五幕（mingxinConfig 固定文案） ---------------- */
+const blindScenes = mingxinConfig.scenes.map((scene, index) => ({
+	index,
+	composite: Boolean(scene.composite),
+	image: scene.image,
+	poolMode: scene.mode ?? "manual",
+	alt: scene.title,
+	title: scene.title,
+	date: scene.date,
+	description: scene.note,
+}));
+const finaleImageSrc = blindScenes[blindScenes.length - 1]?.image ?? mingxinConfig.revealImage;
+/* 轮换池：非 manual 的槽图不直出 src，挂 data-mx-pick 由 Layout 首帧脚本定图 */
+const mxRevealPick = (mingxinConfig.revealMode ?? "manual") !== "manual";
+const mxDollPick = (mingxinConfig.dollMode ?? "manual") !== "manual";
+const mxFinalePickKey = blindScenes.length
+	? `scene-${blindScenes.length - 1}`
+	: "reveal";
+const mxFinalePick = blindScenes.length
+	? blindScenes[blindScenes.length - 1].poolMode !== "manual"
+	: mxRevealPick;
+const mxStandPick = (i: number) =>
+	((mingxinConfig.standModes ?? [])[i] ?? "manual") !== "manual";
+
+/* ---------------- 气泡池 / 台词装配（二期渲染，一期只进运行时配置） ---------------- */
+const bubbleLine = (text: string, limit = 22) => {
+	const clause =
+		text.replace(/\s+/g, " ").split(/[，。；：!?！？,.;:]/)[0] ?? text;
+	const clean = clause.trim();
+	return clean.length > limit ? `${clean.slice(0, limit)}…` : clean;
+};
+const bubbleSeen = new Set<string>();
+const bubbleMessages: string[] = [];
+for (const post of allPosts) {
+	const text = bubbleLine(post.data.description || post.data.title, 24);
+	if (!text || bubbleSeen.has(text)) continue;
+	bubbleSeen.add(text);
+	bubbleMessages.push(text);
+	if (bubbleMessages.length >= 16) break;
+}
+for (const fallback of mingxinConfig.bubbleFallbacks) {
+	if (bubbleMessages.length >= 12) break;
+	if (!bubbleSeen.has(fallback)) {
+		bubbleSeen.add(fallback);
+		bubbleMessages.push(fallback);
+	}
+}
+/* 气泡图走 resolveCover 解析（相对 ./cover.* 直接当 src 会 404）；
+   解析不到的文章不进图池，气泡墙拉不到图时自己会退回纯文字 */
+const bubbleImages = (
+	await Promise.all(
+		allPosts.slice(0, 12).map(async (post) => await resolveCover(post)),
+	)
+)
+	.filter((src): src is string => Boolean(src))
+	.slice(0, 4);
+
+/* ---------------- 黑猫台词装配（二期）：数据派生口径同原站 ----------------
+   文章摘要/标题在前、动态摘句随后、简介与兜底压阵：bubbleLine(48) 切首句
+   截断、去重、上限 8 条；一句都没有时角色不渲染（控制器空台词自动空转）。 */
+const dialogueLines: string[] = [];
+const dialogueSeen = new Set<string>();
+const pushDialogueLine = (raw: string) => {
+	const text = bubbleLine(raw, 48);
+	if (!text || dialogueSeen.has(text)) return;
+	dialogueSeen.add(text);
+	dialogueLines.push(text);
+};
+for (const post of allPosts.slice(0, 6)) {
+	pushDialogueLine(post.data.description || post.data.title);
+	if (dialogueLines.length >= 5) break;
+}
+for (const moment of momentItems.slice(0, 3)) {
+	pushDialogueLine(moment.excerpt);
+	if (dialogueLines.length >= 7) break;
+}
+if (profileBio) pushDialogueLine(profileBio);
+for (const fallback of mingxinConfig.dialogueFallbacks) {
+	pushDialogueLine(fallback);
+	if (dialogueLines.length >= 8) break;
+}
+const dialogueLinesFinal = dialogueLines.slice(0, 8);
+
+const blindsRuntime = {
+	scenes: {
+		scrollDistance: mingxinConfig.scrollDistance,
+		cycleDuration: mingxinConfig.cycleDuration,
+		sceneCount: blindScenes.length,
+		bubbleMessages,
+		bubbleImages,
+	},
+};
+
+/* ---------------- 页脚 ---------------- */
+const footerLinks = [
+	{ label: "RSS", href: url("/rss.xml"), external: false },
+	{ label: "Atom", href: url("/atom.xml"), external: false },
+	{ label: "Sitemap", href: "/sitemap-index.xml", external: true },
+];
+const earliestPost = allPosts.length
+	? allPosts[allPosts.length - 1].data.published
+	: null;
+const runtimeDays = earliestPost
+	? Math.max(0, Math.floor((Date.now() - earliestPost.getTime()) / 86400000))
+	: null;
+
+/* ================= 终幕内容区 ·「Hero」变体（原站 HomeDataLayer 移植） =================
+   与「经典」变体共用同一批构建期数据装配，html[data-mingxin-afterglow] 决定显哪套。
+   牌堆/分类圆盘的取图口径与原站一致：构建期解析封面，客户端不二次遍历。 */
+const allPostsFull = await getSortedPosts();
+const categoriesByCount = (await getCategoryList())
+	.slice()
+	.sort((a, b) => b.count - a.count);
+const tagsByCount = (await getTagList())
+	.slice()
+	.sort((a, b) => b.count - a.count);
+
+/* 字数统计与紧凑数字：原站 home-data-layer.js 的两件小工具，口径照搬 */
+const countReadableCharacters = (body = "") => {
+	const text = String(body)
+		.replace(/```[\s\S]*?```/g, "")
+		.replace(/`[^`]*`/g, "")
+		.replace(/\s+/g, " ")
+		.trim();
+	const cn = text.match(/[一-龥]/g) || [];
+	const en = text.match(/[a-zA-Z]/g) || [];
+	return cn.length + en.length;
+};
+const formatCompactNumber = (value: number) => {
+	if (Math.abs(value) < 1000) return String(value);
+	const compact = value / 1000;
+	return `${Number.isInteger(compact) ? compact.toFixed(0) : compact.toFixed(1)}k`;
+};
+const totalWords = allPostsFull.reduce(
+	(sum, post) => sum + countReadableCharacters(post.body || ""),
+	0,
+);
+
+/* ---------------- 马赛克前段介绍票签内容 ----------------
+   三张票签照原站散文风：壹 = 个人简介散文（mingxinConfig.introBio）、
+   贰 = 站点数据（构建期真实统计）、叁 = 联系散文（mingxinConfig.
+   introContact 整句，装配时把句中「GitHub」字样、「邮箱地址」
+   「RSS / Atom」三处按 profileConfig 真值切成真链接片段；
+   句式被改、命不中的部分按纯文本渲染，不丢字）。 */
+const githubLink = profileConfig.links.find((link) => link.name === "GitHub");
+const emailLink = profileConfig.links.find((link) => link.name === "Email");
+const contactNeedles: { needle: string; href: string }[] = [
+	...(githubLink
+		? [
+				{
+					needle: "GitHub",
+					href: githubLink.url,
+				},
+			]
+		: []),
+	...(emailLink
+		? [
+				{
+					needle: emailLink.url.replace(/^mailto:/, ""),
+					href: emailLink.url,
+				},
+			]
+		: []),
+	{ needle: "RSS / Atom", href: "/atom.xml" },
+];
+const contactSegments: { text: string; href?: string }[] = [];
+{
+	let rest = mingxinConfig.introContact;
+	while (rest) {
+		let hit: { index: number; needle: string; href: string } | null = null;
+		for (const item of contactNeedles) {
+			const index = rest.indexOf(item.needle);
+			if (index >= 0 && (!hit || index < hit.index)) hit = { index, ...item };
+		}
+		if (!hit) {
+			contactSegments.push({ text: rest });
+			break;
+		}
+		if (hit.index > 0) contactSegments.push({ text: rest.slice(0, hit.index) });
+		contactSegments.push({ text: hit.needle, href: hit.href });
+		rest = rest.slice(hit.index + hit.needle.length);
+	}
+}
+const mosaicIntro = {
+	bio: mingxinConfig.introBio,
+	stats: [
+		`文章 ${allPosts.length} 篇`,
+		`总字数 ${formatCompactNumber(totalWords)} 字`,
+		...(runtimeDays !== null ? [`小屋已运行 ${runtimeDays} 天`] : []),
+	],
+	contact: contactSegments,
+};
+
+/* 博客文章牌堆：置顶最多 3 篇 + 最新 5 篇（非置顶），按 id 去重；
+   缩略态按这个顺序自动翻牌；展开态两抽屉沿用牌堆下标选封面 */
+const pinnedPool = allPostsFull.filter((post) => post.data.pinned);
+const recentPool = allPostsFull.filter((post) => !post.data.pinned).slice(0, 5);
+const deckPosts = Array.from(
+	new Map(
+		[...pinnedPool.slice(0, 3), ...recentPool].map((post) => [post.id, post]),
+	).values(),
+);
+const deckItems = await Promise.all(
+	deckPosts.map(async (post, index) => ({
+		index,
+		href: getPostUrlBySlug(post.id),
+		title: post.data.title,
+		date: fmtDate(post.data.published),
+		isPinned: Boolean(post.data.pinned),
+		cover: await resolveCover(post),
+	})),
+);
+const deckGroups = [
+	{
+		label: "置顶文章",
+		icon: "material-symbols:bookmark-outline",
+		items: deckItems.filter((item) => item.isPinned),
+	},
+	{
+		label: "最新更新",
+		icon: "material-symbols:history",
+		items: deckItems.filter((item) => !item.isPinned),
+	},
+].filter((group) => group.items.length > 0);
+
+/* 内容索引抽屉：分类取篇数前 4、标签取篇数前 6，各补一张「查看全部」 */
+const indexGroups = [
+	{
+		label: "分类索引",
+		icon: "material-symbols:folder-outline-rounded",
+		cards: categoriesByCount.slice(0, 4).map((category) => ({
+			name: category.name,
+			count: category.count,
+			url: category.url,
+		})),
+		allLabel: "查看全部",
+		allNote: `${categoriesByCount.length} 个分类`,
+		allUrl: url("/categories/"),
+	},
+	{
+		label: "标签索引",
+		icon: "material-symbols:label",
+		cards: tagsByCount.slice(0, 6).map((tag) => ({
+			name: `#${tag.name}`,
+			count: tag.count,
+			url: getTagUrl(tag.name),
+		})),
+		allLabel: "查看全部标签",
+		allNote: `${tagsByCount.length} 个标签`,
+		allUrl: url("/tags/"),
+	},
+].filter((group) => group.cards.length > 0);
+
+/* 分类剧场：三张圆盘 = 篇数最多的三个分类，盘面是该分类最新一篇文章的封面。
+   allPostsFull 已按发布时间倒序，每个分类第一次命中的就是最新一篇 */
+const leadPostByCategory = new Map<string, (typeof allPostsFull)[number]>();
+for (const post of allPostsFull) {
+	const name = post.data.category?.trim() || "未分类";
+	if (!leadPostByCategory.has(name)) leadPostByCategory.set(name, post);
+}
+const sceneAgents = await Promise.all(
+	categoriesByCount.slice(0, 3).map(async (category) => {
+		const lead = leadPostByCategory.get(category.name);
+		return {
+			name: category.name,
+			count: category.count,
+			cover: lead ? await resolveCover(lead) : null,
+		};
+	}),
+);
+const scenePrompt = `本站共有 ${categoriesByCount.length} 个分类`;
+const SCENE_LINES = [
+	"M300 110C300 162 102 152 102 196",
+	"M300 110V196",
+	"M300 110C300 162 498 152 498 196",
+];
+
+/* 站点数据六项：UV/PV 运行时由 Umami 分享接口回填（口径同原站），其余构建期定值 */
+const statBoxes = [
+	{ mod: "uv", label: "访客", compact: "--", full: "--", statKind: "UV" as const },
+	{ mod: "pv", label: "浏览量", compact: "--", full: "--", statKind: "PV" as const },
+	{
+		mod: "posts",
+		label: "文章",
+		compact: String(allPostsFull.length),
+		full: String(allPostsFull.length),
+	},
+	{
+		mod: "cats",
+		label: "分类",
+		compact: String(categoriesByCount.length),
+		full: String(categoriesByCount.length),
+	},
+	{
+		mod: "tags",
+		label: "标签",
+		compact: String(tagsByCount.length),
+		full: String(tagsByCount.length),
+	},
+	{
+		mod: "words",
+		label: "总字数",
+		compact: formatCompactNumber(totalWords),
+		full: totalWords.toLocaleString(),
+	},
+];
+/* 层叠插画按下标倒序渲染：下标 0（访客）最后画、视觉在最上层 */
+const statLayers = statBoxes.map((box, i) => ({ box, i })).reverse();
+
+/* 订阅与联系：邮箱打头 + profileConfig 社交链接；中心 hub 取 GitHub（无则第一条） */
+const brandColorOf = (haystack: string) => {
+	const text = haystack.toLowerCase();
+	if (text.includes("github")) return "#181717";
+	if (text.includes("telegram")) return "#26a5e4";
+	if (text.includes("bilibili")) return "#fb7299";
+	if (text.includes("mail")) return "#ea4335";
+	if (text.includes("rss")) return "#ee802f";
+	if (text.includes("twitter") || text.includes("x.com")) return "#1d9bf0";
+	return undefined;
+};
+const contactLinks = [
+	{
+		name: "邮箱",
+		icon: "material-symbols:mail-outline-rounded",
+		href: "mailto:xz011@qq.com",
+		color: "#ea4335" as string | undefined,
+	},
+	...profileConfig.links.map((link) => ({
+		name: link.name,
+		icon: link.icon,
+		href: link.url,
+		color: brandColorOf(`${link.icon} ${link.name}`),
+	})),
+];
+const primaryContact =
+	contactLinks.find((link) => /github/i.test(`${link.icon} ${link.name}`)) ??
+	contactLinks[0];
+const ORBIT_SLOTS = [
+	{ x: -92, y: -56, s: 52 },
+	{ x: 90, y: -64, s: 46 },
+	{ x: -104, y: 36, s: 44 },
+	{ x: 102, y: 28, s: 54 },
+	{ x: -46, y: 84, s: 40 },
+	{ x: 58, y: 86, s: 42 },
+];
+const orbitSatellites = contactLinks
+	.filter((link) => link !== primaryContact)
+	.slice(0, ORBIT_SLOTS.length)
+	.map((link, i) => ({ ...link, ...ORBIT_SLOTS[i] }));
+
+const guideCards = [
+	{ id: "stats", title: "站点数据", hint: "小屋的家底，一层一层数给你听" },
+	{ id: "posts", title: "博客文章", hint: "置顶与最新，都收在这摞牌里" },
+	{ id: "index", title: "内容索引", hint: "按分类与标签，找到想看的那篇" },
+	{ id: "contact", title: "订阅与联系", hint: "订阅更新，或者直接找到我" },
+] as const;
+
+const umamiShare = analyticsConfig.umamiAnalytics;
+---
+
+<div class="mingxin-home" data-mingxin-home>
+	{/* 个人信息卡独立长条已按站长 2026-11-01 改定撤除（不渲染）：
+	    作者卡展开并入顶栏左段胶囊（MingxinNavbar.astro 的 .mxnav-brand）。 */}
+
+	<section class="mingxin-blinds" data-mingxin-blinds aria-label="明信片影像层">
+		<div class="mingxin-blinds__stage" data-blinds-stage aria-hidden="true">
+			<img
+				class="mingxin-blinds__background"
+				src={mxRevealPick ? undefined : mingxinConfig.revealImage}
+				data-mx-pick={mxRevealPick ? "reveal" : undefined}
+				alt=""
+				decoding="async"
+				data-blinds-background
+			/>
+			{/* 马赛克 Hero 前段（可选加项，开关关时零渲染）：原站首屏整套
+			    （拼图碎片/巨字标题/照片落位/介绍票签/玻璃雨），交接段照片
+			    放大 + 整层交叉淡化后撤下，揭示段接管（不同图，无跳切） */}
+			{mingxinConfig.mosaicHero && <MingxinMosaic part="layer" intro={mosaicIntro} />}
+			<!-- 全屏背景收缩成首幕画面的过渡层：clip-path 收窗 + 图片等比 scale -->
+			<div class="mingxin-blinds__portal" data-scenes-portal>
+				<img
+					class="mingxin-blinds__portal-image"
+					src={mxRevealPick ? undefined : mingxinConfig.revealImage}
+					data-mx-pick={mxRevealPick ? "reveal" : undefined}
+					alt=""
+					decoding="async"
+					data-scenes-portal-image
+				/>
+			</div>
+		</div>
+
+		{/* 首屏文字层：站名小字 / 大标题 / 轮播语，固定在视口上，只随 reveal 阶段显示 */}
+		<div class="mingxin-blinds__hero" data-blinds-hero data-visible="true">
+			<span class="mingxin-blinds__hero-line" data-hero-line="left" aria-hidden="true" />
+			<span class="mingxin-blinds__hero-line" data-hero-line="right" aria-hidden="true" />
+			<div class="mingxin-blinds__hero-center" data-hero-center>
+				<p class="mingxin-blinds__hero-occupation">{siteConfig.title}</p>
+				<p class="mingxin-blinds__hero-name">{mingxinConfig.headline}</p>
+				<p class="mingxin-blinds__hero-message" data-hero-message>
+					{mingxinConfig.headlineMessages[0]}
+				</p>
+			</div>
+		</div>
+
+		{/* 马赛克前段滚动段（开关关时不存在，揭示段位置与未加此层时一致） */}
+		{mingxinConfig.mosaicHero && <MingxinMosaic part="section" />}
+
+		<section class="mingxin-blinds__reveal" data-blinds-reveal aria-label="揭示">
+			<div class="mingxin-blinds__reveal-viewport"></div>
+		</section>
+
+		<section class="mingxin-blinds__scenes" data-blinds-scenes aria-label="明信片幕序">
+			<div class="mingxin-blinds__scenes-viewport" data-scenes-viewport>
+				<div
+					class="mingxin-blinds__cycle"
+					style="--mingxin-cycle-period:224px"
+					aria-hidden="true"
+					data-scenes-cycle
+				>
+					<div class="mingxin-blinds__cycle-track" data-scenes-cycle-track></div>
+				</div>
+
+				{/* 气泡墙（二期）：留言气泡横向飘过影像层，整层不挡明信片点击；
+				    槽位结构照原站（外层漂移 / 内层卡面 / 文字 / 图） */}
+				<div
+					class="mingxin-blinds__bubbles"
+					aria-hidden="true"
+					data-scenes-bubbles
+				>
+					{
+						Array.from({ length: 12 }).map(() => (
+							<span class="mingxin-blind-bubble" data-scene-bubble>
+								<span class="mingxin-blind-bubble__body" data-scene-bubble-body>
+									<span class="mingxin-blind-bubble__text" data-scene-bubble-text />
+									<img
+										class="mingxin-blind-bubble__image"
+										data-scene-bubble-image
+										alt=""
+										loading="lazy"
+										decoding="async"
+									/>
+								</span>
+							</span>
+						))
+					}
+				</div>
+
+				<div class="mingxin-blinds__track" data-scenes-track>
+					{blindScenes.map((item) => (
+						<MingxinScene index={item.index} item={item} composite={item.composite} />
+					))}
+				</div>
+
+				{/* 立绘巡航（二期）：影像层底部沿视口横向往返，可拖拽带惯性；
+				    图源走 mingxinConfig.standImages（零硬编码，三期进控制台素材卡） */}
+				<div class="mingxin-blinds__stands" data-scenes-stands aria-hidden="true">
+					<div class="mingxin-blinds__stands-track" data-scenes-stands-track>
+						{
+							mingxinConfig.standImages.map((src, si) => (
+								<div class="mingxin-blinds__stand" data-scenes-stand>
+									<img
+										class="mingxin-blinds__stand-image"
+										src={mxStandPick(si) ? undefined : src}
+										data-mx-pick={mxStandPick(si) ? `stand-${si}` : undefined}
+										alt=""
+										loading="lazy"
+										decoding="async"
+										draggable="false"
+									/>
+								</div>
+							))
+						}
+					</div>
+				</div>
+			</div>
+		</section>
+
+		{/* 终幕放大过渡层：恒为 fixed，挂在根层级，避免被 pin 段 transform 影响 */}
+		<div class="mingxin-blinds__finale" data-finale-portal aria-hidden="true">
+			<img
+				class="mingxin-blinds__finale-image"
+				src={mxFinalePick ? undefined : finaleImageSrc}
+				data-mx-pick={mxFinalePick ? mxFinalePickKey : undefined}
+				alt=""
+				loading="lazy"
+				decoding="async"
+				data-finale-image
+			/>
+		</div>
+
+		<script
+			type="application/json"
+			data-blinds-config
+			is:inline
+			set:html={JSON.stringify(blindsRuntime)}
+		/>
+	</section>
+
+	{/* 静态回退（≤768px / 减弱动效）：明信片纵向堆叠，不挂滚动机器 */}
+	<div class="mingxin-static" aria-label="明信片">
+		{blindScenes.map((item) => (
+			<article class="mingxin-static__card">
+				<span class="mingxin-static__badge" aria-hidden="true">{item.index + 1}</span>
+				<img
+					class="mingxin-static__image"
+					src={item.poolMode !== "manual" ? undefined : item.image}
+					data-mx-pick={item.poolMode !== "manual" ? `scene-${item.index}` : undefined}
+					alt={item.alt}
+					loading="lazy"
+					decoding="async"
+				/>
+				<div class="mingxin-static__band">
+					<div class="mingxin-static__id">
+						<p class="mingxin-static__title">{item.title}</p>
+						<p class="mingxin-static__date">{item.date}</p>
+					</div>
+					<span class="mingxin-static__divider" aria-hidden="true"></span>
+					<p class="mingxin-static__note">{item.description}</p>
+				</div>
+			</article>
+		))}
+	</div>
+
+	{/* 终幕衔接占位：高度由控制器按实测校准 */}
+	<div class="mingxin-finale-spacer" data-finale-spacer aria-hidden="true"></div>
+
+	{/* 终幕文字层：独立 fixed 层，位于内容区之上 */}
+	<div class="mingxin-finale-copy" data-finale-copy-layer aria-hidden="true">
+		<div class="mingxin-finale-copy__inner" data-finale-copy-inner>
+			<h2 class="mingxin-finale-copy__title">{mingxinConfig.finaleTitle}</h2>
+			<p class="mingxin-finale-copy__subtitle">{mingxinConfig.finaleSubtitle}</p>
+		</div>
+	</div>
+
+	{/* 内容区：终幕退场后从下方上滑接管。两套变体同一批构建期数据，
+	    html[data-mingxin-afterglow="hero"|"classic"] 决定显哪套（默认 hero=「Hero」）。 */}
+	<div data-mingxin-afterglow>
+	{/* —— 变体「Hero」：原站 HomeDataLayer 四卡（牌堆/站点数据/内容索引/订阅联系），
+	    结构与类名照原站 home-data-layer.css，样式在 styles/mingxin-datalayer.css。
+	    默认态照原站层级：牌堆卡展开通栏在上、其余三卡缩成底部一行（data-guide-expanded
+	    与牌堆卡的 guide-card--active 构建期直出，控制器 boot 时接管这一既成状态） —— */}
+	<section
+		class="mingxin-datalayer"
+		data-afterglow-variant="hero"
+		data-afterglow-compass
+		data-guide-expanded
+		data-stats-base-url={umamiShare.shareApiBase}
+		data-stats-share-id={umamiShare.shareId}
+		aria-labelledby="mingxin-guide-heading"
+	>
+		<div class="home-guide__guides" aria-hidden="true">
+			<div class="mx-guide-frame mx-guide-frame--v"></div>
+			<div class="mx-guide-frame mx-guide-frame--h"></div>
+		</div>
+		<h2 class="mingxin-datalayer__sr-heading" id="mingxin-guide-heading">站点导览</h2>
+		<div class="home-guide">
+			{guideCards.map((card, cardIndex) => (
+				<article
+					class:list={[
+						"guide-card",
+						{ "guide-card--active": card.id === "posts" },
+					]}
+					data-guide-card={card.id}
+					style={`--enter-index:${cardIndex}`}
+					tabindex="0"
+					aria-expanded={card.id === "posts" ? "true" : "false"}
+					aria-controls={`mingxin-guide-detail-${card.id}`}
+				>
+					<div class="guide-card__stage">
+						<div
+							class:list={[
+								"guide-card__art",
+								{ "guide-card__art--fill": card.id === "contact" },
+							]}
+						>
+							{card.id === "stats" && (
+								<svg class="guide-art" viewBox="0 0 220 232" aria-hidden="true">
+									<g class="stat-deck">
+										{statLayers.map((layer) => (
+											<g
+												class="stat-layer"
+												data-stat-layer={layer.i}
+												data-on={layer.i === 0 ? "" : undefined}
+												style={`--y-rest:${70 + layer.i * 11};--y-open:${30 + layer.i * 25};`}
+											>
+												<path
+													class="stat-side"
+													d="M-72 0 L0 36 L72 0 L72 10 L0 46 L-72 10 Z"
+												/>
+												<path
+													class="g-card-face g-outline"
+													pathLength="1"
+													d="M0 -36 L72 0 L0 36 L-72 0 Z"
+												/>
+												<path
+													class="g-hatch"
+													pathLength="1"
+													d="M-46 4 L-14 -10 M-34 14 L6 -6 M-12 22 L32 0"
+												/>
+											</g>
+										))}
+									</g>
+								</svg>
+							)}
+							{card.id === "posts" && (
+								<div
+									class="post-deck"
+									data-post-deck
+									style={`--deck-n:${deckItems.length};`}
+								>
+									{deckItems.map((item, i) => (
+										<a
+											class="post-card"
+											href={item.href}
+											draggable="false"
+											tabindex={i === 0 ? 0 : -1}
+											inert={i !== 0}
+											data-post-card={i}
+											data-on={i === 0 ? "" : undefined}
+											style={`--depth:${i};`}
+										>
+											{item.cover ? (
+												<div class="post-card__media">
+													<img
+														class="post-card__img"
+														src={item.cover}
+														alt={item.title}
+														loading={i < 3 ? "eager" : "lazy"}
+														decoding="async"
+													/>
+												</div>
+											) : (
+												<div class="post-card__media post-card__media--empty" />
+											)}
+											<div class="post-card__body">
+												<p class="post-card__title">{item.title}</p>
+												<p class="post-card__meta">
+													{item.isPinned && (
+														<span class="post-card__badge">置顶</span>
+													)}
+													<span class="post-card__date">{item.date}</span>
+												</p>
+											</div>
+										</a>
+									))}
+								</div>
+							)}
+							{card.id === "index" && (
+								<div
+									class="index-scene"
+									data-index-scene
+									data-scene-phase="team"
+									role="img"
+									aria-label={`${scenePrompt}：${sceneAgents.map((agent) => `${agent.name} ${agent.count}`).join(" / ")}`}
+								>
+									<svg class="index-scene__lines" viewBox="0 0 600 400" aria-hidden="true">
+										<defs>
+											{SCENE_LINES.slice(0, sceneAgents.length).map((d, i) => (
+												<mask
+													id={`mingxin-scene-reveal-${i}`}
+													maskUnits="userSpaceOnUse"
+													x="0"
+													y="0"
+													width="600"
+													height="400"
+												>
+													<path class="index-scene__reveal" pathLength="1" d={d} />
+												</mask>
+											))}
+										</defs>
+										{SCENE_LINES.slice(0, sceneAgents.length).map((d, i) => (
+											<path
+												class="index-scene__line"
+												d={d}
+												mask={`url(#mingxin-scene-reveal-${i})`}
+											/>
+										))}
+									</svg>
+									<div class="index-scene__halo" aria-hidden="true" />
+									<div class="index-scene__prompt" aria-hidden="true">
+										<span class="index-scene__text">
+											<span data-scene-text>{scenePrompt}</span>
+											<span class="index-scene__caret" />
+										</span>
+										<span class="index-scene__send">
+											<svg viewBox="0 0 24 24" aria-hidden="true">
+												<path d="M12 18.5v-13M6.5 11 12 5.5l5.5 5.5" />
+											</svg>
+										</span>
+									</div>
+									{sceneAgents.map((agent, i) => (
+										<div
+											class="index-scene__agent"
+											style={`--agent-x:${102 + i * 198};--i:${i};`}
+										>
+											<div class="index-scene__node">
+												<span class="index-scene__face">
+													{agent.cover ? (
+														<img
+															class="index-scene__img"
+															src={agent.cover}
+															alt=""
+															loading="lazy"
+															decoding="async"
+														/>
+													) : (
+														<span class="index-scene__initial">
+															{agent.name.slice(0, 1)}
+														</span>
+													)}
+												</span>
+												<span class="index-scene__dot" />
+											</div>
+											<div class="index-scene__role">
+												<span class="index-scene__tools">
+													<span class="index-scene__tool">{agent.count}</span>
+												</span>
+												<span class="index-scene__name">{agent.name}</span>
+											</div>
+										</div>
+									))}
+								</div>
+							)}
+							{card.id === "contact" && (
+								<div class="orbit" style={`--orbit-count:${orbitSatellites.length}`}>
+									<div class="orbit__field">
+										{orbitSatellites.map((link, i) => (
+											<a
+												class="orbit__slot"
+												href={link.href}
+												target={isExternalHref(link.href) ? "_blank" : undefined}
+												rel={isExternalHref(link.href) ? "me noopener" : "me"}
+												aria-label={link.name}
+												style={`--x:${link.x};--y:${link.y};--s:${link.s};--orbit-i:${i};${link.color ? `--brand:${link.color};` : ""}`}
+											>
+												<span class="orbit__face">
+													<Icon name={link.icon} />
+												</span>
+											</a>
+										))}
+									</div>
+									<a
+										class="orbit__hub"
+										href={primaryContact.href}
+										target={isExternalHref(primaryContact.href) ? "_blank" : undefined}
+										rel={isExternalHref(primaryContact.href) ? "me noopener" : "me"}
+										aria-label={primaryContact.name}
+										style={primaryContact.color ? `--brand:${primaryContact.color}` : undefined}
+									>
+										<Icon name={primaryContact.icon} />
+									</a>
+								</div>
+							)}
+						</div>
+						<div
+							class:list={[
+								"guide-card__detail",
+								{ "guide-card__detail--always": card.id === "stats" },
+							]}
+							id={`mingxin-guide-detail-${card.id}`}
+						>
+							{card.id === "stats" && (
+								<div class="stat-readout">
+									{statBoxes.map((box, i) => (
+										<div
+											class="stat-card"
+											data-stat-card={i}
+											data-on={i === 0 ? "" : undefined}
+											style={`--stat-i:${i};`}
+										>
+											<p class="stat-card__label">{box.label}</p>
+											<p class="stat-card__value">
+												<span
+													class="stat-card__compact"
+													data-stat-compact={"statKind" in box ? box.statKind : undefined}
+												>
+													{box.compact}
+												</span>
+												<span
+													class="stat-card__full"
+													data-stat-full={"statKind" in box ? box.statKind : undefined}
+												>
+													{box.full}
+												</span>
+											</p>
+										</div>
+									))}
+								</div>
+							)}
+							{card.id === "posts" && (
+								<ul class="acc" data-acc>
+									{deckGroups.map((group, gi) => (
+										<li class="acc__item" data-open={gi === 0 ? "" : undefined}>
+											<button
+												class="acc__head"
+												type="button"
+												aria-expanded={gi === 0}
+												data-acc-head
+											>
+												<span class="acc__icon">
+													<Icon name={group.icon} />
+												</span>
+												<span class="acc__title">{group.label}</span>
+												<span class="acc__count">{group.items.length}</span>
+												<span class="acc__chevron" aria-hidden="true" />
+											</button>
+											<div class="acc__panel">
+												<div class="acc__content">
+													<ul class="acc__rows">
+														{group.items.map((item) => (
+															<li>
+																<a
+																	class="acc__row"
+																	href={item.href}
+																	data-post-pick={item.index}
+																>
+																	<span class="acc__row-title">{item.title}</span>
+																	<span class="acc__row-date">{item.date}</span>
+																</a>
+															</li>
+														))}
+													</ul>
+												</div>
+											</div>
+										</li>
+									))}
+								</ul>
+							)}
+							{card.id === "index" && (
+								<ul class="acc" data-acc>
+									{indexGroups.map((group, gi) => (
+										<li class="acc__item" data-open={gi === 0 ? "" : undefined}>
+											<button
+												class="acc__head"
+												type="button"
+												aria-expanded={gi === 0}
+												data-acc-head
+											>
+												<span class="acc__icon">
+													<Icon name={group.icon} />
+												</span>
+												<span class="acc__title">{group.label}</span>
+												<span class="acc__count">{group.cards.length}</span>
+												<span class="acc__chevron" aria-hidden="true" />
+											</button>
+											<div class="acc__panel">
+												<div class="acc__content">
+													<ul class="acc__cards">
+														{group.cards.map((item) => (
+															<li>
+																<a class="acc__card" href={item.url}>
+																	<span class="acc__card-name">{item.name}</span>
+																	<span class="acc__card-count">{item.count}</span>
+																</a>
+															</li>
+														))}
+														<li>
+															<a class="acc__card acc__card--all" href={group.allUrl}>
+																<span class="acc__card-name">{group.allLabel}</span>
+																<span class="acc__card-count">{group.allNote}</span>
+															</a>
+														</li>
+													</ul>
+												</div>
+											</div>
+										</li>
+									))}
+								</ul>
+							)}
+							{card.id === "contact" && (
+								<ul class="guide-links">
+									{contactLinks.map((link) => (
+										<li>
+											<a
+												href={link.href}
+												target={isExternalHref(link.href) ? "_blank" : undefined}
+												rel={isExternalHref(link.href) ? "me noopener" : "me"}
+												style={link.color ? `--brand:${link.color}` : undefined}
+											>
+												<span class="guide-links__icon">
+													<Icon name={link.icon} />
+												</span>
+												<span>{link.name}</span>
+											</a>
+										</li>
+									))}
+								</ul>
+							)}
+						</div>
+					</div>
+					<footer class="guide-card__meta">
+						<div class="guide-card__meta-text">
+							<h3 class="guide-card__title">{card.title}</h3>
+							<p class="guide-card__hint">{card.hint}</p>
+						</div>
+					</footer>
+				</article>
+			))}
+		</div>
+	</section>
+
+	{/* —— 变体「经典」：番茄四模块（快速前往/公告/近期文章/我的动态） —— */}
+	<section class="mingxin-afterglow" data-afterglow-variant="classic" aria-label="快速前往">
+		<div class="mingxin-afterglow__inner">
+			<div class="mingxin-afterglow__compass">
+				<header class="mingxin-afterglow__head" data-afterglow-compass>
+					<h2 class="mingxin-afterglow__title">快速带你前往</h2>
+					<p class="mingxin-afterglow__subtitle">小屋的各个房间，都从这里过去</p>
+				</header>
+				<nav class="mingxin-afterglow__nav" aria-label="快速前往">
+					{navQuickLinks.map((link) => (
+						<a
+							class="mingxin-afterglow__link"
+							href={link.href}
+							target={link.external ? "_blank" : undefined}
+							rel={link.external ? "noreferrer noopener" : undefined}
+						>
+							{link.icon && <Icon name={link.icon} />}
+							<span>{link.name}</span>
+						</a>
+					))}
+				</nav>
+			</div>
+
+			{noticeText && (
+				<div class="mingxin-afterglow__notice">
+					<Icon
+						name="material-symbols:campaign-outline-rounded"
+						class="mingxin-afterglow__notice-icon"
+					/>
+					<p class="mingxin-afterglow__notice-text">{noticeText}</p>
+					{noticeLink && (
+						<a
+							class="mingxin-afterglow__notice-link"
+							href={noticeLink.external ? noticeLink.url : url(noticeLink.url)}
+							target={noticeLink.external ? "_blank" : undefined}
+							rel={noticeLink.external ? "noreferrer noopener" : undefined}
+						>
+							{noticeLink.text}
+						</a>
+					)}
+				</div>
+			)}
+
+			<div class="mingxin-afterglow__columns">
+				<section class="mingxin-afterglow__col">
+					<header class="mingxin-afterglow__col-head">
+						<h2 class="mingxin-afterglow__col-title">近期文章</h2>
+						<a class="mingxin-afterglow__more" href={url("/archive/")}>
+							<span>更多</span>
+							<Icon name="material-symbols:arrow-forward-rounded" />
+						</a>
+					</header>
+					<div class="mingxin-afterglow__panel">
+						{afterglowPosts.length > 0 ? (
+							<ul class="mingxin-afterglow__list">
+								{afterglowPosts.map((post, index) => (
+									<li class="mingxin-afterglow__post">
+										<a class="mingxin-afterglow__post-link" href={post.href}>
+											<span class="mingxin-afterglow__index">
+												{(index + 1).toString().padStart(2, "0")}
+											</span>
+											{post.cover && (
+												<img
+													class="mingxin-afterglow__thumb"
+													src={post.cover}
+													alt=""
+													loading="lazy"
+													decoding="async"
+												/>
+											)}
+											<span class="mingxin-afterglow__post-body">
+												<span class="mingxin-afterglow__post-title">{post.title}</span>
+												<span class="mingxin-afterglow__post-meta">
+													<time datetime={post.date}>{post.date}</time>
+													{post.description && (
+														<span class="mingxin-afterglow__post-desc">
+															{post.description}
+														</span>
+													)}
+												</span>
+											</span>
+											<span class="mingxin-afterglow__category">{post.category}</span>
+										</a>
+									</li>
+								))}
+							</ul>
+						) : (
+							<p class="mingxin-card__empty">暂无内容</p>
+						)}
+					</div>
+				</section>
+
+				<section class="mingxin-afterglow__col">
+					<header class="mingxin-afterglow__col-head">
+						<h2 class="mingxin-afterglow__col-title">我的动态</h2>
+						<a class="mingxin-afterglow__more" href={url("/dynamic/")}>
+							<span>更多</span>
+							<Icon name="material-symbols:arrow-forward-rounded" />
+						</a>
+					</header>
+					<div class="mingxin-afterglow__panel">
+						{momentItems.length > 0 ? (
+							<ul class="mingxin-afterglow__timeline">
+								{momentItems.map((moment) => (
+									<li
+										class="mingxin-afterglow__moment"
+										data-pinned={moment.pinned ? "true" : undefined}
+									>
+										<span class="mingxin-afterglow__dot" aria-hidden="true" />
+										<a class="mingxin-afterglow__moment-text" href={moment.href}>
+											{moment.excerpt}
+										</a>
+										<time class="mingxin-afterglow__moment-date" datetime={moment.iso}>
+											{moment.date}
+										</time>
+									</li>
+								))}
+							</ul>
+						) : (
+							<p class="mingxin-card__empty">暂无内容</p>
+						)}
+					</div>
+				</section>
+			</div>
+		</div>
+	</section>
+	</div>
+
+	{/* 左下角黑猫对话（二期，结构照原站）：fixed 贴视口左下角（原站用 sticky，
+	    本站祖先链有 overflow-x:clip 滚动盒会裁掉 sticky 溢出后代，实测改 fixed，
+	    显隐由影像层阶段 gate、行为等价）。台词 JSON 与双音效路径都在标记上，
+	    控制器（scripts/mingxin/home-dialogue.ts）零硬编码；
+	    显隐由影像层控制器经 deps 回调驱动（reveal/shrink 段可见）。 */}
+	<aside
+		class="mingxin-dialogue"
+		aria-label="角色对话"
+		data-mingxin-dialogue
+		data-dialogue-sound-press={mingxinConfig.soundPress}
+		data-dialogue-sound-loosen={mingxinConfig.soundLoosen}
+		data-scene-visible="false"
+	>
+		<div class="mingxin-dialogue__anchor" data-dialogue-anchor>
+			<p
+				class="mingxin-dialogue__bubble"
+				data-dialogue-bubble
+				data-open="false"
+				aria-live="polite"
+			/>
+			<figure class="mingxin-dialogue__sticker" data-mingxin-sticker>
+				<img
+					class="mingxin-dialogue__sticker-image"
+					src={mxDollPick ? undefined : mingxinConfig.dollImage}
+					data-mx-pick={mxDollPick ? "doll" : undefined}
+					alt=""
+					width="1254"
+					height="1254"
+					loading="lazy"
+					decoding="async"
+				/>
+			</figure>
+			<button
+				class="mingxin-dialogue__trigger"
+				type="button"
+				aria-label="下一句"
+				title="下一句"
+				data-dialogue-trigger
+			></button>
+		</div>
+		<script
+			type="application/json"
+			data-dialogue-lines
+			is:inline
+			set:html={JSON.stringify(dialogueLinesFinal)}
+		/>
+	</aside>
+
+	{/* 明信页脚：放大手写签名（站长 2026-11-01 定版），暗色 invert 反白 */}
+	<footer class="mingxin-footer">
+		<div class="mingxin-footer__top">
+			<div class="mingxin-footer__brand">
+				<img
+					class="mingxin-footer__logo-image"
+					src={mingxinConfig.signatureImage}
+					alt={siteConfig.title}
+					loading="lazy"
+					decoding="async"
+				/>
+				{mingxinConfig.footerMotto && <p class="mingxin-footer__tagline">{mingxinConfig.footerMotto}</p>}
+			</div>
+			<div class="mingxin-footer__links">
+				{footerLinks.map((link) => (
+					<a
+						href={link.href}
+						target={link.external ? "_blank" : undefined}
+						rel={link.external ? "noreferrer noopener" : undefined}
+					>
+						{link.label}
+					</a>
+				))}
+			</div>
+		</div>
+		<div class="mingxin-footer__rule" aria-hidden="true"></div>
+		<div class="mingxin-footer__bottom">
+			<p class="mingxin-footer__credit">
+				© {new Date().getFullYear()} {siteConfig.title}
+			</p>
+			<div class="mingxin-footer__meta">
+				{runtimeDays !== null && (
+					<p class="mingxin-footer__meta-row">小屋已运行 {runtimeDays} 天</p>
+				)}
+				<p class="mingxin-footer__meta-row">Astro · Firefly · 明信</p>
+			</div>
+		</div>
+	</footer>
+</div>
+
+<style>
+	/* ================= 根与层级 ================= */
+	/* 全幅出血：明信首页脱离 80rem 内容列，影像层/内容区按视口宽排布
+	   （与原站 HomeDataLayer 同款 100vw + 负边距回中；经典滚动条下有
+	   ≤半个滚动条宽的偏移，与原站实现一致） */
+	.mingxin-home {
+		position: relative;
+		width: 100vw;
+		margin-left: calc(50% - 50vw);
+	}
+
+	/* ================= 影像层（blinds） ================= */
+	.mingxin-blinds {
+		position: relative;
+	}
+	.mingxin-blinds__stage {
+		position: fixed;
+		inset: 0;
+		z-index: 0;
+		pointer-events: none;
+	}
+	.mingxin-blinds__background {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+	.mingxin-blinds__portal {
+		position: absolute;
+		inset: 0;
+		z-index: 5;
+		overflow: hidden;
+		will-change: clip-path;
+	}
+	.mingxin-blinds__portal-image {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: 100vw;
+		height: 100vh;
+		object-fit: cover;
+		transform-origin: center;
+		will-change: transform;
+	}
+	.mingxin-blinds__hero {
+		position: fixed;
+		inset: 0;
+		z-index: 6;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		pointer-events: none;
+		color: #fff;
+		transition: opacity 300ms ease;
+	}
+	.mingxin-blinds__hero[data-visible="false"] {
+		opacity: 0;
+		visibility: hidden;
+	}
+	/* 马赛克前段保持中：首屏文字层（祝愿各位）让位给前段巨字标题，
+	   前段控制器在交接末段摘掉此属性，文字层按自身 300ms 过渡淡入 */
+	.mingxin-blinds[data-mosaic-front="hold"] .mingxin-blinds__hero {
+		opacity: 0;
+		visibility: hidden;
+	}
+	.mingxin-blinds__hero-line {
+		position: absolute;
+		top: 50%;
+		width: 1px;
+		height: 48%;
+		transform: translateY(-50%);
+		background: linear-gradient(
+			to bottom,
+			transparent,
+			rgb(255 255 255 / 55%) 30%,
+			rgb(255 255 255 / 55%) 70%,
+			transparent
+		);
+	}
+	.mingxin-blinds__hero-line[data-hero-line="left"] {
+		left: clamp(1rem, 6vw, 6.5rem);
+	}
+	.mingxin-blinds__hero-line[data-hero-line="right"] {
+		right: clamp(1rem, 6vw, 6.5rem);
+	}
+	.mingxin-blinds__hero-center {
+		text-align: center;
+		padding-inline: 1.5rem;
+		text-shadow: 0 2px 24px rgb(0 0 0 / 45%);
+		will-change: transform, opacity;
+	}
+	.mingxin-blinds__hero-occupation {
+		margin: 0;
+		font-size: 0.82rem;
+		font-weight: 700;
+		letter-spacing: 0.32em;
+		text-transform: uppercase;
+		opacity: 0.88;
+	}
+	.mingxin-blinds__hero-name {
+		margin: 0.5rem 0 0;
+		font-size: clamp(1.9rem, 4vw, 4.4rem);
+		font-weight: 900;
+		line-height: 1.12;
+	}
+	.mingxin-blinds__hero-message {
+		margin: 0.7rem 0 0;
+		font-size: clamp(1rem, 1.6vw, 1.3rem);
+		font-weight: 600;
+		opacity: 0.94;
+		transition: opacity 450ms ease;
+	}
+	.mingxin-blinds__hero-message.is-fading {
+		opacity: 0;
+	}
+	.mingxin-blinds__reveal {
+		height: 100vh;
+	}
+	.mingxin-blinds__scenes {
+		position: relative;
+		height: calc(100vh + max(3400px, 340vh));
+	}
+	.mingxin-blinds__scenes-viewport {
+		--mingxin-blind-edge: 2px;
+		--mingxin-blind-pad: clamp(1rem, 1.9vw, 1.6rem);
+		--mingxin-blind-band-height: clamp(2.9rem, 5vh, 3.6rem);
+		--mingxin-blind-photo-width: min(
+			44vw,
+			52rem,
+			calc(
+				(60vh - var(--mingxin-blind-pad) * 2 - var(--mingxin-blind-band-height)) * 4 / 3
+			)
+		);
+		--mingxin-blind-photo-height: calc(var(--mingxin-blind-photo-width) * 3 / 4);
+		--mingxin-blind-width: calc(
+			var(--mingxin-blind-photo-width) + var(--mingxin-blind-pad) * 2 +
+				var(--mingxin-blind-edge) * 2
+		);
+		--mingxin-blind-height: calc(
+			var(--mingxin-blind-photo-height) + var(--mingxin-blind-pad) * 2 +
+				var(--mingxin-blind-band-height) + var(--mingxin-blind-edge) * 2
+		);
+		--mingxin-blind-paper: #f9f3e4;
+		--mingxin-blind-ink: #4c4536;
+		--mingxin-blind-wood: oklch(from var(--mingxin-blind-ink) calc(l + 0.16) 0 h);
+		--mingxin-blind-highlight: oklch(from var(--mingxin-blind-paper) l 0 h);
+		--mingxin-blind-clip-height: clamp(3.4rem, 5.7vw, 5rem);
+		--mingxin-blind-clip-tilt: 8deg;
+		--mingxin-blind-string-length: calc(50vh - var(--mingxin-blind-height) / 2 + 8rem);
+
+		position: sticky;
+		top: 0;
+		height: 100vh;
+		overflow: hidden;
+	}
+	.mingxin-blinds__cycle {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: min(38vh, 22rem);
+		overflow: hidden;
+		opacity: 0.4;
+		pointer-events: none;
+	}
+	.mingxin-blinds__cycle-track {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: calc(100% + 224px);
+		background: var(--on-surface);
+		-webkit-mask-image: url("/assets/images/mingxin/puzzle.svg");
+		mask-image: url("/assets/images/mingxin/puzzle.svg");
+		-webkit-mask-size: 224px 224px;
+		mask-size: 224px 224px;
+		-webkit-mask-repeat: repeat;
+		mask-repeat: repeat;
+		will-change: transform;
+	}
+	.mingxin-blinds__track {
+		position: absolute;
+		inset: 0;
+	}
+	.mingxin-blinds__finale {
+		position: fixed;
+		inset: 0;
+		z-index: 1;
+		pointer-events: none;
+		opacity: 0;
+	}
+	.mingxin-blinds__finale-image {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+		will-change: transform, filter;
+	}
+
+	/* ================= 终幕衔接与文字层 ================= */
+	.mingxin-finale-spacer {
+		height: 130vh;
+	}
+	.mingxin-finale-copy {
+		position: fixed;
+		inset: 0;
+		z-index: 3;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		pointer-events: none;
+		opacity: 0;
+	}
+	.mingxin-finale-copy__inner {
+		text-align: center;
+		color: #fff;
+		text-shadow: 0 2px 28px rgb(0 0 0 / 55%);
+		padding-inline: 1.5rem;
+	}
+	.mingxin-finale-copy__title {
+		margin: 0;
+		font-size: clamp(2rem, 4.6vw, 4.2rem);
+		font-weight: 900;
+		line-height: 1.15;
+	}
+	.mingxin-finale-copy__subtitle {
+		margin: 0.8rem 0 0;
+		font-size: clamp(1rem, 1.8vw, 1.35rem);
+		font-weight: 600;
+		opacity: 0.92;
+	}
+
+	/* ================= 内容区（两变体共用外层） ================= */
+	.mingxin-home [data-mingxin-afterglow] {
+		position: relative;
+		z-index: 2;
+	}
+
+	/* ================= 经典变体（番茄四模块） ================= */
+	.mingxin-afterglow {
+		position: relative;
+		padding: 4.5rem 1.5rem 6rem;
+	}
+	.mingxin-afterglow__inner {
+		max-width: 72rem;
+		margin-inline: auto;
+	}
+	.mingxin-afterglow__head {
+		margin-bottom: 1.4rem;
+	}
+	.mingxin-afterglow__title {
+		margin: 0;
+		font-size: clamp(1.6rem, 3vw, 2.2rem);
+		font-weight: 900;
+	}
+	.mingxin-afterglow__subtitle {
+		margin: 0.4rem 0 0;
+		color: oklch(from var(--deep-text) 0.6 0 h);
+		font-weight: 600;
+	}
+	.mingxin-afterglow__nav {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+	.mingxin-afterglow__link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		padding: 0.5rem 0.95rem;
+		border: 1px solid var(--surface-outline-variant);
+		border-radius: 999px;
+		background: var(--card-bg);
+		color: var(--deep-text);
+		font-size: 0.9rem;
+		font-weight: 700;
+		text-decoration: none;
+		transition:
+			transform 200ms ease,
+			background-color 200ms ease;
+	}
+	.mingxin-afterglow__link:hover {
+		transform: translateY(-2px);
+		background: var(--surface-container);
+	}
+	.mingxin-afterglow__link svg {
+		width: 1.05rem;
+		height: 1.05rem;
+	}
+	.mingxin-afterglow__notice {
+		display: flex;
+		align-items: center;
+		gap: 0.8rem;
+		margin-top: 1.75rem;
+		padding: 1rem 1.25rem;
+		border: 1.5px dashed var(--surface-outline-variant);
+		border-radius: 1rem;
+	}
+	.mingxin-afterglow__notice-icon {
+		font-size: 1.4rem;
+		flex: none;
+	}
+	.mingxin-afterglow__notice-text {
+		flex: 1;
+		margin: 0;
+		line-height: 1.6;
+		font-weight: 600;
+	}
+	.mingxin-afterglow__notice-link {
+		flex: none;
+		font-weight: 800;
+		color: var(--deep-text);
+	}
+	.mingxin-afterglow__columns {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1.75rem;
+		margin-top: 1.75rem;
+	}
+	@media (max-width: 1023.98px) {
+		.mingxin-afterglow__columns {
+			grid-template-columns: 1fr;
+		}
+	}
+	.mingxin-afterglow__col-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		margin-bottom: 0.8rem;
+	}
+	.mingxin-afterglow__col-title {
+		margin: 0;
+		font-size: 1.3rem;
+		font-weight: 900;
+	}
+	.mingxin-afterglow__more {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		font-size: 0.85rem;
+		font-weight: 700;
+		color: oklch(from var(--deep-text) 0.62 0 h);
+		text-decoration: none;
+	}
+	.mingxin-afterglow__panel {
+		border: 1px solid var(--surface-outline-variant);
+		border-radius: 1.25rem;
+		background: var(--card-bg);
+		padding: 0.6rem 1.25rem;
+	}
+	.mingxin-afterglow__list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		max-height: 25rem;
+		overflow-y: auto;
+	}
+	.mingxin-afterglow__post-link {
+		display: flex;
+		align-items: center;
+		gap: 0.8rem;
+		padding: 0.65rem 0;
+		border-bottom: 1px solid
+			color-mix(in oklch, var(--surface-outline-variant) 55%, transparent);
+		color: var(--deep-text);
+		text-decoration: none;
+	}
+	.mingxin-afterglow__post:last-child .mingxin-afterglow__post-link {
+		border-bottom: 0;
+	}
+	.mingxin-afterglow__index {
+		font-family: var(--m3e-font-mono-family, ui-monospace, monospace);
+		font-size: 0.8rem;
+		color: oklch(from var(--deep-text) 0.5 0 h);
+		width: 1.8rem;
+		flex: none;
+	}
+	.mingxin-afterglow__thumb {
+		width: 3.2rem;
+		height: 2.2rem;
+		object-fit: cover;
+		border-radius: 0.5rem;
+		flex: none;
+	}
+	.mingxin-afterglow__post-body {
+		flex: 1;
+		min-width: 0;
+		display: grid;
+		gap: 0.15rem;
+	}
+	.mingxin-afterglow__post-title {
+		font-weight: 800;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.mingxin-afterglow__post-meta {
+		display: flex;
+		gap: 0.6rem;
+		font-size: 0.75rem;
+		color: oklch(from var(--deep-text) 0.55 0 h);
+		min-width: 0;
+	}
+	.mingxin-afterglow__post-desc {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.mingxin-afterglow__category {
+		flex: none;
+		font-size: 0.7rem;
+		font-weight: 700;
+		padding: 0.2rem 0.55rem;
+		border: 1px solid var(--surface-outline-variant);
+		border-radius: 999px;
+	}
+	.mingxin-afterglow__timeline {
+		position: relative;
+		margin: 0;
+		padding: 0.4rem 0 0.4rem 1.3rem;
+		list-style: none;
+	}
+	.mingxin-afterglow__timeline::before {
+		content: "";
+		position: absolute;
+		left: 0.32rem;
+		top: 0.6rem;
+		bottom: 0.6rem;
+		width: 1px;
+		background: var(--surface-outline-variant);
+	}
+	.mingxin-afterglow__moment {
+		position: relative;
+		padding: 0.45rem 0;
+	}
+	.mingxin-afterglow__dot {
+		position: absolute;
+		left: -1.3rem;
+		top: 0.85rem;
+		width: 0.65rem;
+		height: 0.65rem;
+		margin-left: 0.005rem;
+		border-radius: 999px;
+		background: var(--card-bg);
+		border: 2px solid oklch(from var(--deep-text) 0.55 0 h);
+	}
+	.mingxin-afterglow__moment[data-pinned="true"] .mingxin-afterglow__dot {
+		background: var(--deep-text);
+	}
+	.mingxin-afterglow__moment-text {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		overflow: hidden;
+		color: var(--deep-text);
+		font-weight: 600;
+		line-height: 1.55;
+		text-decoration: none;
+	}
+	.mingxin-afterglow__moment-date {
+		display: block;
+		margin-top: 0.15rem;
+		font-family: var(--m3e-font-mono-family, ui-monospace, monospace);
+		font-size: 0.72rem;
+		color: oklch(from var(--deep-text) 0.5 0 h);
+	}
+	.mingxin-card__empty {
+		margin: 0;
+		padding: 1rem 0;
+		color: oklch(from var(--deep-text) 0.55 0 h);
+		font-weight: 600;
+	}
+
+	/* ================= 明信页脚 ================= */
+	.mingxin-footer {
+		position: relative;
+		z-index: 2;
+		padding: 3rem 1.5rem 2.5rem;
+		max-width: 80rem;
+		margin-inline: auto;
+	}
+	.mingxin-footer__top {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 2rem;
+		flex-wrap: wrap;
+	}
+	.mingxin-footer__logo-image {
+		height: clamp(3.2rem, 7vw, 5.2rem);
+		width: auto;
+		display: block;
+	}
+	:root.dark .mingxin-footer__logo-image {
+		filter: invert(1);
+	}
+	.mingxin-footer__tagline {
+		margin: 0.8rem 0 0;
+		max-width: 34rem;
+		line-height: 1.6;
+		color: oklch(from var(--deep-text) 0.6 0 h);
+		font-weight: 600;
+	}
+	.mingxin-footer__links {
+		display: flex;
+		gap: 1.4rem;
+	}
+	.mingxin-footer__links a {
+		color: var(--deep-text);
+		font-weight: 800;
+		text-decoration: none;
+	}
+	.mingxin-footer__rule {
+		height: 1px;
+		background: var(--surface-outline-variant);
+		margin: 1.6rem 0 1.2rem;
+	}
+	.mingxin-footer__bottom {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
+		flex-wrap: wrap;
+		font-size: 0.85rem;
+		color: oklch(from var(--deep-text) 0.6 0 h);
+		font-weight: 600;
+	}
+	.mingxin-footer__credit,
+	.mingxin-footer__meta-row {
+		margin: 0;
+	}
+	.mingxin-footer__meta {
+		display: grid;
+		gap: 0.25rem;
+		text-align: right;
+	}
+
+	/* ================= 静态回退（≤768px / 减弱动效） ================= */
+	.mingxin-static {
+		display: none;
+	}
+	@media (max-width: 767.98px), (prefers-reduced-motion: reduce) {
+		.mingxin-blinds,
+		.mingxin-finale-spacer,
+		.mingxin-finale-copy {
+			display: none !important;
+		}
+		.mingxin-static {
+			display: grid;
+			gap: 1.4rem;
+			max-width: 44rem;
+			margin-inline: auto;
+			padding: 1.25rem 1rem 0;
+		}
+		.mingxin-static__card {
+			position: relative;
+			border: 1px solid var(--surface-outline-variant);
+			border-radius: 1rem;
+			background: var(--card-bg);
+			overflow: hidden;
+		}
+		.mingxin-static__badge {
+			position: absolute;
+			top: 0.75rem;
+			left: 0.75rem;
+			z-index: 1;
+			padding: 0.3rem 0.6rem;
+			border-radius: 0.4rem;
+			background: #4c4536;
+			color: #f9f3e4;
+			font-weight: 900;
+			transform: rotate(-8deg);
+		}
+		.mingxin-static__image {
+			width: 100%;
+			aspect-ratio: 4 / 3;
+			object-fit: cover;
+			display: block;
+		}
+		.mingxin-static__band {
+			display: flex;
+			gap: 0.9rem;
+			padding: 0.9rem 1rem 1rem;
+		}
+		.mingxin-static__id {
+			flex: none;
+		}
+		.mingxin-static__title {
+			margin: 0;
+			font-weight: 800;
+			letter-spacing: 0.08em;
+			color: var(--deep-text);
+		}
+		.mingxin-static__date {
+			margin: 0.2rem 0 0;
+			font-family: var(--m3e-font-mono-family, ui-monospace, monospace);
+			font-size: 0.75rem;
+			color: oklch(from var(--deep-text) 0.55 0 h);
+		}
+		.mingxin-static__divider {
+			width: 1px;
+			background: var(--surface-outline-variant);
+			flex: none;
+		}
+		.mingxin-static__note {
+			margin: 0;
+			color: var(--deep-text);
+			font-size: 0.88rem;
+			line-height: 1.6;
+			display: -webkit-box;
+			-webkit-box-orient: vertical;
+			-webkit-line-clamp: 2;
+			line-clamp: 2;
+			overflow: hidden;
+		}
+		.mingxin-afterglow {
+			padding-top: 2.5rem;
+		}
+	}
+
+	/* ═══════════ 二期：黑猫对话 / 气泡墙 / 立绘巡航 ═══════════
+	   样式照原站 Home.astro 对应段移植（Stylus → CSS、类名 mmz- → mingxin-）；
+	   原站 --mmz-ease 在其仓库内无定义，这里映射到本站 --m3e-easing-standard。 */
+
+	/* ---------------- 左下角黑猫对话 ---------------- */
+	/* 定位与原站的 sticky 方案不同：本站外层有 overflow-x: clip 的滚动祖先链，
+	   sticky 的 0 高盒会把溢出的 anchor 按其约束框裁掉（实测左半被裁、猫不绘制、
+	   命中失效）；改 fixed 后行为等价——显隐本就由影像层阶段回调 gate，
+	   reveal/shrink 之外 anchor 恒隐藏，不会赖在页脚不走。 */
+	.mingxin-dialogue {
+		--mingxin-dialogue-size: clamp(12rem, 13vw, 16rem);
+		--mingxin-dialogue-ink: oklch(0.22 0.01 300);
+		--mingxin-dialogue-paper: oklch(1 0 0);
+		--mingxin-dialogue-stroke: 0.2rem;
+		--mingxin-dialogue-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+		position: fixed;
+		left: 0;
+		bottom: 0;
+		z-index: 3;
+		width: 100vw;
+		height: 0;
+		pointer-events: none;
+	}
+
+	@supports (transition-timing-function: linear(0, 1)) {
+		.mingxin-dialogue {
+			--mingxin-dialogue-spring: linear(
+				0,
+				0.36 12%,
+				0.86 26%,
+				1.12 36%,
+				0.98 46%,
+				1.02 58%,
+				0.995 74%,
+				1
+			);
+		}
+	}
+
+	/* 角色本体：底边压在视口底边、左缘贴住视口左缘；图本身有透明留白，
+	   看着就是卡在角上。JS 接管前保持隐藏，入场只翻 data 属性，过渡交给 CSS。 */
+	.mingxin-dialogue__anchor {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		width: var(--mingxin-dialogue-size);
+		aspect-ratio: 1;
+		opacity: 0;
+		visibility: hidden;
+		translate: 0 2.4rem;
+		transition:
+			opacity var(--m3e-duration-long, 600ms) var(--m3e-easing-standard, cubic-bezier(0.2, 0, 0, 1)),
+			visibility 0s linear var(--m3e-duration-long, 600ms),
+			translate var(--m3e-duration-long, 600ms) var(--m3e-easing-standard, cubic-bezier(0.2, 0, 0, 1));
+		will-change: transform, opacity;
+		pointer-events: none;
+	}
+
+	.mingxin-dialogue[data-scene-visible="true"] .mingxin-dialogue__anchor {
+		opacity: 1;
+		visibility: visible;
+		translate: 0 0;
+		pointer-events: auto;
+		transition:
+			opacity var(--m3e-duration-long, 600ms) var(--m3e-easing-standard, cubic-bezier(0.2, 0, 0, 1)),
+			visibility 0s,
+			translate var(--m3e-duration-long, 600ms) var(--m3e-easing-standard, cubic-bezier(0.2, 0, 0, 1));
+	}
+
+	.mingxin-dialogue__sticker {
+		position: absolute;
+		inset: 0;
+		margin: 0;
+		line-height: 0;
+		filter: drop-shadow(0 0.5rem 0.8rem rgb(0 0 0 / 26%));
+		/* 支点在底边：压下去时头顶动、脚不动，才像按在桌上的一团棉花 */
+		transform-origin: 50% 100%;
+		transition: translate 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	.mingxin-dialogue__sticker[data-pressed="true"] {
+		scale: 1.07 0.9;
+		transition: scale 220ms var(--mingxin-dialogue-spring);
+	}
+
+	.mingxin-dialogue__trigger {
+		position: absolute;
+		inset: 0;
+		padding: 0;
+		border: 0;
+		border-radius: 50% 50% 0 0;
+		background: transparent;
+		cursor: pointer;
+	}
+
+	.mingxin-dialogue__trigger:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	/* 想法气泡：粗描边白椭圆，挂在角色头顶右上方，从左下角冒出来。
+	   墨色/纸色不随主题翻转，属内容型材质例外（同原站口径）。 */
+	.mingxin-dialogue__bubble {
+		position: absolute;
+		bottom: 92%;
+		left: 52%;
+		z-index: 1;
+		width: max-content;
+		max-width: min(16rem, 42vw);
+		margin: 0;
+		padding: 0.95rem 1.75rem;
+		border: var(--mingxin-dialogue-stroke) solid var(--mingxin-dialogue-ink);
+		border-radius: 50%;
+		background: var(--mingxin-dialogue-paper);
+		color: var(--mingxin-dialogue-ink);
+		font-size: clamp(0.88rem, 0.95vw, 1rem);
+		font-weight: 800;
+		line-height: 1.45;
+		text-align: center;
+		text-wrap: balance;
+		transform-origin: 0% 100%;
+		cursor: pointer;
+		opacity: 0;
+		visibility: hidden;
+		transition:
+			opacity 180ms ease,
+			visibility 0s linear 180ms;
+	}
+
+	.mingxin-dialogue__bubble[data-open="true"] {
+		opacity: 1;
+		visibility: visible;
+		transition: none;
+	}
+
+	/* 思考泡泡的两颗小圆点，从气泡左下角一路落向角色头顶 */
+	.mingxin-dialogue__bubble::before,
+	.mingxin-dialogue__bubble::after {
+		content: "";
+		position: absolute;
+		border: var(--mingxin-dialogue-stroke) solid var(--mingxin-dialogue-ink);
+		border-radius: 50%;
+		background: var(--mingxin-dialogue-paper);
+	}
+
+	.mingxin-dialogue__bubble::before {
+		top: calc(100% + 0.2rem);
+		left: 0.9rem;
+		width: 1rem;
+		height: 0.85rem;
+	}
+
+	.mingxin-dialogue__bubble::after {
+		top: calc(100% + 1.25rem);
+		left: 0.1rem;
+		width: 0.62rem;
+		height: 0.52rem;
+	}
+
+	.mingxin-dialogue__sticker-image {
+		display: block;
+		width: 100%;
+		height: auto;
+		object-fit: contain;
+	}
+
+	/* ---------------- 气泡墙 ---------------- */
+	.mingxin-blinds__bubbles {
+		position: absolute;
+		inset: 0;
+		z-index: 3;
+		overflow: hidden;
+		opacity: 0;
+		visibility: hidden;
+		pointer-events: none;
+	}
+
+	.mingxin-blind-bubble {
+		position: absolute;
+		top: var(--mingxin-bubble-top, 50%);
+		left: 0;
+		max-width: 20rem;
+		will-change: transform;
+		animation: mingxin-bubble-drift var(--mingxin-bubble-duration, 32s) linear infinite;
+	}
+
+	.mingxin-blind-bubble.is-empty {
+		visibility: hidden;
+	}
+
+	.mingxin-blind-bubble__body {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.45em;
+		padding: 0.42rem 0.95rem 0.6rem;
+		border: 1px solid color-mix(in srgb, var(--on-surface) 16%, transparent);
+		border-radius: var(--shape-corner-l, 1rem);
+		background: color-mix(in srgb, var(--page-bg) 68%, transparent);
+		color: color-mix(in srgb, var(--on-surface) 62%, transparent);
+		font-size: calc(0.86rem * var(--mingxin-bubble-scale, 1));
+		line-height: 1.45;
+	}
+
+	.mingxin-blind-bubble__image {
+		display: none;
+		flex: none;
+		width: 9em;
+		height: 6.2em;
+		border-radius: var(--shape-corner-m, 0.75rem);
+		object-fit: cover;
+		opacity: 0;
+		background: color-mix(in srgb, var(--on-surface) 12%, transparent);
+		transition: opacity 0.45s ease;
+	}
+
+	.mingxin-blind-bubble__image.is-loading {
+		background-image: linear-gradient(
+			100deg,
+			transparent 20%,
+			color-mix(in srgb, var(--on-surface) 16%, transparent) 45%,
+			transparent 70%
+		);
+		background-size: 220% 100%;
+		animation: mingxin-bubble-shimmer 1.25s linear infinite;
+	}
+
+	.mingxin-blind-bubble__image.is-loaded {
+		opacity: 1;
+	}
+
+	.mingxin-blind-bubble__text {
+		display: -webkit-box;
+		max-width: 100%;
+		overflow: hidden;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow-wrap: break-word;
+		white-space: normal;
+	}
+
+	.mingxin-blind-bubble.has-image .mingxin-blind-bubble__image {
+		display: block;
+	}
+
+	.mingxin-blinds__bubbles.is-paused .mingxin-blind-bubble,
+	.mingxin-blinds__bubbles.is-paused .mingxin-blind-bubble__image {
+		animation-play-state: paused;
+	}
+
+	@keyframes mingxin-bubble-shimmer {
+		from {
+			background-position: 180% 0;
+		}
+		to {
+			background-position: -80% 0;
+		}
+	}
+
+	@keyframes mingxin-bubble-drift {
+		from {
+			transform: translate3d(100vw, 0, 0);
+		}
+		to {
+			transform: translate3d(-100%, 0, 0);
+		}
+	}
+
+	/* ---------------- 立绘巡航 ---------------- */
+	.mingxin-blinds__stands {
+		--mingxin-stand-height: min(24vh, 15rem);
+		--mingxin-stand-width: min(24vw, 13rem);
+		position: absolute;
+		right: 0;
+		bottom: 0;
+		left: 0;
+		z-index: 5;
+		height: var(--mingxin-stand-height);
+		overflow: hidden;
+		opacity: 0;
+		visibility: hidden;
+		pointer-events: none;
+	}
+
+	@supports (height: 100dvh) {
+		.mingxin-blinds__stands {
+			--mingxin-stand-height: min(24dvh, 15rem);
+		}
+	}
+
+	.mingxin-blinds__stands-track {
+		position: absolute;
+		inset: 0;
+	}
+
+	.mingxin-blinds__stand {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		width: max-content;
+		pointer-events: auto;
+		touch-action: pan-y;
+		cursor: grab;
+		user-select: none;
+		will-change: transform;
+	}
+
+	.mingxin-blinds__stand.is-dragging {
+		cursor: grabbing;
+	}
+
+	/* 同时限制单张宽高；内层以底边为铰链立起，不占用外层横移的 transform */
+	.mingxin-blinds__stand-image {
+		display: block;
+		width: auto;
+		height: auto;
+		max-width: var(--mingxin-stand-width);
+		max-height: var(--mingxin-stand-height);
+		object-fit: contain;
+		object-position: center bottom;
+		transform-origin: 50% 100%;
+		user-select: none;
+		-webkit-user-drag: none;
+	}
+
+	/* 小屏 / 减动效：对话整层撤下（影像层本身走静态回退，同原站口径） */
+	@media (max-width: 767.98px) {
+		.mingxin-dialogue {
+			display: none;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.mingxin-dialogue {
+			display: none;
+		}
+	}
+</style>
+
+<script>
+	import { mingxinConfig } from "@/config";
+	import { mountMingxinBlinds } from "@/scripts/home-mingxin";
+	import { mountMingxinDialogue } from "@/scripts/mingxin/home-dialogue";
+	import { mountMingxinMosaic } from "@/scripts/mingxin/home-mosaic";
+	import { bootMingxinGuide } from "@/scripts/mingxin-guide";
+	import { bootMingxinIndexScene } from "@/scripts/mingxin-index-scene";
+
+	/* 明信首页挂载：模式守卫在最前——非 mingxin 时整段不执行（零负担）。
+	   swup 软导航进出首页靠 page:view 重挂、visit:start 销毁；
+	   站内切到明信形态时靠 siteModeChange 补挂。监听只注册一次（window 戳记）。 */
+	const MESSAGES = mingxinConfig.headlineMessages;
+	let teardown: (() => void) | null = null;
+	let lastNavWasSwup = false;
+
+	function mountRotator(root: HTMLElement): () => void {
+		const el = root.querySelector<HTMLElement>("[data-hero-message]");
+		if (!el || MESSAGES.length < 2) return () => {};
+		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+			return () => {};
+		let index = 0;
+		let fadeTimer = 0;
+		const interval = window.setInterval(() => {
+			if (document.hidden) return;
+			el.classList.add("is-fading");
+			fadeTimer = window.setTimeout(() => {
+				index = (index + 1) % MESSAGES.length;
+				el.textContent = MESSAGES[index];
+				el.classList.remove("is-fading");
+			}, 460);
+		}, 3400);
+		return () => {
+			window.clearInterval(interval);
+			window.clearTimeout(fadeTimer);
+		};
+	}
+
+	function mountHome(): void {
+		const root = document.querySelector<HTMLElement>("[data-mingxin-home]");
+		if (!root) return;
+		if (document.documentElement.dataset.siteMode !== "mingxin") {
+			teardown?.();
+			teardown = null;
+			return;
+		}
+		if (root.dataset.mxMounted === "true") return;
+		root.dataset.mxMounted = "true";
+		const cleanups: (() => void)[] = [];
+		/* 黑猫对话先挂：影像层控制器经 deps 回调驱动它的显隐与打招呼
+		   （reveal/shrink 段可见、reveal 段 420ms 后冒首句），同原站装配序 */
+		const dialogueRoot = root.querySelector<HTMLElement>("[data-mingxin-dialogue]");
+		const dialogue = dialogueRoot ? mountMingxinDialogue(dialogueRoot) : null;
+		if (dialogue) cleanups.push(() => dialogue.destroy());
+		const blindsRoot = root.querySelector<HTMLElement>("[data-mingxin-blinds]");
+		if (blindsRoot) {
+			const destroy = mountMingxinBlinds(blindsRoot, {
+				deferFirstSync: lastNavWasSwup,
+				setSceneVisible: (visible) => dialogue?.setSceneVisible(visible),
+				setGreetingVisible: (visible) => dialogue?.setGreetingVisible(visible),
+			});
+			if (destroy) cleanups.push(destroy);
+			/* 马赛克层在影像层之后挂：它只读自己的滚动段，与影像层互不写同一批元素 */
+			if (blindsRoot.querySelector("[data-mosaic-layer]")) {
+				cleanups.push(mountMingxinMosaic(blindsRoot));
+			}
+		}
+		cleanups.push(mountRotator(root));
+		const layer = root.querySelector<HTMLElement>(".mingxin-datalayer");
+		if (layer && layer.dataset.guideMounted !== "true") {
+			layer.dataset.guideMounted = "true";
+			cleanups.push(bootMingxinGuide(layer));
+			cleanups.push(bootMingxinIndexScene(layer));
+		}
+		teardown = () => {
+			cleanups.forEach((fn) => {
+				try {
+					fn();
+				} catch {}
+			});
+			delete root.dataset.mxMounted;
+			if (layer) delete layer.dataset.guideMounted;
+		};
+	}
+
+	const w = window as unknown as { __mingxinHomeBoot?: boolean };
+	if (!w.__mingxinHomeBoot) {
+		w.__mingxinHomeBoot = true;
+		document.addEventListener("swup:page:view", () => {
+			lastNavWasSwup = true;
+			mountHome();
+		});
+		document.addEventListener("swup:visit:start", () => {
+			teardown?.();
+			teardown = null;
+		});
+		window.addEventListener("siteModeChange", mountHome);
+	}
+	mountHome();
+</script>

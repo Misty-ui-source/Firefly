@@ -1,0 +1,260 @@
+/* ---------- 文章思维导图弹窗 ----------
+   机制与几何参考 MmzMing 的 article-toc-mindmap（嵌套 em 布局、共享主干
+   连线、面板尺寸），配色改走本站令牌：背景/文字/强调色随形态与深浅色
+   自动适配，不自成一套硬编码色板。 */
+
+.article-mindmap {
+	--mm-bg: var(--card-bg);
+	--mm-text: var(--deep-text);
+	--mm-muted: var(--content-meta);
+	--mm-ink: var(--deep-text);
+	--mm-hover: color-mix(in oklch, var(--mm-ink) 8%, transparent);
+	--mm-line: color-mix(in oklch, var(--mm-ink) 28%, transparent);
+	--mm-active: var(--primary);
+
+	position: fixed;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	max-width: none;
+	max-height: none;
+	padding: 0;
+	border: 0;
+	background: transparent;
+}
+
+/* --deep-text 只有亮色值，暗色下文字与线色改用近白墨色（透明度沿用原版口径） */
+:root.dark .article-mindmap {
+	--mm-text: oklch(0.93 0.01 var(--hue));
+	--mm-ink: oklch(0.95 0.005 var(--hue));
+	--mm-hover: rgb(255 255 255 / 12%);
+	--mm-line: rgb(255 255 255 / 22%);
+}
+
+.article-mindmap::backdrop {
+	background: transparent;
+}
+
+.article-mindmap__overlay {
+	position: absolute;
+	inset: 0;
+	background: rgb(0 0 0 / 45%);
+}
+
+.article-mindmap__panel {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	margin: auto;
+	width: min(90vw, 72rem);
+	height: min(85vh, 48rem);
+	background: var(--mm-bg);
+	border: 1px solid var(--mm-line);
+	border-radius: var(--radius-large);
+	overflow: hidden;
+}
+
+.article-mindmap__header {
+	display: flex;
+	flex: none;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.5rem 0.75rem 0.5rem 1rem;
+	border-bottom: 1px solid var(--mm-line);
+}
+
+.article-mindmap__heading {
+	color: var(--mm-text);
+	font-size: 0.9rem;
+	font-weight: 700;
+}
+
+.article-mindmap__tools {
+	display: flex;
+	gap: 0.15rem;
+	align-items: center;
+}
+
+.article-mindmap__tool-btn {
+	display: grid;
+	place-items: center;
+	width: 1.8rem;
+	height: 1.8rem;
+	padding: 0;
+	border: 0;
+	border-radius: 0.5rem;
+	background: transparent;
+	color: var(--mm-muted);
+	cursor: pointer;
+	transition:
+		background-color 160ms ease,
+		color 160ms ease;
+}
+
+.article-mindmap__tool-btn:hover,
+.article-mindmap__tool-btn:focus-visible {
+	color: var(--mm-text);
+	background: var(--mm-hover);
+}
+
+/* 全屏状态：面板铺满、图标切换为退出全屏 */
+.article-mindmap__panel:fullscreen {
+	width: 100vw;
+	height: 100vh;
+	border: 0;
+	border-radius: 0;
+}
+
+.article-mindmap__panel:fullscreen .article-mindmap__fs-icon.is-enter {
+	display: none;
+}
+
+.article-mindmap__tool-btn .article-mindmap__fs-icon.is-exit {
+	display: none;
+}
+
+.article-mindmap__panel:fullscreen .article-mindmap__fs-icon.is-exit {
+	display: block;
+}
+
+/* 画布：滚轮缩放 + 拖拽平移，光标与拖拽态反馈 */
+.article-mindmap__canvas {
+	position: relative;
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: auto;
+	cursor: grab;
+	touch-action: none;
+	user-select: none;
+}
+
+.article-mindmap__canvas.is-panning {
+	cursor: grabbing;
+}
+
+.article-mindmap__lines {
+	position: absolute;
+	top: 0;
+	left: 0;
+	overflow: visible;
+	pointer-events: none;
+}
+
+.article-mindmap__line {
+	fill: none;
+	stroke: var(--mm-line);
+	stroke-width: 1.5;
+}
+
+/* 挂载点：不参与布局（display: contents），仅承载 JS 注入的 --mindmap-zoom
+   并让它继承进内层树——内层若自己声明该变量会覆盖继承值，导致缩放失效 */
+.article-mindmap__mount {
+	display: contents;
+}
+
+/* 嵌套递归布局：父节点与其子树子列垂直居中对齐；间距全用 em，
+   缩放通过树容器 font-size（--mindmap-zoom）整体生效，滚动区随之正确 */
+.article-mindmap__tree {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	gap: 3em;
+	align-items: center;
+	min-width: max-content;
+	min-height: 100%;
+	padding: 2em 2.5em;
+	font-size: calc(0.82rem * var(--mindmap-zoom, 1));
+}
+
+.article-mindmap__branch {
+	display: flex;
+	gap: 3em;
+	align-items: center;
+}
+
+.article-mindmap__children {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5em;
+}
+
+/* 根节点的子级组之间留大间距、组内小间距，分组呼吸感与原版一致 */
+.article-mindmap__tree > .article-mindmap__children {
+	gap: 4.5em;
+}
+
+.article-mindmap__node {
+	display: inline-flex;
+	flex: none;
+	gap: 0.5em;
+	align-items: center;
+	max-width: 19em;
+	padding: 0.35em 0.9em;
+	border: 1px solid var(--mm-line);
+	border-radius: 999px;
+	background: var(--mm-bg);
+	color: var(--mm-muted);
+	font-size: 1em;
+	line-height: 1.5;
+	text-align: left;
+	cursor: pointer;
+	transition:
+		color 160ms ease,
+		border-color 160ms ease;
+}
+
+.article-mindmap__node:hover,
+.article-mindmap__node:focus-visible {
+	color: var(--mm-active);
+	border-color: var(--mm-active);
+}
+
+/* 悬停链高亮：根到悬停节点的整条链，连线、边框、文字、圆点全部转强调色 */
+.article-mindmap__node.is-trail {
+	color: var(--mm-active);
+	border-color: var(--mm-active);
+}
+
+.article-mindmap__node.is-trail .article-mindmap__node-dot {
+	border-color: var(--mm-active);
+}
+
+.article-mindmap__line.is-active {
+	stroke: var(--mm-active);
+}
+
+.article-mindmap__node--root {
+	color: var(--mm-text);
+	font-weight: 700;
+}
+
+.article-mindmap__node-dot {
+	flex: none;
+	box-sizing: border-box;
+	width: 0.6em;
+	height: 0.6em;
+	border: 1.5px solid var(--mm-line);
+	border-radius: 999px;
+	background: var(--mm-bg);
+}
+
+.article-mindmap__node-text {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* 入口按钮被同步逻辑隐藏时压过自身的 display 类（如 flex） */
+[data-mindmap-open][hidden] {
+	display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.article-mindmap__tool-btn,
+	.article-mindmap__node {
+		transition-duration: 1ms;
+		transition-delay: 0ms;
+	}
+}

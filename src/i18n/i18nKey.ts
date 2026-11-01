@@ -27,6 +27,12 @@ enum I18nKey {
 	postList = "postList",
 	tableOfContents = "tableOfContents",
 	tocEmpty = "tocEmpty",
+	tocMindMap = "tocMindMap",
+	tocMindMapZoomIn = "tocMindMapZoomIn",
+	tocMindMapZoomOut = "tocMindMapZoomOut",
+	tocMindMapReset = "tocMindMapReset",
+	tocMindMapFullscreen = "tocMindMapFullscreen",
+	close = "close",
 	music = "music",
 
 	// 动态
@@ -108,6 +114,7 @@ enum I18nKey {
 	siteModeBrick = "siteModeBrick",
 	siteModeAstral = "siteModeAstral",
 	siteModePaper = "siteModePaper",
+	siteModeMingxin = "siteModeMingxin",
 	harmonySettings = "harmonySettings",
 	harmonyScheme = "harmonyScheme",
 	harmonySchemeTonalSpot = "harmonySchemeTonalSpot",

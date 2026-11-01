@@ -5,14 +5,21 @@ import type { TimelineItem } from "@/types/timelineConfig";
 const { items, title, enabled } = timelineConfig;
 const activeItems = items.filter((item) => item.enabled !== false);
 
-// 按日期分组（日期倒序）
-const groups = new Map<string, TimelineItem[]>();
+// 分组顺序 = 配置顺序：控制台存什么顺序就显示什么顺序，页面端不再自行重排。
+// （旧实现对日期字符串做 localeCompare 排序，"2026.9.28" 会因逐字比较排到
+//   "2026.10.27" 前面，与控制台手动顺序冲突；需要按时间排时用控制台
+//   时间线页的「按时间排序」按钮，那边按解析后的真日期比较。）
+// 相邻且同日期的条目合并为一组，共用一个日期头。
+type TimelineGroup = { date: string; items: TimelineItem[] };
+const groups: TimelineGroup[] = [];
 for (const item of activeItems) {
-  const k = item.date;
-  if (!groups.has(k)) groups.set(k, []);
-  groups.get(k)!.push(item);
+  const last = groups[groups.length - 1];
+  if (last && last.date === item.date) {
+    last.items.push(item);
+  } else {
+    groups.push({ date: item.date, items: [item] });
+  }
 }
-const sortedKeys = [...groups.keys()].sort((a, b) => b.localeCompare(a));
 ---
 
 {enabled && activeItems.length > 0 && (
@@ -35,8 +42,7 @@ const sortedKeys = [...groups.keys()].sort((a, b) => b.localeCompare(a));
     </div>
 
     <div>
-      {sortedKeys.map((key) => {
-        const items = groups.get(key)!;
+      {groups.map(({ date: key, items }) => {
         return (
           <div class="relative pl-12 pb-8 last:pb-0">
             <div class="absolute left-5 top-10 bottom-0 w-px bg-black/10 dark:bg-white/10"></div>

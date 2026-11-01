@@ -1,6 +1,7 @@
 ---
 import type { MarkdownHeading } from "astro";
 import "@/styles/toc.css";
+import { Icon } from "astro-icon/components";
 import WidgetLayout from "@/components/common/WidgetLayout.astro";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -36,6 +37,17 @@ const items = encrypted ? [] : computeTocItems(headings, { maxLevel: 3 });
   class={className}
   style={style}
 >
+  <button
+    slot="title-icon"
+    type="button"
+    class="mindmap-entry-btn"
+    data-mindmap-open
+    hidden={encrypted || items.length === 0}
+    title={i18n(I18nKey.tocMindMap)}
+    aria-label={i18n(I18nKey.tocMindMap)}
+  >
+    <Icon name="material-symbols:account-tree-rounded" class="text-[1.35rem]" aria-hidden="true" />
+  </button>
   <div class="toc-scroll-container custom-scrollbar">
     <div
       class="toc-content"
@@ -80,6 +92,22 @@ const items = encrypted ? [] : computeTocItems(headings, { maxLevel: 3 });
 
 <style lang="stylus">
 /* SidebarTOC 特定样式 */
+/* 思维导图入口：挂在标题行右侧（WidgetLayout 的 title-icon 槽位），
+   显隐由 article-mindmap 的同步逻辑按当前文章标题树维护 */
+.mindmap-entry-btn
+	display: flex
+	align-items: center
+	justify-content: center
+	width: 2rem
+	height: 2rem
+	margin-right: -0.25rem
+	border-radius: 0.5rem
+	color: var(--content-meta)
+	transition: color 0.2s ease, background-color 0.2s ease
+	&:hover
+		color: var(--primary)
+		background: var(--btn-card-bg-hover)
+
 .toc-scroll-container
 	max-height: calc(100vh - 25rem)
 	/* 滚动条与内容之间的小间隙（从共享样式挪入，避免影响浮动目录的对称内边距） */

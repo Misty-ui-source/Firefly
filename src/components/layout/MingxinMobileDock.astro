@@ -1,0 +1,1323 @@
+---
+/**
+ * 明信移动端底部 Dock（移植自 MmzMing/my-blog 的 MobileDock，机制与数值照原版）：
+ * ≤768px 明信形态下承接浮动音乐播放器——胶囊条（站标 + 站名/播放歌词 + 菜单钮）
+ * ⇄ 下滚收成气泡 ⇄ 上滑展开内容卡（菜单 / 音乐 / 目录三视图 + 底部工具栏）。
+ * 音乐视图是 MingxinMusicPlayer 引擎的第三个视图：经 window.__mingxinMusic
+ * 门面读状态、发指令（与原版 Dock 消费 window.__fireflyMusic 同构），不另起引擎。
+ *
+ * 显隐：main.css 守卫默认整根隐藏；仅「明信 + ≤768px」由本组件全局样式点亮。
+ * 同断点下浮动播放器本体隐藏（样式在本文件末尾），播放交接给 Dock；
+ * 悬浮按钮栈抬到 Dock 上方让位（同在本文件末尾，明信作用域）。
+ *
+ * 与原版的映射差异（本站数据模型不同，逐项有据）：
+ * - 无公告视图/按钮：本站公告是单条 geo 动态文案，无原站 items 列表数据源，
+ *   且明信首页正文里已有公告模块，硬塞会与页面实际公告不一致。
+ * - 无标签视图：原站工具栏本无标签入口；标签走菜单视图「文章 → 标签」可达。
+ * - 无 Spine 槽：明信已定撤全部看板娘，Dock 不摆死按钮（站长立规）。
+ * - 条左键未播放时：原版派发事件开顶栏资料卡；本站改为开 Dock 菜单视图。
+ * - 站标用本站头像（profileConfig.avatar），点击回首页（同原版 logo 链接）。
+ */
+import { Icon } from "astro-icon/components";
+import { profileConfig, siteConfig } from "@/config";
+import { resolveNavMenuLinks } from "@/utils/nav-menu-utils";
+import { url } from "@/utils/url-utils";
+
+const links = resolveNavMenuLinks();
+const dockTitle = siteConfig.navbar.title || siteConfig.title;
+const dockAvatar = url(profileConfig.avatar);
+
+/* Dock 自身图标：与原版同名的 material-symbols rounded 字形，内联 SVG
+   （路径与原站生成图标逐字节一致，同胶囊皮先例，不依赖图标生成管线） */
+const icons: Record<string, string> = {
+	menu: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M4 18q-.425 0-.712-.288T3 17t.288-.712T4 16h16q.425 0 .713.288T21 17t-.288.713T20 18zm0-5q-.425 0-.712-.288T3 12t.288-.712T4 11h16q.425 0 .713.288T21 12t-.288.713T20 13zm0-5q-.425 0-.712-.288T3 7t.288-.712T4 6h16q.425 0 .713.288T21 7t-.288.713T20 8z"/></svg>',
+	close: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 13.4l-4.9 4.9q-.275.275-.7.275t-.7-.275t-.275-.7t.275-.7l4.9-4.9l-4.9-4.9q-.275-.275-.275-.7t.275-.7t.7-.275t.7.275l4.9 4.9l4.9-4.9q.275-.275.7-.275t.7.275t.275.7t-.275.7L13.4 12l4.9 4.9q.275.275.275.7t-.275.7t-.7.275t-.7-.275z"/></svg>',
+	search: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M9.5 16q-2.725 0-4.612-1.888T3 9.5t1.888-4.612T9.5 3t4.613 1.888T16 9.5q0 1.1-.35 2.075T14.7 13.3l5.6 5.6q.275.275.275.7t-.275.7t-.7.275t-.7-.275l-5.6-5.6q-.75.6-1.725.95T9.5 16m0-2q1.875 0 3.188-1.312T14 9.5t-1.312-3.187T9.5 5T6.313 6.313T5 9.5t1.313 3.188T9.5 14"/></svg>',
+	sun: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M11 3V2q0-.425.288-.712T12 1t.713.288T13 2v1q0 .425-.288.713T12 4t-.712-.288T11 3m0 19v-1q0-.425.288-.712T12 20t.713.288T13 21v1q0 .425-.288.713T12 23t-.712-.288T11 22m11-9h-1q-.425 0-.712-.288T20 12t.288-.712T21 11h1q.425 0 .713.288T23 12t-.288.713T22 13M3 13H2q-.425 0-.712-.288T1 12t.288-.712T2 11h1q.425 0 .713.288T4 12t-.288.713T3 13m16.75-7.325l-.35.35q-.275.275-.687.275T18 6q-.275-.275-.288-.687t.263-.713l.375-.375q.275-.3.7-.3t.725.3t.288.725t-.313.725M6.025 19.4l-.375.375q-.275.3-.7.3t-.725-.3t-.288-.725t.313-.725l.35-.35q.275-.275.688-.275T6 18q.275.275.288.688t-.263.712m12.3.35l-.35-.35q-.275-.275-.275-.687T18 18q.275-.275.688-.287t.712.262l.375.375q.3.275.3.7t-.3.725t-.725.288t-.725-.313M4.6 6.025l-.375-.375q-.3-.275-.3-.7t.3-.725t.725-.288t.725.313l.35.35q.275.275.275.688T6 6q-.275.275-.687.288T4.6 6.025M7.75 16.25Q6 14.5 6 12t1.75-4.25T12 6t4.25 1.75T18 12t-1.75 4.25T12 18t-4.25-1.75m7.088-1.412Q16 13.675 16 12t-1.162-2.838T12 8T9.162 9.163T8 12t1.163 2.838T12 16t2.838-1.162M12 12"/></svg>',
+	moon: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M12 21q-3.775 0-6.387-2.613T3 12q0-3.45 2.25-5.988T11 3.05q.325-.05.575.088t.4.362t.163.525t-.188.575q-.425.65-.638 1.375T11.1 7.5q0 2.25 1.575 3.825T16.5 12.9q.775 0 1.538-.225t1.362-.625q.275-.175.563-.162t.512.137q.25.125.388.375t.087.6q-.35 3.45-2.937 5.725T12 21m0-2q2.2 0 3.95-1.213t2.55-3.162q-.5.125-1 .2t-1 .075q-3.075 0-5.238-2.163T9.1 7.5q0-.5.075-1t.2-1q-1.95.8-3.163 2.55T5 12q0 2.9 2.05 4.95T12 19m-.25-6.75"/></svg>',
+	music: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M7.175 19.825Q6 18.65 6 17t1.175-2.825T10 13q.575 0 1.063.138t.937.412V4q0-.425.288-.712T13 3h4q.425 0 .713.288T18 4v2q0 .425-.288.713T17 7h-3v10q0 1.65-1.175 2.825T10 21t-2.825-1.175"/></svg>',
+	toc: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M9 19v-2h12v2zm0-6v-2h12v2zm0-6V5h12v2zM5 20q-.825 0-1.412-.587T3 18t.588-1.412T5 16t1.413.588T7 18t-.587 1.413T5 20m0-6q-.825 0-1.412-.587T3 12t.588-1.412T5 10t1.413.588T7 12t-.587 1.413T5 14M3.588 7.413Q3 6.825 3 6t.588-1.412T5 4t1.413.588T7 6t-.587 1.413T5 8t-1.412-.587"/></svg>',
+	up: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 10.8l-3.9 3.9q-.275.275-.7.275t-.7-.275t-.275-.7t.275-.7l4.6-4.6q.3-.3.7-.3t.7.3l4.6 4.6q.275.275.275.7t-.275.7t-.7.275t-.7-.275z"/></svg>',
+	repeat: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m6.85 19l.85.85q.3.3.288.7t-.288.7q-.3.3-.712.313t-.713-.288L3.7 18.7q-.15-.15-.213-.325T3.426 18t.063-.375t.212-.325l2.575-2.575q.3-.3.713-.287t.712.312q.275.3.288.7t-.288.7l-.85.85H17v-3q0-.425.288-.712T18 13t.713.288T19 14v3q0 .825-.587 1.413T17 19zm10.3-12H7v3q0 .425-.288.713T6 11t-.712-.288T5 10V7q0-.825.588-1.412T7 5h10.15l-.85-.85q-.3-.3-.288-.7t.288-.7q.3-.3.712-.312t.713.287L20.3 5.3q.15.15.213.325t.062.375t-.062.375t-.213.325l-2.575 2.575q-.3.3-.712.288T16.3 9.25q-.275-.3-.288-.7t.288-.7z"/></svg>',
+	repeatOne: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M11.5 10.5h-.75q-.325 0-.537-.213T10 9.75t.213-.537T10.75 9H12q.425 0 .713.288T13 10v4.25q0 .325-.213.538T12.25 15t-.537-.213t-.213-.537zM6.85 19l.85.85q.3.3.288.7t-.288.7q-.3.3-.712.313t-.713-.288L3.7 18.7q-.15-.15-.213-.325T3.426 18t.063-.375t.212-.325l2.575-2.575q.3-.3.713-.287t.712.312q.275.3.288.7t-.288.7l-.85.85H17v-3q0-.425.288-.712T18 13t.713.288T19 14v3q0 .825-.587 1.413T17 19zm10.3-12H7v3q0 .425-.288.713T6 11t-.712-.288T5 10V7q0-.825.588-1.412T7 5h10.15l-.85-.85q-.3-.3-.288-.7t.288-.7q.3-.3.712-.312t.713.287L20.3 5.3q.15.15.213.325t.062.375t-.062.375t-.213.325l-2.575 2.575q-.3.3-.712.288T16.3 9.25q-.275-.3-.288-.7t.288-.7z"/></svg>',
+	shuffle: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M15 20q-.425 0-.712-.288T14 19t.288-.712T15 18h1.6l-2.475-2.475q-.3-.3-.287-.712t.312-.713t.713-.3t.712.3L18 16.55V15q0-.425.288-.712T19 14t.713.288T20 15v4q0 .425-.288.713T19 20zm-10.7-.3q-.275-.275-.275-.7t.275-.7L16.6 6H15q-.425 0-.712-.288T14 5t.288-.712T15 4h4q.425 0 .713.288T20 5v4q0 .425-.288.713T19 10t-.712-.288T18 9V7.4L5.7 19.7q-.275.275-.7.275t-.7-.275m-.025-14Q4 5.425 4 5t.275-.7t.687-.275t.713.275l4.2 4.175q.275.275.288.688t-.288.712q-.275.275-.7.275t-.7-.275z"/></svg>',
+	prev: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M5.5 17V7q0-.425.288-.712T6.5 6t.713.288T7.5 7v10q0 .425-.288.713T6.5 18t-.712-.288T5.5 17m11.45-.025l-6.2-4.15q-.225-.15-.337-.362T10.3 12t.113-.462t.337-.363l6.2-4.15q.125-.1.275-.125t.275-.025q.4 0 .7.275t.3.725v8.25q0 .45-.3.725t-.7.275q-.125 0-.275-.025t-.275-.125"/></svg>',
+	next: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M16.5 17V7q0-.425.288-.712T17.5 6t.713.288T18.5 7v10q0 .425-.288.713T17.5 18t-.712-.288T16.5 17m-11-.875v-8.25q0-.45.3-.725t.7-.275q.125 0 .275.025t.275.125l6.2 4.15q.225.15.338.363T13.7 12t-.112.463t-.338.362l-6.2 4.15q-.125.1-.275.125t-.275.025q-.4 0-.7-.275t-.3-.725"/></svg>',
+	play: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M8 17.175V6.825q0-.425.3-.713t.7-.287q.125 0 .263.037t.262.113l8.15 5.175q.225.15.338.375t.112.475t-.112.475t-.338.375l-8.15 5.175q-.125.075-.262.113T9 18.175q-.4 0-.7-.288t-.3-.712"/></svg>',
+	pause: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M16 19q-.825 0-1.412-.587T14 17V7q0-.825.588-1.412T16 5t1.413.588T18 7v10q0 .825-.587 1.413T16 19m-8 0q-.825 0-1.412-.587T6 17V7q0-.825.588-1.412T8 5t1.413.588T10 7v10q0 .825-.587 1.413T8 19"/></svg>',
+	volUp: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M19 11.975q0-2.075-1.1-3.787t-2.95-2.563q-.375-.175-.55-.537t-.05-.738q.15-.4.538-.575t.787 0Q18.1 4.85 19.55 7.063T21 11.974t-1.45 4.913t-3.875 3.287q-.4.175-.788 0t-.537-.575q-.125-.375.05-.737t.55-.538q1.85-.85 2.95-2.562t1.1-3.788M7 15H4q-.425 0-.712-.288T3 14v-4q0-.425.288-.712T4 9h3l3.3-3.3q.475-.475 1.088-.213t.612.938v11.15q0 .675-.612.938T10.3 18.3zm9.5-3q0 1.05-.475 1.988t-1.25 1.537q-.25.15-.513.013T14 15.1V8.85q0-.3.263-.437t.512.012q.775.625 1.25 1.575t.475 2"/></svg>',
+	volOff: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M16.775 19.575q-.275.175-.55.325t-.575.275q-.375.175-.762 0t-.538-.575q-.15-.375.038-.737t.562-.538q.1-.05.188-.1t.187-.1L12 14.8v2.775q0 .675-.612.938T10.3 18.3L7 15H4q-.425 0-.712-.288T3 14v-4q0-.425.288-.712T4 9h2.2L2.1 4.9q-.275-.275-.275-.7t.275-.7t.7-.275t.7.275l17 17q.275.275.275.7t-.275.7t-.7.275t-.7-.275zm2.225-7.6q0-2.075-1.1-3.787t-2.95-2.563q-.375-.175-.55-.537t-.05-.738q.15-.4.538-.575t.787 0Q18.1 4.85 19.55 7.05T21 11.975q0 .825-.15 1.638t-.425 1.562q-.2.55-.612.688t-.763.012t-.562-.45t-.013-.75q.275-.65.4-1.312T19 11.975m-4.225-3.55Q15.6 8.95 16.05 10t.45 2v.25q0 .125-.025.25q-.05.325-.35.425t-.55-.15L14.3 11.5q-.15-.15-.225-.337T14 10.775V8.85q0-.3.263-.437t.512.012M9.75 6.95Q9.6 6.8 9.6 6.6t.15-.35l.55-.55q.475-.475 1.087-.213t.613.938V8q0 .35-.3.475t-.55-.125z"/></svg>',
+	back: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m7.825 13l4.9 4.9q.3.3.288.7t-.313.7q-.3.275-.7.288t-.7-.288l-6.6-6.6q-.15-.15-.213-.325T4.426 12t.063-.375t.212-.325l6.6-6.6q.275-.275.688-.275t.712.275q.3.3.3.713t-.3.712L7.825 11H19q.425 0 .713.288T20 12t-.288.713T19 13z"/></svg>',
+	chevron: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M11.625 14.913q-.175-.063-.325-.213l-4.6-4.6q-.275-.275-.275-.7t.275-.7t.7-.275t.7.275l3.9 3.9l3.9-3.9q.275-.275.7-.275t.7.275t.275.7t-.275.7l-4.6 4.6q-.15.15-.325.213t-.375.062t-.375-.062"/></svg>',
+	comment: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M16 4a3 3 0 0 1 2.995 2.824L19 7v2a3 3 0 0 1 2.995 2.824L22 12v4a3 3 0 0 1-2.824 2.995L19 19v.966c0 1.02-1.143 1.594-1.954 1.033l-.096-.072L14.638 19H11a3 3 0 0 1-1.998-.762l-.14-.134L7 19.5c-.791.593-1.906.075-1.994-.879L5 18.5V17a3 3 0 0 1-2.995-2.824L2 14V7a3 3 0 0 1 2.824-2.995L5 4zm3 7h-8a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h3.638a2 2 0 0 1 1.28.464l1.088.906A1.5 1.5 0 0 1 18.5 17h.5a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-3-5H5a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h.5A1.5 1.5 0 0 1 7 16.5v.5l1.01-.757A3 3 0 0 1 8 16v-4a3 3 0 0 1 3-3h6V7a1 1 0 0 0-1-1"/></g></svg>',
+};
+const ico = (name: string) => icons[name] ?? "";
+---
+
+<div class="mxdock-overlay" id="mxdock-overlay" aria-hidden="true"></div>
+
+<section
+	class="mxdock"
+	id="mxdock"
+	data-shape="pill"
+	data-view="menu"
+	aria-label="工具坞"
+>
+	<div class="mxdock__bar">
+		<div class="mxdock__context">
+			<a class="mxdock__site-mark" href={url("/")} aria-label={dockTitle}>
+				<img src={dockAvatar} alt="" />
+			</a>
+			<button
+				class="mxdock__context-action"
+				id="mxdock-context-btn"
+				type="button"
+				aria-label={dockTitle}
+			>
+				<span class="mxdock__back-mark" aria-hidden="true">
+					<Fragment set:html={ico("back")} />
+				</span>
+				<span class="mxdock__context-viewport">
+					<span class="mxdock__site-title">{dockTitle}</span>
+					<span class="mxdock__lyric-viewport" id="mxdock-lyric-viewport">
+						<span class="mxdock__lyric-text" id="mxdock-lyric-text"></span>
+					</span>
+					<span class="mxdock__view-title" id="mxdock-view-title">菜单</span>
+				</span>
+			</button>
+		</div>
+
+		<button
+			class="mxdock__menu-toggle"
+			id="mxdock-menu-btn"
+			type="button"
+			aria-label="菜单"
+			aria-controls="mxdock-card"
+			aria-expanded="false"
+		>
+			<span class="mxdock__menu-icon" aria-hidden="true">
+				<Fragment set:html={ico("menu")} />
+			</span>
+			<span class="mxdock__close-icon" aria-hidden="true">
+				<Fragment set:html={ico("close")} />
+			</span>
+		</button>
+	</div>
+
+	<div class="mxdock__card" id="mxdock-card" aria-hidden="true">
+		<div class="mxdock__card-inner" tabindex="-1">
+			<div class="mxdock__views">
+				<section
+					class="mxdock__view is-active"
+					data-dock-view="menu"
+					data-title="菜单"
+				>
+					<nav class="mxdock__menu" aria-label="菜单">
+						{links.map((link, index) =>
+							link.children && link.children.length > 0 ? (
+								<div class="mxdock__accordion" data-dock-accordion>
+									<button
+										class="mxdock__menu-row mxdock__accordion-trigger"
+										type="button"
+										aria-expanded="false"
+										aria-controls={`mxdock-submenu-${index}`}
+									>
+										<span class="mxdock__menu-row-main">
+											{link.icon && <Icon name={link.icon} />}
+											<span>{link.name}</span>
+										</span>
+										<span class="mxdock__accordion-arrow" aria-hidden="true">
+											<Fragment set:html={ico("chevron")} />
+										</span>
+									</button>
+									<div
+										class="mxdock__submenu"
+										id={`mxdock-submenu-${index}`}
+										aria-hidden="true"
+										inert
+									>
+										<div class="mxdock__submenu-inner">
+											{link.children.map((child) => (
+												<a
+													href={child.external ? child.url : url(child.url)}
+													class="mxdock__submenu-row"
+													target={child.external ? "_blank" : undefined}
+													rel={child.external ? "noopener noreferrer" : undefined}
+													data-dock-navigation
+												>
+													{child.icon && <Icon name={child.icon} />}
+													<span>{child.name}</span>
+													{child.external && (
+														<Icon
+															name="fa7-solid:arrow-up-right-from-square"
+															class="mxdock__external-icon"
+														/>
+													)}
+												</a>
+											))}
+										</div>
+									</div>
+								</div>
+							) : (
+								<a
+									href={link.external ? link.url : url(link.url)}
+									class="mxdock__menu-row"
+									target={link.external ? "_blank" : undefined}
+									rel={link.external ? "noopener noreferrer" : undefined}
+									data-dock-navigation
+								>
+									<span class="mxdock__menu-row-main">
+										{link.icon && <Icon name={link.icon} />}
+										<span>{link.name}</span>
+									</span>
+									{link.external && (
+										<Icon
+											name="fa7-solid:arrow-up-right-from-square"
+											class="mxdock__external-icon"
+										/>
+									)}
+								</a>
+							),
+						)}
+					</nav>
+				</section>
+
+				<section class="mxdock__view" data-dock-view="music" data-title="音乐" hidden>
+					<div
+						class="mxdock__playlist"
+						id="mxdock-playlist"
+						role="listbox"
+						aria-label="歌单"
+					>
+						<p class="mxdock__empty" id="mxdock-music-empty">暂无正在播放</p>
+					</div>
+					<div class="mxdock__transport">
+						<div class="mxdock__progress-row">
+							<span id="mxdock-current-time">0:00</span>
+							<input
+								class="mxdock__progress"
+								id="mxdock-progress"
+								type="range"
+								min="0"
+								max="100"
+								step="0.1"
+								value="0"
+								aria-label="播放进度"
+							/>
+							<span id="mxdock-duration">0:00</span>
+						</div>
+						<div class="mxdock__transport-buttons">
+							<button type="button" id="mxdock-mode-btn" aria-label="播放模式：顺序播放" aria-pressed="false">
+								<span class="mxdock__mode-list-icon" aria-hidden="true"><Fragment set:html={ico("repeat")} /></span>
+								<span class="mxdock__mode-single-icon is-hidden" aria-hidden="true"><Fragment set:html={ico("repeatOne")} /></span>
+								<span class="mxdock__mode-shuffle-icon is-hidden" aria-hidden="true"><Fragment set:html={ico("shuffle")} /></span>
+							</button>
+							<button type="button" id="mxdock-prev-btn" aria-label="上一首">
+								<Fragment set:html={ico("prev")} />
+							</button>
+							<button class="mxdock__play-button" type="button" id="mxdock-play-btn" aria-label="播放">
+								<span class="mxdock__play-icon" aria-hidden="true"><Fragment set:html={ico("play")} /></span>
+								<span class="mxdock__pause-icon is-hidden" aria-hidden="true"><Fragment set:html={ico("pause")} /></span>
+							</button>
+							<button type="button" id="mxdock-next-btn" aria-label="下一首">
+								<Fragment set:html={ico("next")} />
+							</button>
+							<button type="button" id="mxdock-mute-btn" aria-label="音量" aria-pressed="false">
+								<span class="mxdock__volume-up-icon" aria-hidden="true"><Fragment set:html={ico("volUp")} /></span>
+								<span class="mxdock__volume-off-icon is-hidden" aria-hidden="true"><Fragment set:html={ico("volOff")} /></span>
+							</button>
+						</div>
+					</div>
+				</section>
+
+				<section class="mxdock__view" data-dock-view="toc" data-title="目录" hidden>
+					<div class="mxdock__toc">
+						<div id="mxdock-toc-content"></div>
+					</div>
+				</section>
+			</div>
+
+			<nav class="mxdock__toolbar" aria-label="工具">
+				<button type="button" id="mxdock-search-btn" aria-label="搜索">
+					<Fragment set:html={ico("search")} />
+					<span>搜索</span>
+				</button>
+				<button type="button" id="mxdock-theme-btn" aria-label="主题">
+					<span class="mxdock__theme-light" aria-hidden="true"><Fragment set:html={ico("sun")} /></span>
+					<span class="mxdock__theme-dark is-hidden" aria-hidden="true"><Fragment set:html={ico("moon")} /></span>
+					<span>主题</span>
+				</button>
+				<button type="button" data-view-target="music" aria-label="音乐">
+					<Fragment set:html={ico("music")} />
+					<span>音乐</span>
+				</button>
+				<button class="is-hidden" type="button" id="mxdock-toc-btn" data-view-target="toc" aria-label="目录">
+					<Fragment set:html={ico("toc")} />
+					<span>目录</span>
+				</button>
+				<button class="is-hidden" type="button" id="mxdock-comment-btn" aria-label="评论">
+					<Fragment set:html={ico("comment")} />
+					<span>评论</span>
+				</button>
+				<button class="is-hidden" type="button" id="mxdock-top-btn" aria-label="回到顶部">
+					<Fragment set:html={ico("up")} />
+					<span>顶部</span>
+				</button>
+			</nav>
+		</div>
+	</div>
+</section>
+
+<style is:global>
+	/* ============================================
+	   明信移动端统一变形 Dock（移植自原站 mobile-dock.css，类名 mxdock 前缀）
+	   胶囊 / 滚动气泡 / 内容卡三态；仅「明信 + ≤768px」点亮，
+	   默认隐藏守卫在 main.css（.mxdock / .mxdock-overlay）。
+	   ============================================ */
+	@media (max-width: 768px) {
+		html[data-site-mode="mingxin"] .mxdock {
+			--mxdock-surface: #e7e7e7;
+			--mxdock-edge: max(0.75rem, env(safe-area-inset-right, 0px));
+			--mxdock-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+			--mxdock-motion: cubic-bezier(0.22, 1, 0.36, 1);
+			--mxdock-content-top-padding: 0.75rem;
+			--mxdock-inset-left: 0.75rem;
+			position: fixed;
+			right: var(--mxdock-edge);
+			bottom: var(--mxdock-bottom);
+			z-index: 74;
+			display: flex;
+			flex-direction: column-reverse;
+			align-items: stretch;
+			width: calc(
+				100vw - var(--mxdock-edge) -
+					max(var(--mxdock-inset-left), env(safe-area-inset-left, 0px))
+			);
+			max-width: calc(100vw - 1.5rem);
+			max-height: 70dvh;
+			color: var(--deep-text);
+			background: var(--mxdock-surface);
+			border: 0;
+			border-radius: 1.825rem;
+			box-shadow: 0 0.65rem 1.8rem rgb(0 0 0 / 14%);
+			overflow: hidden;
+			transform-origin: bottom right;
+			transition:
+				width 500ms var(--mxdock-motion),
+				border-radius 500ms var(--mxdock-motion),
+				transform 500ms var(--mxdock-motion),
+				opacity 180ms ease,
+				box-shadow 240ms ease;
+		}
+
+		html.dark[data-site-mode="mingxin"] .mxdock {
+			--mxdock-surface: #181818;
+			box-shadow: 0 0.65rem 1.8rem rgb(0 0 0 / 34%);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock[data-shape="bubble"] {
+			width: 3.65rem;
+			height: 3.65rem;
+			min-height: 3.65rem;
+			max-height: 3.65rem;
+			aspect-ratio: 1;
+			border-radius: 50%;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock[data-shape="pill"] {
+			border-radius: 1.825rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock[data-shape="card"] {
+			border-radius: 1.25rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock.is-keyboard-open {
+			transform: translateY(calc(100% + var(--mxdock-bottom) + 1rem));
+			opacity: 0;
+			pointer-events: none;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__bar {
+			display: flex;
+			align-items: center;
+			gap: 0.35rem;
+			min-height: 3.25rem;
+			padding: 0.2rem 0.35rem 0.2rem 0.65rem;
+			transition:
+				border-color 200ms ease,
+				padding 260ms ease;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__context-action,
+		html[data-site-mode="mingxin"] .mxdock__menu-toggle,
+		html[data-site-mode="mingxin"] .mxdock__toolbar button,
+		html[data-site-mode="mingxin"] .mxdock__transport button,
+		html[data-site-mode="mingxin"] .mxdock__playlist-item,
+		html[data-site-mode="mingxin"] .mxdock__menu-row,
+		html[data-site-mode="mingxin"] .mxdock__submenu-row {
+			border: 0;
+			color: inherit;
+			background: transparent;
+			cursor: pointer;
+			-webkit-tap-highlight-color: transparent;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__context {
+			display: flex;
+			align-items: center;
+			gap: 0.65rem;
+			min-width: 0;
+			min-height: 2.75rem;
+			flex: 1;
+			padding: 0 0.25rem;
+			border-radius: var(--radius-full);
+			overflow: hidden;
+			transition:
+				flex-basis 320ms var(--mxdock-motion),
+				opacity 160ms ease,
+				padding 260ms ease,
+				background-color 180ms ease;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__context-action {
+			display: flex;
+			align-items: center;
+			gap: 0.65rem;
+			min-width: 0;
+			min-height: 2.75rem;
+			flex: 1;
+			padding: 0 0.25rem;
+			text-align: left;
+			border-radius: var(--radius-full);
+			overflow: hidden;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__context-action:active,
+		html[data-site-mode="mingxin"] .mxdock__menu-toggle:active,
+		html[data-site-mode="mingxin"] .mxdock__toolbar button:active,
+		html[data-site-mode="mingxin"] .mxdock__transport button:active {
+			background: var(--btn-plain-bg-active);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__site-mark {
+			display: none;
+			place-items: center;
+			width: 2.75rem;
+			height: 2.75rem;
+			flex: 0 0 2.75rem;
+			border-radius: 50%;
+			color: inherit;
+			overflow: hidden;
+			-webkit-tap-highlight-color: transparent;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__site-mark img {
+			display: block;
+			width: 1.75rem;
+			height: 1.75rem;
+			border-radius: 50%;
+			object-fit: cover;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__back-mark {
+			display: none;
+			place-items: center;
+			width: 1.65rem;
+			height: 1.65rem;
+			flex: 0 0 auto;
+			font-size: 1.2rem;
+			color: var(--primary);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__back-mark svg {
+			width: 1.2rem;
+			height: 1.2rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__context-viewport {
+			display: block;
+			min-width: 0;
+			flex: 1;
+			overflow: hidden;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__site-title,
+		html[data-site-mode="mingxin"] .mxdock__view-title {
+			display: block;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			font-size: 1rem;
+			font-weight: 650;
+			letter-spacing: 0.01em;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__view-title,
+		html[data-site-mode="mingxin"] .mxdock__lyric-viewport {
+			display: none;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__lyric-viewport {
+			min-width: 0;
+			width: 100%;
+			padding-left: 0.5rem;
+			overflow: hidden;
+			white-space: nowrap;
+			mask-image: linear-gradient(
+				90deg,
+				transparent 0,
+				#000 0.5rem,
+				#000 calc(100% - 0.5rem),
+				transparent 100%
+			);
+			-webkit-mask-image: linear-gradient(
+				90deg,
+				transparent 0,
+				#000 0.5rem,
+				#000 calc(100% - 0.5rem),
+				transparent 100%
+			);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__lyric-text {
+			display: inline-block;
+			min-width: max-content;
+			font-size: 0.95rem;
+			font-weight: 600;
+			line-height: 1.4;
+			will-change: transform;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__lyric-text.is-marquee {
+			animation: mxdock-lyric-marquee var(--mxdock-lyric-duration, 7s)
+				ease-in-out infinite alternate;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__lyric-text.is-paused {
+			animation-play-state: paused;
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock.has-playing-context[data-shape="pill"]
+			.mxdock__site-title {
+			display: none;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock[data-shape="pill"] .mxdock__site-mark {
+			display: grid;
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock.has-playing-context[data-shape="pill"]
+			.mxdock__context {
+			gap: 0.25rem;
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock.has-playing-context[data-shape="pill"]
+			.mxdock__lyric-viewport {
+			display: block;
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock[data-shape="card"]:not(.is-child-view)
+			.mxdock__site-mark {
+			display: grid;
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock.has-playing-context[data-shape="card"]:not(.is-child-view)
+			.mxdock__site-title {
+			display: none;
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock.has-playing-context[data-shape="card"]:not(.is-child-view)
+			.mxdock__lyric-viewport {
+			display: block;
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock[data-shape="card"].is-child-view
+			.mxdock__site-title,
+		html[data-site-mode="mingxin"]
+			.mxdock[data-shape="card"].is-child-view
+			.mxdock__lyric-viewport,
+		html[data-site-mode="mingxin"]
+			.mxdock[data-shape="card"].is-child-view
+			.mxdock__site-mark {
+			display: none;
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock[data-shape="card"].is-child-view
+			.mxdock__view-title {
+			display: block;
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock[data-shape="card"].is-child-view
+			.mxdock__back-mark {
+			display: grid;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock[data-shape="bubble"] .mxdock__context {
+			flex: 0 0 0;
+			width: 0;
+			min-height: 0;
+			padding: 0;
+			opacity: 0;
+			pointer-events: none;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__menu-toggle {
+			display: grid;
+			place-items: center;
+			position: relative;
+			width: 2.85rem;
+			height: 2.85rem;
+			flex: 0 0 2.85rem;
+			border-radius: var(--radius-full);
+			font-size: 1.5rem;
+			transition:
+				background-color 180ms ease,
+				transform 260ms var(--mxdock-motion);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__menu-toggle svg {
+			width: 1.5rem;
+			height: 1.5rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock[data-shape="bubble"] .mxdock__bar {
+			width: 100%;
+			height: 100%;
+			min-height: 0;
+			justify-content: center;
+			padding: 0.4rem;
+			box-sizing: border-box;
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock[data-shape="bubble"]
+			.mxdock__menu-toggle {
+			width: 2.8rem;
+			flex-basis: 2.8rem;
+			transform: none;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__menu-icon,
+		html[data-site-mode="mingxin"] .mxdock__close-icon {
+			position: absolute;
+			inset: 0;
+			display: grid;
+			place-items: center;
+			transition:
+				opacity 180ms ease,
+				transform 260ms var(--mxdock-motion);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__close-icon {
+			opacity: 0;
+			transform: rotate(-90deg) scale(0.72);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock[data-shape="card"] .mxdock__menu-icon {
+			opacity: 0;
+			transform: rotate(90deg) scale(0.72);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock[data-shape="card"] .mxdock__close-icon {
+			opacity: 1;
+			transform: rotate(0) scale(1);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock.is-closing .mxdock__menu-icon {
+			opacity: 1;
+			transform: rotate(0) scale(1);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock.is-closing .mxdock__close-icon {
+			opacity: 0;
+			transform: rotate(-90deg) scale(0.72);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__card {
+			display: grid;
+			grid-template-rows: 0fr;
+			min-width: 0;
+			min-height: 0;
+			overflow: hidden;
+			pointer-events: none;
+			transition: grid-template-rows 500ms var(--mxdock-motion);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock[data-shape="card"] .mxdock__card {
+			grid-template-rows: 1fr;
+			pointer-events: auto;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock.is-closing .mxdock__card {
+			grid-template-rows: 0fr;
+			pointer-events: none;
+			transition: grid-template-rows 500ms var(--mxdock-motion);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__card-inner {
+			display: flex;
+			flex-direction: column;
+			min-height: 0;
+			max-height: calc(70dvh - 3.25rem);
+			overflow: hidden;
+			outline: none;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__views,
+		html[data-site-mode="mingxin"] .mxdock__toolbar {
+			opacity: 0;
+			transform: translate3d(0, 0.65rem, 0);
+			transition:
+				opacity 200ms ease,
+				transform 280ms var(--mxdock-motion);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock[data-shape="card"] .mxdock__views,
+		html[data-site-mode="mingxin"] .mxdock[data-shape="card"] .mxdock__toolbar {
+			opacity: 1;
+			transform: translate3d(0, 0, 0);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock[data-shape="card"] .mxdock__views {
+			transition-delay: 150ms;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock[data-shape="card"] .mxdock__toolbar {
+			transition-delay: 220ms;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock.is-closing .mxdock__views {
+			opacity: 0;
+			transform: translate3d(0, 0.65rem, 0);
+			transition-delay: 0ms;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock.is-closing .mxdock__toolbar {
+			opacity: 0;
+			transform: none;
+			transition: none;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__views {
+			min-height: 0;
+			max-height: calc(70dvh - 7.3rem - var(--mxdock-content-top-padding));
+			padding-top: var(--mxdock-content-top-padding);
+			box-sizing: border-box;
+			overflow: hidden;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__view {
+			display: none;
+			flex-direction: column;
+			min-height: 0;
+			max-height: calc(
+				70dvh - 7.3rem - var(--mxdock-content-top-padding) * 2
+			);
+			overflow-y: auto;
+			overflow-x: hidden;
+			overscroll-behavior: contain;
+			-webkit-overflow-scrolling: touch;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__view.is-active {
+			display: flex;
+			animation: mxdock-view-in 220ms ease-out;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__view[hidden],
+		html[data-site-mode="mingxin"] .mxdock .is-hidden {
+			display: none !important;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__menu {
+			padding: 0.35rem 0.85rem 0.75rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__menu-row,
+		html[data-site-mode="mingxin"] .mxdock__submenu-row {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 0.75rem;
+			width: 100%;
+			min-height: 3.25rem;
+			padding: 0.65rem 0.4rem;
+			text-decoration: none;
+			color: inherit;
+			font-size: 1rem;
+			font-weight: 560;
+			transition:
+				color 160ms ease,
+				background-color 160ms ease,
+				padding 180ms ease;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__menu-row {
+			border-bottom: 1px solid var(--line-divider);
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock__menu
+			> .mxdock__menu-row:last-child,
+		html[data-site-mode="mingxin"]
+			.mxdock__menu
+			> .mxdock__accordion:last-child
+			.mxdock__accordion-trigger {
+			border-bottom: none;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__menu-row:hover,
+		html[data-site-mode="mingxin"] .mxdock__submenu-row:hover {
+			color: var(--primary);
+			padding-left: 0.65rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__menu-row-main,
+		html[data-site-mode="mingxin"] .mxdock__submenu-row {
+			min-width: 0;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__menu-row-main {
+			display: flex;
+			align-items: center;
+			gap: 0.65rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__menu-row-main > svg,
+		html[data-site-mode="mingxin"] .mxdock__submenu-row > svg:first-child {
+			width: 1.15rem;
+			height: 1.15rem;
+			opacity: 0.72;
+			flex: 0 0 auto;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__external-icon {
+			width: 0.72rem;
+			height: 0.72rem;
+			opacity: 0.35;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__accordion-arrow {
+			display: grid;
+			place-items: center;
+			opacity: 0.55;
+			transition: transform 260ms var(--mxdock-motion);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__accordion-arrow svg {
+			width: 1.15rem;
+			height: 1.15rem;
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock__accordion.is-open
+			.mxdock__accordion-arrow {
+			transform: rotate(180deg);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__submenu {
+			display: grid;
+			grid-template-rows: 0fr;
+			opacity: 0;
+			transition:
+				grid-template-rows 300ms var(--mxdock-motion),
+				opacity 180ms ease;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__accordion.is-open .mxdock__submenu {
+			grid-template-rows: 1fr;
+			opacity: 1;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__submenu-inner {
+			min-height: 0;
+			overflow: hidden;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__submenu-row {
+			justify-content: flex-start;
+			min-height: 2.85rem;
+			padding-left: 1.55rem;
+			font-size: 0.9rem;
+			font-weight: 500;
+			opacity: 0.78;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__submenu-row:hover {
+			padding-left: 1.8rem;
+			opacity: 1;
+		}
+
+		/* —— 音乐视图：歌单 + 播放控制（照原版数值） —— */
+		html[data-site-mode="mingxin"] .mxdock__playlist {
+			display: flex;
+			flex-direction: column;
+			min-height: 4rem;
+			padding: 0.35rem 0.85rem 0.5rem;
+			overflow-y: auto;
+			overscroll-behavior: contain;
+			-webkit-overflow-scrolling: touch;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__playlist-item {
+			display: grid;
+			grid-template-columns: 2.25rem minmax(0, 1fr) 1.2rem;
+			align-items: center;
+			gap: 0.65rem;
+			width: 100%;
+			min-height: 3.3rem;
+			padding: 0.45rem 0.3rem;
+			text-align: left;
+			transition:
+				color 160ms ease,
+				padding 180ms ease;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__playlist-item:hover,
+		html[data-site-mode="mingxin"] .mxdock__playlist-item.is-active {
+			color: var(--primary);
+			padding-left: 0.55rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__playlist-cover {
+			position: relative;
+			display: grid;
+			place-items: center;
+			width: 2.25rem;
+			height: 2.25rem;
+			border-radius: 0.65rem;
+			background: var(--btn-plain-bg-hover);
+			overflow: hidden;
+			flex: 0 0 auto;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__playlist-cover img {
+			position: absolute;
+			inset: 0;
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__playlist-meta {
+			display: flex;
+			flex-direction: column;
+			gap: 0.15rem;
+			min-width: 0;
+			flex: 1;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__playlist-meta strong,
+		html[data-site-mode="mingxin"] .mxdock__playlist-meta span {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__playlist-meta strong {
+			font-size: 0.82rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__playlist-meta span {
+			font-size: 0.72rem;
+			opacity: 0.58;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__playlist-eq {
+			display: flex;
+			align-items: flex-end;
+			justify-content: center;
+			gap: 0.12rem;
+			height: 1rem;
+			opacity: 0;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__playlist-eq i {
+			display: block;
+			width: 0.13rem;
+			height: 35%;
+			border-radius: var(--radius-full);
+			background: var(--primary);
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock__playlist-item.is-active
+			.mxdock__playlist-eq {
+			opacity: 1;
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock__playlist-item.is-playing
+			.mxdock__playlist-eq
+			i {
+			animation: mxdock-eq 720ms ease-in-out infinite alternate;
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock__playlist-item.is-playing
+			.mxdock__playlist-eq
+			i:nth-child(2) {
+			animation-delay: -240ms;
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock__playlist-item.is-playing
+			.mxdock__playlist-eq
+			i:nth-child(3) {
+			animation-delay: -480ms;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__empty {
+			margin: 0;
+			padding: 1.4rem 0.5rem;
+			text-align: center;
+			font-size: 0.82rem;
+			opacity: 0.55;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__transport {
+			padding: 0.5rem 0.9rem 0.65rem;
+			border-top: 1px solid var(--line-divider);
+			flex: 0 0 auto;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__progress-row {
+			display: grid;
+			grid-template-columns: 2.4rem minmax(0, 1fr) 2.4rem;
+			align-items: center;
+			gap: 0.45rem;
+			font-size: 0.65rem;
+			opacity: 0.72;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__progress-row span:last-child {
+			text-align: right;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__progress {
+			--mxdock-progress: 0%;
+			width: 100%;
+			height: 1rem;
+			margin: 0;
+			appearance: none;
+			-webkit-appearance: none;
+			background: transparent;
+			cursor: pointer;
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock__progress::-webkit-slider-runnable-track {
+			height: 0.2rem;
+			border-radius: var(--radius-full);
+			background: linear-gradient(
+				90deg,
+				var(--primary) var(--mxdock-progress),
+				var(--line-divider) var(--mxdock-progress)
+			);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__progress::-webkit-slider-thumb {
+			width: 0.72rem;
+			height: 0.72rem;
+			margin-top: -0.26rem;
+			appearance: none;
+			-webkit-appearance: none;
+			border: 0;
+			border-radius: var(--radius-full);
+			background: var(--primary);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__progress::-moz-range-track {
+			height: 0.2rem;
+			border-radius: var(--radius-full);
+			background: var(--line-divider);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__progress::-moz-range-progress {
+			height: 0.2rem;
+			border-radius: var(--radius-full);
+			background: var(--primary);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__progress::-moz-range-thumb {
+			width: 0.72rem;
+			height: 0.72rem;
+			border: 0;
+			border-radius: var(--radius-full);
+			background: var(--primary);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__transport-buttons {
+			display: grid;
+			grid-template-columns: repeat(2, 2.4rem) 3.25rem repeat(2, 2.4rem);
+			align-items: center;
+			justify-content: center;
+			justify-items: center;
+			gap: 0.3rem;
+			margin-top: 0.15rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__transport-buttons button {
+			display: grid;
+			place-items: center;
+			width: 2.4rem;
+			height: 2.4rem;
+			border-radius: var(--radius-full);
+			font-size: 1.25rem;
+			transition:
+				color 160ms ease,
+				background-color 160ms ease;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__transport-buttons button svg {
+			width: 1.25rem;
+			height: 1.25rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__transport-buttons button.is-active {
+			color: var(--primary);
+			background: color-mix(in oklch, var(--deep-text) 7%, transparent);
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock__transport-buttons
+			.mxdock__play-button {
+			width: 3.25rem;
+			height: 3.25rem;
+			background: var(--deep-text);
+			color: var(--float-panel-bg);
+			font-size: 1.45rem;
+		}
+
+		html[data-site-mode="mingxin"]
+			.mxdock__transport-buttons
+			.mxdock__play-button
+			svg {
+			width: 1.45rem;
+			height: 1.45rem;
+		}
+
+		/* —— 目录视图：标题行（缩进按层级），样式从简对齐菜单行 —— */
+		html[data-site-mode="mingxin"] .mxdock__toc {
+			padding: 0.35rem 0.85rem 0.75rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__toc-link {
+			display: block;
+			width: 100%;
+			padding: 0.6rem 0.4rem;
+			border: 0;
+			border-bottom: 1px solid var(--line-divider);
+			background: transparent;
+			color: inherit;
+			font-size: 0.92rem;
+			font-weight: 540;
+			text-align: left;
+			text-decoration: none;
+			cursor: pointer;
+			-webkit-tap-highlight-color: transparent;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__toc-link:last-child {
+			border-bottom: none;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__toc-link[data-depth="1"] {
+			padding-left: 1.3rem;
+			font-size: 0.88rem;
+			opacity: 0.85;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__toc-link[data-depth="2"] {
+			padding-left: 2.2rem;
+			font-size: 0.84rem;
+			opacity: 0.7;
+		}
+
+		/* —— 工具栏（照原版数值） —— */
+		html[data-site-mode="mingxin"] .mxdock__toolbar {
+			display: flex;
+			align-items: stretch;
+			gap: 0.35rem;
+			min-height: 4.05rem;
+			padding: 0.3rem 0.55rem;
+			border-top: 1px solid var(--line-divider);
+			overflow-x: auto;
+			overflow-y: hidden;
+			overscroll-behavior-x: contain;
+			scrollbar-width: none;
+			flex: 0 0 auto;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__toolbar::-webkit-scrollbar {
+			display: none;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__toolbar button {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 0.2rem;
+			min-width: 3.45rem;
+			min-height: 3.25rem;
+			padding: 0.3rem 0.45rem;
+			border-radius: 1rem;
+			font-size: 1.2rem;
+			transition:
+				color 160ms ease,
+				background-color 160ms ease,
+				transform 160ms ease;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__toolbar button svg {
+			width: 1.2rem;
+			height: 1.2rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__toolbar button > span:last-child {
+			max-width: 3.2rem;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			font-size: 0.62rem;
+			font-weight: 600;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__toolbar button.is-active {
+			color: var(--primary);
+			background: var(--btn-plain-bg-active);
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__context:focus-visible,
+		html[data-site-mode="mingxin"] .mxdock__menu-toggle:focus-visible,
+		html[data-site-mode="mingxin"] .mxdock__toolbar button:focus-visible,
+		html[data-site-mode="mingxin"] .mxdock__transport button:focus-visible,
+		html[data-site-mode="mingxin"] .mxdock__menu-row:focus-visible,
+		html[data-site-mode="mingxin"] .mxdock__submenu-row:focus-visible,
+		html[data-site-mode="mingxin"] .mxdock__playlist-item:focus-visible,
+		html[data-site-mode="mingxin"] .mxdock__progress:focus-visible {
+			outline: 2px solid var(--primary);
+			outline-offset: -2px;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock-overlay {
+			position: fixed;
+			inset: 0;
+			z-index: 73;
+			display: block;
+			background: color-mix(in oklch, var(--deep-text) 28%, transparent);
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity 220ms ease;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock-overlay.is-open {
+			opacity: 1;
+			pointer-events: auto;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock-overlay.is-closing {
+			opacity: 0;
+			pointer-events: auto;
+			transition: opacity 220ms ease-in;
+		}
+
+		/* —— 交接与让位（明信 + ≤768px 专属，其他形态/桌面零影响） —— */
+		/* 浮动播放器两张皮在移动端整体隐藏，播放与控制交给 Dock（音频不中断） */
+		html[data-site-mode="mingxin"] #mingxin-music-player {
+			display: none !important;
+		}
+
+		/* 悬浮按钮栈抬到 Dock 上方：Dock 顶边约在底部 4.15rem 处，
+		   栈底改 8.75rem 留足间隙；z-index 压到 Dock 遮罩（73）之下，
+		   Dock 卡片打开时栈一并被遮罩盖住、不可点（同原版模态口径） */
+		html[data-site-mode="mingxin"] .floating-controls-container {
+			bottom: 8.75rem;
+			z-index: 70;
+		}
+
+		/* 页脚底部留白由 Dock 高度承担，避免页脚内容被胶囊条压住 */
+		html[data-site-mode="mingxin"] .site-footer {
+			padding-bottom: 5.25rem;
+		}
+
+		@keyframes mxdock-view-in {
+			0% {
+				transform: translateY(0.2rem);
+				opacity: 0;
+			}
+			100% {
+				transform: translateY(0);
+				opacity: 1;
+			}
+		}
+
+		@keyframes mxdock-lyric-marquee {
+			0%,
+			14% {
+				transform: translate3d(0, 0, 0);
+			}
+			72%,
+			100% {
+				transform: translate3d(var(--mxdock-lyric-offset, 0), 0, 0);
+			}
+		}
+
+		@keyframes mxdock-eq {
+			0% {
+				height: 28%;
+			}
+			100% {
+				height: 100%;
+			}
+		}
+	}
+
+	@media (max-width: 360px) {
+		html[data-site-mode="mingxin"] .mxdock__bar {
+			min-height: 3.25rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__site-title,
+		html[data-site-mode="mingxin"] .mxdock__view-title,
+		html[data-site-mode="mingxin"] .mxdock__lyric-text {
+			font-size: 0.9rem;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__toolbar button {
+			min-width: 3.2rem;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		html[data-site-mode="mingxin"] .mxdock,
+		html[data-site-mode="mingxin"] .mxdock *,
+		html[data-site-mode="mingxin"] .mxdock-overlay {
+			scroll-behavior: auto !important;
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.01ms !important;
+		}
+
+		html[data-site-mode="mingxin"] .mxdock__lyric-text.is-marquee {
+			animation: none !important;
+			transform: none !important;
+		}
+	}
+</style>
+
+<script>
+	import { bootMingxinMobileDock } from "@/scripts/mingxin/mobile-dock";
+	bootMingxinMobileDock();
+</script>

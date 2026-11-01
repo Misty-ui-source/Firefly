@@ -418,7 +418,7 @@ export function setNavbarStyle(style: NavbarStyle): void {
 	applyNavbarStyleToDocument(safe);
 }
 
-const SITE_MODES: SiteMode[] = ["full", "pure", "harmony", "brick", "astral", "paper"];
+const SITE_MODES: SiteMode[] = ["full", "pure", "harmony", "brick", "astral", "paper", "mingxin"];
 
 // ─── 形态切换全局淡变 ─────────────────────────────────────────
 // 切换站点形态 / 璨夜子主题时，先给 html 挂 .mode-fade 再改属性：

@@ -1,0 +1,529 @@
+---
+import { render } from "astro:content";
+import { Icon } from "astro-icon/components";
+import CoverImage from "@/components/common/CoverImage.astro";
+import { analyticsConfig, mingxinConfig } from "@/config";
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
+import { getSortedPosts } from "@/utils/content-utils";
+import { processCoverImageSync } from "@/utils/image-utils";
+import {
+	getFileDirFromPath,
+	getPostUrlBySlug,
+	url,
+} from "@/utils/url-utils";
+
+/**
+ * 明信文章列表（原站 ArticleListPage 移植，站长 2026-11-01 点名）：
+ * 页头（POSTS 眉题 + 大标题 + 引言）/ 置顶轮播 / 「文章 · 共 N 篇」/ 三列卡 /
+ * 分页，只在明信作用域点亮（守卫在 main.css、样式在 mingxin-mode.css）；
+ * 挂在 [...page] 的 .std-home 内，明信下 PostPage 与旧分页让位。
+ * 分页数学沿用本站 [...page]（布局层不改数据）：置顶取全站 pinned 前 3 篇
+ * 进轮播（原站 PINNED_CAROUSEL_MAX = 3），与本页网格重复者从网格剔除。
+ */
+
+interface Props {
+	/* [...page] 的 Astro 分页对象 */
+	page: any;
+}
+
+const { page } = Astro.props;
+
+/** 分类色：原站 getCategoryHue —— FNV-1a 哈希分类名取色相，逐字移植 */
+function getCategoryHue(category: string): number {
+	let hash = 2166136261;
+	for (let index = 0; index < category.length; index++) {
+		hash ^= category.charCodeAt(index);
+		hash = Math.imul(hash, 16777619);
+	}
+	return (hash >>> 0) % 360;
+}
+
+const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
+	year: "numeric",
+	month: "2-digit",
+	day: "2-digit",
+});
+
+type ListPost = {
+	id: string;
+	title: string;
+	url: string;
+	publishedIso: string;
+	publishedText: string;
+	category: string;
+	categoryHue: number;
+	tags: string[];
+	description: string;
+	words: number;
+	cover: string | null;
+	coverBase: string;
+	password: boolean;
+};
+
+async function createListPost(entry: any): Promise<ListPost> {
+	const { remarkPluginFrontmatter } = await render(entry);
+	const rawCategory = entry.data.category?.trim();
+	const category = rawCategory || i18n(I18nKey.uncategorized);
+	const processed = processCoverImageSync(entry.data.image, entry.id);
+	const cover =
+		typeof processed === "string" ? processed : (processed?.src ?? null);
+	return {
+		id: entry.id,
+		title: entry.data.title,
+		url: getPostUrlBySlug(entry.id),
+		publishedIso: entry.data.published.toISOString(),
+		publishedText: dateFormatter.format(entry.data.published),
+		category,
+		categoryHue: getCategoryHue(category),
+		tags: (entry.data.tags || []).map((tag: string) => tag.trim()).filter(Boolean),
+		description:
+			entry.data.description || remarkPluginFrontmatter.excerpt || "",
+		words: Number(remarkPluginFrontmatter.words) || 0,
+		cover,
+		coverBase: getFileDirFromPath(entry.filePath || ""),
+		password: !!entry.data.password,
+	};
+}
+
+const allPosts = await getSortedPosts();
+const PINNED_CAROUSEL_MAX = 3;
+const pinnedEntries = allPosts
+	.filter((entry) => entry.data.pinned)
+	.slice(0, PINNED_CAROUSEL_MAX);
+const carouselIds = new Set(pinnedEntries.map((entry) => entry.id));
+const pinnedPosts = await Promise.all(pinnedEntries.map(createListPost));
+const gridEntries = (page.data as any[]).filter(
+	(entry) => !carouselIds.has(entry.id),
+);
+const gridPosts = await Promise.all(gridEntries.map(createListPost));
+
+const totalPosts = page.total as number;
+const currentPage = page.currentPage as number;
+const lastPage = page.lastPage as number;
+const pageUrl = (p: number) => url(p === 1 ? "/" : `/${p}/`);
+
+/* 引言：用本站现成句子——站长自选座右铭（mingxinConfig.footerMotto，控制台可改），
+ * 不另编新文案；原站对应位是他自己的 postsMotto */
+const listQuote = mingxinConfig.footerMotto;
+
+const umami = analyticsConfig.umamiAnalytics;
+const umamiEnabled = !!umami?.shareId && !!umami?.shareApiBase;
+---
+
+<div
+	class="mxlist"
+	data-mxlist
+	data-umami-enabled={umamiEnabled ? "true" : "false"}
+	data-umami-api-base={umami?.shareApiBase || ""}
+	data-umami-share-id={umami?.shareId || ""}
+>
+	<header class="mxlist__header">
+		<span class="mxlist__eyebrow">Posts</span>
+		<h2 class="mxlist__title">文章</h2>
+		{listQuote && <p class="mxlist__desc">{listQuote}</p>}
+	</header>
+
+	{pinnedPosts.length > 0 && (
+		<section class="mxlist-pinned" data-mxlist-pinned aria-labelledby="mxlist-pinned-title">
+			<h3 id="mxlist-pinned-title" class="mxlist__section-title">置顶</h3>
+			<div class="mxlist-pinned__collection" data-mxlist-carousel>
+				{pinnedPosts.map((post, index) => {
+					const visibleTags = post.tags.slice(0, 3);
+					const hiddenTagCount = post.tags.length - visibleTags.length;
+					return (
+						<article
+							class="mxlist-pinned__item"
+							data-mxlist-pinned-item
+							hidden={index !== 0}
+							style={`--mx-cat-hue: ${post.categoryHue}`}
+						>
+							<div class="mxlist-pinned__content">
+								<h4 class="mxlist-pinned__title">
+									<span class="mxlist-pinned__title-text" title={post.title}>
+										{post.title}
+										{post.password && (
+											<span class="mxlist__lock" aria-hidden="true">
+												<Icon name="material-symbols:lock-outline" width="1em" height="1em" />
+											</span>
+										)}
+									</span>
+								</h4>
+								<div class="mxlist-pinned__meta">
+									<span class="mxlist__taxonomy mxlist__taxonomy--category">{post.category}</span>
+									<span class="mxlist__meta-item" title="浏览量">
+										<Icon name="material-symbols:visibility-outline-rounded" width="1em" height="1em" />
+										<span data-mxlist-pageview data-mxlist-pageview-path={post.url}>-</span>
+									</span>
+									<span class="mxlist__meta-item">
+										<Icon name="material-symbols:calendar-month-rounded" width="1em" height="1em" />
+										<time datetime={post.publishedIso}>{post.publishedText}</time>
+									</span>
+									<span class="mxlist__meta-item">
+										<Icon name="material-symbols:article-outline-rounded" width="1em" height="1em" />
+										<span>{post.words.toLocaleString()} 字</span>
+									</span>
+									{visibleTags.map((tag) => (
+										<span class="mxlist__taxonomy mxlist__taxonomy--tag">{tag}</span>
+									))}
+									{hiddenTagCount > 0 && (
+										<span class="mxlist__taxonomy mxlist__taxonomy--tag">+{hiddenTagCount}</span>
+									)}
+								</div>
+								<p class="mxlist-pinned__desc">{post.description}</p>
+							</div>
+							{post.cover && (
+								<div class="mxlist-pinned__cover-wrap">
+									<CoverImage
+										src={post.cover}
+										basePath={post.coverBase}
+										alt={post.title}
+										class="mxlist-pinned__cover"
+										preview={true}
+										loading={index === 0 ? "eager" : "lazy"}
+									/>
+								</div>
+							)}
+							<a href={post.url} class="mxlist__surface-link" aria-label={post.title} title={post.title}></a>
+						</article>
+					);
+				})}
+			</div>
+			{pinnedPosts.length > 1 && (
+				<div class="mxlist-pinned__dots" aria-label="切换置顶文章">
+					{pinnedPosts.map((post, index) => (
+						<button
+							type="button"
+							data-mxlist-pinned-dot
+							aria-label={`查看置顶文章：${post.title}`}
+							aria-current={index === 0 ? "true" : undefined}
+						></button>
+					))}
+				</div>
+			)}
+		</section>
+	)}
+
+	<header class="mxlist__toolbar">
+		<div class="mxlist__summary">
+			<h3 class="mxlist__section-title">文章</h3>
+			<div class="mxlist__total" aria-label={`共 ${totalPosts} 篇文章`}>
+				<span>共</span>
+				<strong>{totalPosts}</strong>
+				<span>篇文章</span>
+			</div>
+		</div>
+	</header>
+
+	<section class="mxlist__grid" data-mxlist-grid aria-label="文章列表">
+		<span class="mxlist__highlight" data-mxlist-highlight aria-hidden="true"></span>
+		{gridPosts.map((post) => (
+			<article class="mxlist-card" style={`--mx-cat-hue: ${post.categoryHue}`}>
+				{post.cover && (
+					<div class="mxlist-card__cover-wrap">
+						<CoverImage
+							src={post.cover}
+							basePath={post.coverBase}
+							alt={post.title}
+							class="mxlist-card__cover"
+							preview={true}
+							loading="lazy"
+						/>
+					</div>
+				)}
+				<div class="mxlist-card__content">
+					<div class="mxlist-card__title-row">
+						<h4 class="mxlist-card__title">
+							<span class="mxlist-card__title-text" title={post.title}>
+								{post.title}
+								{post.password && (
+									<span class="mxlist__lock" aria-hidden="true">
+										<Icon name="material-symbols:lock-outline" width="1em" height="1em" />
+									</span>
+								)}
+							</span>
+						</h4>
+						<span class="mxlist-card__views" title="浏览量">
+							<Icon name="material-symbols:visibility-outline-rounded" width="1em" height="1em" />
+							<span data-mxlist-pageview data-mxlist-pageview-path={post.url}>-</span>
+						</span>
+					</div>
+					<div class="mxlist-card__meta">
+						<span class="mxlist__taxonomy mxlist__taxonomy--category">{post.category}</span>
+						<span class="mxlist__meta-item">
+							<Icon name="material-symbols:calendar-month-rounded" width="1em" height="1em" />
+							<time datetime={post.publishedIso}>{post.publishedText}</time>
+						</span>
+						<span class="mxlist__meta-item">
+							<Icon name="material-symbols:article-outline-rounded" width="1em" height="1em" />
+							<span>{post.words.toLocaleString()} 字</span>
+						</span>
+					</div>
+					<div class="mxlist-card__rule" aria-hidden="true"></div>
+					<p class="mxlist-card__desc">{post.description}</p>
+				</div>
+				<a href={post.url} class="mxlist__surface-link" aria-label={post.title} title={post.title}></a>
+			</article>
+		))}
+	</section>
+
+	{lastPage > 1 && (
+		<nav class="mxlist-pagination" aria-label="文章列表分页">
+			<div class="mxlist-pagination__inner">
+				{currentPage > 1 ? (
+					<a class="mxlist-pagination__btn" href={pageUrl(currentPage - 1)}>
+						<Icon name="material-symbols:chevron-left-rounded" class="h-4 w-4" />
+						<span class="mxlist-pagination__label">上一页</span>
+					</a>
+				) : (
+					<span class="mxlist-pagination__btn is-disabled" aria-disabled="true">
+						<Icon name="material-symbols:chevron-left-rounded" class="h-4 w-4" />
+						<span class="mxlist-pagination__label">上一页</span>
+					</span>
+				)}
+				<div class="mxlist-pagination__pages">
+					{Array.from({ length: lastPage }, (_, i) => i + 1).map((p) =>
+						p === currentPage ? (
+							<span class="mxlist-pagination__page is-active" aria-current="page">{p}</span>
+						) : (
+							<a class="mxlist-pagination__page" href={pageUrl(p)}>{p}</a>
+						),
+					)}
+				</div>
+				{currentPage < lastPage ? (
+					<a class="mxlist-pagination__btn" href={pageUrl(currentPage + 1)}>
+						<span class="mxlist-pagination__label">下一页</span>
+						<Icon name="material-symbols:chevron-right-rounded" class="h-4 w-4" />
+					</a>
+				) : (
+					<span class="mxlist-pagination__btn is-disabled" aria-disabled="true">
+						<span class="mxlist-pagination__label">下一页</span>
+						<Icon name="material-symbols:chevron-right-rounded" class="h-4 w-4" />
+					</span>
+				)}
+			</div>
+		</nav>
+	)}
+</div>
+
+<script>
+	/* 明信列表控制器：置顶轮播（原站 pinned-carousel 机制简化移植：6s 自动轮播、
+	 * 手动后静默 12s、悬停/聚焦暂停、减弱动态时堆叠展示）、悬停胶囊、
+	 * Umami 浏览量（原站 umami-pageviews 同路：share → metrics by path）。 */
+	const AUTO_ROTATE_INTERVAL = 6000;
+	const MANUAL_HOLD = 12000;
+
+	let mxlistTeardown: (() => void) | null = null;
+
+	function normalizePath(path: string): string {
+		if (!path) return "/";
+		let pathname: string;
+		try {
+			pathname = new URL(path, window.location.origin).pathname;
+		} catch {
+			pathname = path.split(/[?#]/, 1)[0] || "/";
+		}
+		const normalized = pathname.replace(/\/+$/, "").toLowerCase();
+		return normalized || "/";
+	}
+
+	function initMingxinList(): void {
+		mxlistTeardown?.();
+		mxlistTeardown = null;
+		const root = document.querySelector<HTMLElement>("[data-mxlist]");
+		if (!root) return;
+		if (getComputedStyle(root).display === "none") return;
+
+		const controller = new AbortController();
+		const { signal } = controller;
+		const cleanups: (() => void)[] = [];
+
+		/* ---------- 置顶轮播 ---------- */
+		const pinnedSection = root.querySelector<HTMLElement>("[data-mxlist-pinned]");
+		if (pinnedSection) {
+			const collection = pinnedSection.querySelector<HTMLElement>("[data-mxlist-carousel]");
+			const items = Array.from(pinnedSection.querySelectorAll<HTMLElement>("[data-mxlist-pinned-item]"));
+			const dots = Array.from(pinnedSection.querySelectorAll<HTMLButtonElement>("[data-mxlist-pinned-dot]"));
+			if (collection && items.length > 1) {
+				if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+					for (const item of items) item.hidden = false;
+					for (const dot of dots) dot.hidden = true;
+				} else {
+					collection.classList.add("is-carousel-slides");
+					for (const item of items) item.hidden = false;
+					let activeIndex = 0;
+					let rotationTimer: number | undefined;
+					let manualHoldTimer: number | undefined;
+					let hovered = false;
+					let focused = false;
+					let animating = false;
+
+					const applyActive = () => {
+						items.forEach((item, index) => {
+							if (index === activeIndex) item.dataset.pinnedActive = "true";
+							else delete item.dataset.pinnedActive;
+						});
+						dots.forEach((dot, index) => {
+							dot.setAttribute("aria-current", String(index === activeIndex));
+						});
+					};
+					const stopRotation = () => {
+						if (rotationTimer !== undefined) window.clearInterval(rotationTimer);
+						rotationTimer = undefined;
+					};
+					const startRotation = () => {
+						if (rotationTimer !== undefined || manualHoldTimer !== undefined || hovered || focused) return;
+						rotationTimer = window.setInterval(() => {
+							if (document.hidden || animating) return;
+							slideTo(activeIndex + 1, 1);
+						}, AUTO_ROTATE_INTERVAL);
+					};
+					const holdRotation = () => {
+						stopRotation();
+						if (manualHoldTimer !== undefined) window.clearTimeout(manualHoldTimer);
+						manualHoldTimer = window.setTimeout(() => {
+							manualHoldTimer = undefined;
+							startRotation();
+						}, MANUAL_HOLD);
+					};
+					const slideTo = (next: number, dir: 1 | -1) => {
+						const target = ((next % items.length) + items.length) % items.length;
+						if (target === activeIndex || animating) return;
+						const from = items[activeIndex];
+						const to = items[target];
+						activeIndex = target;
+						applyActive();
+						animating = true;
+						to.classList.add("is-pinned-sliding");
+						from.classList.add("is-pinned-sliding");
+						const width = collection.getBoundingClientRect().width || 1;
+						const toAnim = to.animate(
+							[
+								{ transform: `translateX(${dir * width}px)`, visibility: "visible" },
+								{ transform: "translateX(0)", visibility: "visible" },
+							],
+							{ duration: 240, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "both" },
+						);
+						const fromAnim = from.animate(
+							[
+								{ transform: "translateX(0)", visibility: "visible" },
+								{ transform: `translateX(${-dir * width}px)`, visibility: "visible" },
+							],
+							{ duration: 240, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "both" },
+						);
+						void Promise.all([toAnim.finished, fromAnim.finished])
+							.catch(() => undefined)
+							.then(() => {
+								toAnim.cancel();
+								fromAnim.cancel();
+								to.classList.remove("is-pinned-sliding");
+								from.classList.remove("is-pinned-sliding");
+								animating = false;
+							});
+					};
+					dots.forEach((dot, index) => {
+						dot.addEventListener("click", () => {
+							if (index === activeIndex) return;
+							slideTo(index, index > activeIndex ? 1 : -1);
+							holdRotation();
+						}, { signal });
+					});
+					pinnedSection.addEventListener("pointerenter", () => {
+						hovered = true;
+						stopRotation();
+					}, { signal });
+					pinnedSection.addEventListener("pointerleave", () => {
+						hovered = false;
+						startRotation();
+					}, { signal });
+					pinnedSection.addEventListener("focusin", () => {
+						focused = true;
+						stopRotation();
+					}, { signal });
+					pinnedSection.addEventListener("focusout", () => {
+						focused = false;
+						startRotation();
+					}, { signal });
+					applyActive();
+					startRotation();
+					cleanups.push(() => {
+						stopRotation();
+						if (manualHoldTimer !== undefined) window.clearTimeout(manualHoldTimer);
+					});
+				}
+			}
+		}
+
+		/* ---------- 悬停胶囊 ---------- */
+		const grid = root.querySelector<HTMLElement>("[data-mxlist-grid]");
+		const capsule = root.querySelector<HTMLElement>("[data-mxlist-highlight]");
+		if (grid && capsule && window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+			const onEnter = (event: Event) => {
+				const card = (event.target as Element).closest<HTMLElement>(".mxlist-card");
+				if (!card) return;
+				const gridRect = grid.getBoundingClientRect();
+				const cardRect = card.getBoundingClientRect();
+				capsule.style.transform = `translate(${cardRect.left - gridRect.left}px, ${cardRect.top - gridRect.top}px)`;
+				capsule.style.width = `${cardRect.width}px`;
+				capsule.style.height = `${cardRect.height}px`;
+				grid.setAttribute("data-highlighted", "");
+			};
+			const onLeave = () => grid.removeAttribute("data-highlighted");
+			grid.addEventListener("mouseover", onEnter, { signal });
+			grid.addEventListener("mouseleave", onLeave, { signal });
+		}
+
+		/* ---------- Umami 浏览量 ---------- */
+		const viewNodes = Array.from(root.querySelectorAll<HTMLElement>("[data-mxlist-pageview]"));
+		if (viewNodes.length > 0 && root.dataset.umamiEnabled === "true") {
+			const apiBase = (root.dataset.umamiApiBase || "").replace(/\/$/, "");
+			const shareId = root.dataset.umamiShareId || "";
+			const render = (lookup: Map<string, number> | null) => {
+				viewNodes.forEach((node) => {
+					if (lookup === null) {
+						node.textContent = "-";
+						return;
+					}
+					node.textContent = (lookup.get(normalizePath(node.dataset.mxlistPageviewPath || "")) || 0).toLocaleString();
+				});
+			};
+			(async () => {
+				try {
+					const shareRes = await fetch(`${apiBase}/api/share/${shareId}`, { signal });
+					if (!shareRes.ok) throw new Error("share failed");
+					const share = (await shareRes.json()) as { websiteId?: string; entityId?: string; token?: string };
+					const websiteId = share.websiteId || share.entityId;
+					if (!websiteId) throw new Error("no website id");
+					const metricsRes = await fetch(
+						`${apiBase}/api/websites/${websiteId}/metrics?startAt=0&endAt=${Date.now()}&type=path&limit=1000`,
+						{
+							headers: {
+								"x-umami-share-context": "1",
+								"x-umami-share-token": share.token || shareId,
+							},
+							signal,
+						},
+					);
+					if (!metricsRes.ok) throw new Error("metrics failed");
+					const rows = (await metricsRes.json()) as { x: string; y: number }[];
+					const lookup = new Map<string, number>();
+					for (const row of rows) {
+						const path = normalizePath(row.x);
+						lookup.set(path, (lookup.get(path) || 0) + (Number(row.y) || 0));
+					}
+					render(lookup);
+				} catch {
+					render(null);
+				}
+			})();
+		}
+
+		mxlistTeardown = () => {
+			controller.abort();
+			cleanups.forEach((fn) => fn());
+		};
+	}
+
+	initMingxinList();
+	document.addEventListener("swup:page:view", () => initMingxinList());
+</script>

@@ -1,0 +1,52 @@
+---
+import leafDark from "@/assets/images/logo/firefly-dark.png";
+import leafLight from "@/assets/images/logo/firefly-light.png";
+import type { MingxinOtherSite } from "@/config/mingxinConfig";
+
+/**
+ * 作者卡「其他站点」的站点图标（原站 ProfileCardSiteAvatar 移植）：
+ * 折叠态头像堆叠与展开态站点行共用一份实现。
+ * 本站叶片标（顶栏品牌 logo，本地资产）垫底，配了 icon 才压上 favicon img；
+ * favicon 取不到/失败一律露叶片标（站长 2026-11-01 改口径，不用首字标）。
+ * 防破图三保险：favicon img 默认 opacity:0、加载成功（内联 onload / 控制器
+ * 补扫）才加 is-loaded 亮出；失败由内联 onerror + 控制器捕获监听双路标记
+ * data-avatar-failed 后 CSS 撤下——任何时序下未成功加载的 img 都不露面，
+ * 浏览器破图标记无从显示。
+ */
+interface Props {
+	site: MingxinOtherSite;
+	/** 面板内序号，控制器据此把堆叠头像与列表头像配对做 FLIP 位移 */
+	index: number;
+}
+
+const { site, index } = Astro.props;
+---
+
+<span class="mxprofile-card__site-avatar" data-mxprofile-avatar={String(index)}>
+	<img
+		class="mxprofile-card__site-avatar-leaf mxprofile-card__site-avatar-leaf--light"
+		src={leafLight.src}
+		alt=""
+		loading="lazy"
+		decoding="async"
+	/>
+	<img
+		class="mxprofile-card__site-avatar-leaf mxprofile-card__site-avatar-leaf--dark"
+		src={leafDark.src}
+		alt=""
+		loading="lazy"
+		decoding="async"
+	/>
+	{site.icon && (
+		<img
+			class="mxprofile-card__site-avatar-img"
+			data-mxprofile-site-icon
+			src={site.icon}
+			alt=""
+			loading="lazy"
+			decoding="async"
+			onload="this.classList.add('is-loaded')"
+			onerror="this.dataset.avatarFailed='true'"
+		/>
+	)}
+</span>

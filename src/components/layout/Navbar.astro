@@ -8,6 +8,7 @@ import LightDarkSwitch from "@/components/controls/LightDarkSwitch.svelte";
 import Search from "@/components/controls/Search.svelte";
 import MusicPlayer from "@/components/features/MusicPlayer.astro";
 import {
+	announcementConfig,
 	backgroundWallpaper,
 	displaySettingsConfig,
 	siteConfig,
@@ -21,6 +22,7 @@ import { isHomePage } from "@/utils/layout-utils";
 import { resolveNavMenuLinks } from "@/utils/nav-menu-utils";
 import { url } from "@/utils/url-utils";
 import DropdownMenu from "./DropdownMenu.astro";
+import MingxinNavbar from "./MingxinNavbar.astro";
 
 const className = Astro.props.class;
 
@@ -122,6 +124,7 @@ const logoVariants = await Promise.all(
 			src: logoConfig?.type === "url" ? variant.value : url(variant.value),
 		})),
 );
+
 ---
 <div id="navbar" class="z-50" style={`--navbar-glass-blur: ${navbarBlur}px;`} data-transparent-mode={navbarTransparentMode} data-is-home={isHomePageCheck} data-full-width={navbarWidthFull}>
     <script is:inline define:vars={{
@@ -275,6 +278,8 @@ const logoVariants = await Promise.all(
         )}
         {isDisplaySettingsEnabled && <DisplaySettings client:load></DisplaySettings>}
     </div>
+    {/* 明信顶栏（原站 mmz 移植）：main.css 守卫默认隐藏，仅明信点亮并取代标准顶栏 */}
+    <MingxinNavbar />
 </div>
 
 <script>
@@ -604,3 +609,8 @@ if (document.readyState === 'loading') {
         </script>
     )
 }
+
+<script>
+	import { initMingxinNavbar } from "@/scripts/mingxin-navbar";
+	initMingxinNavbar();
+</script>
