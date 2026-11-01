@@ -1,3 +1,6 @@
+---
+published: 2026-10-23T18:31:00+08:00
+---
 # About
 This static blog is based on [Firefly](https://github.com/CuteLeaf/Firefly).
 
