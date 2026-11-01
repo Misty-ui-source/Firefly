@@ -250,6 +250,7 @@ const mxHeatmapMonths = await (async () => {
 					class="mxnav-tools-item"
 					data-mxnav-tools-stop
 					data-mxnav-action="search"
+					aria-expanded="false"
 					role="menuitem"
 				>
 					<Icon name="material-symbols:search-rounded" class="mxnav-tools-item__icon" />
@@ -259,6 +260,15 @@ const mxHeatmapMonths = await (async () => {
 						<span>K</span>
 					</kbd>
 				</button>
+				<form class="mxnav-tools-search" data-mxnav-search hidden>
+					<input
+						type="search"
+						data-mxnav-search-input
+						placeholder="搜索"
+						aria-label="搜索"
+						autocomplete="off"
+					/>
+				</form>
 				{noticeText && (
 					<>
 						<button

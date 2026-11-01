@@ -391,7 +391,7 @@ export function mountMingxinBlinds(
 		const rootRect = root.getBoundingClientRect();
 		metrics = {
 			vh,
-			shrinkStart: sceneTop - vh * (2 / 3),
+			shrinkStart: sceneTop - vh * 0.95,
 			pinStart: sceneTop,
 			pinEnd: sceneTop + pinDistance,
 			pinDistance,

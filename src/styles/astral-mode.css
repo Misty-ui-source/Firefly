@@ -1085,3 +1085,6 @@ html.dark[data-site-mode="astral"][data-astral-layout="bento"] body.is-home .ast
 html.dark[data-site-mode="astral"][data-astral-layout="bento"] body.is-home .astral-tile .daystrip-main b {
   color: #e2e8f0;
 }
+
+/* 形态自愈探针：本形态样式真生效时探针=本形态名（Layout 脚本据此自检） */
+html[data-site-mode="astral"] body { --mx-probe: astral; }

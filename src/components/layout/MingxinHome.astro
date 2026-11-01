@@ -115,13 +115,18 @@ const navQuickLinks = quickLinks.slice(0, 12);
 
 /* ---------------- 公告：复用 announcementConfig 静态文案 ---------------- */
 const noticeText = announcementConfig.content.trim();
-const noticeLink =
-	noticeText &&
-	announcementConfig.link?.enable &&
-	announcementConfig.link.text &&
-	announcementConfig.link.url
-		? announcementConfig.link
-		: null;
+/* 链接与全站公告组件同口径：检测版用 geoLink（缺失回落 link），静态用 link。
+   正文挂 .announcement-content 类，公告组件的访客检测脚本会把全站所有
+   .announcement-content 一并换成检测版文案——此前这里只抄了静态文案、
+   没挂这个类，于是明信终幕的公告永远停在静态版，与顶栏面板里的
+   检测版对不上（2026-11-01 站长报障）。 */
+const noticeLink = (() => {
+	const pick =
+		announcementConfig.mode === "geo"
+			? (announcementConfig.geoLink ?? announcementConfig.link)
+			: announcementConfig.link;
+	return noticeText && pick?.enable && pick.text && pick.url ? pick : null;
+})();
 
 /* ---------------- 个人简介（页脚标语用） ----------------
    作者卡本体已按站长 2026-11-01 改定移入顶栏左段胶囊（MingxinNavbar.astro
@@ -1089,7 +1094,7 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 						name="material-symbols:campaign-outline-rounded"
 						class="mingxin-afterglow__notice-icon"
 					/>
-					<p class="mingxin-afterglow__notice-text">{noticeText}</p>
+					<p class="mingxin-afterglow__notice-text announcement-content">{noticeText}</p>
 					{noticeLink && (
 						<a
 							class="mingxin-afterglow__notice-link"
@@ -1418,10 +1423,9 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 		--mingxin-blind-pad: clamp(1rem, 1.9vw, 1.6rem);
 		--mingxin-blind-band-height: clamp(2.9rem, 5vh, 3.6rem);
 		--mingxin-blind-photo-width: min(
-			44vw,
-			52rem,
+			62vw,
 			calc(
-				(60vh - var(--mingxin-blind-pad) * 2 - var(--mingxin-blind-band-height)) * 4 / 3
+				(76vh - var(--mingxin-blind-pad) * 2 - var(--mingxin-blind-band-height)) * 4 / 3
 			)
 		);
 		--mingxin-blind-photo-height: calc(var(--mingxin-blind-photo-width) * 3 / 4);

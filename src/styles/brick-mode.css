@@ -776,3 +776,6 @@ html.dark[data-site-mode="brick"] .custom-scrollbar::-webkit-scrollbar-track {
 html.dark[data-site-mode="brick"] .custom-scrollbar::-webkit-scrollbar-thumb {
 	background: rgb(56 189 248 / 0.55);
 }
+
+/* 形态自愈探针：本形态样式真生效时探针=本形态名（Layout 脚本据此自检） */
+html[data-site-mode="brick"] body { --mx-probe: brick; }

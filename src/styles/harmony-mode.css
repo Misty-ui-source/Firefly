@@ -877,3 +877,6 @@ html[data-site-mode="harmony"][data-harmony-motion="reduced"] .typewriter::after
 }
 
 }
+
+/* 形态自愈探针：本形态样式真生效时探针=本形态名（Layout 脚本据此自检） */
+html[data-site-mode="harmony"] body { --mx-probe: harmony; }

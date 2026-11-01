@@ -17,7 +17,7 @@
    --guide-row-inset 是卡片列与横线之间的垂直留白
    横线通满整层宽度，竖线通满整层高度 */
 .mingxin-datalayer {
-	--guide-col: clamp(20rem, 94%, 84rem);
+	--guide-col: clamp(20rem, 94%, 120rem);
 	--guide-col-inset: clamp(2rem, 4vw, 4rem);
 	--guide-row-inset: clamp(1.25rem, 3vh, 2.5rem);
 	--layer-pad-block: clamp(1.5rem, 4.5vh, 3.25rem);

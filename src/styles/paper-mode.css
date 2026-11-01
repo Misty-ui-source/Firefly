@@ -2358,3 +2358,6 @@ html[data-site-mode="paper"][data-paper-theme="manual"] #display-setting .opacit
 }
 
 }
+
+/* 形态自愈探针：本形态样式真生效时探针=本形态名（Layout 脚本据此自检） */
+html[data-site-mode="paper"] body { --mx-probe: paper; }

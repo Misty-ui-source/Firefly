@@ -746,6 +746,39 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
         return Promise.resolve();
       };
     </script>
+    <script>
+      // 形态自愈（2026-11-01）：站长真机多次遇到「存着的形态半失效」——
+      // localStorage 说是某形态、页面却按别的形态渲染（横幅带空白、皮肤
+      // 不对版），切走再切回就好。本脚本在 load 后自检一次：用各形态样式
+      // 文件里的 --mx-probe 探针核对「当前形态的样式是否真生效」，同时
+      // 核对 html 上的 data-site-mode 是否等于 localStorage 的选择；
+      // 任一对不上就带新参数整页重载一次（每页每会话最多一次，防死循环）。
+      window.addEventListener("load", () => {
+        setTimeout(() => {
+          try {
+            const MODES = ["full", "pure", "harmony", "brick", "astral", "paper", "mingxin"];
+            const stored = localStorage.getItem("siteMode");
+            const attr = document.documentElement.getAttribute("data-site-mode") || "full";
+            const intended = MODES.includes(stored) ? stored : attr;
+            const probe = getComputedStyle(document.body)
+              .getPropertyValue("--mx-probe")
+              .trim();
+            const key = "mxHeal:" + location.pathname;
+            if (probe === intended && attr === intended) {
+              sessionStorage.removeItem(key);
+              return;
+            }
+            if (sessionStorage.getItem(key)) return;
+            sessionStorage.setItem(key, "1");
+            const u = new URL(location.href);
+            u.searchParams.set("mxheal", Date.now().toString(36));
+            location.replace(u.toString());
+          } catch {
+            /* 自愈失败不打扰访客 */
+          }
+        }, 400);
+      });
+    </script>
     <style
       define:vars={{
         configHue,

@@ -827,3 +827,6 @@ html[data-site-mode="pure"][data-wallpaper-mode="fullscreen"][data-fullscreen-la
 	top: 5.25rem !important;
 	min-height: calc(100vh - 5.25rem) !important;
 }
+
+/* 形态自愈探针：本形态样式真生效时探针=本形态名（Layout 脚本据此自检） */
+html[data-site-mode="pure"] body { --mx-probe: pure; }

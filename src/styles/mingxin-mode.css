@@ -921,6 +921,29 @@ html[data-site-mode="mingxin"] #navbar-wrapper.navbar-hidden {
 		font-weight: 600;
 		color: var(--primary);
 	}
+	/* 搜索内联展开区（站长 2026-11-01 口径：点搜索行就地出输入框，
+	   回车去搜索页出结果；旧做法开的 #search-panel 在桌面宽下没有
+	   输入框、只剩一句「没有搜到」） */
+	.mxnav-tools-search {
+		padding: 0.3rem 0 0.1rem;
+	}
+	.mxnav-tools-search[hidden] {
+		display: none;
+	}
+	.mxnav-tools-search input {
+		width: 100%;
+		height: 2.4rem;
+		padding: 0 0.75rem;
+		border: none;
+		border-radius: 0.5rem;
+		outline: none;
+		background: color-mix(in oklch, var(--deep-text) 6%, transparent);
+		font-size: 0.85rem;
+		color: var(--deep-text);
+	}
+	.mxnav-tools-search input:focus {
+		background: color-mix(in oklch, var(--deep-text) 10%, transparent);
+	}
 	/* 主题三段滑块：整行是一个组，滑块只靠 --mxnav-tools-seg-index 位移（原作同法） */
 	.mxnav-tools-segments {
 		position: relative;
@@ -3586,3 +3609,6 @@ html[data-site-mode="mingxin"] #navbar-wrapper.navbar-hidden {
 		color: oklch(0.75 0.13 var(--mx-cat-hue, 190)) !important;
 	}
 }
+
+/* 形态自愈探针：本形态样式真生效时探针=本形态名（Layout 脚本据此自检） */
+html[data-site-mode="mingxin"] body { --mx-probe: mingxin; }

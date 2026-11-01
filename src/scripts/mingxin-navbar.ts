@@ -20,6 +20,8 @@ import {
 	setSiteMode,
 	setTheme,
 } from "@/utils/setting-utils";
+import { navigateToPage } from "@/utils/navigation-utils";
+import { getSearchUrl } from "@/utils/url-utils";
 import {
 	closeMxnavDropdownPanel,
 	initMxnavDropdownDelegation,
@@ -793,6 +795,13 @@ function initToolsPanel(
 	const noticeBtn = panel.querySelector<HTMLElement>(
 		'[data-mxnav-action="notice"]',
 	);
+	const searchBox = panel.querySelector<HTMLElement>("[data-mxnav-search]");
+	const searchBtn = panel.querySelector<HTMLElement>(
+		'[data-mxnav-action="search"]',
+	);
+	const searchInput = panel.querySelector<HTMLInputElement>(
+		"[data-mxnav-search-input]",
+	);
 
 	function toggleNotice(): void {
 		if (!noticeBox || !noticeBtn) return;
@@ -801,18 +810,37 @@ function initToolsPanel(
 		noticeBtn.setAttribute("aria-expanded", String(willShow));
 	}
 
+	function toggleSearch(): void {
+		if (!searchBox || !searchBtn) return;
+		const willShow = searchBox.hidden;
+		searchBox.hidden = !willShow;
+		searchBtn.setAttribute("aria-expanded", String(willShow));
+		if (willShow) requestAnimationFrame(() => searchInput?.focus());
+	}
+
+	searchBox?.addEventListener("submit", (event) => {
+		event.preventDefault();
+		const q = searchInput?.value.trim();
+		if (!q) {
+			searchInput?.focus();
+			return;
+		}
+		close();
+		navigateToPage(getSearchUrl(q));
+	});
+
 	panel.addEventListener(
 		"click",
 		(event) => {
 			const target = event.target;
 			if (!(target instanceof Element)) return;
 			if (target.closest('[data-mxnav-action="search"]')) {
-				// 本次真实点击若继续冒泡到 document，会被站点「点外关闭浮层」
-				// 的处理器当成搜索面板的外点而把刚打开的面板又关掉——就地截断
+				// 就地展开面板内搜索框（站长 2026-11-01 口径：点开就能在
+				// 这个小框里输入、回车出结果）。旧做法程序化点 #search-switch
+				// 开 #search-panel——桌面宽下那个面板里没有输入框（输入框是
+				// 窄屏专用行），打开只剩一句「没有搜到」。
 				event.stopPropagation();
-				close();
-				// 搜索入口在标准顶栏内（明信下隐藏），程序化点击照样触发其面板
-				document.getElementById("search-switch")?.click();
+				toggleSearch();
 				return;
 			}
 			if (target.closest('[data-mxnav-action="notice"]')) {
