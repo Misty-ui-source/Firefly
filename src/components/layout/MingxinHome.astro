@@ -1423,10 +1423,10 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 		--mingxin-blind-pad: clamp(1rem, 1.9vw, 1.6rem);
 		--mingxin-blind-band-height: clamp(2.9rem, 5vh, 3.6rem);
 		--mingxin-blind-photo-width: min(
-			48vw,
-			56rem,
+			44vw,
+			52rem,
 			calc(
-				(64vh - var(--mingxin-blind-pad) * 2 - var(--mingxin-blind-band-height)) * 4 / 3
+				(60vh - var(--mingxin-blind-pad) * 2 - var(--mingxin-blind-band-height)) * 4 / 3
 			)
 		);
 		--mingxin-blind-photo-height: calc(var(--mingxin-blind-photo-width) * 3 / 4);
@@ -2270,6 +2270,21 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 	@supports (height: 100dvh) {
 		.mingxin-blinds__stands {
 			--mingxin-stand-height: min(24dvh, 15rem);
+		}
+	}
+
+	/* 大屏自适应（2026-11-02 站长定 A 路线）：超宽视口下抬高立绘展台
+	   的 rem 上限，让展台按自身 vh/vw 比例继续生长；常规屏幕不受
+	   影响、仍是原数值。五幕照片不在此列（已按原站值定死）。 */
+	@media (min-width: 100rem) {
+		.mingxin-blinds__stands {
+			--mingxin-stand-height: min(24vh, 19rem);
+			--mingxin-stand-width: min(24vw, 16rem);
+		}
+		@supports (height: 100dvh) {
+			.mingxin-blinds__stands {
+				--mingxin-stand-height: min(24dvh, 19rem);
+			}
 		}
 	}
 

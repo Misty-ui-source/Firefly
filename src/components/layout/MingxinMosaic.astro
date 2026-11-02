@@ -331,6 +331,14 @@ const introCards = intro
 		background: var(--page-bg);
 		pointer-events: none;
 	}
+	/* 大屏自适应（2026-11-02 站长定 A 路线）：超宽视口下抬高导引线
+	   列宽的 rem 上限——控制器按列宽量照片落位尺寸，列宽放开后照片
+	   随之按原比例生长；常规屏幕不受影响、仍是原站数值。 */
+	@media (min-width: 100rem) {
+		.mingxin-mosaic {
+			--mx-guide-col: clamp(20rem, 94%, 104rem);
+		}
+	}
 	.mingxin-mosaic__puzzle {
 		position: absolute;
 		inset: 0;
