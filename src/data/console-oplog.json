@@ -747,5 +747,12 @@
     "action": "新建",
     "target": "src/content/diary/2026-11-01.md",
     "detail": ""
+  },
+  {
+    "ts": "2026-11-02T05:28:09.181Z",
+    "type": "单页",
+    "action": "更新",
+    "target": "src/content/spec/about.md",
+    "detail": ""
   }
 ]
