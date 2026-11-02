@@ -235,9 +235,11 @@ export const mingxinConfig: MingxinConfig = {
 	texturePreset: "jigsaw",
 	textureOpacity: 0.12,
 	revealImage: "/assets/images/mingxin/reveal-golden-field.webp",
-	revealPool: ["/assets/images/mingxin/reveal.webp"],
+	revealPool: [
+		"/assets/images/mingxin/reveal.webp",
+	],
 	revealMode: "manual",
-	mosaicImage: "/assets/images/mingxin/mosaic-feiyu-harbor.webp",
+	mosaicImage: "/assets/images/mingxin/pool/mosaic-feiyu-aquarium-modern.webp",
 	mosaicPool: [
 		"/assets/images/mingxin/v2/glitch-0.png",
 		"/assets/images/mingxin/v2/glitch-1.png",
@@ -266,12 +268,12 @@ export const mingxinConfig: MingxinConfig = {
 		"/assets/images/mingxin/pool/mosaic-sakura-night.webp",
 		"/assets/images/mingxin/pool/mosaic-feiyu-aquarium-v2.webp",
 		"/assets/images/mingxin/pool/mosaic-feiyu-seaside-v2.webp",
-		"/assets/images/mingxin/pool/mosaic-feiyu-cafe.webp",
-		"/assets/images/mingxin/pool/mosaic-feiyu-aquarium-modern.webp",
 		"/assets/images/mingxin/pool/mosaic-feiyu-seaside-modern.webp",
+		"/assets/images/mingxin/mosaic-feiyu-harbor.webp",
+		"/assets/images/mingxin/pool/mosaic-feiyu-cafe.webp",
 	],
 	mosaicMode: "manual",
-	mosaicOverlayImage: "",
+	mosaicOverlayImage: "https://img.lanerc.me/admin/wallpaper/mvtocdl0-157a8f8e4b29e92fee0efd9f08f9bb19_720.webp",
 	mosaicOverlayPool: [],
 	mosaicOverlayMode: "manual",
 	heroSubtitle: "生活原本沉闷，但跑起来就有风",
@@ -290,7 +292,12 @@ export const mingxinConfig: MingxinConfig = {
 		{ name: "Alexander Console", url: "https://lanerc.me/admin/", icon: "https://lanerc.me/admin/icon-192.png" },
 	],
 	headline: "祝愿各位",
-	headlineMessages: ["夜路有星光", "岁岁皆欢愉", "所念皆星河", "版本无回滚"],
+	headlineMessages: [
+		"夜路有星光",
+		"岁岁皆欢愉",
+		"所念皆星河",
+		"版本无回滚",
+	],
 	scenes: [
 		{
 			title: "迁址安家",
@@ -361,8 +368,14 @@ export const mingxinConfig: MingxinConfig = {
 		"/assets/images/mingxin/act2-doll-1.gif",
 		"/assets/images/mingxin/act2-doll-2.gif",
 	],
-	standPools: [[], []],
-	standModes: ["manual", "manual"],
+	standPools: [
+		[],
+		[],
+	],
+	standModes: [
+		"manual",
+		"manual",
+	],
 	soundPress: "/assets/images/mingxin/doll-press.mp3",
 	soundLoosen: "/assets/images/mingxin/doll-loosen.mp3",
 	music: {
