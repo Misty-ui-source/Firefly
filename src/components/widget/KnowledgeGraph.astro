@@ -1,0 +1,381 @@
+---
+import GraphDock from "@/components/widget/GraphDock.astro";
+import type { KGMeta } from "@/utils/knowledge-graph-data";
+
+interface Props {
+	meta: KGMeta;
+}
+
+const { meta } = Astro.props;
+
+const accessibleLabel = "标签关系图谱，共 {tags} 个标签、{links} 条关联。使用方向键选择标签，回车打开。"
+	.replace("{tags}", String(meta.counts.tag))
+	.replace("{links}", String(meta.counts.post));
+
+// 控制器是纯 util，不 import i18n；文案由组件侧注入
+const strings = {
+	loaded: "知识图谱已加载",
+	failed: "关系图谱加载失败",
+	play: "播放",
+	pause: "暂停",
+	tier: {
+		category: "分类",
+		tag: "标签",
+		post: "文章",
+		heading: "小标题",
+	},
+	posts: "{count} 篇文章",
+	sections: "{count} 个小节",
+	relations: "关联 {count} 个节点",
+	mindmap: "切换为脑图布局",
+	forceLayout: "切换为力导向布局",
+};
+
+// 详情面板的分组渲染顺序：标签 → 文章 → 小标题（与控制器 groups 的产出顺序一致）
+const detailGroups = [
+	{ tier: "tag", label: "标签" },
+	{ tier: "post", label: "文章" },
+	{ tier: "heading", label: "小标题" },
+] as const;
+---
+
+<div
+  class="knowledge-graph"
+  id="knowledge-graph"
+  data-kg-root
+  data-kg-strings={JSON.stringify(strings)}
+>
+  <div
+    class="knowledge-graph__surface"
+    data-kg-surface
+    data-state={meta.counts.post === 0 ? "empty" : "idle"}
+  >
+    <canvas
+      class="knowledge-graph__canvas"
+      data-kg-canvas
+      role="application"
+      tabindex="0"
+      aria-label={accessibleLabel}
+    ></canvas>
+
+    <p class="knowledge-graph__status" data-kg-status aria-live="polite" role="status">
+      {meta.counts.post === 0 ? "暂无标签关系" : "正在准备图谱…"}
+    </p>
+
+    <div class="knowledge-graph__tooltip" data-kg-tooltip role="tooltip" aria-hidden="true" hidden>
+      <strong data-kg-tip-title></strong>
+      <span data-kg-tip-meta></span>
+    </div>
+
+    {/* 播放/暂停、布局切换、连线与粒子开关、全屏都在右缘的 dock 上（GraphDock.astro） */}
+  </div>
+
+  {/* 底部抽屉容器：只装详情卡。桌面端它 display:contents 零影响（详情卡自己
+      absolute 挂在左侧）；移动端切成 flex 列，卡片从布局上不会和别的东西重叠 */}
+  <div class="knowledge-graph__drawers">
+  {/* 选中节点的详情弹窗：默认隐藏，由控制器的 kg:select 事件驱动填充。
+      空分组整节隐藏 */}
+  <aside class="graph-detail" data-kg-detail hidden aria-label="节点详情">
+    <div class="graph-detail__top">
+      <header class="graph-detail__head">
+        <p class="graph-detail__tier" data-kg-detail-tier></p>
+        <button
+          type="button"
+          class="graph-detail__close"
+          data-kg-action="deselect"
+          aria-label="关闭"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </header>
+      <a class="graph-detail__title" data-kg-detail-link>
+        <strong data-kg-detail-name></strong>
+      </a>
+    </div>
+    <div class="graph-detail__body">
+      {detailGroups.map((group) => (
+        <section
+          class="graph-accordion graph-detail__section"
+          data-kg-accordion
+          data-open
+          data-kg-detail-group={group.tier}
+          hidden
+        >
+          <button
+            type="button"
+            class="graph-accordion__head"
+            data-kg-accordion-toggle
+            aria-expanded="true"
+          >
+            <span class="graph-accordion__bar" aria-hidden="true"></span>
+            <span class="graph-accordion__title">{group.label}</span>
+            <span class="graph-detail__count" data-kg-detail-count></span>
+            <svg class="graph-accordion__arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg>
+          </button>
+          <div class="graph-accordion__body">
+            <div class="graph-accordion__inner">
+              <ul class="graph-detail__list" data-kg-detail-list></ul>
+            </div>
+          </div>
+        </section>
+      ))}
+    </div>
+  </aside>
+  </div>
+
+  {/* dock 竖条与筛选弹窗是 .knowledge-graph 的直接子节点，不进抽屉容器 */}
+  <GraphDock meta={meta} />
+</div>
+
+<script>
+  import type {
+    GraphController,
+    GraphTier,
+    KGSelection,
+  } from "@/utils/graph/types";
+  import { mountGraphDockPopover } from "@/utils/graph-dock-popover-controller";
+  import { url } from "@/utils/url-utils";
+
+  let controller: GraphController | null = null;
+  let cleanups: (() => void)[] = [];
+  let version = 0;
+
+  function teardown() {
+    version++;
+    for (const off of cleanups) off();
+    cleanups = [];
+    controller?.destroy();
+    controller = null;
+    // 离开页面时清掉全屏态，别把滚动锁留给下一个页面
+    document
+      .getElementById("knowledge-graph")
+      ?.classList.remove("is-fullscreen");
+    document.documentElement.classList.remove("kg-fullscreen-lock");
+  }
+
+  async function init() {
+    teardown();
+    const root = document.getElementById("knowledge-graph");
+    if (!root) return;
+    const surface = root.querySelector<HTMLElement>("[data-kg-surface]");
+    const status = root.querySelector<HTMLElement>("[data-kg-status]");
+    if (!surface || surface.dataset.state === "empty") return;
+
+    // 手机端不挂载图谱：标签页已把整块隐藏，这里连数据拉取与模拟都不起，
+    // 免得看不见还在后台跑、拖慢小屏（站长 2026-11-02 验收口径）
+    if (window.matchMedia("(max-width: 768px)").matches) {
+      surface.dataset.state = "idle";
+      if (status) status.textContent = "";
+      return;
+    }
+
+    const current = version;
+    const strings = JSON.parse(root.dataset.kgStrings || "{}");
+    surface.dataset.state = "loading";
+
+    try {
+      // 控制器与数据并发拉取，两个请求不串行
+      const [{ mountKnowledgeGraph }, graph] = await Promise.all([
+        import("@/utils/graph"),
+        fetch(url("/api/knowledge-graph.json")).then((r) => {
+          if (!r.ok) throw new Error(`graph fetch failed: ${r.status}`);
+          return r.json();
+        }),
+      ]);
+      if (current !== version || !root.isConnected) return;
+
+      controller = mountKnowledgeGraph(root, graph, strings);
+      cleanups = [
+        wireControls(root, controller),
+        mountGraphDockPopover(root),
+      ];
+      // 入场自动播放发生在挂载期间，早于监听器接线，手动同步一次图标
+      root.dispatchEvent(
+        new CustomEvent("kg:playback", { detail: controller.playback.getState() }),
+      );
+    } catch (error) {
+      if (current !== version || !root.isConnected) return;
+      surface.dataset.state = "error";
+      if (status) status.textContent = strings.failed ?? "";
+      console.error("Failed to load the knowledge graph", error);
+    }
+  }
+
+  /** 单一委托监听覆盖 dock 按钮与弹窗内筛选控件的全部交互。
+      弹窗自身的开合与锚定不在这里 —— 它要监听 document，走 graph-dock-popover-controller */
+  function wireControls(root: HTMLElement, ctrl: GraphController): () => void {
+    const playBtn = root.querySelector<HTMLElement>('[data-kg-action="play"]');
+    const playIcon = root.querySelector<HTMLElement>('[data-kg-icon="play"]');
+    const pauseIcon = root.querySelector<HTMLElement>('[data-kg-icon="pause"]');
+    const stats = root.querySelector<HTMLElement>("[data-kg-stats]");
+    const statsTpl = stats?.dataset.template ?? "";
+    const strings = JSON.parse(root.dataset.kgStrings || "{}");
+
+    const onInput = (event: Event) => {
+      const el = event.target as HTMLElement & { value?: string; checked?: boolean };
+      const d = el.dataset;
+
+      if (d.kgTier) {
+        const tiers = { ...ctrl.getFilters().tiers, [d.kgTier]: Boolean(el.checked) };
+        ctrl.patchFilters({ tiers });
+      } else if (d.kgCategory) {
+        const categories = new Set(ctrl.getFilters().categories);
+        if (el.checked) categories.add(d.kgCategory);
+        else categories.delete(d.kgCategory);
+        ctrl.patchFilters({ categories });
+      } else if (d.kgFilter === "query") {
+        ctrl.patchFilters({ query: el.value ?? "" });
+      } else if (d.kgFilter === "minPosts") {
+        ctrl.patchFilters({ minPosts: Number(el.value) });
+        const out = root.querySelector<HTMLElement>('[data-kg-out="minPosts"]');
+        if (out) out.textContent = el.value ?? "";
+      }
+    };
+
+    const onClick = (event: Event) => {
+      const el = event.target as HTMLElement;
+      // 手风琴分区：只切 data-open，展开动画走 CSS
+      const accordionToggle = el.closest?.<HTMLElement>("[data-kg-accordion-toggle]");
+      if (accordionToggle) {
+        const section = accordionToggle.closest<HTMLElement>("[data-kg-accordion]");
+        if (section) {
+          const open = section.toggleAttribute("data-open");
+          accordionToggle.setAttribute("aria-expanded", String(open));
+        }
+        return;
+      }
+      const target = el.closest?.<HTMLElement>("[data-kg-action]");
+      if (!target) return;
+      const action = target.dataset.kgAction;
+      if (action === "play") ctrl.playback.toggle();
+      else if (action === "reset-view") ctrl.resetView();
+      else if (action === "deselect") ctrl.select(null);
+      else if (action === "toggle-layout") ctrl.toggleLayout();
+      // dock 上的两个开关是「一颗按钮一个态」，状态就记在 aria-pressed 上
+      else if (action === "toggle-cooccurrence") {
+        const next = target.getAttribute("aria-pressed") !== "true";
+        target.setAttribute("aria-pressed", String(next));
+        ctrl.patchFilters({ showCooccurrence: next });
+      } else if (action === "toggle-particles") {
+        const next = target.getAttribute("aria-pressed") !== "true";
+        target.setAttribute("aria-pressed", String(next));
+        ctrl.patchFilters({ particles: next });
+      } else if (action === "toggle-fullscreen") {
+        // 本站加的：中栏缩略 ⇄ 全屏。画布尺寸变化由引擎的 ResizeObserver
+        // 自己接住重排，这里只切根节点状态与图标
+        const fs = root.classList.toggle("is-fullscreen");
+        target.setAttribute("aria-pressed", String(fs));
+        const label = fs ? "退出全屏" : "全屏展开";
+        target.setAttribute("aria-label", label);
+        target.setAttribute("data-tooltip", label);
+        const expandIcon = root.querySelector<HTMLElement>('[data-kg-icon="expand"]');
+        const compressIcon = root.querySelector<HTMLElement>('[data-kg-icon="compress"]');
+        if (expandIcon) expandIcon.style.display = fs ? "none" : "";
+        if (compressIcon) compressIcon.style.display = fs ? "" : "none";
+        document.documentElement.classList.toggle("kg-fullscreen-lock", fs);
+      }
+    };
+
+    const onPlayback = (event: Event) => {
+      const state = (event as CustomEvent).detail as { playing: boolean };
+      // svg 上放不了 hidden 属性（Astro 类型不收），用 display 切换两个图标
+      if (playIcon) playIcon.style.display = state.playing ? "none" : "";
+      if (pauseIcon) pauseIcon.style.display = state.playing ? "" : "none";
+      const label = state.playing ? strings.pause : strings.play;
+      playBtn?.setAttribute("aria-pressed", String(state.playing));
+      playBtn?.setAttribute("aria-label", label);
+      // 提示走 data-tooltip（dock 的黑白箭头气泡读它），不用 title：
+      // 两个都写会叠出浏览器原生的第二个气泡
+      playBtn?.setAttribute("data-tooltip", label);
+    };
+
+    const onStats = (event: Event) => {
+      const d = (event as CustomEvent).detail as { visible: number; total: number; links: number };
+      if (stats) {
+        stats.textContent = statsTpl
+          .replace("{visible}", String(d.visible))
+          .replace("{total}", String(d.total))
+          .replace("{links}", String(d.links));
+      }
+    };
+
+    /** kg:select → 填充左侧详情弹窗：层级徽标 + 名称链接 + 按层分组列表 */
+    const onSelect = (event: Event) => {
+      const detail = (event as CustomEvent).detail as KGSelection | null;
+      const panel = root.querySelector<HTMLElement>("[data-kg-detail]");
+      if (!panel) return;
+      if (!detail) {
+        panel.hidden = true;
+        return;
+      }
+      const name = panel.querySelector<HTMLElement>("[data-kg-detail-name]");
+      const tier = panel.querySelector<HTMLElement>("[data-kg-detail-tier]");
+      const link = panel.querySelector<HTMLAnchorElement>("[data-kg-detail-link]");
+      if (name) name.textContent = detail.node.name;
+      if (tier) tier.textContent = strings.tier[detail.node.tier];
+      if (link) link.href = detail.node.url;
+      for (const section of panel.querySelectorAll<HTMLElement>(
+        "[data-kg-detail-group]",
+      )) {
+        const groupTier = section.dataset.kgDetailGroup as GraphTier;
+        const group = detail.groups.find((g) => g.tier === groupTier);
+        const list = section.querySelector<HTMLUListElement>("[data-kg-detail-list]");
+        const count = section.querySelector<HTMLElement>("[data-kg-detail-count]");
+        if (!group || group.items.length === 0 || !list) {
+          section.hidden = true;
+          continue;
+        }
+        section.hidden = false;
+        if (count) count.textContent = String(group.items.length);
+        list.replaceChildren(
+          ...group.items.map((item) => {
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+            a.href = item.url;
+            a.textContent = item.name;
+            li.append(a);
+            return li;
+          }),
+        );
+      }
+      panel.hidden = false;
+    };
+
+    /** kg:layout → 同步脑图切换按钮的按下态与提示文案 */
+    const onLayout = (event: Event) => {
+      const { mode } = (event as CustomEvent).detail as { mode: "graph" | "mindmap" };
+      const layoutBtn = root.querySelector<HTMLElement>('[data-kg-action="toggle-layout"]');
+      if (!layoutBtn) return;
+      const mindmap = mode === "mindmap";
+      const label = mindmap ? strings.forceLayout : strings.mindmap;
+      layoutBtn.setAttribute("aria-pressed", String(mindmap));
+      layoutBtn.dataset.tooltip = label;
+      layoutBtn.setAttribute("aria-label", label);
+    };
+
+    root.addEventListener("input", onInput);
+    root.addEventListener("change", onInput);
+    root.addEventListener("click", onClick);
+    root.addEventListener("kg:playback", onPlayback);
+    root.addEventListener("kg:stats", onStats);
+    root.addEventListener("kg:select", onSelect);
+    root.addEventListener("kg:layout", onLayout);
+
+    return () => {
+      root.removeEventListener("input", onInput);
+      root.removeEventListener("change", onInput);
+      root.removeEventListener("click", onClick);
+      root.removeEventListener("kg:playback", onPlayback);
+      root.removeEventListener("kg:stats", onStats);
+      root.removeEventListener("kg:select", onSelect);
+      root.removeEventListener("kg:layout", onLayout);
+    };
+  }
+
+  // 本站没有 mmz 的孤岛运行时：用 swup v4 钩子达到同样的挂载语义 ——
+  // 首次加载直接 init，软导航后 page:view 再 init（init 内部先 teardown，
+  // 幂等），visit:start 先拆旧实例，别让旧画布的 RAF 活到新页面
+  init();
+  document.addEventListener("swup:page:view", init);
+  document.addEventListener("swup:visit:start", teardown);
+</script>

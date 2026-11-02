@@ -1,0 +1,587 @@
+/* 图谱控制 dock：右缘一条垂直居中的图标竖条 + 一个带箭头的筛选弹窗。
+   桌面端两者都 absolute 定位在 .knowledge-graph 内，刻意不放进
+   .knowledge-graph__surface —— 那层带 overflow:hidden 会裁掉弹窗。弹窗的
+   left/top 与箭头轴由 src/utils/graph-dock-popover-controller.ts 量出来写内联。
+
+   移动端整条压扁成横排 pill，尺寸沿用同一套留白变量；弹窗改成往上浮、
+   箭头落在底边。
+
+   表单控件（勾选行 / 搜索 / 滑杆 / 统计）类名与详情面板共用
+   （.graph-accordion 那套也在本文件里，详情面板还在复用，删不得）。 */
+
+/* ===== dock 竖条：一颗胶囊外壳包着图标按钮 ===== */
+
+.kg-dock {
+	position: absolute;
+	/* 比弹窗（30）高一档：提示往左弹正好压在弹窗上方，不然被面板吃掉 */
+	z-index: 32;
+	top: 50%;
+	right: var(--kg-dock-edge, 1rem);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--kg-dock-gap, 0.125rem);
+	padding: var(--kg-dock-pad, 0.375rem);
+	border: 0;
+	border-radius: 999px;
+	/* 壳面取 --navbar-bg（本站在 knowledge-graph.css 里别名到 --card-bg）：
+	   不另外描边，靠与画布的明暗对比成形 */
+	background: var(--navbar-bg);
+	box-shadow: 0 0.35rem 1.25rem rgb(0 0 0 / 0.16);
+	transform: translateY(-50%);
+}
+
+/* 按钮不带边框，形状全靠壳那一层 */
+.kg-dock__btn {
+	position: relative;
+	width: var(--kg-dock-btn-size, 2.875rem);
+	height: var(--kg-dock-btn-size, 2.875rem);
+	flex: none;
+	display: grid;
+	place-items: center;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: var(--deep-text);
+	cursor: pointer;
+	transition:
+		background-color 200ms ease,
+		color 200ms ease;
+}
+
+/* 选中态：灰阶背景高亮，图标保持正文色 */
+.kg-dock__btn[aria-pressed="true"] {
+	background: var(--navbar-highlight-bg);
+	color: var(--navbar-highlight-text);
+}
+
+.kg-dock__btn:hover {
+	background: color-mix(in oklch, var(--deep-text) 8%, transparent);
+	color: var(--deep-text);
+}
+
+.kg-dock__btn[aria-pressed="true"]:hover {
+	background: var(--navbar-highlight-bg);
+	color: var(--navbar-highlight-text);
+}
+
+.kg-dock__btn:focus-visible {
+	outline: 2px solid var(--primary);
+	outline-offset: 2px;
+}
+
+.kg-dock__btn svg {
+	width: 1.375rem;
+	height: 1.375rem;
+	fill: currentColor;
+}
+
+/* 悬停提示：dock 贴着右缘，只能往左弹。::after 是气泡，::before 是箭头。
+   必须描边 —— 壳面与 --float-panel-bg 可能同值，不加边框气泡就化在 dock 里。
+   只在有精确指针的宽屏出现 —— 触屏没有真 hover，弹出来就是永久占位 */
+@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
+	.kg-dock__btn::after,
+	.kg-dock__btn::before {
+		position: absolute;
+		visibility: hidden;
+		opacity: 0;
+		pointer-events: none;
+		transition:
+			opacity 160ms ease,
+			visibility 160ms ease;
+	}
+
+	.kg-dock__btn::after {
+		top: 50%;
+		right: calc(100% + var(--kg-dock-tip-gap, 0.875rem));
+		z-index: 0;
+		padding: 0.25rem 0.5rem;
+		border: 1.5px solid var(--deep-text);
+		border-radius: var(--radius-small);
+		background: var(--float-panel-bg);
+		color: var(--deep-text);
+		content: attr(data-tooltip);
+		font-size: 0.75rem;
+		font-weight: 600;
+		line-height: 1.3;
+		white-space: nowrap;
+		transform: translateY(-50%);
+	}
+
+	.kg-dock__btn::before {
+		content: "";
+		top: calc(50% - 0.25rem);
+		right: calc(100% + var(--kg-dock-tip-gap, 0.875rem) - 3.25px);
+		z-index: 1;
+		width: 0.5rem;
+		height: 0.5rem;
+		border-top: 1.5px solid var(--deep-text);
+		border-right: 1.5px solid var(--deep-text);
+		background: var(--float-panel-bg);
+		transform: rotate(45deg);
+	}
+
+	.kg-dock__btn:hover::after,
+	.kg-dock__btn:hover::before,
+	.kg-dock__btn:focus-visible::after,
+	.kg-dock__btn:focus-visible::before {
+		visibility: visible;
+		opacity: 1;
+	}
+}
+
+/* 一颗按钮两态换图（布局切换、播放/暂停、全屏都这个套路）。
+   用 display 而非 visibility：两个 svg 叠在同一格，留着另一颗会互相透出 */
+.kg-dock__icon--force {
+	display: none;
+}
+
+.kg-dock__btn[aria-pressed="true"] .kg-dock__icon--mindmap {
+	display: none;
+}
+
+.kg-dock__btn[aria-pressed="true"] .kg-dock__icon--force {
+	display: block;
+}
+
+/* ===== 筛选弹窗 ===== */
+
+.kg-dock__popover {
+	position: absolute;
+	z-index: 30;
+	top: 0;
+	left: 0;
+	width: var(--kg-popover-width, 19rem);
+	/* 上缘让开导航栏的悬浮区，下缘留一个 margin —— 与控制器里按 #top-row
+	   下缘做的夹取是同一件事的两半：这里限高，那里定位 */
+	max-height: calc(
+		100% - var(--kg-top-inset, 4.75rem) - var(--kg-popover-margin, 1rem)
+	);
+	display: flex;
+	flex-direction: column;
+	border: 1.5px solid var(--deep-text);
+	border-radius: var(--radius-large, 0.75rem);
+	/* 必须不透明：箭头方块要和面板同色才能盖住它下面那段边框 */
+	background: var(--float-panel-bg);
+	box-shadow: 0 0.5rem 1.75rem rgb(0 0 0 / 0.12);
+	visibility: hidden;
+	opacity: 0;
+	pointer-events: none;
+	transform: translateX(0.5rem);
+	transition:
+		opacity 180ms ease-out,
+		transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+		visibility 220ms;
+}
+
+.kg-dock__popover[data-open] {
+	visibility: visible;
+	opacity: 1;
+	pointer-events: auto;
+	transform: none;
+}
+
+/* 旋转 45° 的方块，只画相邻两条边 —— 桌面朝右指（上边 + 右边）。
+   右缘偏出 1.5px 让方块中心正好压在面板的外边框线上；JS 写 top 对齐触发按钮 */
+.kg-dock__arrow {
+	position: absolute;
+	top: 1.25rem;
+	right: calc(-0.375rem - 1.5px);
+	width: var(--kg-popover-arrow, 0.75rem);
+	height: var(--kg-popover-arrow, 0.75rem);
+	border-top: 1.5px solid var(--deep-text);
+	border-right: 1.5px solid var(--deep-text);
+	background: var(--float-panel-bg);
+	transform: rotate(45deg);
+}
+
+.kg-dock__popover .graph-panel__stats {
+	padding: 0.625rem 0.75rem;
+	border-bottom: 1px solid var(--line-divider);
+}
+
+/* 首帧统计还没数字时别占一条带分割线的横条 */
+.kg-dock__popover .graph-panel__stats:empty {
+	display: none;
+}
+
+.kg-dock__popover-body {
+	overflow-y: auto;
+	padding: 0 0.75rem 0.25rem;
+	overscroll-behavior: contain;
+}
+
+/* 分区标题：左侧主色竖条 */
+.kg-dock__section + .kg-dock__section {
+	border-top: 1px solid var(--line-divider);
+}
+
+.kg-dock__section-title {
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+	padding: 0.625rem 0 0.125rem;
+	color: var(--deep-text);
+	font-size: 0.8125rem;
+	font-weight: 700;
+}
+
+.kg-dock__section-title::before {
+	content: "";
+	width: 4px;
+	align-self: stretch;
+	flex: none;
+	border-radius: 999px;
+	background: var(--primary);
+}
+
+/* ===== 矮视窗兜底：竖排太矮时会顶到右下角 ===== */
+
+@media (max-height: 34rem) and (min-width: 769px) {
+	.kg-dock {
+		--kg-dock-btn-size: 2.5rem;
+		--kg-dock-gap: 0;
+	}
+}
+
+/* ===== 移动端：横排 pill 条 ===== */
+
+@media (max-width: 768px) {
+	.kg-dock {
+		top: auto;
+		left: auto;
+		right: max(var(--kg-mobile-edge), env(safe-area-inset-right, 0px));
+		width: calc(
+			100vw - max(var(--kg-mobile-edge), env(safe-area-inset-right, 0px)) -
+				max(var(--kg-mobile-edge), env(safe-area-inset-left, 0px))
+		);
+		max-width: calc(100vw - (var(--kg-mobile-edge) * 2));
+		bottom: var(--kg-dock-mobile-bottom);
+		flex-direction: row;
+		align-items: stretch;
+		gap: 0.35rem;
+		height: var(--kg-graph-bar-h);
+		padding: 0.2rem 0.35rem;
+		border: 0;
+		border-radius: 1.825rem;
+		background: var(--mobile-dock-surface);
+		box-shadow: 0 0.65rem 1.8rem rgb(0 0 0 / 14%);
+		transform: none;
+	}
+
+	:root.dark .kg-dock {
+		box-shadow: 0 0.65rem 1.8rem rgb(0 0 0 / 34%);
+	}
+
+	.kg-dock__btn {
+		width: auto;
+		height: auto;
+		flex: 1 1 0;
+		min-width: 0;
+		border: 0;
+		border-radius: 1rem;
+		background: transparent;
+		color: var(--deep-text);
+	}
+
+	/* 触屏没有真正的 hover，别让它把图标色改回去；点按反馈走 :active */
+	.kg-dock__btn:hover {
+		background: transparent;
+	}
+
+	.kg-dock__btn[aria-pressed="true"] {
+		background: var(--navbar-highlight-bg);
+		color: var(--navbar-highlight-text);
+	}
+
+	.kg-dock__btn:active {
+		background: var(--btn-plain-bg-active);
+	}
+
+	/* 移动端整套几何交给这里：弹窗铺满同一对留白、坐在横条上方，
+	   JS 只写箭头的 left 并清掉桌面端可能留下的内联 left/top */
+	.kg-dock__popover {
+		top: auto;
+		left: auto;
+		right: max(var(--kg-mobile-edge), env(safe-area-inset-right, 0px));
+		width: calc(
+			100vw - max(var(--kg-mobile-edge), env(safe-area-inset-right, 0px)) -
+				max(var(--kg-mobile-edge), env(safe-area-inset-left, 0px))
+		);
+		max-width: calc(100vw - (var(--kg-mobile-edge) * 2));
+		bottom: calc(
+			var(--kg-dock-mobile-bottom) + var(--kg-graph-bar-h) +
+				var(--kg-drawer-gap)
+		);
+		max-height: 60dvh;
+		transform: translateY(0.5rem);
+	}
+
+	/* 箭头改朝下，落在面板底边对准横条里那颗触发按钮；left 由 JS 写 */
+	.kg-dock__arrow {
+		top: auto;
+		right: auto;
+		bottom: calc(-0.375rem - 1.5px);
+		left: 1.25rem;
+		border-top: 0;
+		border-right: 1.5px solid var(--deep-text);
+		border-bottom: 1.5px solid var(--deep-text);
+	}
+}
+
+/* ===== 堆叠手风琴：详情面板（graph-detail）复用 ===== */
+
+.graph-accordion + .graph-accordion {
+	border-top: 1px solid var(--line-divider);
+}
+
+.graph-accordion__head {
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+	width: 100%;
+	padding: 0.625rem 0;
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	text-align: start;
+}
+
+.graph-accordion__head:focus-visible {
+	outline: 2px solid var(--primary);
+	outline-offset: 2px;
+	border-radius: var(--radius-small, 0.375rem);
+}
+
+/* 左侧胶囊竖条：悬停时轻微伸长 */
+.graph-accordion__bar {
+	width: 4px;
+	align-self: stretch;
+	flex: none;
+	border-radius: 999px;
+	background: var(--primary);
+	transition: transform 180ms ease;
+}
+
+.graph-accordion__head:hover .graph-accordion__bar,
+.graph-accordion__head:focus-visible .graph-accordion__bar {
+	transform: scaleY(1.12);
+}
+
+.graph-accordion__title {
+	flex: 1;
+	overflow: hidden;
+	color: var(--deep-text);
+	font-size: 0.8125rem;
+	font-weight: 700;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.graph-accordion__arrow {
+	width: 1rem;
+	height: 1rem;
+	flex: none;
+	fill: var(--content-meta);
+	transition: rotate 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.graph-accordion__head:hover .graph-accordion__arrow {
+	fill: var(--deep-text);
+}
+
+.graph-accordion[data-open] .graph-accordion__arrow {
+	rotate: 180deg;
+}
+
+/* 展开/收起：grid-template-rows 过渡 */
+.graph-accordion__body {
+	display: grid;
+	grid-template-rows: 0fr;
+	transition: grid-template-rows 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.graph-accordion[data-open] .graph-accordion__body {
+	grid-template-rows: 1fr;
+}
+
+.graph-accordion__inner {
+	overflow: hidden;
+	min-height: 0;
+}
+
+/* padding 落在 inner 的子层：inner 自身带 padding 时 0fr 折叠不干净 */
+.graph-panel__fields {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	padding: 0.125rem 0 0.75rem;
+}
+
+/* 勾选列表：一行一项纵向排，限高内滚，不让弹窗被顶出视窗 */
+.graph-panel__grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 0.0625rem;
+	max-height: 12.5rem;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding-bottom: 0.125rem;
+	scrollbar-width: thin;
+}
+
+.graph-panel__search input {
+	width: 100%;
+	padding: 0.375rem 0.5rem;
+	border: 1px solid var(--line-divider);
+	border-radius: var(--radius-small, 0.375rem);
+	background: transparent;
+	color: var(--deep-text);
+	font-size: 0.8125rem;
+}
+
+.graph-panel__search input::placeholder {
+	color: var(--content-meta);
+}
+
+.graph-panel__range {
+	display: flex;
+	gap: 0.4375rem;
+	align-items: center;
+	color: var(--deep-text);
+	font-size: 0.8125rem;
+	cursor: pointer;
+}
+
+.graph-panel__range input[type="range"] {
+	flex: 1;
+	min-width: 0;
+	accent-color: var(--primary);
+}
+
+.graph-panel__range output {
+	min-width: 1.25rem;
+	color: var(--content-meta);
+	font-size: 0.75rem;
+	font-variant-numeric: tabular-nums;
+	text-align: right;
+}
+
+/* 勾选项一行一项：原生 checkbox 视觉隐藏但留在焦点顺序里，
+   画出来那颗圆框只是它的影子 */
+.graph-panel__check {
+	position: relative;
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+	padding: 0.3125rem 0.375rem;
+	border-radius: var(--radius-small, 0.375rem);
+	color: var(--deep-text);
+	font-size: 0.8125rem;
+	cursor: pointer;
+	transition: background-color 160ms ease-out;
+}
+
+.graph-panel__check:hover {
+	background: var(--btn-regular-bg-hover);
+}
+
+.graph-panel__check input[type="checkbox"] {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.graph-panel__check:has(input:focus-visible) {
+	box-shadow: inset 0 0 0 2px
+		color-mix(in srgb, var(--graph-chip-checked) 55%, transparent);
+}
+
+/* 可见复选框：整颗圆形，跟 dock 按钮的圆形语言一致。
+   勾上时填强调色，对勾用两条边框转 45° 画出来 */
+.graph-panel__box {
+	position: relative;
+	width: 0.9375rem;
+	height: 0.9375rem;
+	flex: none;
+	border: 1.5px solid var(--line-divider);
+	border-radius: 50%;
+	transition:
+		border-color 160ms ease-out,
+		background-color 160ms ease-out;
+}
+
+.graph-panel__box::after {
+	content: "";
+	position: absolute;
+	top: 42%;
+	left: 50%;
+	width: 0.25rem;
+	height: 0.4375rem;
+	border: solid var(--float-panel-bg);
+	border-width: 0 1.5px 1.5px 0;
+	opacity: 0;
+	transform: translate(-50%, -50%) rotate(45deg);
+	transition: opacity 120ms ease-out;
+}
+
+.graph-panel__check:has(input:checked) .graph-panel__box {
+	border-color: var(--graph-chip-checked);
+	background: var(--graph-chip-checked);
+}
+
+.graph-panel__check:has(input:checked) .graph-panel__box::after {
+	opacity: 1;
+}
+
+.graph-panel__check-label {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.graph-panel__count {
+	color: var(--content-meta);
+	font-size: 0.6875rem;
+	font-variant-numeric: tabular-nums;
+}
+
+/* 分类色点：与画布节点同一套 token，保证图例与图形一致 */
+.graph-panel__dot {
+	width: 0.5rem;
+	height: 0.5rem;
+	flex: none;
+	border-radius: 50%;
+	background: var(--graph-panel-accent, var(--tag-graph-muted));
+}
+
+.graph-panel__check[data-color-index="0"] { --graph-panel-accent: var(--tag-graph-node-1); }
+.graph-panel__check[data-color-index="1"] { --graph-panel-accent: var(--tag-graph-node-2); }
+.graph-panel__check[data-color-index="2"] { --graph-panel-accent: var(--tag-graph-node-3); }
+.graph-panel__check[data-color-index="3"] { --graph-panel-accent: var(--tag-graph-node-4); }
+.graph-panel__check[data-color-index="4"] { --graph-panel-accent: var(--tag-graph-node-5); }
+.graph-panel__check[data-color-index="5"] { --graph-panel-accent: var(--tag-graph-node-6); }
+.graph-panel__check[data-color-index="6"] { --graph-panel-accent: var(--tag-graph-node-7); }
+.graph-panel__check[data-color-index="7"] { --graph-panel-accent: var(--tag-graph-node-8); }
+
+.graph-panel__stats {
+	color: var(--content-meta);
+	font-size: 0.6875rem;
+	font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.kg-dock__btn,
+	.kg-dock__popover,
+	.graph-accordion__bar,
+	.graph-accordion__arrow,
+	.graph-accordion__body,
+	.graph-panel__check,
+	.graph-panel__box,
+	.graph-panel__box::after {
+		transition: none;
+	}
+}
