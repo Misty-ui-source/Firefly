@@ -27,6 +27,14 @@ This static blog is based on [Firefly](https://github.com/CuteLeaf/Firefly).
 - Telegram：https://t.me/zhzhk27
 - Discord：[halo022391](https://discord.com/users/1550493367920627732)
 
+## 讲讲三个名字的来历
+
+**站名 Alexander**，译名亚历山大，也译作「鸭力山大」——和我的处境差不多。其实起的时候并没有什么特别的含义，后来搜了搜，发现这个名字也有不断探索未知领域、建立自己「思想大厦」的愿景；古代的亚历山大城，还有世界上最大的图书馆。给博客起这个名字，是希望把这里打造成一个个人知识库、藏书阁，或者思想集散地。
+
+**作者名 zhz** 就简单了：这三个字母很好看呀。
+
+**域名 lanerc** 是退而求其次：申请的时候试了两三个中意的前缀，都显示被注册了。我很喜欢看动漫，就借用了 lanerc （懒站）的名字。
+
 ## 相关链接
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin:1rem 0;">
