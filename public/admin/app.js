@@ -6490,6 +6490,7 @@ routes.theme = async () => {
   const P_BGW = 'src/config/backgroundWallpaper.ts';
   const P_FX = 'src/config/effectsConfig.ts';
   const P_MX = 'src/config/mingxinConfig.ts';
+  const P_PIO = 'src/config/pioConfig.ts';
   /* 在对象的某个块内读/写某个 key：先按 key 名定位块的左花括号，再数花括号找块尾，只动块内第一处匹配 */
   function blockOf(text, keyRe) {
     const m = text.match(keyRe);
@@ -6586,6 +6587,19 @@ routes.theme = async () => {
     if (!/playerVariant\s*:\s*"\w+"\s*,/.test(t)) return null;
     return t.replace(/playerVariant\s*:\s*"\w+"\s*,/, `playerVariant: "${s.mxPlayerVariant}",`);
   }
+  /* 看板娘开关：pioConfig 里 spine / live2d 两个配置块各自的第一个 enable */
+  function parsePio(t) {
+    const sp = getIn(t, blockOf(t, /spineModelConfig\s*=/), /enable\s*:\s*(true|false)/);
+    const l2 = getIn(t, blockOf(t, /live2dWidgetConfig\s*=/), /enable\s*:\s*(true|false)/);
+    if (sp === null || l2 === null) return null;
+    return { pioSpine: sp === 'true', pioLive2d: l2 === 'true' };
+  }
+  function applyPio(t, s) {
+    let out = setIn(t, blockOf(t, /spineModelConfig\s*=/), /enable\s*:\s*(?:true|false)/, `enable: ${s.pioSpine}`);
+    if (out === null) return null;
+    out = setIn(out, blockOf(out, /live2dWidgetConfig\s*=/), /enable\s*:\s*(?:true|false)/, `enable: ${s.pioLive2d}`);
+    return out;
+  }
   function parseFx(t) {
     const keys = ['sakura', 'snow', 'firefly', 'notes', 'rain', 'meteor', 'bubbles', 'hearts', 'leaves', 'click'];
     const out = {};
@@ -6679,18 +6693,19 @@ routes.theme = async () => {
     }
     return out;
   }
-  let siteT, bgwT, fxT, mxT;
+  let siteT, bgwT, fxT, mxT, pioT;
   try {
-    [siteT, bgwT, fxT, mxT] = await Promise.all([
+    [siteT, bgwT, fxT, mxT, pioT] = await Promise.all([
       ghGetFile(P_SITE).then((d) => d.text),
       ghGetFile(P_BGW).then((d) => d.text),
       ghGetFile(P_FX).then((d) => d.text),
       ghGetFile(P_MX).then((d) => d.text),
+      ghGetFile(P_PIO).then((d) => d.text),
     ]);
   } catch (e) { view.innerHTML = `<p class="hint">读取失败：${esc(e.message)}</p>`; return; }
-  const pSite = parseSite(siteT), pBgw = parseBgw(bgwT), pFx = parseFx(fxT), pMx = parseMx(mxT);
-  if (!pSite || !pBgw || !pFx || !pMx) { view.innerHTML = '<p class="hint">配置文件格式对不上（某个默认值没找到），已中止，没有改动任何文件。</p>'; return; }
-  let st = { ...pSite, ...pBgw, ...pFx, ...pMx };
+  const pSite = parseSite(siteT), pBgw = parseBgw(bgwT), pFx = parseFx(fxT), pMx = parseMx(mxT), pPio = parsePio(pioT);
+  if (!pSite || !pBgw || !pFx || !pMx || !pPio) { view.innerHTML = '<p class="hint">配置文件格式对不上（某个默认值没找到），已中止，没有改动任何文件。</p>'; return; }
+  let st = { ...pSite, ...pBgw, ...pFx, ...pMx, ...pPio };
   let orig = JSON.stringify(st);
   const MODES = [
     { id: 'banner', icon: '🖼️', name: '横幅模式', desc: '顶部一条横幅，内容在下方滚动（现在用的就是它）' },
@@ -6784,13 +6799,18 @@ routes.theme = async () => {
       <p class="hint">两个开关：上面的是总开关（整排显不显示），每条前面的是单条开关（先加着、暂时不想露面就关掉，不用删）。名称填 GitHub、Telegram、Discord、Bilibili 这类常见平台时，图标代码会根据名称自动带出来（带错了直接改，改过就不再覆盖）；其它图标填 Iconify 代码，如 fa7-solid:envelope；链接 http 开头是外部站、mailto: 是邮箱、/ 开头是站内页。名称在鼠标悬停时显示。</p>
     </div>
     <div class="card">
+      <h2>🐱 看板娘</h2>
+      <div class="pills">${pill('pioLive2d', 'Live2D 看板娘')}${pill('pioSpine', 'Spine 看板娘（流萤）')}</div>
+      <p class="hint">默认两个都关：访客进来不加载看板娘，页面上也不会留「正在加载」的空壳。打开后完全按现在站内的老逻辑走——哪些形态、哪些设备该出现才出现（比如璨夜和手机上本来就不出现），跟今天开着的时候一模一样。在这里关掉只是不让它出来，模型文件都还在，随时能再打开。</p>
+    </div>
+    <div class="card">
       <h2>🌸 特效默认值</h2>
       <div class="pills">${pill('sakura', '樱花特效')}${pill('snow', '雪花特效')}${pill('firefly', '萤火虫特效')}${pill('notes', '音符特效')}${pill('rain', '雨滴特效')}${pill('meteor', '流星特效')}${pill('bubbles', '泡泡特效')}${pill('hearts', '爱心特效')}${pill('leaves', '落叶特效')}${pill('click', '点击特效')}</div>
     </div>
     <div class="card">
       <div class="toolbar">
         <button class="btn" id="theme-save" ${dirty() ? '' : 'disabled'}>💾 保存到仓库</button>
-        <span class="hint">一次保存 = 一次提交（最多动 siteConfig / backgroundWallpaper / effectsConfig / mingxinConfig 四个文件，没改的不动）；重新构建后生效。</span>
+        <span class="hint">一次保存 = 一次提交（最多动 siteConfig / backgroundWallpaper / effectsConfig / mingxinConfig / pioConfig 五个文件，没改的不动）；重新构建后生效。</span>
       </div>
     </div>`;
     view.querySelectorAll('[data-k]').forEach((cb) => {
@@ -6880,17 +6900,19 @@ routes.theme = async () => {
       saveBtn.disabled = true;
       saveBtn.textContent = '保存中…';
       try {
-        const [fSite, fBgw, fFx, fMx] = await Promise.all([ghGetFile(P_SITE), ghGetFile(P_BGW), ghGetFile(P_FX), ghGetFile(P_MX)]);
+        const [fSite, fBgw, fFx, fMx, fPio] = await Promise.all([ghGetFile(P_SITE), ghGetFile(P_BGW), ghGetFile(P_FX), ghGetFile(P_MX), ghGetFile(P_PIO)]);
         const nSite = applySite(fSite.text, st);
         const nBgw = applyBgw(fBgw.text, st);
         const nFx = applyFx(fFx.text, st);
         const nMx = applyMx(fMx.text, st);
-        if (nSite === null || nBgw === null || nFx === null || nMx === null) throw new Error('配置文件格式对不上，已中止，没有改动任何文件');
+        const nPio = applyPio(fPio.text, st);
+        if (nSite === null || nBgw === null || nFx === null || nMx === null || nPio === null) throw new Error('配置文件格式对不上，已中止，没有改动任何文件');
         const files = [];
         if (nSite !== fSite.text) files.push({ path: P_SITE, content: nSite, encoding: 'utf-8' });
         if (nBgw !== fBgw.text) files.push({ path: P_BGW, content: nBgw, encoding: 'utf-8' });
         if (nFx !== fFx.text) files.push({ path: P_FX, content: nFx, encoding: 'utf-8' });
         if (nMx !== fMx.text) files.push({ path: P_MX, content: nMx, encoding: 'utf-8' });
+        if (nPio !== fPio.text) files.push({ path: P_PIO, content: nPio, encoding: 'utf-8' });
         if (!files.length) throw new Error('没有实际改动');
         /* 操作日志与配置文件同 1 个 commit（同 saveWithLog 的做法） */
         try {

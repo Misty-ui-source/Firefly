@@ -14,11 +14,12 @@
 	try {
 		var start = new Date('2026-10-15T00:00:00+08:00').getTime();
 		function tick() {
-			var diff = Math.max(0, Date.now() - start);
-			var d = Math.floor(diff / 86400000);
-			var h = Math.floor((diff % 86400000) / 3600000);
-			var m = Math.floor((diff % 3600000) / 60000);
-			var s = Math.floor((diff % 60000) / 1000);
+			var now = Date.now();
+			var d = Math.floor((now + 28800000) / 86400000) - Math.floor((start + 28800000) / 86400000) + 1;
+			var rest = Math.max(0, now - (Math.floor((now + 28800000) / 86400000) * 86400000 - 28800000));
+			var h = Math.floor(rest / 3600000);
+			var m = Math.floor((rest % 3600000) / 60000);
+			var s = Math.floor((rest % 60000) / 1000);
 			var el = document.getElementById('site-uptime');
 			if (el) el.textContent = d + ' 天 ' + h + ' 小时 ' + m + ' 分 ' + s + ' 秒';
 		}

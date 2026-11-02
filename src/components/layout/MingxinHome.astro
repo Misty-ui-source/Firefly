@@ -15,7 +15,7 @@ import {
 	getSortedPostsList,
 	getTagList,
 } from "@/utils/content-utils";
-import { formatDateI18nWithTime } from "@/utils/date-utils";
+import { formatDateI18nWithTime, getSiteRunningDays } from "@/utils/date-utils";
 import { dynamicSlug, sortDynamics } from "@/utils/dynamic-utils";
 import { loadLocalImage } from "@/utils/schema-image";
 import { getPostUrlBySlug, getTagUrl, url } from "@/utils/url-utils";
@@ -238,16 +238,16 @@ const footerLinks = [
 const runtimeStart = new Date(
 	`${siteConfig.siteStartDate || "2026-10-15"}T00:00:00+08:00`,
 );
-const runtimeDays = Math.max(
-	0,
-	Math.floor((Date.now() - runtimeStart.getTime()) / 86400000),
-);
+const runtimeDays = getSiteRunningDays();
 /* 构建时间与站点信息卡（SiteInfo）同源同格式：构建时刻 + i18n 带时间格式 */
 const footerBuildTime = formatDateI18nWithTime(new Date());
 /* 页脚运行时间与他形态页脚（FooterConfig.html）同格式：天/时/分/秒、每秒跳字；
    SSR 先给构建时刻的分解值，挂载后由 boot 脚本按同一起点逐秒刷新 */
-const runtimeDiffMs = Math.max(0, Date.now() - runtimeStart.getTime());
-const runtimeText = `${Math.floor(runtimeDiffMs / 86400000)} 天 ${Math.floor((runtimeDiffMs % 86400000) / 3600000)} 小时 ${Math.floor((runtimeDiffMs % 3600000) / 60000)} 分 ${Math.floor((runtimeDiffMs % 60000) / 1000)} 秒`;
+const runtimeNowMs = Date.now();
+const runtimeTodayStartMs =
+	Math.floor((runtimeNowMs + 28800000) / 86400000) * 86400000 - 28800000;
+const runtimeRestMs = Math.max(0, runtimeNowMs - runtimeTodayStartMs);
+const runtimeText = `${runtimeDays} 天 ${Math.floor(runtimeRestMs / 3600000)} 小时 ${Math.floor((runtimeRestMs % 3600000) / 60000)} 分 ${Math.floor((runtimeRestMs % 60000) / 1000)} 秒`;
 
 /* ================= 终幕内容区 ·「Hero」变体（原站 HomeDataLayer 移植） =================
    与「经典」变体共用同一批构建期数据装配，html[data-mingxin-afterglow] 决定显哪套。
@@ -2409,8 +2409,10 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 		if (uptimeEl) {
 			const start = Number(uptimeEl.dataset.start || 0);
 			const tick = () => {
-				const diff = Math.max(0, Date.now() - start);
-				uptimeEl.textContent = `${Math.floor(diff / 86400000)} 天 ${Math.floor((diff % 86400000) / 3600000)} 小时 ${Math.floor((diff % 3600000) / 60000)} 分 ${Math.floor((diff % 60000) / 1000)} 秒`;
+				const now = Date.now();
+				const d = Math.floor((now + 28800000) / 86400000) - Math.floor((start + 28800000) / 86400000) + 1;
+				const rest = Math.max(0, now - (Math.floor((now + 28800000) / 86400000) * 86400000 - 28800000));
+				uptimeEl.textContent = `${d} 天 ${Math.floor(rest / 3600000)} 小时 ${Math.floor((rest % 3600000) / 60000)} 分 ${Math.floor((rest % 60000) / 1000)} 秒`;
 			};
 			tick();
 			const timer = window.setInterval(tick, 1000);

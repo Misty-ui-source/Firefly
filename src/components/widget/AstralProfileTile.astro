@@ -2,6 +2,7 @@
 import { Icon } from "astro-icon/components";
 import { profileConfig, siteConfig } from "@/config";
 import { getSortedPosts } from "@/utils/content-utils";
+import { getSiteRunningDays } from "@/utils/date-utils";
 import { encodeMailto, MAILTO_ONCLICK_SCRIPT } from "@/utils/email-utils";
 import { url } from "@/utils/url-utils";
 
@@ -18,11 +19,7 @@ import { url } from "@/utils/url-utils";
 const posts = await getSortedPosts();
 const postCount = posts.length;
 
-const startDate = new Date(siteConfig.siteStartDate || "2026-10-15");
-const runningDays = Math.max(
-	1,
-	Math.floor((Date.now() - startDate.getTime()) / 86400000) + 1,
-);
+const runningDays = getSiteRunningDays();
 
 const links = profileConfig.links || [];
 ---

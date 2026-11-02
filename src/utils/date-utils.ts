@@ -13,6 +13,28 @@ export function formatDateToYYYYMMDD(date: Date): string {
 	return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
+// 全站统一的运行天数口径：按站点时区的日历天数，上线当天算第 1 天。
+// 统计卡 / 页脚 / 明信 / 璨夜资料卡都用它，不再各算各的。
+export function getSiteRunningDays(): number {
+	const tz = siteConfig.timezone || "Asia/Shanghai";
+	const startParts = (siteConfig.siteStartDate || "2026-10-15")
+		.split("-")
+		.map(Number);
+	const parts = new Intl.DateTimeFormat("en-CA", {
+		timeZone: tz,
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).formatToParts(new Date());
+	const getNum = (type: Intl.DateTimeFormatPartTypes) =>
+		Number(parts.find((part) => part.type === type)?.value || 0);
+	const startDay =
+		Date.UTC(startParts[0], (startParts[1] || 1) - 1, startParts[2] || 1) / 86400000;
+	const todayDay =
+		Date.UTC(getNum("year"), getNum("month") - 1, getNum("day")) / 86400000;
+	return Math.max(1, Math.round(todayDay - startDay) + 1);
+}
+
 // 国际化日期格式化函数
 export function formatDateI18n(
 	dateInput: Date | string,

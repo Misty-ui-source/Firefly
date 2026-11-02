@@ -4,6 +4,7 @@ import { mingxinConfig, siteConfig } from "@/config";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import { getSortedPosts } from "@/utils/content-utils";
+import { getSiteRunningDays } from "@/utils/date-utils";
 
 /**
  * 明信文章页常驻目录栏（原站 ArticleTocPanel 移植，站长 2026-11-01 点名）：
@@ -59,14 +60,7 @@ const totalWords = posts.reduce(
 	0,
 );
 const DAY_MS = 24 * 60 * 60 * 1000;
-const runningDays = siteConfig.siteStartDate
-	? Math.max(
-			0,
-			Math.floor(
-				(Date.now() - new Date(siteConfig.siteStartDate).getTime()) / DAY_MS,
-			),
-		)
-	: null;
+const runningDays = getSiteRunningDays();
 const latestUpdate = posts.reduce<Date | null>((latest, post) => {
 	const updated = post.data.updated ?? post.data.published;
 	return !latest || updated > latest ? updated : latest;

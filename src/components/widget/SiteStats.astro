@@ -10,6 +10,7 @@ import {
 	getSortedPosts,
 	getTagList,
 } from "@/utils/content-utils";
+import { getSiteRunningDays } from "@/utils/date-utils";
 
 interface Props {
 	class?: string;
@@ -70,6 +71,8 @@ const lastPostDate = lastActivityDate ? lastActivityDate.toISOString() : null;
 
 const todayText = i18n(I18nKey.today);
 
+const runningDays = getSiteRunningDays();
+
 const stats = [
 	{
 		icon: "material-symbols:article-outline",
@@ -95,10 +98,8 @@ const stats = [
 	{
 		icon: "material-symbols:calendar-clock-outline",
 		label: i18n(I18nKey.siteStatsRunningDays),
-		value: 0, // 将由客户端更新
+		value: runningDays,
 		suffix: i18n(I18nKey.siteStatsDays).replace("{days}", ""),
-		dynamic: true,
-		id: "running-days",
 	},
 	{
 		icon: "mingcute:heartbeat-line",
@@ -141,19 +142,9 @@ const stats = [
   </div>
 </WidgetLayout>
 
-<script is:inline define:vars={{ siteStartDate, lastPostDate, todayText }}>
+<script is:inline define:vars={{ lastPostDate, todayText }}>
   function updateDynamicStats() {
     const today = new Date();
-
-    // 更新运行天数
-    const startDate = new Date(siteStartDate);
-    const diffTime = Math.abs(today.getTime() - startDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    const runningDaysElements = document.querySelectorAll('[data-stat-id="running-days"]');
-    runningDaysElements.forEach((element) => {
-      element.textContent = diffDays.toString();
-    });
 
     // 更新最后活动时间
     if (lastPostDate) {

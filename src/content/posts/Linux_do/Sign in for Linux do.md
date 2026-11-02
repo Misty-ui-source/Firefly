@@ -2,7 +2,7 @@
 title: GitHub 账号未满足Linux do入社资质，如何申请年轻版资质？——从失落 to 惊喜：GitHub 未满5年，我还是拿到了 LINUX DO 的门票
 published: 2026-09-15
 updated: 2026-09-15
-description: 文章描述
+description: GitHub 账号才两年多、不够 Linux DO 常规申请的五年门槛，本来以为没戏了，后来发现还有给年轻账号留的预申请通道——认真写了申请居然通过了。记录从失落到上车的全过程，还有年轻版账号初期的那些限制
 image: ./cover.png
 tags:
   - 折腾
