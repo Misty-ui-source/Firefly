@@ -17,9 +17,21 @@ const pathname = Astro.url.pathname.replace(/\/+$/, "") || "/";
 const isCalendarPage = pathname === "/calendar";
 
 const map = isCalendarPage ? await getOnThisDayMap() : {};
-const now = new Date();
-const todayMd = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-const initial = (map[todayMd] || []).filter((i) => i.year < now.getFullYear());
+// 「今天」按北京时间算：索引键本身就是北京时间口径（calendar-data 里按 +8 换算），
+// 构建机是 UTC，凌晨构建时用构建机日期会把今天指错一天、和索引对不上。
+const bjNowParts = new Intl.DateTimeFormat("en-US", {
+	timeZone: "Asia/Shanghai",
+	year: "numeric",
+	month: "2-digit",
+	day: "2-digit",
+}).formatToParts(new Date());
+const bjPart = (type: string) =>
+	Number(bjNowParts.find((p) => p.type === type)?.value);
+const bjYear = bjPart("year");
+const bjMonth = bjPart("month");
+const bjDay = bjPart("day");
+const todayMd = `${String(bjMonth).padStart(2, "0")}-${String(bjDay).padStart(2, "0")}`;
+const initial = (map[todayMd] || []).filter((i) => i.year < bjYear);
 const payload = JSON.stringify(map);
 
 const KIND_LABEL: Record<string, string> = {
@@ -34,7 +46,7 @@ const KIND_LABEL: Record<string, string> = {
 	<WidgetLayout name="那年今日" id="on-this-day" class={className} style={style}>
 		<div class="on-this-day" data-otd>
 			<p class="otd-anchor text-sm text-neutral-500 dark:text-neutral-400 mb-2" data-otd-anchor>
-				{now.getMonth() + 1}月{now.getDate()}日 · 往年的今天
+				{bjMonth}月{bjDay}日 · 往年的今天
 			</p>
 			<div data-otd-list>
 				{initial.length === 0 && (

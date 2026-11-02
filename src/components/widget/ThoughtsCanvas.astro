@@ -7,10 +7,19 @@ interface Props {
 
 const { items } = Astro.props;
 
+// 日期按北京时间算：createdAt 存的是 UTC 时间戳，构建机也是 UTC，
+// 直接用本地时区读会把北京时间凌晨写的那条标成前一天。
 function fmtDate(iso: string): string {
 	try {
-		const d = new Date(iso);
-		return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+		const parts = new Intl.DateTimeFormat("en-US", {
+			timeZone: "Asia/Shanghai",
+			year: "numeric",
+			month: "numeric",
+			day: "numeric",
+		}).formatToParts(new Date(iso));
+		const get = (type: string) =>
+			Number(parts.find((p) => p.type === type)?.value);
+		return `${get("year")}年${get("month")}月${get("day")}日`;
 	} catch {
 		return iso;
 	}
