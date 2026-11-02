@@ -1566,10 +1566,13 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 		margin: 0;
 		font-size: clamp(1.6rem, 3vw, 2.2rem);
 		font-weight: 900;
+		/* 原站此处是显式的 on-surface（随暗色翻转）；移植时漏了，
+		   标题只能继承到不翻转的墨色，暗色下黑字落暗背景（2026-11-02 站长报障） */
+		color: var(--on-surface);
 	}
 	.mingxin-afterglow__subtitle {
 		margin: 0.4rem 0 0;
-		color: oklch(from var(--deep-text) 0.6 0 h);
+		color: var(--on-surface-variant);
 		font-weight: 600;
 	}
 	.mingxin-afterglow__nav {
@@ -1609,6 +1612,9 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 		padding: 1rem 1.25rem;
 		border: 1.5px dashed var(--surface-outline-variant);
 		border-radius: 1rem;
+		/* 同 title：给容器显式翻转色，正文与图标继承它（原站靠容器上的
+		   on-surface 兜住整行，移植时丢了） */
+		color: var(--on-surface);
 	}
 	.mingxin-afterglow__notice-icon {
 		font-size: 1.4rem;
@@ -1646,6 +1652,7 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 		margin: 0;
 		font-size: 1.3rem;
 		font-weight: 900;
+		color: var(--on-surface);
 	}
 	.mingxin-afterglow__more {
 		display: inline-flex;

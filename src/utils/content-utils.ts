@@ -1,7 +1,17 @@
-import { type CollectionEntry, getCollection } from "astro:content";
+import type { MarkdownHeading } from "astro";
+import { type CollectionEntry, getCollection, render } from "astro:content";
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
-import { getCategoryUrl } from "@utils/url-utils";
+import { siteConfig } from "@/config";
+import {
+	buildKnowledgeGraphData,
+	type KGData,
+} from "@/utils/knowledge-graph-data";
+import {
+	getCategoryUrl,
+	getPostUrlBySlug,
+	getTagUrl,
+} from "@utils/url-utils";
 
 // // Retrieve posts and sort them by publication date
 async function getRawSortedPosts() {
@@ -339,4 +349,54 @@ export async function getRelatedPosts(
 	}
 
 	return result;
+}
+
+
+/* ========== 知识图谱（标签页四层图） ========== */
+
+let cachedKgHeadings: Map<string, MarkdownHeading[]> | null = null;
+
+/**
+ * 提取全部文章的标题（render() 的 headings，含 rehype-slug 去重后的真实 slug）。
+ * 顺序渲染：render() 走全 markdown 链（含代码块渲染子进程），并发会打满。
+ */
+export async function getAllPostHeadings(): Promise<
+	Map<string, MarkdownHeading[]>
+> {
+	if (cachedKgHeadings) return cachedKgHeadings;
+	const posts = await getSortedPosts();
+	const headingMap = new Map<string, MarkdownHeading[]>();
+	for (const post of posts) {
+		const { headings } = await render(post);
+		headingMap.set(post.id, headings);
+	}
+	cachedKgHeadings = headingMap;
+	return headingMap;
+}
+
+/** 四层知识图谱数据：分类 → 标签 → 文章 → H2 小标题 */
+export async function getKnowledgeGraphData(): Promise<KGData> {
+	const posts = await getSortedPosts();
+	const headingMap = await getAllPostHeadings();
+	return buildKnowledgeGraphData(
+		posts.map((post) => ({
+			id: post.id,
+			title: post.data.title,
+			url: getPostUrlBySlug(post.id),
+			published: post.data.published,
+			category: post.data.category,
+			tags: post.data.tags ?? [],
+			headings: (headingMap.get(post.id) ?? []).map((heading) => ({
+				depth: heading.depth,
+				slug: heading.slug,
+				text: heading.text,
+			})),
+		})),
+		{
+			uncategorizedName: i18n(I18nKey.uncategorized),
+			categoryUrl: getCategoryUrl,
+			tagUrl: getTagUrl,
+			siteStartDate: siteConfig.siteStartDate,
+		},
+	);
 }
