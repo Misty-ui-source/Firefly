@@ -161,6 +161,14 @@ const detailGroups = [
     const status = root.querySelector<HTMLElement>("[data-kg-status]");
     if (!surface || surface.dataset.state === "empty") return;
 
+    // 手机端不挂载图谱：标签页已把整块隐藏，这里连数据拉取与模拟都不起，
+    // 免得看不见还在后台跑、拖慢小屏（站长 2026-11-02 验收口径）
+    if (window.matchMedia("(max-width: 768px)").matches) {
+      surface.dataset.state = "idle";
+      if (status) status.textContent = "";
+      return;
+    }
+
     const current = version;
     const strings = JSON.parse(root.dataset.kgStrings || "{}");
     surface.dataset.state = "loading";

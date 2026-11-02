@@ -22,15 +22,6 @@ const topMaxCount = topTags.length > 0 ? topTags[0].count : 1;
 ---
 
 <MainGridLayout title={i18n(I18nKey.tags)} description={i18n(I18nKey.allTags)}>
-    <!-- 知识图谱：页面第一位。平时是中栏里的一块活图（能拖能点），
-         dock 末颗按钮全屏展开；下方标签云与 Top 10 原样保留 -->
-    <div
-        class="card-base overflow-hidden mb-4 kg-embed"
-        style="--kg-top-inset: 1rem;"
-    >
-        <KnowledgeGraph meta={kgMeta} />
-    </div>
-
     <!-- 页面标题 -->
     <div class="card-base px-8 py-6 mb-4">
         <div class="text-2xl font-bold text-(--primary) mb-2">
@@ -39,6 +30,16 @@ const topMaxCount = topTags.length > 0 ? topTags[0].count : 1;
         <p class="text-30 text-sm">
             {i18n(I18nKey.allTags)} · {tags.length} {i18n(I18nKey.tagsCount)}
         </p>
+    </div>
+
+    <!-- 知识图谱：标题卡下方。平时是中栏里的一块活图（能拖能点），
+         dock 末颗按钮全屏展开；下方标签云与 Top 10 原样保留。
+         手机端整块不显示（见页尾样式），组件脚本也不会挂载，防卡顿 -->
+    <div
+        class="card-base overflow-hidden mb-4 kg-embed"
+        style="--kg-top-inset: 1rem;"
+    >
+        <KnowledgeGraph meta={kgMeta} />
     </div>
 
     <div class="flex w-full rounded-(--radius-large) overflow-hidden relative min-h-32">
@@ -112,14 +113,16 @@ const topMaxCount = topTags.length > 0 ? topTags[0].count : 1;
     )}
 
     <style>
-        /* 图谱嵌入块的高度：中栏里给足一屏内的大半，手机略矮。
-           全屏态由 knowledge-graph.css 的 .is-fullscreen 规则接管（100dvh） */
+        /* 图谱嵌入块的高度：中栏里给足一屏内的大半。
+           全屏态由 knowledge-graph.css 的 .is-fullscreen 规则接管（100dvh）。
+           手机端整块隐藏：图谱是持续动画的 canvas，小屏上容易卡顿，
+           站长 2026-11-02 验收时定为手机不显示 */
         .kg-embed {
             height: clamp(430px, 68vh, 660px);
         }
         @media (max-width: 768px) {
             .kg-embed {
-                height: 68dvh;
+                display: none;
             }
         }
     </style>
