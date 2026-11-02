@@ -10,6 +10,8 @@ tags:
   - AI
   - 折腾记录
 category: 博客
+series: 博客搭建
+seriesOrder: 4
 draft: false
 ---
 

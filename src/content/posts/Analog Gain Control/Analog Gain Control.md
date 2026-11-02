@@ -11,6 +11,8 @@ tags:
   - 可控增益
   - 运算放大器
 category: 实验报告
+series: 实验报告
+seriesOrder: 14
 draft: false
 ---
 

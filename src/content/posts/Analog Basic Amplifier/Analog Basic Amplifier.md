@@ -10,6 +10,8 @@ tags:
   - 模电实验
   - 运算放大器
 category: 实验报告
+series: 实验报告
+seriesOrder: 13
 draft: false
 ---
 

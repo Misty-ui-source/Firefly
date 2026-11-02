@@ -10,6 +10,8 @@ tags:
   - Astro
   - 迁移
 category: 博客
+series: 博客搭建
+seriesOrder: 1
 draft: false
 ---
 

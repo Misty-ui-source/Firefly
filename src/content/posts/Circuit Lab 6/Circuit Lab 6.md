@@ -12,6 +12,8 @@ tags:
   - 双端口网络
   - 频率特性
 category: 实验报告
+series: 实验报告
+seriesOrder: 9
 draft: false
 ---
 

@@ -11,6 +11,8 @@ tags:
   - 波形发生
   - 有源滤波
 category: 实验报告
+series: 实验报告
+seriesOrder: 15
 draft: false
 ---
 

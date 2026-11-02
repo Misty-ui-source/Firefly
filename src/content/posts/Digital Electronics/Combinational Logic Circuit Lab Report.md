@@ -9,6 +9,8 @@ tags:
   - 数字电路
   - 课程实验
 category: 实验报告
+series: 实验报告
+seriesOrder: 2
 draft: false
 ---
 

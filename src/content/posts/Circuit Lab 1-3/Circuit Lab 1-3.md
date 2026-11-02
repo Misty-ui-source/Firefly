@@ -10,6 +10,8 @@ tags:
   - 元器件识别
   - 万用表
 category: 实验报告
+series: 实验报告
+seriesOrder: 7
 draft: false
 ---
 

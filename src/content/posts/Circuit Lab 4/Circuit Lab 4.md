@@ -10,6 +10,8 @@ tags:
   - 交流电路
   - 功率因数
 category: 实验报告
+series: 实验报告
+seriesOrder: 6
 draft: false
 ---
 

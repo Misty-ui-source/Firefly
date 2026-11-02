@@ -11,6 +11,8 @@ tags:
   - FPGA
   - Quartus
 category: 实验报告
+series: 实验报告
+seriesOrder: 11
 draft: false
 ---
 

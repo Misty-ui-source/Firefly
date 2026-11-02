@@ -11,6 +11,8 @@ tags:
   - 热阻分析
   - 大学物理
 category: 论文
+series: 实验报告
+seriesOrder: 17
 draft: false
 ---
 

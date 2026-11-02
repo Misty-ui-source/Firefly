@@ -11,6 +11,8 @@ tags:
   - 功率放大
   - LM386
 category: 实验报告
+series: 实验报告
+seriesOrder: 16
 draft: false
 ---
 

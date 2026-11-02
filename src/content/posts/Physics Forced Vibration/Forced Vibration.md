@@ -11,6 +11,8 @@ tags:
   - 受迫振动
   - 共振
 category: 实验报告
+series: 实验报告
+seriesOrder: 4
 draft: false
 ---
 

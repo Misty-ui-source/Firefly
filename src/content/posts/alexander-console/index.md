@@ -9,7 +9,7 @@ tags:
   - 网络
   - AI
 series: 博客搭建
-seriesOrder: 1
+seriesOrder: 5
 description: 为了让写博客这件事变得赏心悦目，我重构了整套系统：自研控制台、评论迁移，与一个未解决的难题
 image: https://img.lanerc.me/covers/mvmlrz7h-1c5e7c0d463b38aa0256f1362becc554_720.webp
 draft: false

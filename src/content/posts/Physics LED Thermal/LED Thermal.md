@@ -11,6 +11,8 @@ tags:
   - LED
   - 热学特性
 category: 实验报告
+series: 实验报告
+seriesOrder: 5
 draft: false
 ---
 

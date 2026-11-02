@@ -13,6 +13,8 @@ tags:
   - VPS
   - Cloudflare
 category: 教程
+series: 博客搭建
+seriesOrder: 3
 draft: false
 ---
 

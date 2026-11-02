@@ -12,6 +12,8 @@ tags:
   - 计数器
   - 序列检测
 category: 实验报告
+series: 实验报告
+seriesOrder: 8
 draft: false
 ---
 

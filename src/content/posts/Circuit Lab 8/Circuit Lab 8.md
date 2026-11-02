@@ -10,6 +10,8 @@ tags:
   - 黑箱电路
   - 阻抗测量
 category: 实验报告
+series: 实验报告
+seriesOrder: 10
 draft: false
 ---
 

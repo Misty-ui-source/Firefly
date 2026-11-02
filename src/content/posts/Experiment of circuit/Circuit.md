@@ -9,6 +9,8 @@ tags:
   - 电路实验
   - Multisim
 category: 实验报告
+series: 实验报告
+seriesOrder: 3
 draft: false
 ---
 

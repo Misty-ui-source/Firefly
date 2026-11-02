@@ -11,6 +11,8 @@ tags:
   - PCB设计
   - 焊接
 category: 实验报告
+series: 实验报告
+seriesOrder: 12
 draft: false
 ---
 

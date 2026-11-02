@@ -13,6 +13,8 @@ tags:
   - Umami
   - 统计
 category: 教程
+series: 博客搭建
+seriesOrder: 2
 draft: false
 ---
 

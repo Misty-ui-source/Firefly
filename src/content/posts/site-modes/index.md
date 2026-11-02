@@ -7,6 +7,7 @@ tags:
   - 站点形态
   - 折腾记录
 series: 博客搭建
+seriesOrder: 6
 description: 华彩、素简、谐彩、顽彩、璨夜、纸舟、明信——同一套页面七种形态，再乘上壁纸、导航、字体、特效，组合多到玩不完。这篇讲清每个形态长什么样、能怎么搭，并给出十套我自己试过的推荐搭配。
 image: https://img.lanerc.me/covers/mvtruyt3-0ded6f1484ac37b81c2b8b4a61902c58.webp
 draft: false
