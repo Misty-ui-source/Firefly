@@ -287,6 +287,7 @@ export const mingxinConfig: MingxinConfig = {
 	profileBannerMode: "manual",
 	otherSites: [
 		{ name: "旧站存档", url: "https://www.lanerc.me", icon: "https://www.lanerc.me/favicon/zhz.jpg" },
+		{ name: "备用线路", url: "https://hk.lanerc.me/", icon: "https://lanerc.me/avatar.png" },
 		{ name: "站点统计", url: "https://lanerc.me/analytics/", icon: "https://lanerc.me/favicon/favicon-cat-32.png" },
 		{ name: "工具盒子", url: "https://lanerc.me/projects/", icon: "https://lanerc.me/favicon/favicon-cat-32.png" },
 		{ name: "Alexander Console", url: "https://lanerc.me/admin/", icon: "https://lanerc.me/admin/icon-192.png" },
