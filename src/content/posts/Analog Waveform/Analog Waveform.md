@@ -3,7 +3,7 @@ title: 波形的产生分解与合成电路的设计实验报告
 published: 2026-05-21
 updated: 2026-05-21
 description: 模电实验：500Hz方波发生器+基波/三次谐波提取+移相+加法合成，5个电路级联，用傅里叶的思想把方波拆了再拼回去。
-image: ./cover.png
+image: ./cover.webp
 tags:
   - 实验报告
   - 模拟电路

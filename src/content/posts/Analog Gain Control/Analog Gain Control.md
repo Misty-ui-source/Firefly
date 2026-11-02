@@ -3,7 +3,7 @@ title: 可控增益放大电路设计实验报告
 published: 2026-05-07
 updated: 2026-05-07
 description: 模电实验：μA741做三档增益（0.1/1/10），CD4052模拟开关+电压比较器实现按输入幅值自动切换，输出稳在0.5V~5V。
-image: ./cover.png
+image: ./cover.webp
 tags:
   - 实验报告
   - 模拟电路

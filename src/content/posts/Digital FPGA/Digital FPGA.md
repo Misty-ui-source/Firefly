@@ -3,7 +3,7 @@ title: FPGA小系统设计实验报告
 published: 2025-12-31
 updated: 2025-12-31
 description: 数电实验：Quartus里搭个简易计算器——键盘输入、BCD加减、串行乘法、数码管显示，状态机+数据通路一次搞定，还附赠加法器基础模块图。
-image: ./cover.png
+image: ./cover.webp
 tags:
   - 实验报告
   - 数字电路

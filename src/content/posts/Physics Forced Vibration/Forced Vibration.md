@@ -3,7 +3,7 @@ title: 受迫振动的研究实验报告
 published: 2025-11-24
 updated: 2025-11-24
 description: 大物实验：波尔共振仪上扫出受迫振动的幅频/相频特性曲线，两种方法测阻尼系数只差4.57%，共振点相位差90°对上了理论。
-image: ./cover.png
+image: ./cover.webp
 tags:
   - 实验报告
   - 大学物理

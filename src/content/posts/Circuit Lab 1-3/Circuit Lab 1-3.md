@@ -3,7 +3,7 @@ title: 电子元器件识别参数测试及常用仪器使用实验报告
 published: 2025-11-29
 updated: 2025-11-29
 description: 电路实验第1、3次：万用表测电阻电容、电流表内接 vs 外接的误差分析、二极管稳压管特性，顺手把常用仪器的脾气摸了一遍。
-image: ./cover.png
+image: ./cover.webp
 tags:
   - 实验报告
   - 电路实验

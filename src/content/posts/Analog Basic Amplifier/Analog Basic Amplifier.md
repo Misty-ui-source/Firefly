@@ -3,7 +3,7 @@ title: 基本比例放大电路实验报告
 published: 2026-04-09
 updated: 2026-04-09
 description: 模电实验：μA741搭反相比例放大，增益-10，输入电阻10kΩ起步，顺手测了运放的最大输出摆幅和交直流特性。
-image: ./cover.png
+image: ./cover.webp
 tags:
   - 实验报告
   - 模拟电路

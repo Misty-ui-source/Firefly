@@ -3,7 +3,7 @@ title: 大功率LED结温测量方法的扩展
 published: 2026-01-02
 updated: 2026-01-02
 description: 基于大物实验"大功率LED热学特性研究"的一篇拓展小论文：优化脉冲法参数、引入双指数瞬态热阻模型、建立结温—照度—电压耦合模型，把验证性实验做成了研究性课题。
-image: ./cover.png
+image: ./cover.webp
 tags:
   - 论文
   - LED

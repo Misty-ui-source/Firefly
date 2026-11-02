@@ -3,7 +3,7 @@ title: 博客重建：从 Fuwari 到 Firefly，一天的折腾记录
 published: 2026-10-15
 updated: 2026-10-15
 description: 把博客从 Fuwari 搬到 Firefly，踩了一堆坑：Astro content 缓存、VPS 构建内存爆炸、Live2D 的 DOM 定位、下载站的反爬。记录一下。
-image: ./cover.png
+image: ./cover.webp
 tags:
   - 博客
   - 折腾

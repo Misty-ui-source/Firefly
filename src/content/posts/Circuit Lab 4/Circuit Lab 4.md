@@ -3,7 +3,7 @@ title: 交流电路认识及参数测试实验报告
 published: 2025-11-28
 updated: 2025-11-28
 description: 电路实验第4次：三电压表法和三表法测交流阻抗，亲手把功率因数从0.70拉到0.964——并联电容补偿是真的香。
-image: ./cover.png
+image: ./cover.webp
 tags:
   - 实验报告
   - 电路实验

@@ -3,7 +3,7 @@ title: 黑箱电路元件判别及参数测试实验报告
 published: 2025-12-26
 updated: 2025-12-26
 description: 电路实验第8次：一个不透明的黑箱子，三个端口，里面是 Y 还是 △？电阻电容电感各藏在哪？靠万用表初测+扫频相位+三电压表法，一步步把黑箱"开膛"。
-image: ./cover.png
+image: ./cover.webp
 tags:
   - 实验报告
   - 电路实验

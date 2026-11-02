@@ -3,7 +3,7 @@ title: 大功率LED热学特性研究实验报告
 published: 2025-11-27
 updated: 2025-11-27
 description: 大物实验：脉冲法标定结温-压降曲线，测得热阻22.097°C/W，结温每升10°C照度掉6.2%——散热真的是LED的命门。
-image: ./cover.png
+image: ./cover.webp
 tags:
   - 实验报告
   - 大学物理

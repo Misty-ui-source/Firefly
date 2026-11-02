@@ -3,7 +3,7 @@ title: 时序逻辑电路实验报告
 published: 2025-12-15
 updated: 2025-12-15
 description: 数电实验：7474搭模8计数器做广告流水灯，74161/74194两种方案实现1100100序列发生器，再加个曼切斯特编码器——时序电路三连。
-image: ./cover.png
+image: ./cover.webp
 tags:
   - 实验报告
   - 数字电路

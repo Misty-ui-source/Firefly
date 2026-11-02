@@ -3,7 +3,7 @@ title: 4路广告流水灯电路设计与制作实验报告
 published: 2026-03-25
 updated: 2026-03-25
 description: 电子工艺实践：从555+74HC194流水灯原理分析，到嘉立创EDA画原理图打PCB，再到亲手焊接调试——虚焊排查实录。
-image: ./cover.png
+image: ./cover.webp
 tags:
   - 实验报告
   - 电子工艺

@@ -3,7 +3,7 @@ title: Umami 统计加速：VPS 定时任务 + 静态 JSON，让统计页毫秒�
 published: 2026-10-17
 updated: 2026-10-17
 description: 博客统计页直连 Umami API 太慢？用 VPS cron 每 5 分钟拉数据写成静态 JSON，前端优先读 JSON、失败降级走 API。Cloudflare CDN 缓存，毫秒级加载，附完整脚本和部署步骤。
-image: ./cover.jpg
+image: ./cover.webp
 tags:
   - 博客
   - 教程

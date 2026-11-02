@@ -3,7 +3,7 @@ title: 功率放大电路的设计实验报告
 published: 2026-06-26
 updated: 2026-06-26
 description: 模电实验：μA741前置+LM386功放级联，做个简单的话音放大装置，顺手搞懂OCL和OTL的区别。
-image: ./cover.png
+image: ./cover.webp
 tags:
   - 实验报告
   - 模拟电路

@@ -3,7 +3,7 @@ title: 双端口网络频率特性测试及谐振电路分析实验报告
 published: 2025-12-18
 updated: 2025-12-18
 description: 电路实验第6次：Multisim 扫出一阶 RC 的幅频相频曲线，高低通串联拼出带通，RLC 实物谐振点 88.4kHz，理论 87.61kHz，误差不到 1%。
-image: ./cover.png
+image: ./cover.webp
 tags:
   - 实验报告
   - 电路实验
