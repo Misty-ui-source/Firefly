@@ -266,6 +266,29 @@ html[data-site-mode="mingxin"] #navbar-wrapper.navbar-hidden {
 	html[data-site-mode="mingxin"] #navbar > div.mxnav::before {
 		content: none !important;
 	}
+	/* 白条二修（2026-11-02 站长真机打回）：上一版只中和了 .mxnav 本体，漏了
+	   顶栏这一摞里另外两个会满宽上色的盒子——#navbar 本体的滚动投影（基座
+	   把投影挂在 #navbar.navbar-sticky-shadow 上、无 layer，我上面那条
+	   #navbar{background:transparent} 是 layer 内普通声明、压不过它）与标准
+	   顶栏 .navbar-bar（同为 #navbar > div、照样吃整套表面规则；它的
+	   display:none 只是 layer 内普通声明）。明信下把整摞表面一次中和干净：
+	   双 id 提特异性，压过壁纸半透/semi 系列的 !important 规则。 */
+	html[data-site-mode="mingxin"] #navbar#navbar {
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+	html[data-site-mode="mingxin"] #navbar#navbar > div {
+		background: transparent !important;
+		box-shadow: none !important;
+		border-radius: 0 !important;
+		--navbar-surface-blur: 0px !important;
+	}
+	html[data-site-mode="mingxin"] #navbar#navbar > div::before {
+		content: none !important;
+	}
+	html[data-site-mode="mingxin"] #navbar .navbar-bar {
+		display: none !important;
+	}
 	html[data-site-mode="mingxin"] #navbar .navbar-bar {
 		display: none;
 	}
