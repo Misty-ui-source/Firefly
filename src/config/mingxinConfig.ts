@@ -67,6 +67,16 @@ export interface MingxinConfig {
 	/** 马赛克图轮换模式：manual / random / daily */
 	mosaicMode: string;
 	/**
+	 * 马赛克叠图（原站照片 overlay）：主照片落位后从照片下缘滑入、
+	 * 叠压在照片下半部的第二张图；空串且池为空 = 整张叠图不渲染
+	 * （原站语义：image 留空不显示），页面与无此功能时一模一样。
+	 */
+	mosaicOverlayImage: string;
+	/** 马赛克叠图轮换池 */
+	mosaicOverlayPool: string[];
+	/** 马赛克叠图轮换模式：manual / random / daily */
+	mosaicOverlayMode: string;
+	/**
 	 * 座右铭（与 footerMotto 同句）：2026-11-01 前曾挂在前段巨字下
 	 * occupation 位，站长当日定版改挂身份行 profileTagline 后，本字段
 	 * 不再被 Hero 引用（值保留，控制台生成器以它为字段锚点，勿删）。
@@ -261,6 +271,9 @@ export const mingxinConfig: MingxinConfig = {
 		"/assets/images/mingxin/pool/mosaic-feiyu-seaside-modern.webp",
 	],
 	mosaicMode: "manual",
+	mosaicOverlayImage: "",
+	mosaicOverlayPool: [],
+	mosaicOverlayMode: "manual",
 	heroSubtitle: "生活原本沉闷，但跑起来就有风",
 	introBio:
 		"热衷于制作一些美丽且不实用的站点形态设计，这间小屋这么多副面孔就是证据。白天上课，晚上折腾，乐此不疲。",

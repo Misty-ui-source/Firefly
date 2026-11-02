@@ -316,6 +316,12 @@ const PHOTO_SETTLE_TIME = GUIDE_REVEAL_TIME + GUIDE_REVEAL_DURATION;
 const PHOTO_SETTLE_DURATION = 0.2;
 const PHOTO_ROTATION = -3;
 const PHOTO_ROTATION_TAIL = 0.25;
+/* 叠图（原站 PHOTO_OVERLAY_*）：自身倾角 / 滑入起点（以主图高为单位）/
+   在照片框内的落位（top / width 分数，与 CSS 同值，几何计算要用） */
+const PHOTO_OVERLAY_ROTATION = 5;
+const PHOTO_OVERLAY_SLIDE_IN = 0.55;
+const PHOTO_OVERLAY_TOP = 0.64;
+const PHOTO_OVERLAY_WIDTH = 0.74;
 const PHOTO_WIDTH_RATIO = 0.62;
 const PHOTO_HEIGHT_RATIO = 0.96;
 const PHOTO_FRAME_THICKNESS_REM = 0.5;
@@ -335,6 +341,8 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const EASE_CUBIC_IN = (t: number) => t ** 3;
 /** GSAP power2.out（三次方出） */
 const EASE_CUBIC_OUT = (t: number) => 1 - (1 - t) ** 3;
+/** GSAP power3.out（四次方出） */
+const EASE_QUART_OUT = (t: number) => 1 - (1 - t) ** 4;
 /** GSAP power2.inOut（三次方进出） */
 const EASE_CUBIC_IN_OUT = (t: number) =>
 	t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
@@ -429,10 +437,52 @@ export function mountMingxinMosaic(root: HTMLElement): () => void {
 	const photoFrameSvg = layer.querySelector<HTMLElement>(
 		"[data-mosaic-photo-frame]",
 	);
+	const photoOverlay = layer.querySelector<HTMLElement>(
+		"[data-mosaic-photo-overlay]",
+	);
+	const photoOverlayImage = layer.querySelector<HTMLImageElement>(
+		"[data-mosaic-photo-overlay-img]",
+	);
 	const rainCanvas = layer.querySelector<HTMLCanvasElement>(
 		"[data-mosaic-rain]",
 	);
 	if (!grid || !complete || !completeImage || !frame) return () => undefined;
+
+	/* 叠图轮换选图（非 manual 时服务端不写 src）：口径与全站明信选图
+	   脚本一致（候选 = 当前图 + 池、去重；random 每次挂载重挑；daily
+	   按访客本地日期 + 槽名盐确定性轮换），但只在本控制器内跑——
+	   作用域锁死在明信马赛克层，不动共享布局的选图脚本 */
+	if (photoOverlay && photoOverlayImage) {
+		const mode = photoOverlay.dataset.overlayMode ?? "manual";
+		if (mode === "random" || mode === "daily") {
+			let pool: string[] = [];
+			try {
+				pool = JSON.parse(photoOverlay.dataset.overlayPool ?? "[]");
+			} catch {
+				pool = [];
+			}
+			const candidates: string[] = [];
+			for (const value of [photoOverlay.dataset.overlayCur ?? "", ...pool]) {
+				if (value && !candidates.includes(value)) candidates.push(value);
+			}
+			if (candidates.length) {
+				let picked = candidates[0];
+				if (mode === "random" && candidates.length > 1) {
+					picked =
+						candidates[Math.floor(Math.random() * candidates.length)];
+				} else if (mode === "daily" && candidates.length > 1) {
+					const now = new Date();
+					const key = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}|mosaicOverlay`;
+					let hash = 5381;
+					for (let i = 0; i < key.length; i++) {
+						hash = ((hash << 5) + hash + key.charCodeAt(i)) | 0;
+					}
+					picked = candidates[Math.abs(hash) % candidates.length];
+				}
+				if (picked) photoOverlayImage.setAttribute("src", picked);
+			}
+		}
+	}
 
 	const tiles: TileState[] = Array.from(
 		layer.querySelectorAll<HTMLElement>("[data-mosaic-tile]"),
@@ -571,12 +621,27 @@ export function mountMingxinMosaic(root: HTMLElement): () => void {
 		const frameStyle = getComputedStyle(frame);
 		const bottomPx = Number.parseFloat(frameStyle.bottom) || 0;
 		const frameTop = stageHeight - bottomPx - frameH;
+		/* 叠图几何（原站 measureMosaic 同款）：整组按「主图 + 叠图伸出
+		   部分」的总高缩放，落位纵心按总高居中，两张图的倾角留白
+		   都必须留在画幅内；无叠图时 stackBottom 退回 frameH、与旧版等价 */
+		const overlayAspect =
+			photoOverlayImage && photoOverlayImage.naturalWidth > 0
+				? photoOverlayImage.naturalWidth / photoOverlayImage.naturalHeight
+				: 0;
+		const overlayW = photoOverlay ? frameW * PHOTO_OVERLAY_WIDTH : 0;
+		const overlayH =
+			photoOverlay && overlayAspect > 0 ? overlayW / overlayAspect : 0;
+		const stackBottom = Math.max(
+			frameH,
+			photoOverlay ? frameH * PHOTO_OVERLAY_TOP + overlayH : frameH,
+		);
 		const rotationPadding =
-			frameW * Math.abs(Math.sin((PHOTO_ROTATION * Math.PI) / 180));
+			frameW * Math.abs(Math.sin((PHOTO_ROTATION * Math.PI) / 180)) +
+			overlayW * Math.abs(Math.sin((PHOTO_OVERLAY_ROTATION * Math.PI) / 180));
 		const scale = Math.min(
 			1,
 			(guideW * PHOTO_WIDTH_RATIO) / frameW,
-			(bandH * PHOTO_HEIGHT_RATIO) / (frameH + rotationPadding),
+			(bandH * PHOTO_HEIGHT_RATIO) / (stackBottom + rotationPadding),
 		);
 		const photoW = frameW * scale;
 		Object.assign(geometry, {
@@ -587,7 +652,10 @@ export function mountMingxinMosaic(root: HTMLElement): () => void {
 			scale,
 			photoW,
 			settledX: (photoW - guideW) / 2,
-			settledY: stageHeight / 2 - (frameTop + frameH / 2),
+			settledY:
+				stageHeight / 2 -
+				(frameTop + frameH / 2) -
+				((stackBottom - frameH) * scale) / 2,
 			coverScale: Math.max(stageWidth / frameW, stageHeight / frameH),
 		});
 		layer.style.setProperty("--mx-photo-w", `${Math.round(photoW)}px`);
@@ -875,6 +943,20 @@ export function mountMingxinMosaic(root: HTMLElement): () => void {
 			card.style.transform = `translateY(${(-24 * (1 - introFade)).toFixed(1)}px) rotate(${(90 * (1 - e)).toFixed(2)}deg)`;
 		});
 
+		/* ---- 照片叠图：与票签同拍滑入（原站 INTRO_REVEAL_TIME 的 fromTo：
+		   自照片下缘外 55% 图高处升起、0 转正到 5°、power3.out）；
+		   它骑在照片上随框缩放与交接，不单独淡出，与整层一起退场 ---- */
+		if (photoOverlay) {
+			const e = EASE_QUART_OUT(seg(time, INTRO_REVEAL_TIME, INTRO_DURATION));
+			photoOverlay.style.opacity = String(e);
+			photoOverlay.style.visibility = e > 0 ? "visible" : "hidden";
+			photoOverlay.style.transform = `translateY(${(
+				geometry.frameH *
+				PHOTO_OVERLAY_SLIDE_IN *
+				(1 - e)
+			).toFixed(1)}px) rotate(${(PHOTO_OVERLAY_ROTATION * e).toFixed(2)}deg)`;
+		}
+
 		/* ---- 整层：交接后 30% 交叉淡出，揭示层接管 ---- */
 		layer.style.opacity = String(1 - clamp01((handoff - 0.7) / 0.3));
 	};
@@ -1041,6 +1123,19 @@ export function mountMingxinMosaic(root: HTMLElement): () => void {
 				measure();
 				render(value);
 				playTilesIntro();
+			},
+			{ once: true, signal },
+		);
+	}
+
+	/* 叠图慢加载：图到之前几何按无叠图算，到了重测一次（原站同款：
+	   给叠图 img 挂 load 后刷新几何） */
+	if (photoOverlayImage && !photoOverlayImage.complete) {
+		photoOverlayImage.addEventListener(
+			"load",
+			() => {
+				measure();
+				render(value);
 			},
 			{ once: true, signal },
 		);

@@ -253,6 +253,19 @@ html[data-site-mode="mingxin"] #navbar-wrapper.navbar-hidden {
 		background: transparent;
 		box-shadow: none;
 	}
+	/* 明信顶栏根节点 .mxnav 同为 #navbar 的直接子 div，被基座 navbar.css 的
+	   「#navbar > div = 导航栏表面」整套规则误伤：--card-bg 底色、壁纸半透
+	   !important 变体、下圆角、玻璃高光与 ::before 糊化层一起在三段胶囊
+	   后面垫出一条横贯全宽的白色长条。明信设计里没有这层底托（站长
+	   2026-11-02 定版去掉），中和掉，让胶囊自身的磨砂底直接落在背景上。 */
+	html[data-site-mode="mingxin"] #navbar > div.mxnav {
+		background: transparent !important;
+		box-shadow: none !important;
+		border-radius: 0 !important;
+	}
+	html[data-site-mode="mingxin"] #navbar > div.mxnav::before {
+		content: none !important;
+	}
 	html[data-site-mode="mingxin"] #navbar .navbar-bar {
 		display: none;
 	}
@@ -2180,6 +2193,12 @@ html[data-site-mode="mingxin"] #navbar-wrapper.navbar-hidden {
 	}
 	html[data-site-mode="mingxin"][data-texture-preset="none"]
 		#mingxin-texture-canvas {
+		display: none;
+	}
+	/* 首页关画布：马赛克前段（拼图缝 SVG）与百叶幕段（循环拼图层）各有
+	   自己的拼图纹理，全局画布同纹（默认 jigsaw）叠印出双线与缝隙
+	   （站长 2026-11-02 指出）；首页只留各段自己的纹理，内页不受影响。 */
+	html[data-site-mode="mingxin"]:has(.mingxin-home) #mingxin-texture-canvas {
 		display: none;
 	}
 	/* 网格 */

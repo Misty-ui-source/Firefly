@@ -30,7 +30,9 @@
  *   （mingxinConfig.introBio）、贰 = 站点数据、叁 = 联系散文
  *   （mingxinConfig.introContact，GitHub/邮箱/RSS 三处为真链接），
  *   由 MingxinHome 装配后经 intro prop 传入；
- * - 原站照片叠图（overlay 第二张照片）本站无对应素材，未渲染。
+ * - 照片叠图（原站 overlay 第二张照片）已补：配置 mosaicOverlayImage
+ *   （+ 池/模式，控制台「马赛克叠图」槽），全空不渲染；位置/尺寸/倾角/
+ *   滑入动效照原站，唯作者小标牌与主图口径一致、不加（原站两图都有）。
  */
 import { mingxinConfig, siteConfig } from "@/config";
 import {
@@ -51,6 +53,14 @@ interface Props {
 const { part, intro } = Astro.props;
 /* 轮换池：非 manual 时图不直出 src，挂 data-mx-pick 由 Layout 首帧脚本定图 */
 const mxMosaicPick = (mingxinConfig.mosaicMode ?? "manual") !== "manual";
+/* 叠图不走全站选图脚本：非 manual 时候选数据挂在叠图元素上，
+   由马赛克控制器挂载时按同口径选图后写 src（作用域只限明信） */
+const mxOverlayPick = (mingxinConfig.mosaicOverlayMode ?? "manual") !== "manual";
+/* 叠图候选（当前图 + 轮换池）：全空 = 整张叠图不渲染（原站 image 留空语义） */
+const mxOverlaySet = Boolean(
+	mingxinConfig.mosaicOverlayImage ||
+		(mingxinConfig.mosaicOverlayPool ?? []).length,
+);
 const mosaic = mingxinConfig.mosaic;
 const tiles = createMingxinTileLayout(mosaic);
 const puzzle = createMingxinPuzzleLayout();
@@ -170,6 +180,28 @@ const introCards = intro
 				<svg class="mingxin-mosaic__photo-frame" data-mosaic-photo-frame aria-hidden="true">
 					{Array.from({ length: 8 }, () => <path pathLength="1000" />)}
 				</svg>
+				{/* 照片叠图（原站 __photo-overlay）：照片落位后与介绍票签同拍，
+				    从照片下缘外滑入、带自身倾角叠在照片下半部；配置全空不渲染。
+				    作者小标牌原站有、本站主图未做，叠图同样不加（口径一致） */}
+				{mxOverlaySet && (
+					<div
+						class="mingxin-mosaic__photo-overlay"
+						data-mosaic-photo-overlay
+						data-overlay-mode={mxOverlayPick ? mingxinConfig.mosaicOverlayMode : undefined}
+						data-overlay-cur={mxOverlayPick ? mingxinConfig.mosaicOverlayImage : undefined}
+						data-overlay-pool={mxOverlayPick ? JSON.stringify(mingxinConfig.mosaicOverlayPool ?? []) : undefined}
+					>
+						<img
+							class="mingxin-mosaic__photo-overlay-img"
+							data-mosaic-photo-overlay-img
+							src={mxOverlayPick ? undefined : mingxinConfig.mosaicOverlayImage}
+							alt=""
+							loading="lazy"
+							decoding="async"
+							draggable="false"
+						/>
+					</div>
+				)}
 			</div>
 
 			<svg
@@ -446,6 +478,30 @@ const introCards = intro
 		stroke-width: 0.5rem;
 		stroke-dasharray: 1000;
 		stroke-dashoffset: 1000;
+	}
+	/* 照片叠图（原站 __photo-overlay）：位置/宽度/描边/圆角/阴影照原站，
+	   颜色复用照片描边的同名令牌；初始隐形，滑入由控制器逐帧写
+	   transform / opacity（原站 GSAP fromTo 的等价实现） */
+	.mingxin-mosaic__photo-overlay {
+		position: absolute;
+		top: 64%;
+		left: 12%;
+		z-index: 3;
+		width: 74%;
+		opacity: 0;
+		visibility: hidden;
+		pointer-events: none;
+		will-change: transform, opacity;
+	}
+	.mingxin-mosaic__photo-overlay-img {
+		display: block;
+		width: 100%;
+		height: auto;
+		border: 0.4rem solid var(--mx-photo-edge);
+		border-radius: 0.9rem;
+		box-shadow: 0 1.8rem 3.6rem -1.4rem var(--mx-photo-shadow);
+		user-select: none;
+		-webkit-user-drag: none;
 	}
 	/* 左上身份区（原站 __identity）：占上半屏高度、内容垂直居中 */
 	.mingxin-mosaic__identity {

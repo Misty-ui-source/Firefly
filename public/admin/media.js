@@ -2092,6 +2092,9 @@ function mxParse(text) {
     mosaicImage: mxGetStr(text, 'mosaicImage'),
     mosaicPool: mxGetPool(text, 'mosaicPool'),
     mosaicMode: mxModeOf(mxGetStr(text, 'mosaicMode', 'manual')),
+    mosaicOverlayImage: mxGetStr(text, 'mosaicOverlayImage'),
+    mosaicOverlayPool: mxGetPool(text, 'mosaicOverlayPool'),
+    mosaicOverlayMode: mxModeOf(mxGetStr(text, 'mosaicOverlayMode', 'manual')),
     dollImage: mxGetStr(text, 'dollImage'),
     dollPool: mxGetPool(text, 'dollPool'),
     dollMode: mxModeOf(mxGetStr(text, 'dollMode', 'manual')),
@@ -2123,6 +2126,7 @@ function mxBuild(text, d) {
     ...d,
     revealPool: mxCleanPool(d.revealPool),
     mosaicPool: mxCleanPool(d.mosaicPool),
+    mosaicOverlayPool: mxCleanPool(d.mosaicOverlayPool),
     profileBannerPool: mxCleanPool(d.profileBannerPool),
     dollPool: mxCleanPool(d.dollPool),
     scenes: d.scenes.map((s) => ({ ...s, pool: mxCleanPool(s.pool), mode: mxModeOf(s.mode) })),
@@ -2148,6 +2152,9 @@ function mxBuild(text, d) {
     () => mxSetStrOrInsert(out, 'mosaicImage', d.mosaicImage, 'mosaicHero'),
     () => mxSetPoolOrInsert(out, 'mosaicPool', d.mosaicPool, ['mosaicImage']),
     () => mxSetModeOrInsert(out, 'mosaicMode', d.mosaicMode, ['mosaicPool', 'mosaicImage']),
+    () => mxSetStrOrInsert(out, 'mosaicOverlayImage', d.mosaicOverlayImage, 'mosaicMode'),
+    () => mxSetPoolOrInsert(out, 'mosaicOverlayPool', d.mosaicOverlayPool, ['mosaicOverlayImage']),
+    () => mxSetModeOrInsert(out, 'mosaicOverlayMode', d.mosaicOverlayMode, ['mosaicOverlayPool', 'mosaicOverlayImage']),
     () => mxSetStr(out, 'dollImage', d.dollImage),
     () => mxSetPoolOrInsert(out, 'dollPool', d.dollPool, ['dollImage']),
     () => mxSetModeOrInsert(out, 'dollMode', d.dollMode, ['dollPool', 'dollImage']),
@@ -2553,6 +2560,7 @@ routes.mingxin = async () => {
       <h3 class="sub-h">🖼 素材槽位</h3>
       ${slotHtml('mx-reveal', '揭示图（首屏全屏图，首幕明信片与它合成）', mx.revealImage, 'image', true, true)}
       ${slotHtml('mx-mosaicimg', '马赛克图（马赛克 Hero 前段自有照片：碎片拼图与图框成图共用）', mx.mosaicImage, 'image', true, true)}
+      ${slotHtml('mx-mosaicov', '马赛克叠图（照片落位后从下缘滑入、叠压在照片下半部的第二张图；留空 = 整段不显示）', mx.mosaicOverlayImage, 'image', true, true)}
       ${slotHtml('mx-pbanner', '作者卡横幅（留空 = 用揭示图；统计卡底图共用此槽）', mx.profileBanner, 'image', true, true)}
       ${slotHtml('mx-doll', '黑猫本体（左下角对话角色）', mx.dollImage, 'image', false, true)}
       <div class="field"><label>巡航立绘（影像层底部，顺序即出场序）</label><div id="mx-stands"></div>
@@ -2596,6 +2604,7 @@ routes.mingxin = async () => {
     </div>`;
     wireSlot('mx-reveal', (v) => { mx.revealImage = v; }, 'image', slotAcc(() => mx.revealImage, 'reveal'));
     wireSlot('mx-mosaicimg', (v) => { mx.mosaicImage = v; }, 'image', slotAcc(() => mx.mosaicImage, 'mosaic'));
+    wireSlot('mx-mosaicov', (v) => { mx.mosaicOverlayImage = v; }, 'image', slotAcc(() => mx.mosaicOverlayImage, 'mosaicOverlay'));
     wireSlot('mx-pbanner', (v) => { mx.profileBanner = v; }, 'image', slotAcc(() => mx.profileBanner, 'profileBanner'));
     wireSlot('mx-doll', (v) => { mx.dollImage = v; }, 'image', slotAcc(() => mx.dollImage, 'doll'));
     wireSlot('mx-press', (v) => { mx.soundPress = v; }, 'audio');

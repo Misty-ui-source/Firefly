@@ -1422,11 +1422,13 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 		--mingxin-blind-edge: 2px;
 		--mingxin-blind-pad: clamp(1rem, 1.9vw, 1.6rem);
 		--mingxin-blind-band-height: clamp(2.9rem, 5vh, 3.6rem);
+		/* 照片尺寸随视口自适应（站长 2026-11-02 要求全屏观感）：此前 56rem 写死
+		   上限 + 64vh 高度份额，大屏上卡片冻结在小尺寸、四周留白；改走视口
+		   份额（60vw 与 80vh 折算取小），多大屏幕占多大比例，不再封顶。 */
 		--mingxin-blind-photo-width: min(
-			48vw,
-			56rem,
+			60vw,
 			calc(
-				(64vh - var(--mingxin-blind-pad) * 2 - var(--mingxin-blind-band-height)) * 4 / 3
+				(80vh - var(--mingxin-blind-pad) * 2 - var(--mingxin-blind-band-height)) * 4 / 3
 			)
 		);
 		--mingxin-blind-photo-height: calc(var(--mingxin-blind-photo-width) * 3 / 4);
