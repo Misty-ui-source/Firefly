@@ -186,8 +186,10 @@ const smartLink = config.linkRouting === "smart" && isLineLink;
     smartLink && (
       <script>
         // 线路智能分流（跳转方式=智能选路线时）：公告的线路入口被点击时，
-        // 先看访客在哪儿——名单内的亚太地区送国内备用线路（香港前置），
-        // 其余送海外加速线路（CF 直达）；跳转保留当前页路径，读到哪篇、
+        // 先用访客浏览器的实测结果选线（页面空闲时已测好两条线的往返
+        // 耗时，赢家优先）；没有实测才看访客在哪儿——名单内的亚太地区
+        // 送国内备用线路（香港前置），其余送海外加速线路（CF 直达）。
+        // 跳转保留当前页路径，读到哪篇、
         // 过去还是哪篇。选出的线路就是当前所在线路时不跳，改为弹提示栏。
         // 地区请求与检测版公告共用同一个 Promise；超时或失败就按配置链接的域名走（同样保留路径）。
         const LINE_DOMESTIC = "hk.lanerc.me";
@@ -202,6 +204,77 @@ const smartLink = config.linkRouting === "smart" && isLineLink;
           "SG", "MY", "ID", "VN", "TH", "PH", "KH", "MM", "BN",
           "IN", "LK", "PK", "KZ",
         ];
+        // 实测选线（2026-11-03 加，站长定「实测优先、名单兜底」）：页面空闲时
+        // 让访客浏览器分别请求两条线的 /api/ping（各 3 次取最快），赢家存
+        // sessionStorage，本会话内有效；点击时有新鲜实测就用实测，没有
+        // （还没跑完 / 全失败）才回落到上面的国家名单。测速全挂 = 回到
+        // 名单逻辑，最差不差于没有实测时。脚本可能有两份实例，靠
+        // window.__lineProbeP 去重，只测一次。
+        const PROBE_KEY = "lineProbe";
+        const readProbe = () => {
+          try {
+            const j = JSON.parse(sessionStorage.getItem(PROBE_KEY) || "null");
+            if (
+              j &&
+              (j.winner === LINE_DOMESTIC || j.winner === LINE_OVERSEAS) &&
+              Date.now() - j.ts < 30 * 60 * 1000
+            )
+              return j.winner;
+          } catch {}
+          return null;
+        };
+        const pingOnce = async (host) => {
+          const ctl = new AbortController();
+          const timer = setTimeout(() => ctl.abort(), 4000);
+          const t0 = performance.now();
+          try {
+            const r = await fetch("https://" + host + "/api/ping", {
+              cache: "no-store",
+              signal: ctl.signal,
+            });
+            await r.text();
+            return performance.now() - t0;
+          } catch {
+            return Infinity;
+          } finally {
+            clearTimeout(timer);
+          }
+        };
+        const runProbe = async () => {
+          const times = { [LINE_DOMESTIC]: [], [LINE_OVERSEAS]: [] };
+          for (let i = 0; i < 3; i++) {
+            const pair = await Promise.all([
+              pingOnce(LINE_DOMESTIC),
+              pingOnce(LINE_OVERSEAS),
+            ]);
+            times[LINE_DOMESTIC].push(pair[0]);
+            times[LINE_OVERSEAS].push(pair[1]);
+          }
+          const hk = Math.min(...times[LINE_DOMESTIC]);
+          const ov = Math.min(...times[LINE_OVERSEAS]);
+          if (!isFinite(hk) && !isFinite(ov)) return null;
+          const winner = hk <= ov ? LINE_DOMESTIC : LINE_OVERSEAS;
+          try {
+            sessionStorage.setItem(
+              PROBE_KEY,
+              JSON.stringify({
+                winner,
+                hk: Math.round(hk),
+                origin: Math.round(ov),
+                ts: Date.now(),
+              }),
+            );
+          } catch {}
+          return winner;
+        };
+        if (!readProbe() && !window.__lineProbeP) {
+          const startProbe = () => {
+            window.__lineProbeP = runProbe().catch(() => null);
+          };
+          if ("requestIdleCallback" in window)
+            requestIdleCallback(startProbe, { timeout: 3000 });
+          else setTimeout(startProbe, 1800);
+        }
         // 已在最优线路时的小提示栏（全站共用一个元素，重复点击只重置计时）
         const showLineToast = (msg) => {
           let t = document.getElementById("ann-line-toast");
@@ -239,8 +312,10 @@ const smartLink = config.linkRouting === "smart" && isLineLink;
             fallbackHost = new URL(a.getAttribute("href") || "").hostname;
           } catch {}
           const decide = (v) => {
-            let host = fallbackHost;
-            if (v && v.country) {
+            // 优先级：实测赢家 > 国家名单 > 配置链接的域名
+            const probed = readProbe();
+            let host = probed || fallbackHost;
+            if (!probed && v && v.country) {
               host = HK_LINE_CC.includes(v.country) ? LINE_DOMESTIC : LINE_OVERSEAS;
             }
             if (!host) return;
@@ -261,10 +336,16 @@ const smartLink = config.linkRouting === "smart" && isLineLink;
             (window.__annVisitorP = fetch("/api/visitor")
               .then((r) => r.json())
               .catch(() => null));
+          // 测速还在跑且尚无结果时，给它一个短窗口一起等（上限 1.6s）；
+          // 其余情况维持原来的 0.9s 口径，超时立刻按已有信息决策。
+          const probePending = !readProbe() && window.__lineProbeP;
+          const waits = probePending ? [p, window.__lineProbeP] : [p];
           Promise.race([
-            p,
-            new Promise((res) => setTimeout(() => res(null), 900)),
-          ]).then(decide);
+            Promise.all(waits),
+            new Promise((res) =>
+              setTimeout(() => res(null), probePending ? 1600 : 900),
+            ),
+          ]).then((arr) => decide(arr ? arr[0] : null));
         }, true);
       </script>
     )
