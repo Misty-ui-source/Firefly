@@ -10,6 +10,16 @@ export const thoughtsConfig: ThoughtsConfig = {
 	title: "碎碎念",
 	items: [
 		{
+			title: '突然发现做PPT好难',
+			content: '好久没做PPT了，第一版ai跑的，确实有点屎山了',
+			createdAt: '2026-11-03T16:38:23.903Z'
+		},
+		{
+			title: '车啊我对不起你＞人＜，我不知道这个点下大暴雨了qwq',
+			content: '那我先睡为敬',
+			createdAt: '2026-11-03T16:37:14.198Z'
+		},
+		{
 			title: '突然想早点睡，但是每天都熬到这么晚',
 			content: '哈哈哈哈哈哈哈，每天晚上都忙一晚上哈哈哈哈哈哈，总是要做到最好哈哈哈哈哈哈',
 			createdAt: '2026-11-02T16:53:00.930Z'
