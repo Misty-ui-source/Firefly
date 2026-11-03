@@ -3,7 +3,9 @@
  * 或用 refresh_token 静默续期（grant_type=refresh_token）。
  * client_secret 只在服务端出现，绝不暴露给浏览器
  * 环境变量：GITHUB_CLIENT_ID_PAGES, GITHUB_CLIENT_SECRET_PAGES,
- *           GITHUB_CLIENT_ID_LANERC, GITHUB_CLIENT_SECRET_LANERC
+ *           GITHUB_CLIENT_ID_LANERC, GITHUB_CLIENT_SECRET_LANERC,
+ *           GITHUB_CLIENT_ID_HK, GITHUB_CLIENT_SECRET_HK,
+ *           GITHUB_CLIENT_ID_ORIGIN, GITHUB_CLIENT_SECRET_ORIGIN
  */
 export async function onRequestPost({ request, env }) {
   try {
@@ -16,6 +18,8 @@ export async function onRequestPost({ request, env }) {
     const secretMap = {
       [env.GITHUB_CLIENT_ID_PAGES]: env.GITHUB_CLIENT_SECRET_PAGES,
       [env.GITHUB_CLIENT_ID_LANERC]: env.GITHUB_CLIENT_SECRET_LANERC,
+      [env.GITHUB_CLIENT_ID_HK]: env.GITHUB_CLIENT_SECRET_HK,
+      [env.GITHUB_CLIENT_ID_ORIGIN]: env.GITHUB_CLIENT_SECRET_ORIGIN,
     };
     const client_secret = secretMap[client_id];
     if (!client_secret) {

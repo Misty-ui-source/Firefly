@@ -6,12 +6,14 @@ window.ADMIN_CONFIG = {
   branch: 'main',
 
   // GitHub OAuth App 的 Client ID（按域名自动切换）
-  // firefly-6sp.pages.dev 用旧 App，lanerc.me 用新 App
+  // 每个域名用各自的 App（pages.dev / lanerc.me / hk / origin 四套）
   // 回调地址填：https://你的域名/admin/
   githubClientId: (() => {
     const ids = {
       'firefly-6sp.pages.dev': 'Ov23lizGLBB3dIulw6ss',
-      'lanerc.me': 'Ov23liLl7QdL6nfcgOLR'
+      'lanerc.me': 'Ov23liLl7QdL6nfcgOLR',
+      'hk.lanerc.me': 'Ov23liiRyNo94HxHZipe',
+      'origin.lanerc.me': 'Ov23liYVP2sJg75AWX2c'
     };
     return ids[location.hostname] || ids['lanerc.me'];
   })(),

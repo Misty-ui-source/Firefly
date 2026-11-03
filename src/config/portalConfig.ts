@@ -50,5 +50,15 @@ export const portalConfig: PortalConfig = {
 			note: "当前线路",
 			current: true,
 		},
+		{
+			name: "国内备用线路",
+			url: "https://hk.lanerc.me",
+			note: "香港前置",
+		},
+		{
+			name: "海外加速线路",
+			url: "https://origin.lanerc.me",
+			note: "CF 直达",
+		},
 	],
 };
