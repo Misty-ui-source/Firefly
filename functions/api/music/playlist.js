@@ -96,6 +96,12 @@ async function playlistKugou(id) {
 	};
 }
 
+// 上游给的封面常是 http 明文地址（如网易云 p1.music.126.net），页面是
+// https 时浏览器会因混合内容把整页标成「不完全安全」；这些图床都支持
+// https，出接口前统一升级。
+const httpsPic = (u) =>
+	typeof u === "string" ? u.replace(/^http:\/\//i, "https://") : u;
+
 function json(data, status = 200, extraHeaders = {}) {
 	return new Response(JSON.stringify(data), {
 		status,
@@ -118,6 +124,7 @@ export async function onRequestGet(context) {
 	if (hit) return hit;
 	try {
 		const data = await handlers[platform](id);
+		data.tracks = data.tracks.map((t) => ({ ...t, pic: httpsPic(t.pic) }));
 		const res = json(
 			{ platform, ...data },
 			200,

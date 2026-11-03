@@ -730,8 +730,18 @@ export async function onRequestGet(context) {
 	const songInfo = { id, songmid: id, hash: id, name, singer };
 	try {
 		const got = await getUrlWithSwap(platform, songInfo, quality);
+		// 部分源给的网易云 CDN 直链是 http 明文，https 页面下音频会触发
+		// 混合内容「不完全安全」标记；该 CDN 同路径支持 https，仅对它升级。
+		let finalUrl = got.url;
+		try {
+			const pu = new URL(finalUrl);
+			if (pu.protocol === "http:" && pu.hostname.endsWith("music.126.net")) {
+				pu.protocol = "https:";
+				finalUrl = pu.toString();
+			}
+		} catch {}
 		const res = json(
-			{ url: got.url, platform, servedPlatform: got.servedPlatform, swapped: got.swapped, quality },
+			{ url: finalUrl, platform, servedPlatform: got.servedPlatform, swapped: got.swapped, quality },
 			200,
 			{ "Cache-Control": "public, max-age=1200" },
 		);
