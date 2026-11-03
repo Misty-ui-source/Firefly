@@ -8,6 +8,13 @@ import { portalConfig } from "@/config";
 const links = (portalConfig.links ?? []).filter((e) => e.enable !== false);
 const lines = (portalConfig.lines ?? []).filter((e) => e.enable !== false);
 const isExternal = (url: string) => /^https?:\/\//.test(url);
+const lineHost = (url: string) => {
+	try {
+		return new URL(url).hostname;
+	} catch {
+		return "";
+	}
+};
 ---
 
 {
@@ -43,13 +50,13 @@ const isExternal = (url: string) => /^https?:\/\//.test(url);
 							<li>
 								<a
 									href={e.url}
-									class:list={[{ "is-current": !!e.current }]}
-									{...(isExternal(e.url) && !e.current
+									data-line-host={lineHost(e.url)}
+									{...(isExternal(e.url)
 										? { target: "_blank", rel: "noopener" }
 										: {})}
 								>
 									<span class="paper-portal-name">
-										{e.current && <span class="paper-portal-dot" />}
+										<span class="paper-portal-dot" />
 										{e.name}
 									</span>
 									{e.note && (
@@ -118,4 +125,24 @@ const isExternal = (url: string) => /^https?:\/\//.test(url);
 		if (e.key === "Escape") portalSetOpen(false);
 	});
 	portalMq.addEventListener?.("change", () => portalSetOpen(false));
+</script>
+
+<script>
+	// 线路绿点：按访客当前域名点亮对应线路行（pages.dev 视作主线路）；
+	// 当前线路在本页打开（去掉新标签），其余线路保持新标签。
+	function markPaperCurrentLine() {
+		const host = location.hostname;
+		const mainHosts = ["lanerc.me", "firefly-6sp.pages.dev"];
+		document
+			.querySelectorAll("#paper-portal-panel [data-line-host]")
+			.forEach((el) => {
+				const h = el.getAttribute("data-line-host") || "";
+				const on =
+					h === host || (h === "lanerc.me" && mainHosts.includes(host));
+				el.classList.toggle("is-current-line", on);
+				if (on) el.removeAttribute("target");
+			});
+	}
+	markPaperCurrentLine();
+	document.addEventListener("swup:page:view", markPaperCurrentLine);
 </script>

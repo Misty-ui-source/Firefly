@@ -988,24 +988,34 @@ html[data-site-mode="paper"][data-paper-theme="ink"] .paper-portal-lines {
 	margin-top: 0.6rem;
 	padding-top: 0.6rem;
 }
-html[data-site-mode="paper"][data-paper-theme="ink"] .paper-portal-list a.is-current {
+html[data-site-mode="paper"][data-paper-theme="ink"] .paper-portal-list a.is-current,
+html[data-site-mode="paper"][data-paper-theme="ink"] .paper-portal-list a.is-current-line {
 	background: var(--pz-accent-soft);
 }
-html[data-site-mode="paper"][data-paper-theme="ink"] .paper-portal-list a.is-current:hover {
+html[data-site-mode="paper"][data-paper-theme="ink"] .paper-portal-list a.is-current:hover,
+html[data-site-mode="paper"][data-paper-theme="ink"] .paper-portal-list a.is-current-line:hover {
 	background: var(--pz-accent-soft);
 	color: var(--pz-fg);
 }
-html[data-site-mode="paper"][data-paper-theme="ink"] .paper-portal-list a.is-current .paper-portal-note {
+html[data-site-mode="paper"][data-paper-theme="ink"] .paper-portal-list a.is-current .paper-portal-note,
+html[data-site-mode="paper"][data-paper-theme="ink"] .paper-portal-list a.is-current-line .paper-portal-note {
 	color: var(--pz-accent);
 	font-weight: 600;
 }
+/* 线路绿点：每行都渲染、默认藏起，访客当前域名对上才点亮（脚本加 .is-current-line） */
 html[data-site-mode="paper"][data-paper-theme="ink"] .paper-portal-dot {
 	display: inline-block;
 	width: 0.42rem;
 	height: 0.42rem;
 	border-radius: 999px;
-	background: var(--pz-accent);
+	background: #22c55e;
+	box-shadow: 0 0 0 3px rgb(34 197 94 / 0.2);
 	margin-right: 0.45rem;
+	visibility: hidden;
+}
+html[data-site-mode="paper"][data-paper-theme="ink"] .paper-portal-list a.is-current .paper-portal-dot,
+html[data-site-mode="paper"][data-paper-theme="ink"] .paper-portal-list a.is-current-line .paper-portal-dot {
+	visibility: visible;
 }
 
 /* ================================================================

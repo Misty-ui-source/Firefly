@@ -1475,9 +1475,26 @@ function initProfilePanel(
 
 /* ================= 挂载 / 销毁 / 入口（生命周期照本站既有纪律） ================= */
 
+/* 线路绿点：按访客当前域名点亮「其他站点」里对应的线路行（pages.dev 视作主线路） */
+function markCurrentLineRow(): void {
+	const host = location.hostname;
+	const mainHosts = ["lanerc.me", "firefly-6sp.pages.dev"];
+	document
+		.querySelectorAll<HTMLElement>(
+			".mxprofile-card__sites-list [data-line-host]",
+		)
+		.forEach((el) => {
+			const h = el.getAttribute("data-line-host") ?? "";
+			const on =
+				h === host || (h === "lanerc.me" && mainHosts.includes(host));
+			el.classList.toggle("is-current-line", on);
+		});
+}
+
 function init(): void {
 	const root = document.querySelector<HTMLElement>("[data-mxnav]");
 	if (!root) return;
+	markCurrentLineRow();
 	const ac = new AbortController();
 	const { signal } = ac;
 	const reparents: ReparentRecord[] = [];

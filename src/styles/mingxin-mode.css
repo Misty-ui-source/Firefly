@@ -1527,6 +1527,18 @@ html[data-site-mode="mingxin"] #navbar-wrapper.navbar-hidden {
 		font-size: 0.7rem;
 		opacity: 0.6;
 	}
+	/* 线路绿点：默认只占位不亮，访客当前域名对上这条线路才点亮（脚本加 .is-current-line） */
+	.mxprofile-card__line-dot {
+		flex: none;
+		width: 0.45rem;
+		height: 0.45rem;
+		border-radius: 999px;
+		background: transparent;
+	}
+	.mxprofile-card__site-row.is-current-line .mxprofile-card__line-dot {
+		background: #22c55e;
+		box-shadow: 0 0 0 3px rgb(34 197 94 / 0.22);
+	}
 	/* 桌面端：导航左段下方的单列卡片（.is-open 与锚点由控制器驱动） */
 	@media (min-width: 1024px) {
 		html[data-site-mode="mingxin"] .mxnav-profile-dropdown {
