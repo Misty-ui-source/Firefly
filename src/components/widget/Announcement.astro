@@ -186,13 +186,22 @@ const smartLink = config.linkRouting === "smart" && isLineLink;
     smartLink && (
       <script>
         // 线路智能分流（跳转方式=智能选路线时）：公告的线路入口被点击时，
-        // 先看访客在哪儿——国内（含港澳台）送国内备用线路（香港前置），
-        // 海外送海外加速线路（CF 直达）；跳转保留当前页路径，读到哪篇、
+        // 先看访客在哪儿——名单内的亚太地区送国内备用线路（香港前置），
+        // 其余送海外加速线路（CF 直达）；跳转保留当前页路径，读到哪篇、
         // 过去还是哪篇。选出的线路就是当前所在线路时不跳，改为弹提示栏。
         // 地区请求与检测版公告共用同一个 Promise；超时或失败就按配置链接的域名走（同样保留路径）。
         const LINE_DOMESTIC = "hk.lanerc.me";
         const LINE_OVERSEAS = "origin.lanerc.me";
-        const DOMESTIC_CC = ["CN", "HK", "MO", "TW"];
+        // 走香港线的国家/地区名单（2026-11-03 扩围）：原只有 CN/HK/MO/TW；
+        // 按 Globalping 全球探针两轮实测，香港线在东亚/东南亚/南亚稳定
+        // 快于 CF 直达（CF 侧 Pages 回源时延在这些地区是抽奖），故扩入
+        // 日韩蒙、东南亚与南亚三国、中亚哈萨克斯坦；欧美非/中东/俄/澳新
+        // 实测 origin 稳赢，留海外线。泰国两轮打架、取香港线的稳定值。
+        const HK_LINE_CC = [
+          "CN", "HK", "MO", "TW", "JP", "KR", "MN",
+          "SG", "MY", "ID", "VN", "TH", "PH", "KH", "MM", "BN",
+          "IN", "LK", "PK", "KZ",
+        ];
         // 已在最优线路时的小提示栏（全站共用一个元素，重复点击只重置计时）
         const showLineToast = (msg) => {
           let t = document.getElementById("ann-line-toast");
@@ -232,7 +241,7 @@ const smartLink = config.linkRouting === "smart" && isLineLink;
           const decide = (v) => {
             let host = fallbackHost;
             if (v && v.country) {
-              host = DOMESTIC_CC.includes(v.country) ? LINE_DOMESTIC : LINE_OVERSEAS;
+              host = HK_LINE_CC.includes(v.country) ? LINE_DOMESTIC : LINE_OVERSEAS;
             }
             if (!host) return;
             if (host === window.location.hostname) {
