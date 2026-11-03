@@ -46,6 +46,21 @@ html.is-animating .transition-main {
     transform: translateY(2rem);
 }
 
+/* 白屏保险（2026-11-03 性能批一）：is-animating 本应由 swup 在约 120ms
+   后摘除；弱机/旧内核上 JS 卡死或报错时类摘不掉，内容会永久停在
+   opacity:0（整页白屏）。给隐藏态挂一个延迟强制显形：正常流程里类
+   早被摘走、轮不到它；真卡死时 1.2s 后自动恢复可见，不用手动刷新。 */
+html.is-animating .transition-main,
+html.is-animating .transition-swup-fade {
+    animation: swup-failsafe-show 0s linear 1.2s forwards;
+}
+@keyframes swup-failsafe-show {
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
 /* State: Leaving */
 html.is-animating.is-leaving .transition-leaving {
     transform: translateY(-2rem);
@@ -83,7 +98,7 @@ html.is-animating .transition-swup-fade {
 
 .onload-animation {
     opacity: 0;
-    animation: fade-in-up 120ms ease-out forwards;
+    animation: fade-in-up 120ms ease-out forwards, swup-failsafe-show 0s linear 1s forwards;
 }
 
 /* 渐进式动画延迟 */
