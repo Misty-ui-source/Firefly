@@ -183,7 +183,7 @@ for (const post of allPosts) {
 	if (!text || bubbleSeen.has(text)) continue;
 	bubbleSeen.add(text);
 	bubbleMessages.push(text);
-	if (bubbleMessages.length >= 16) break;
+	if (bubbleMessages.length >= 5) break;
 }
 for (const fallback of mingxinConfig.bubbleFallbacks) {
 	if (bubbleMessages.length >= 12) break;

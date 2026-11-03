@@ -784,7 +784,7 @@ export function mountMingxinBlinds(
 		try {
 			const server = (commentConfig.waline?.serverURL || "").replace(/\/$/, "");
 			if (!server) return;
-			const res = await fetch(`${server}/api/comment?type=recent&count=10`, {
+			const res = await fetch(`${server}/api/comment?type=recent&count=20`, {
 				signal,
 			});
 			const json: unknown = await res.json();
