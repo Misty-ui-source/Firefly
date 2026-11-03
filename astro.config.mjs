@@ -135,7 +135,7 @@ export default defineConfig({
 			cache: true,
 			preload: {
 				hover: true,
-				visible: true,
+				visible: false,
 			},
 			accessibility: true,
 			updateHead: true,
