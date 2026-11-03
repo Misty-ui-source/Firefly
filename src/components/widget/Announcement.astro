@@ -206,12 +206,12 @@ const smartLink = config.linkRouting === "smart" && isLineLink;
         ];
         // 实测选线（2026-11-03 加，站长定「实测优先、名单兜底」）：页面空闲时
         // 让访客浏览器分别请求两条线的 /api/ping（各 3 次取最快），赢家存
-        // sessionStorage，本会话内有效；点击时有新鲜实测就用实测，没有
-        // （还没跑完 / 全失败）才回落到上面的国家名单。测速全挂 = 回到
-        // 名单逻辑，最差不差于没有实测时。脚本可能有两份实例，靠
-        // window.__lineProbeP 去重，只测一次。
+        // sessionStorage，本会话内有效；点击决策时实测要推翻国家名单须过
+        // 门槛（明显更快才算数，见 decide），没测速 / 全失败就按名单走。
+        // 测速全挂 = 回到名单逻辑，最差不差于没有实测时。脚本可能有两份
+        // 实例，靠 window.__lineProbeP 去重，只测一次。
         const PROBE_KEY = "lineProbe";
-        const readProbe = () => {
+        const readProbeData = () => {
           try {
             const j = JSON.parse(sessionStorage.getItem(PROBE_KEY) || "null");
             if (
@@ -219,9 +219,13 @@ const smartLink = config.linkRouting === "smart" && isLineLink;
               (j.winner === LINE_DOMESTIC || j.winner === LINE_OVERSEAS) &&
               Date.now() - j.ts < 30 * 60 * 1000
             )
-              return j.winner;
+              return j;
           } catch {}
           return null;
+        };
+        const readProbe = () => {
+          const j = readProbeData();
+          return j ? j.winner : null;
         };
         const pingOnce = async (host) => {
           const ctl = new AbortController();
@@ -312,11 +316,26 @@ const smartLink = config.linkRouting === "smart" && isLineLink;
             fallbackHost = new URL(a.getAttribute("href") || "").hostname;
           } catch {}
           const decide = (v) => {
-            // 优先级：实测赢家 > 国家名单 > 配置链接的域名
-            const probed = readProbe();
-            let host = probed || fallbackHost;
-            if (!probed && v && v.country) {
+            // 先验：国家名单（查不到地区时用配置链接的域名）
+            let host = fallbackHost;
+            if (v && v.country) {
               host = HK_LINE_CC.includes(v.country) ? LINE_DOMESTIC : LINE_OVERSEAS;
+            }
+            // 实测推翻先验要过门槛（2026-11-03 站长定）：两线接近时样本
+            // 噪声就能翻盘（香港访客实测险被带去海外线），所以赢家必须
+            // 明显更快——快出至少三成、且至少 50ms——才推翻名单；
+            // 先验那条线整个测不通（耗时无穷大）时不讲门槛，直接生效。
+            const p = readProbeData();
+            if (p && p.winner !== host) {
+              const norm = (x) =>
+                typeof x === "number" && x >= 0 ? x : Infinity;
+              const winMs = norm(p.winner === LINE_DOMESTIC ? p.hk : p.origin);
+              const loseMs = norm(p.winner === LINE_DOMESTIC ? p.origin : p.hk);
+              if (
+                isFinite(winMs) &&
+                (!isFinite(loseMs) || (winMs + 50 <= loseMs && winMs * 1.3 <= loseMs))
+              )
+                host = p.winner;
             }
             if (!host) return;
             if (host === window.location.hostname) {
