@@ -3493,7 +3493,7 @@ function parseAnnPlaces(src) {
   while ((m = re.exec(block))) out.push({ label: un(m[1]), city: un(m[2]), lat: parseFloat(m[3]), lon: parseFloat(m[4]) });
   return out;
 }
-function buildAnnouncementTs({ content, closable, linkEnable, linkText, linkUrl, external, mode, geoTemplate, ownerCity, ownerLat, ownerLon, ownerPlaces, geoLinkEnable, geoLinkText, geoLinkUrl, geoExternal, history }) {
+function buildAnnouncementTs({ content, closable, linkEnable, linkText, linkUrl, external, mode, linkRouting, geoTemplate, ownerCity, ownerLat, ownerLon, ownerPlaces, geoLinkEnable, geoLinkText, geoLinkUrl, geoExternal, history }) {
   const histLines = (history || []).map((h) => `\t\t{ date: "${tsEsc(h.date)}", content: "${tsEsc(h.content)}" },`).join('\n');
   const placeLines = (ownerPlaces || []).map((pl) => `\t\t{ label: "${tsEsc(pl.label)}", city: "${tsEsc(pl.city)}", lat: ${Number.isFinite(pl.lat) ? pl.lat : 0}, lon: ${Number.isFinite(pl.lon) ? pl.lon : 0} },`).join('\n');
   return `import type { AnnouncementConfig } from "../types/announcementConfig";
@@ -3507,6 +3507,9 @@ export const announcementConfig: AnnouncementConfig = {
 
 \t// 显示模式：static=静态公告 / geo=访客检测公告（控制台公告页可切换）
 \tmode: "${mode === 'geo' ? 'geo' : 'static'}",
+
+\t// 链接跳转方式：smart=智能选路线 / original=原链接（控制台公告页可切换）
+\tlinkRouting: "${linkRouting === 'original' ? 'original' : 'smart'}",
 
 \t// 检测版文案模板，占位符：{country} {region} {city} {distance} {greeting}
 \tgeoTemplate: "${tsEsc(geoTemplate)}",
@@ -3551,7 +3554,7 @@ routes.announce = async () => {
   view.innerHTML = '<div class="card"><h2>加载中…</h2></div>';
   let sha = null, external = false, geoExternal = false;
   let content = '', closable = true, linkEnable = true, linkText = '', linkUrl = '';
-  let mode = 'static', geoTemplate = '', ownerCity = '南京', ownerLat = 32.0603, ownerLon = 118.7969;
+  let mode = 'static', linkRouting = 'smart', geoTemplate = '', ownerCity = '南京', ownerLat = 32.0603, ownerLon = 118.7969;
   let geoLinkEnable = true, geoLinkText = '', geoLinkUrl = '';
   let annHistory = [];
   let annPlaces = [], loadedPlaces = [];
@@ -3567,6 +3570,7 @@ routes.announce = async () => {
     linkUrl = tsGetStr(linkBlock, 'url');
     external = tsGetBool(linkBlock, 'external', false);
     mode = tsGetStr(src, 'mode') === 'geo' ? 'geo' : 'static';
+    linkRouting = tsGetStr(src, 'linkRouting') === 'original' ? 'original' : 'smart';
     geoTemplate = tsGetStr(src, 'geoTemplate');
     ownerCity = tsGetStr(src, 'ownerCity') || '南京';
     ownerLat = tsGetNum(src, 'ownerLat', 32.0603);
@@ -3597,6 +3601,11 @@ routes.announce = async () => {
       <label class="pill${mode === 'geo' ? ' on' : ''}"><input type="checkbox" id="ann-mode-geo"${mode === 'geo' ? ' checked' : ''}>📍 访客检测公告</label>
       <label class="pill${closable ? ' on' : ''}"><input type="checkbox" id="ann-closable"${closable ? ' checked' : ''}>❌ 允许用户关闭</label>
     </div></div>
+    <div class="field"><label>链接跳转方式（静态 / 检测版两套链接都适用）</label><div class="pills">
+      <label class="pill${linkRouting === 'smart' ? ' on' : ''}"><input type="checkbox" id="ann-routing-smart"${linkRouting === 'smart' ? ' checked' : ''}>🧭 智能选路线</label>
+      <label class="pill${linkRouting === 'original' ? ' on' : ''}"><input type="checkbox" id="ann-routing-original"${linkRouting === 'original' ? ' checked' : ''}>🔗 原链接</label>
+    </div>
+    <p class="hint">智能选路线：公告链接指向博客线路（hk / origin）时，按访客地区自动选线（国内走 hk、海外走 origin），选中的就是访客当前所在线路时不跳；链接不是线路地址时照常跳。原链接：照链接 URL 直接跳。</p></div>
     <div id="ann-static-zone" class="${mode === 'static' ? '' : 'hidden'}">
       <div class="field"><label>公告内容</label>
         <input type="text" id="ann-content" class="big" value="${esc(content)}" placeholder="一句话公告"></div>
@@ -3657,6 +3666,15 @@ routes.announce = async () => {
   const annMs = $('#ann-mode-static'), annMg = $('#ann-mode-geo');
   if (annMs) annMs.onchange = () => annSetMode('static');
   if (annMg) annMg.onchange = () => annSetMode('geo');
+  /* 跳转方式二选一（当单选钮用） */
+  const annSetRouting = (r) => {
+    const s = $('#ann-routing-smart'), o = $('#ann-routing-original');
+    if (s) { s.checked = r === 'smart'; s.closest('.pill').classList.toggle('on', r === 'smart'); }
+    if (o) { o.checked = r === 'original'; o.closest('.pill').classList.toggle('on', r === 'original'); }
+  };
+  const annRs = $('#ann-routing-smart'), annRo = $('#ann-routing-original');
+  if (annRs) annRs.onchange = () => annSetRouting('smart');
+  if (annRo) annRo.onchange = () => annSetRouting('original');
   /* 本地草稿（自动保存）：与正文编辑器同款机制，改到一半退出也不丢；保存成功即清 */
   const annDraftKey = 'admin-edit-draft:announce';
   const annCollect = () => {
@@ -3666,6 +3684,7 @@ routes.announce = async () => {
       linkEnable: $('#ann-link-enable').checked,
       linkText: $('#ann-link-text').value, linkUrl: $('#ann-link-url').value,
       mode: ($('#ann-mode-geo') && $('#ann-mode-geo').checked) ? 'geo' : 'static',
+      linkRouting: ($('#ann-routing-original') && $('#ann-routing-original').checked) ? 'original' : 'smart',
       geoTemplate: $('#ann-geo-template') ? $('#ann-geo-template').value : '',
       ownerCity: $('#ann-owner-city') ? $('#ann-owner-city').value : '',
       ownerLat: Number.isFinite(coords[0]) ? coords[0] : 0,
@@ -3680,13 +3699,13 @@ routes.announce = async () => {
   const buildAnnText = (vals, hist) => buildAnnouncementTs({
     content: vals.content.trim(), closable: vals.closable,
     linkEnable: vals.linkEnable, linkText: vals.linkText.trim(), linkUrl: vals.linkUrl.trim(), external,
-    mode: vals.mode, geoTemplate: vals.geoTemplate.trim(), ownerCity: vals.ownerCity.trim() || '南京',
+    mode: vals.mode, linkRouting: vals.linkRouting, geoTemplate: vals.geoTemplate.trim(), ownerCity: vals.ownerCity.trim() || '南京',
     ownerLat: vals.ownerLat, ownerLon: vals.ownerLon, ownerPlaces: vals.places || [],
     geoLinkEnable: vals.geoLinkEnable, geoLinkText: vals.geoLinkText.trim(), geoLinkUrl: vals.geoLinkUrl.trim(), geoExternal,
     history: hist,
   });
   /* 文件里已保存的值（删历史存档时用它生成文本，不带上表单里没保存的改动） */
-  const loadedVals = () => ({ content, closable, linkEnable, linkText, linkUrl, mode, geoTemplate, ownerCity, ownerLat, ownerLon, places: loadedPlaces, geoLinkEnable, geoLinkText, geoLinkUrl });
+  const loadedVals = () => ({ content, closable, linkEnable, linkText, linkUrl, mode, linkRouting, geoTemplate, ownerCity, ownerLat, ownerLon, places: loadedPlaces, geoLinkEnable, geoLinkText, geoLinkUrl });
   const renderAnnHistory = () => {
     const box = $('#ann-history-list');
     if (!box) return;
@@ -3808,6 +3827,7 @@ routes.announce = async () => {
           $('#ann-geolink-zone').classList.toggle('hidden', !gel.checked);
         }
         if (d.mode) annSetMode(d.mode);
+        if (d.linkRouting) annSetRouting(d.linkRouting);
         };
         const showAnnDiscard = () => {
           const b = $('#btn-ann-discard');

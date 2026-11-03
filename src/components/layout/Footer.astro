@@ -1,8 +1,11 @@
 ---
 import fs from "node:fs";
 import path from "node:path";
-import { profileConfig } from "@/config";
+import { portalConfig, profileConfig } from "@/config";
 import { url } from "@/utils/url-utils";
+
+// 博客线路与纸舟传送门共用 portalConfig 一份数据
+const footerLines = (portalConfig.lines ?? []).filter((e) => e.enable !== false);
 
 const currentYear = new Date().getFullYear();
 
@@ -84,6 +87,23 @@ try {
 					href="https://github.com/CuteLeaf/Firefly">Firefly</a
 				>
 			</div>
+			{
+				footerLines.length > 1 && (
+					<div class="mx-0.5 my-2.5 flex gap-x-2 gap-y-2.5 justify-center flex-wrap">
+						{footerLines.map((e, i) => (
+							<>
+								{i > 0 && <span aria-hidden="true">/</span>}
+								<a
+									class="transition link text-(--primary) font-medium"
+									href={e.url}
+								>
+									{e.name}
+								</a>
+							</>
+						))}
+					</div>
+				)
+			}
 		</div>
 	</div>
 </footer>

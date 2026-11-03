@@ -73,6 +73,17 @@ const noticeLink =
 	noticeActiveLink.url
 		? noticeActiveLink
 		: null;
+/* 智能选路线与全站公告同口径：smart 且链接指向线路域名时挂 data-line-smart，
+   点击由公告组件的文档级委托脚本统一分流（同线不跳） */
+let noticeSmart = false;
+try {
+	noticeSmart =
+		announcementConfig.linkRouting === "smart" &&
+		!!noticeLink &&
+		["hk.lanerc.me", "origin.lanerc.me"].includes(
+			new URL(noticeLink.url).hostname,
+		);
+} catch {}
 
 /* 资料卡数据：与原资料卡同源（profileConfig + 发文热力图） */
 const mxAvatar = url(profileConfig.avatar);
@@ -287,6 +298,7 @@ const mxHeatmapMonths = await (async () => {
 							<p class="announcement-content">{noticeText}</p>
 							{noticeLink && (
 								<a
+									{...(noticeSmart ? { "data-line-smart": true } : {})}
 									href={url(noticeLink.url)}
 									target={noticeLink.external ? "_blank" : "_self"}
 									rel={noticeLink.external ? "noopener noreferrer" : undefined}

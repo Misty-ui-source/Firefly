@@ -18,6 +18,14 @@ const { class: className, style, widgetConfig } = Astro.props;
 const showTitle = widgetConfig?.showTitle !== false;
 // 「了解更多」链接按当前模式取：检测版用 geoLink，静态用 link（geoLink 缺失时回落 link）
 const activeLink = config.mode === "geo" ? (config.geoLink ?? config.link) : config.link;
+// 链接指向某条博客线路、且跳转方式为「智能选路线」时，点击走智能分流（见组件末尾脚本）；
+// 跳转方式为 original（原链接）时不挂任何处理，照配置地址直达
+const LINE_HOSTS = ["hk.lanerc.me", "origin.lanerc.me"];
+let isLineLink = false;
+try {
+	isLineLink = LINE_HOSTS.includes(new URL(activeLink?.url || "").hostname);
+} catch {}
+const smartLink = config.linkRouting === "smart" && isLineLink;
 ---
 
 <!-- 组件显示现在由sidebarLayoutConfig统一控制，无需检查config.enable -->
@@ -41,6 +49,7 @@ const activeLink = config.mode === "geo" ? (config.geoLink ?? config.link) : con
           activeLink && activeLink.enable !== false && (
             <a
               href={activeLink.url}
+              {...(smartLink ? { "data-line-smart": true } : {})}
               target={activeLink.external ? "_blank" : "_self"}
               rel={activeLink.external ? "noopener noreferrer" : undefined}
               class="btn-regular rounded-lg px-3 py-1.5 text-sm font-medium active:scale-95 transition-transform"
@@ -170,6 +179,84 @@ const activeLink = config.mode === "geo" ? (config.geoLink ?? config.link) : con
             render({ place, local, country: COUNTRY[v.country] || v.country, region: provZh, city: cityZh, distance });
           }).catch(() => { setAll(staticContent); });
         })();
+      </script>
+    )
+  }
+  {
+    smartLink && (
+      <script>
+        // 线路智能分流（跳转方式=智能选路线时）：公告的线路入口被点击时，
+        // 先看访客在哪儿——国内（含港澳台）送国内备用线路（香港前置），
+        // 海外送海外加速线路（CF 直达）；跳转保留当前页路径，读到哪篇、
+        // 过去还是哪篇。选出的线路就是当前所在线路时不跳，改为弹提示栏。
+        // 地区请求与检测版公告共用同一个 Promise；超时或失败就按配置链接的域名走（同样保留路径）。
+        const LINE_DOMESTIC = "hk.lanerc.me";
+        const LINE_OVERSEAS = "origin.lanerc.me";
+        const DOMESTIC_CC = ["CN", "HK", "MO", "TW"];
+        // 已在最优线路时的小提示栏（全站共用一个元素，重复点击只重置计时）
+        const showLineToast = (msg) => {
+          let t = document.getElementById("ann-line-toast");
+          if (!t) {
+            t = document.createElement("div");
+            t.id = "ann-line-toast";
+            t.setAttribute("role", "status");
+            t.style.cssText =
+              "position:fixed;left:50%;bottom:2rem;transform:translate(-50%,1rem);z-index:9999;background:var(--primary,#0d9488);color:#fff;padding:.55rem 1.1rem;border-radius:999px;font-size:.875rem;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s ease;";
+            document.body.appendChild(t);
+          }
+          t.textContent = msg;
+          requestAnimationFrame(() => {
+            t.style.opacity = "1";
+            t.style.transform = "translate(-50%,0)";
+          });
+          clearTimeout(t._hideTimer);
+          t._hideTimer = setTimeout(() => {
+            t.style.opacity = "0";
+            t.style.transform = "translate(-50%,1rem)";
+          }, 2000);
+        };
+        // 捕获阶段挂载并截断事件：站内软导航（swup）会把同域链接点击接管成
+        // 一次软跳转并滚回顶部，必须赶在它之前 preventDefault + stopPropagation，
+        // 否则「不跳」会被它变成「回顶部」（2026-11-03 站长实测报障）
+        document.addEventListener("click", (e) => {
+          const t = e.target;
+          if (!(t instanceof Element)) return;
+          const a = t.closest("a[data-line-smart]");
+          if (!a) return;
+          e.preventDefault();
+          e.stopPropagation();
+          let fallbackHost = "";
+          try {
+            fallbackHost = new URL(a.getAttribute("href") || "").hostname;
+          } catch {}
+          const decide = (v) => {
+            let host = fallbackHost;
+            if (v && v.country) {
+              host = DOMESTIC_CC.includes(v.country) ? LINE_DOMESTIC : LINE_OVERSEAS;
+            }
+            if (!host) return;
+            if (host === window.location.hostname) {
+              // 选出的就是当前所在线路：不跳，弹提示栏说明已在最优线路（站长 2026-11-03 定）
+              showLineToast("您已在最优线路上了😭");
+              return;
+            }
+            window.location.href =
+              "https://" +
+              host +
+              window.location.pathname +
+              window.location.search +
+              window.location.hash;
+          };
+          const p =
+            window.__annVisitorP ||
+            (window.__annVisitorP = fetch("/api/visitor")
+              .then((r) => r.json())
+              .catch(() => null));
+          Promise.race([
+            p,
+            new Promise((res) => setTimeout(() => res(null), 900)),
+          ]).then(decide);
+        }, true);
       </script>
     )
   }

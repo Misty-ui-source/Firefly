@@ -7,6 +7,8 @@ export type AnnouncementConfig = {
 	closable?: boolean; // 是否可关闭
 	// 显示模式：static=静态公告（用 content）；geo=访客检测公告（用 geoTemplate 按访客位置/时间生成）
 	mode?: "static" | "geo";
+	// 链接跳转方式：smart=智能选路线（链接指向线路域名时，按访客地区在国内备用/海外加速间选线，选中当前所在线路则不跳）；original=原链接（照配置地址直达）。控制台公告页可切换
+	linkRouting?: "smart" | "original";
 	// 检测版文案模板，占位符：{country} 国家 {region} 地区 {city} 城市 {distance} 距博主公里数 {greeting} 时段问候
 	geoTemplate?: string;
 	ownerCity?: string; // 博主所在城市（展示用）

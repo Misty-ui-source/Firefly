@@ -10,6 +10,9 @@ export const announcementConfig: AnnouncementConfig = {
 	// 显示模式：static=静态公告 / geo=访客检测公告（控制台公告页可切换）
 	mode: "static",
 
+	// 链接跳转方式：smart=智能选路线 / original=原链接（控制台公告页可切换）
+	linkRouting: "smart",
+
 	// 检测版文案模板，占位符：{country} {region} {city} {distance} {greeting}
 	geoTemplate: "欢迎来自 {place} 的朋友，{greeting}。{local}。你距离 Alexander 约有 {distance} 公里，欢迎来串门。",
 

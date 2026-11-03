@@ -127,6 +127,17 @@ const noticeLink = (() => {
 			: announcementConfig.link;
 	return noticeText && pick?.enable && pick.text && pick.url ? pick : null;
 })();
+/* 智能选路线与全站公告同口径：跳转方式为 smart 且链接指向线路域名时挂
+   data-line-smart，点击由公告组件的文档级委托脚本统一分流（同线不跳） */
+let noticeSmart = false;
+try {
+	noticeSmart =
+		announcementConfig.linkRouting === "smart" &&
+		!!noticeLink &&
+		["hk.lanerc.me", "origin.lanerc.me"].includes(
+			new URL(noticeLink.url).hostname,
+		);
+} catch {}
 
 /* ---------------- 个人简介（页脚标语用） ----------------
    作者卡本体已按站长 2026-11-01 改定移入顶栏左段胶囊（MingxinNavbar.astro
@@ -1098,6 +1109,7 @@ const umamiShare = analyticsConfig.umamiAnalytics;
 					{noticeLink && (
 						<a
 							class="mingxin-afterglow__notice-link"
+							{...(noticeSmart ? { "data-line-smart": true } : {})}
 							href={noticeLink.external ? noticeLink.url : url(noticeLink.url)}
 							target={noticeLink.external ? "_blank" : undefined}
 							rel={noticeLink.external ? "noreferrer noopener" : undefined}
