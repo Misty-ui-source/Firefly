@@ -5,10 +5,10 @@ export const announcementConfig: AnnouncementConfig = {
 	title: "",
 
 	// 公告内容（静态模式用）
-	content: "欢迎来到Alexander，国内访问可能较慢，正在寻找优化方案。评论后台被主包小猪手搞崩了，但评论功能正常。",
+	content: "欢迎来到Alexander，这里是我的小站，希望你能在这里找到对自己有价值的东西。如果国内访问不顺畅，可以使用备用线路！",
 
 	// 显示模式：static=静态公告 / geo=访客检测公告（控制台公告页可切换）
-	mode: "geo",
+	mode: "static",
 
 	// 检测版文案模板，占位符：{country} {region} {city} {distance} {greeting}
 	geoTemplate: "欢迎来自 {place} 的朋友，{greeting}。{local}。你距离 Alexander 约有 {distance} 公里，欢迎来串门。",
@@ -18,6 +18,11 @@ export const announcementConfig: AnnouncementConfig = {
 	ownerLat: 32.0603,
 	ownerLon: 118.7969,
 
+	// 常用地址预设（控制台公告页维护，点预设切换到上面的 ownerCity/ownerLat/ownerLon）
+	ownerPlaces: [
+		{ label: "南京", city: "南京", lat: 32.0603, lon: 118.7969 },
+	],
+
 	// 是否允许用户关闭公告
 	closable: true,
 
@@ -26,9 +31,9 @@ export const announcementConfig: AnnouncementConfig = {
 		// 启用链接
 		enable: true,
 		// 链接文本
-		text: "了解更多",
+		text: "备用线路",
 		// 链接 URL
-		url: "/about/",
+		url: "https://hk.lanerc.me",
 		// 内部链接
 		external: false,
 	},
@@ -42,5 +47,7 @@ export const announcementConfig: AnnouncementConfig = {
 	},
 
 	// 历史公告存档（控制台自动维护）
-	history: [],
+	history: [
+		{ date: "2026-11-03T01:34:50.186Z", content: "欢迎来到Alexander，国内访问可能较慢，正在寻找优化方案。评论后台被主包小猪手搞崩了，但评论功能正常。" },
+	],
 };
