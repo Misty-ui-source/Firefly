@@ -399,28 +399,6 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
       const DARK_MODE = "dark";
       const SYSTEM_MODE = "system";
 
-      // 存储安全垫（2026-11-03 性能批一）：个别浏览器在隐私/无痕/禁存储
-      // 环境下读 localStorage 会直接抛错。这段开屏脚本连读几十个键，一处
-      // 抛错就整段死掉——主题、形态、壁纸全落不到位，页面发白发错。先探
-      // 活：原生可用就用原生，不可用就换成永远返回空的垫片顶上；本脚本
-      // 后面所有 localStorage 读取都走这个垫片，无需逐处改。本垫片只在
-      // 本脚本作用域内遮蔽全局 localStorage，其他脚本不受影响。
-      const localStorage = (() => {
-        try {
-          const s = window.localStorage;
-          const k = "__ls_probe__";
-          s.setItem(k, "1");
-          s.removeItem(k);
-          return s;
-        } catch {
-          return {
-            getItem: () => null,
-            setItem: () => {},
-            removeItem: () => {},
-          };
-        }
-      })();
-
       // 获取存储的主题，如果没有则使用默认值
       const theme = localStorage.getItem("theme") || defaultMode;
 

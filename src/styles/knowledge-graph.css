@@ -67,7 +67,6 @@
 	position: fixed;
 	inset: 0;
 	z-index: 60;
-	height: 100vh; /* 旧内核降级 */
 	height: 100dvh;
 	background: var(--page-bg);
 	/* 全屏时顶栏悬浮在画布之上，详情卡/弹窗的上偏移恢复原站口径 */

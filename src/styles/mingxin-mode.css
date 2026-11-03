@@ -2335,7 +2335,6 @@ html[data-site-mode="mingxin"] #navbar-wrapper.navbar-hidden {
 			--mx-toc-panel-hover: var(--btn-plain-bg-hover);
 			--mx-toc-line: rgb(0 0 0 / 28%);
 			--mx-toc-dot: rgb(0 0 0 / 40%);
-			--mx-toc-max-height: min(40rem, calc(100vh - 10rem)); /* 旧内核降级 */
 			--mx-toc-max-height: min(40rem, calc(100dvh - 10rem));
 
 			position: fixed;

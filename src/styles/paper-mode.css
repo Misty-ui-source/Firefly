@@ -1074,7 +1074,6 @@ html[data-site-mode="paper"][data-paper-theme="manual"] .card-base-transparent {
 @media (min-width: 1024px) {
 	html[data-site-mode="paper"][data-paper-theme="manual"] #top-row {
 		width: 12rem !important;
-		height: 100vh !important; /* 旧内核降级：不支持 dvh 时用 vh */
 		height: 100dvh !important;
 		right: auto !important;
 	}
