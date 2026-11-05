@@ -43,7 +43,7 @@ export const portalConfig: PortalConfig = {
 			note: "简历生成器",
 		},
 		{
-			name: "实验站",
+			name: "灵感屋",
 			url: "https://idea.lanerc.me",
 			note: "主题试验田",
 		},
