@@ -711,6 +711,39 @@ function json(data, status = 200, extraHeaders = {}) {
 
 export async function onRequestGet(context) {
 	const { request } = context;
+
+	// 来源白名单（2026-11-05 站长定）：只放行自家页面调用，防止接口被站外白嫖。
+	// 取 Referer、缺了再看 Origin，都没有或域名不在名单内一律 403。必须在读
+	// 边缘缓存之前拦，否则缓存里的 200 会绕过校验。localhost 与 127.0.0.1
+	// 放行供本地 8880 测试入口使用。
+	const ALLOWED_HOSTS = [
+		"lanerc.me",
+		"origin.lanerc.me",
+		"hk.lanerc.me",
+		"firefly-6sp.pages.dev",
+		"localhost",
+		"127.0.0.1",
+	];
+	const srcHost = (() => {
+		for (const h of ["referer", "origin"]) {
+			const v = request.headers.get(h);
+			if (v) {
+				try {
+					return new URL(v).hostname;
+				} catch {}
+			}
+		}
+		return "";
+	})();
+	// vercel.app 按后缀放行（站长 2026-11-05 定）：灵感屋的 Vercel 预览域名
+	// 不固定，且为将来主站迁移预留；其余域名一律按上面的名单精确匹配。
+	const allowed =
+		ALLOWED_HOSTS.includes(srcHost) ||
+		srcHost === "vercel.app" ||
+		srcHost.endsWith(".vercel.app");
+	if (!allowed) {
+		return json({ error: "forbidden" }, 403);
+	}
 	const u = new URL(request.url);
 	const platform = u.searchParams.get("platform") || "";
 	const id = u.searchParams.get("id") || "";
