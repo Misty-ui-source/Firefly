@@ -3,6 +3,52 @@
  */
 'use strict';
 const CFG = window.ADMIN_CONFIG;
+/* ---------- 多站管理：当前站点决定 CFG 指向哪个仓库 ----------
+ * 主站 = config.js 顶层配置原样；其他站点在 config.sites 里自带仓库/集合/导航。
+ * 切换 = 记住选择后整页重载（清掉全部内存状态，最稳）。GitHub 令牌共用一份。 */
+const SITE_KEY = 'admin-site';
+const BASE_CFG = {
+  owner: CFG.owner, repo: CFG.repo, branch: CFG.branch,
+  collections: CFG.collections, navLayout: CFG.navLayout,
+  navExternal: CFG.navExternal, quickLinks: CFG.quickLinks,
+};
+let SITE_ID = 'main';
+try { SITE_ID = localStorage.getItem(SITE_KEY) || 'main'; } catch (e) {}
+function siteDef() {
+  const sites = Array.isArray(CFG.sites) ? CFG.sites : [];
+  return sites.find((s) => s.id === SITE_ID) || sites[0] || { id: 'main', label: '主站' };
+}
+let SITE_OPLOG = true;
+let SITE_PAGES = null;
+function applySite() {
+  const s = siteDef();
+  SITE_ID = s.id;
+  if (s.id === 'main') {
+    CFG.owner = BASE_CFG.owner; CFG.repo = BASE_CFG.repo; CFG.branch = BASE_CFG.branch;
+    CFG.collections = BASE_CFG.collections; CFG.navLayout = BASE_CFG.navLayout;
+    CFG.navExternal = BASE_CFG.navExternal; CFG.quickLinks = BASE_CFG.quickLinks;
+  } else {
+    if (s.owner) CFG.owner = s.owner;
+    if (s.repo) CFG.repo = s.repo;
+    if (s.branch) CFG.branch = s.branch;
+    if (s.collections) CFG.collections = s.collections;
+    if (s.navLayout) CFG.navLayout = s.navLayout;
+    if ('navExternal' in s) CFG.navExternal = s.navExternal;
+    if (s.quickLinks) CFG.quickLinks = s.quickLinks;
+  }
+  SITE_OPLOG = s.oplog !== false;
+  SITE_PAGES = Array.isArray(s.pages) ? s.pages : null;
+  try { document.documentElement.dataset.site = s.id; } catch (e) {}
+}
+applySite();
+/* 本机数据按站分键：主站沿用旧键名（不迁移、不丢已有的草稿与队列），其他站点加后缀 */
+const siteKey = (base) => (SITE_ID === 'main' ? base : `${base}:${SITE_ID}`);
+function switchSite(id) {
+  if (id === SITE_ID) return;
+  try { localStorage.setItem(SITE_KEY, id); } catch (e) {}
+  location.hash = '#/dashboard';
+  location.reload();
+}
 const GH_API = 'https://api.github.com';
 const TOKEN_KEY = 'admin_github_token';
 const USER_KEY = 'admin_github_user';
@@ -138,14 +184,15 @@ const OPLOG_PATH = 'src/data/console-oplog.json';
 const OPLOG_PENDING_KEY = 'admin_oplog_pending';
 const OPLOG_MAX_ENTRIES = 2000;
 function oplogLoadPending() {
-  try { const v = JSON.parse(localStorage.getItem(OPLOG_PENDING_KEY) || '[]'); return Array.isArray(v) ? v : []; }
+  try { const v = JSON.parse(localStorage.getItem(siteKey(OPLOG_PENDING_KEY)) || '[]'); return Array.isArray(v) ? v : []; }
   catch (e) { return []; }
 }
 function oplogSavePending(list) {
-  try { localStorage.setItem(OPLOG_PENDING_KEY, JSON.stringify(list)); } catch (e) {}
+  try { localStorage.setItem(siteKey(OPLOG_PENDING_KEY), JSON.stringify(list)); } catch (e) {}
 }
 /* 记一条操作：只写本地 pending，绝不抛错、绝不阻塞保存 */
 function oplogRecord(type, action, target, detail) {
+  if (!SITE_OPLOG) return null; /* 无日志站点不记 */
   const entry = { ts: new Date().toISOString(), type, action, target: target || '', detail: detail || '' };
   const pending = oplogLoadPending();
   pending.push(entry);
@@ -214,6 +261,16 @@ async function oplogCurrentText() {
 }
 /* ghPutFile 的直接替代：主文件 + 日志文件同 1 个 commit。返回 {content: {sha}} 保持调用方不变 */
 async function saveWithLog(path, text, sha, message, op, opts = {}) {
+  /* 无操作日志的站点（如灵感屋）：不往人家仓库里塞日志文件，单文件直存 */
+  if (!SITE_OPLOG) {
+    if (opts.isBase64) {
+      return await gh(`/repos/${CFG.owner}/${CFG.repo}/contents/${path}`, {
+        method: 'PUT',
+        body: JSON.stringify({ message, content: text, branch: CFG.branch, ...(sha ? { sha } : {}) }),
+      });
+    }
+    return ghPutFile(path, text, sha, message);
+  }
   const entry = op ? { ts: new Date().toISOString(), type: op.type, action: op.action, target: op.target || '', detail: op.detail || '' } : null;
   try {
     const curText = await oplogCurrentText();
@@ -255,6 +312,7 @@ async function saveWithLog(path, text, sha, message, op, opts = {}) {
 }
 /* 单文件删除 + 日志同 commit（回落：先删文件，日志留 pending） */
 async function delWithLog(path, sha, message, op) {
+  if (!SITE_OPLOG) { await ghDelFile(path, sha, message); return; }
   const entry = op ? { ts: new Date().toISOString(), type: op.type, action: op.action, target: op.target || '', detail: op.detail || '' } : null;
   try {
     const curText = await oplogCurrentText();
@@ -282,12 +340,12 @@ async function delWithLog(path, sha, message, op) {
 const OPQUEUE_KEY = 'admin_op_queue_v1';
 function opQueueLoad() {
   try {
-    const v = JSON.parse(localStorage.getItem(OPQUEUE_KEY) || '[]');
+    const v = JSON.parse(localStorage.getItem(siteKey(OPQUEUE_KEY)) || '[]');
     return Array.isArray(v) ? v.filter((e) => e && e.targetFile && typeof e.payload === 'string') : [];
   } catch (e) { return []; }
 }
 function opQueueSave(list) {
-  try { localStorage.setItem(OPQUEUE_KEY, JSON.stringify(list)); } catch (e) {}
+  try { localStorage.setItem(siteKey(OPQUEUE_KEY), JSON.stringify(list)); } catch (e) {}
   opQueueRenderBadge();
 }
 function opQueueFind(targetFile) {
@@ -757,11 +815,12 @@ function navLabel(key) {
 function navLayout() {
   const d = { primary: ['dashboard', 'stats', 'posts', 'dynamic', 'projects', 'spec'], secondary: ['images', 'music', 'gallery', 'announce', 'friends', 'booknav', 'navmgr', 'videos', 'profile', 'banner'] };
   const cfg = CFG.navLayout || {};
-  const all = Object.keys(navDefs());
+  /* 站点自带导航 key（如灵感屋的 ideas）可能不在全局 navDefs 里，以配置名单为准 */
+  const all = [...new Set([...Object.keys(navDefs()), ...(cfg.primary || []), ...(cfg.secondary || [])])];
   const p = (cfg.primary || d.primary).filter((k) => all.includes(k));
   const s = (cfg.secondary || d.secondary).filter((k) => all.includes(k));
-  // 漏掉的新增项自动补进次栏
-  all.forEach((k) => { if (!p.includes(k) && !s.includes(k)) s.push(k); });
+  // 漏掉的新增项自动补进次栏（限定页面白名单的站点不补，导航就是名单本身）
+  if (!SITE_PAGES) all.forEach((k) => { if (!p.includes(k) && !s.includes(k)) s.push(k); });
   return { primary: p, secondary: s };
 }
 function nav() {
@@ -812,7 +871,9 @@ function nav() {
 }
 function router() {
   const h = location.hash.replace('#/', '') || 'dashboard';
-  const [page, ...rest] = h.split('/');
+  let [page, ...rest] = h.split('/');
+  /* 限定站（如灵感屋）只开放白名单页面，其余路由一律回首页 */
+  if (SITE_PAGES && !SITE_PAGES.includes(page)) page = 'dashboard';
   const arg = rest.join('/');
   const wasLogin = document.body.classList.contains('is-login');
   if (page !== 'login' && window._loginTimer) { clearInterval(window._loginTimer); window._loginTimer = null; }
@@ -845,6 +906,7 @@ function router() {
 }
 /* 总结报告弹窗延后检查：等 CRT/虫洞动画跑完再弹，不抢动画；只在主页面（dashboard）触发 */
 function queueReportPopup(page) {
+  if (!SITE_OPLOG) return; /* 无操作日志的站点没有总结报告 */
   if (page !== 'dashboard' || !token()) return;
   setTimeout(() => { maybeShowReportPopup(); }, 900);
 }
@@ -1388,7 +1450,7 @@ routes.dashboard = async () => {
   view.innerHTML = '<div class="card"><h2>加载中…</h2></div>';
   const grid = document.createElement('div');
   grid.className = 'stat-grid';
-  view.innerHTML = '<div class="card"><h2>👋 欢迎回来，<span id="d-user"></span></h2><p class="hint">选个集合开始干活。保存后会自动 commit 到 GitHub，构建发版走 Pages。</p></div>';
+  view.innerHTML = `<div class="card"><h2>👋 欢迎回来，<span id="d-user"></span></h2><p class="hint">${esc(siteDef().dashHint || '选个集合开始干活。保存后会自动 commit 到 GitHub，构建发版走 Pages。')}</p></div>`;
   $('#d-user').textContent = localStorage.getItem(USER_KEY) || '';
   view.appendChild(grid);
   const monthPrefix = new Date().toISOString().slice(0, 7); // YYYY-MM
@@ -2329,13 +2391,14 @@ async function refreshRailOps() {
 async function mountRail() {
   const rail = $('#rail');
   if (!rail) return;
-  if (rail.dataset.done) { renderRailLinks(); refreshRailOps(); return; }
+  if (rail.dataset.done) { renderRailLinks(); if (SITE_OPLOG) refreshRailOps(); return; }
   rail.dataset.done = '1';
   rail.innerHTML = `
     <div class="card rail-card"><h3>🧭 快捷入口</h3><div class="rail-links" id="rail-links"></div></div>
     <div class="card rail-card"><h3>🕘 最近操作</h3><div id="rail-ops"><p class="hint">读取中…</p></div></div>
     <div class="card rail-card" id="rail-gnss-card" hidden><h3>🛰 星历数据</h3><p class="hint" id="rail-gnss"></p></div>`;
   renderRailLinks();
+  if (!SITE_OPLOG) { const oc = $('#rail-ops'); if (oc && oc.parentElement) oc.parentElement.style.display = 'none'; return; }
   refreshRailOps();
   try {
     const m = await (await fetch('https://raw.githubusercontent.com/Misty-ui-source/Firefly/main/gnss-data/meta.json', { cache: 'no-store' })).json();
@@ -2427,18 +2490,22 @@ function openProjectStatusMenu(chip, e, getTitle, paint) {
 }
 
 /* 列表页 */
-function listRoute(key) {
+function listRoute(key, opts = {}) {
   return async () => {
     const col = CFG.collections[key];
+    const draftOnly = !!opts.draftOnly;
     view.innerHTML = `<div class="toolbar">
-        <button class="btn" id="btn-new">＋ 新建${col.label}</button>
-        ${key === 'posts' ? '<button class="btn" id="btn-sort">🕒 按时间排</button>' : ''}
-        ${key === 'posts' ? '<button class="btn" id="btn-linkcard" disabled>🔗 链接卡片…</button>' : ''}
+        <button class="btn" id="btn-new">＋ 新建${draftOnly ? '点子' : col.label}</button>
+        ${key === 'posts' && !draftOnly ? '<button class="btn" id="btn-sort">🕒 按时间排</button>' : ''}
+        ${key === 'posts' && !draftOnly ? '<button class="btn" id="btn-linkcard" disabled>🔗 链接卡片…</button>' : ''}
         ${LV_SEG}
         <span class="spacer"></span><span class="hint copyable" data-copy="${col.path}" title="点击复制路径">${col.path} 📋</span>
       </div><div id="list"></div>`;
-    $('#btn-new').onclick = () => { location.hash = `#/edit/${key}/__new__`; };
-    if (key === 'posts') mountLinkCardButton();
+    $('#btn-new').onclick = () => {
+      if (draftOnly) { try { sessionStorage.setItem('admin-new-idea', '1'); } catch (e) {} }
+      location.hash = `#/edit/${key}/__new__`;
+    };
+    if (key === 'posts' && !draftOnly) mountLinkCardButton();
     if (key === 'spec') { mountSpecCommentCard(); mountDiarySection(); mountGnssSection(); mountResumeSection(); mountFeaturesSection(); mountCalendarRecordsSection(); mountPicbedSection(); }
     const listEl = $('#list');
     /* 文章列表排序：默认文件名倒序，点按钮切到发布时间倒序（日期回填完会自动按当前模式重排） */
@@ -2521,7 +2588,7 @@ function listRoute(key) {
           urlChip.textContent = `/${slug}/ 📋`;
           metaEl.after(urlChip);
         }
-        listEl.appendChild(div);
+        if (!draftOnly) listEl.appendChild(div);
         rows.push({ e, div });
       }
       rowsRef = rows;
@@ -2565,6 +2632,10 @@ function listRoute(key) {
             if (!md) return;
             const data = await ghGetFile(`${col.path}/${e.name}/${md.name}`);
             const { fm } = parseFrontmatter(data.text);
+            if (draftOnly) {
+              if (String(fm.draft).toLowerCase() !== 'true') return; /* 点子视图只要草稿 */
+              listEl.appendChild(div);
+            }
             const th = makeListThumb(coverThumbUrl(fm.image, `${col.path}/${e.name}`));
             if (th) div.prepend(th);
             const dEl = div.querySelector('.date');
@@ -2584,11 +2655,14 @@ function listRoute(key) {
           await Promise.all(rows.slice(i, i + 4).map(fill));
         }
         if (sortMode === 'time') applyOrder();
+        if (draftOnly && !listEl.children.length) listEl.innerHTML = '<div class="card">还没有点子，来记一个吧 👆</div>';
       }
     } catch (e) { listEl.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; }
   };
 }
 for (const key of Object.keys(CFG.collections)) routes[key] = listRoute(key);
+/* 「点子」视图 = posts 里 draft 的文章（站点配置 ideas:true 才注册，如灵感屋） */
+if (siteDef().ideas && CFG.collections.posts) routes.ideas = listRoute('posts', { draftOnly: true });
 
 /* 编辑页 */
 routes.edit = async (arg) => {
@@ -2596,7 +2670,7 @@ routes.edit = async (arg) => {
   const col = CFG.collections[key];
   const isNew = name === '__new__';
   /* 本地草稿键：按 集合+目标 区分（文章/动态/项目/单页 各自独立，互不覆盖） */
-  const draftKey = `admin-edit-draft:${key}:${name}`;
+  const draftKey = siteKey(`admin-edit-draft:${key}:${name}`);
   view.innerHTML = '<div class="card"><h2>加载中…</h2></div>';
   let fm = {}, body = '', sha = null, filePath = '', dirName = '';
   let rawFmText = ''; // 原文件全文：保存时按行保留表单未管理的 frontmatter 字段
@@ -2786,6 +2860,8 @@ routes.edit = async (arg) => {
     <div id="preview" class="preview hidden"></div>
   </div>`;
 
+  /* 限定站（如灵感屋）没有媒体库模块：藏掉封面旁的媒体库入口（封面仍可上传 R2 或填外链） */
+  if (SITE_PAGES) { const mlBtn = $('#btn-cover-ml'); if (mlBtn) mlBtn.style.display = 'none'; }
   /* pill 开关样式 + 密码区显隐 */
   view.querySelectorAll('.pill input[type=checkbox]').forEach((el) => {
     el.onchange = () => {
@@ -2793,6 +2869,16 @@ routes.edit = async (arg) => {
       if (el.dataset.f === '_pw') $('#pw-zone').classList.toggle('hidden', !el.checked);
     };
   });
+  /* 从「点子」视图新建：默认勾上草稿（点子先孵化，不直接发布） */
+  if (isNew && isPost) {
+    try {
+      if (sessionStorage.getItem('admin-new-idea') === '1') {
+        sessionStorage.removeItem('admin-new-idea');
+        const cbDraft = view.querySelector('input[data-f="draft"]');
+        if (cbDraft && !cbDraft.checked) cbDraft.click();
+      }
+    } catch (e) {}
+  }
   const ta = $('#md-body');
   /* 🖼 原图直传开关：状态存 localStorage，uploadImages 全局读取（封面/背景等上传同样生效） */
   const btnRaw = $('#btn-raw');
@@ -7359,6 +7445,15 @@ async function init() {
   $('#user-badge').classList.remove('hidden');
   $('#btn-logout').classList.remove('hidden');
   opQueueInitUi();
+  /* 顶栏站点切换器（多站管理）：切换后整页重载到新站 */
+  (() => {
+    const sel = document.getElementById('site-switch');
+    if (!sel) return;
+    if (!Array.isArray(CFG.sites) || CFG.sites.length < 2) { sel.style.display = 'none'; return; }
+    sel.innerHTML = CFG.sites.map((s) => `<option value="${s.id}">${s.label}</option>`).join('');
+    sel.value = SITE_ID;
+    sel.onchange = () => switchSite(sel.value);
+  })();
   window.addEventListener('hashchange', router);
   router();
   hideLoader();

@@ -1142,3 +1142,6 @@ body.is-login .view { max-width: none; margin: 0; padding: 0; }
 .opqueue-item.stale { background: rgba(245, 197, 66, .22); border-color: #d97706; }
 .opqueue-stale-tag { color: #b45309; font-weight: 700; }
 .opqueue-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; }
+
+/* 多站管理：顶栏站点切换器 */
+.site-switch{margin-left:10px;padding:5px 8px;border-radius:8px;border:1px solid var(--line,#ddd);background:transparent;color:inherit;font-size:13px;max-width:132px;cursor:pointer}

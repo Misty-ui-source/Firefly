@@ -18,6 +18,41 @@ window.ADMIN_CONFIG = {
     return ids[location.hostname] || ids['lanerc.me'];
   })(),
 
+  // 多站管理：sites[0] 是主站（用上面的顶层 owner/repo/branch/collections）；
+  // 其他站点自带仓库与集合配置，在顶栏切换。GitHub 令牌共用一份
+  // （登录账号对各站仓库有写权限即可，如协作者）。
+  sites: [
+    { id: 'main', label: '🏠 主站' },
+    {
+      id: 'idea', label: '💡 灵感屋',
+      owner: 'halozray', repo: 'my-blog', branch: 'master',
+      oplog: false, // 该仓库不写操作日志文件，保存走单文件直存
+      ideas: true, // 开「点子」视图（posts 的 draft 筛选）
+      pages: ['dashboard', 'posts', 'ideas', 'edit', 'login'], // 只开放这些页面，其余路由回首页
+      dashHint: '选个集合开始干活。保存后会自动 commit 到 GitHub，构建发版走 Vercel。',
+      collections: {
+        posts: {
+          label: '文章',
+          path: 'src/content/posts',
+          mode: 'dir', // 每篇文章一个目录
+          fields: ['title', 'published', 'updated', 'description', 'image', 'tags', 'category', 'draft', 'pinned', 'password', 'passwordHint'],
+        },
+      },
+      navLayout: {
+        primary: ['dashboard', 'posts', 'ideas'],
+        secondary: [],
+        homeCards: ['posts'],
+        labels: { posts: '📝 文章', ideas: '💡 点子' },
+      },
+      navExternal: { blog: 'https://idea.lanerc.me/' },
+      quickLinks: [
+        { icon: '🌐', label: '灵感屋首页', url: 'https://idea.lanerc.me/' },
+        { icon: '🐙', label: 'GitHub 仓库', url: 'https://github.com/halozray/my-blog' },
+        { icon: '▲', label: 'Vercel', url: 'https://vercel.com/dashboard' },
+      ],
+    },
+  ],
+
   // R2 图床公开访问前缀（Function 返回的 URL 会拼成 公开前缀 + 路径）
   // 例如绑定了自定义域名 img.lanerc.me，就填 https://img.lanerc.me
   r2PublicBase: 'https://img.lanerc.me',
