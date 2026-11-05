@@ -42,6 +42,11 @@ export const portalConfig: PortalConfig = {
 			url: "/resume/",
 			note: "简历生成器",
 		},
+		{
+			name: "实验站",
+			url: "https://idea.lanerc.me",
+			note: "主题试验田",
+		},
 	],
 	lines: [
 		{
