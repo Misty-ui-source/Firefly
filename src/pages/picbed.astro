@@ -29,11 +29,19 @@ const description = "博客图片都存在这里，点图就能复制外链。";
 					<button type="button" class="picbed-btn" data-pb-unlock>解锁</button>
 				</div>
 				<p class="picbed-error" data-pb-error></p>
-				<p class="picbed-footnote">口令在 Alexander Console「单页 → 图床门面」里设置；还没设口令时图床处于关闭状态，谁都列不出来。图片本身是公开直链，这里挡的只是把整个图库翻出来。</p>
+				<p class="picbed-footnote">口令在 Alexander Console「单页 → 图床门面」里设置；还没设口令时图床处于关闭状态，谁都列不出来。图片本身是公开直链，这里挡的是翻图库和往里传图。</p>
 			</div>
 
 			<div data-pb-browser hidden>
 				<nav class="picbed-crumbs" data-pb-crumbs aria-label="目录"></nav>
+				<div class="picbed-upload" data-pb-upload>
+					<input type="file" data-pb-file multiple hidden>
+					<button type="button" class="picbed-btn" data-pb-pick>⬆ 上传</button>
+					<span class="picbed-up-target" data-pb-up-target></span>
+					<span class="picbed-up-status" data-pb-up-status></span>
+					<p class="picbed-up-hint">点按钮选文件，或把文件直接拖到这个框里；会传到你正在看的这个目录。</p>
+					<div class="picbed-up-results" data-pb-up-results></div>
+				</div>
 				<div class="picbed-folders" data-pb-folders></div>
 				<div class="picbed-grid" data-pb-grid></div>
 				<div class="picbed-files" data-pb-files></div>
@@ -62,6 +70,12 @@ const description = "博客图片都存在这里，点图就能复制外链。";
 		var filesEl = browser.querySelector("[data-pb-files]");
 		var emptyEl = browser.querySelector("[data-pb-empty]");
 		var moreBtn = browser.querySelector("[data-pb-more]");
+		var uploadBox = browser.querySelector("[data-pb-upload]");
+		var fileInput = browser.querySelector("[data-pb-file]");
+		var pickBtn = browser.querySelector("[data-pb-pick]");
+		var upTarget = browser.querySelector("[data-pb-up-target]");
+		var upStatus = browser.querySelector("[data-pb-up-status]");
+		var upResults = browser.querySelector("[data-pb-up-results]");
 
 		var password = sessionStorage.getItem(PW_KEY) || "";
 		var prefix = "";
@@ -108,6 +122,7 @@ const description = "博客图片都存在这里，点图就能复制外链。";
 				html += '<span class="sep">/</span><button type="button" data-crumb="' + esc(acc) + '">' + esc(p) + "</button>";
 			});
 			crumbs.innerHTML = html;
+			upTarget.textContent = "传到：" + (prefix ? "/" + prefix.replace(/\/$/, "") : "根目录");
 		}
 
 		function render(data, append) {
@@ -227,6 +242,66 @@ const description = "博客图片都存在这里，点图就能复制外链。";
 			load(false).catch(function () {});
 		});
 		moreBtn.addEventListener("click", function () { load(true).catch(function () {}); });
+
+		function uploadFiles(fileList) {
+			var files = Array.prototype.slice.call(fileList || []);
+			if (!files.length) return;
+			upStatus.classList.remove("error");
+			upStatus.textContent = "上传中…（" + files.length + " 个）";
+			var fd = new FormData();
+			fd.append("password", password);
+			fd.append("dir", prefix.replace(/\/$/, ""));
+			files.forEach(function (f) { fd.append("files", f, f.name); });
+			fetch("/api/picbed-upload", { method: "POST", body: fd })
+				.then(function (r) {
+					return r.json().then(function (data) { return { ok: r.ok, status: r.status, data: data }; });
+				})
+				.then(function (res) {
+					if (!res.ok) {
+						if (res.status === 401) {
+							sessionStorage.removeItem(PW_KEY);
+							password = "";
+							showGate("口令不对，重新输一次。");
+							return;
+						}
+						throw new Error(res.data.error || "上传失败");
+					}
+					upStatus.textContent = "已上传 " + res.data.urls.length + " 个";
+					res.data.urls.forEach(function (u) {
+						var row = document.createElement("div");
+						row.className = "picbed-up-result";
+						row.innerHTML = '<span class="url">' + esc(u) + "</span>";
+						var b = document.createElement("button");
+						b.type = "button";
+						b.className = "picbed-btn";
+						b.textContent = "复制";
+						b.addEventListener("click", function () { copy(u, b); });
+						row.appendChild(b);
+						upResults.appendChild(row);
+					});
+					cursor = null;
+					load(false).catch(function () {});
+				})
+				.catch(function (e) {
+					upStatus.classList.add("error");
+					upStatus.textContent = e.message || "上传失败";
+				});
+		}
+		pickBtn.addEventListener("click", function () { fileInput.click(); });
+		fileInput.addEventListener("change", function () {
+			uploadFiles(fileInput.files);
+			fileInput.value = "";
+		});
+		uploadBox.addEventListener("dragover", function (e) {
+			e.preventDefault();
+			uploadBox.classList.add("dragover");
+		});
+		uploadBox.addEventListener("dragleave", function () { uploadBox.classList.remove("dragover"); });
+		uploadBox.addEventListener("drop", function (e) {
+			e.preventDefault();
+			uploadBox.classList.remove("dragover");
+			if (e.dataTransfer) uploadFiles(e.dataTransfer.files);
+		});
 
 		if (password) load(false).catch(function () {});
 	};
