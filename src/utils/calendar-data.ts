@@ -2,7 +2,7 @@ import { getCollection } from "astro:content";
 import holidays2026 from "../../calendar-data/holidays-2026.json";
 import personalRecordsSeed from "../../calendar-data/personal-records.json";
 import seuCalendar from "../../calendar-data/seu-calendar.json";
-import { lunarFestival, solarToLunar } from "./lunar";
+import { lunarFestival, type LunarDate, solarToLunar } from "./lunar";
 import { SOLAR_TERMS } from "./solar-terms-data";
 import { getPostUrlBySlug } from "./url-utils";
 
@@ -158,14 +158,24 @@ export const SOLAR_FESTIVALS: Record<string, string> = {
 	"5-19": "中国旅游日", "6-1": "儿童节", "6-6": "全国爱眼日", "6-26": "国际禁毒日",
 	"7-1": "建党节", "7-7": "七七事变纪念日", "8-1": "建军节", "8-19": "中国医师节",
 	"9-3": "抗战胜利纪念日", "9-10": "教师节", "9-18": "九一八事变纪念日", "9-30": "烈士纪念日",
-	"10-10": "辛亥革命纪念日", "10-24": "程序员节", "10-25": "台湾光复日", "10-31": "万圣夜",
-	"11-8": "记者节", "11-9": "全国消防日", "11-11": "光棍节", "12-4": "国家宪法日",
+	"10-10": "辛亥革命纪念日", "10-15": "小站周年庆", "10-24": "程序员节", "10-25": "台湾光复日", "10-31": "万圣夜",
+	"11-5": "灵感屋周年庆", "11-8": "记者节", "11-9": "全国消防日", "11-11": "光棍节", "12-4": "国家宪法日",
 	"12-13": "国家公祭日", "12-20": "澳门回归纪念日", "12-24": "平安夜", "12-25": "圣诞节",
 };
 export const SOLAR_WEEK_FESTIVALS: Record<string, string> = {
 	"5-2-0": "母亲节", "5-3-0": "全国助残日", "6-3-0": "父亲节",
 	"9-3-6": "全民国防教育日", "11-4-4": "感恩节",
 };
+
+/* 站长生日：农历三月廿七（与 src/pages/calendar.astro 内联脚本的 LUNAR_BIRTHDAY
+   保持一致，两处改一处必须同步）。闰三月不算，只认正月序的三月。 */
+export const LUNAR_BIRTHDAY = { month: 3, day: 27, title: "站长生日" };
+
+export function lunarBirthdayOf(l: LunarDate): string {
+	return !l.leap && l.month === LUNAR_BIRTHDAY.month && l.day === LUNAR_BIRTHDAY.day
+		? LUNAR_BIRTHDAY.title
+		: "";
+}
 
 export function solarFestivalOf(y: number, m: number, d: number): string {
 	const fixed = SOLAR_FESTIVALS[`${m}-${d}`];
@@ -205,6 +215,9 @@ export function getNextCountdown(): NextCountdown | null {
 
 		const fest = lunarFestival(solarToLunar(y, m, d));
 		if (fest) return { name: fest, tag: "农历", date: k, daysLeft: off };
+
+		const bday = lunarBirthdayOf(solarToLunar(y, m, d));
+		if (bday) return { name: bday, tag: "农历", date: k, daysLeft: off };
 
 		const sfest = solarFestivalOf(y, m, d);
 		if (sfest) return { name: sfest, tag: "节日", date: k, daysLeft: off };
