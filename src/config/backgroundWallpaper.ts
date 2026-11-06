@@ -76,6 +76,11 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 			"https://img.lanerc.me/admin/wallpaper/mvtob09w-c20a345f5711d114b130d4c9b806518a_720.webp",
 			"https://img.lanerc.me/admin/wallpaper/mw1pogrr-1000053595.webp",
 			"https://img.lanerc.me/admin/wallpaper/mw1pop7k-1000053653.webp",
+			"https://img.lanerc.me/admin/wallpaper/mw52ysx5-4c454ca155d2cb9264008117b1d9c2fb.webp",
+			"https://img.lanerc.me/admin/wallpaper/mw52z23l-dd0a1339b66587c3251de63f864251ec.webp",
+			"https://img.lanerc.me/admin/wallpaper/mw52zblm-ce9fe362f682ec7da6712e5b5d59f9f2.webp",
+			"https://img.lanerc.me/admin/wallpaper/mw52zijs-5c071cf406905603062ec7f7e4feb5a4.webp",
+			"https://img.lanerc.me/admin/wallpaper/mw52zoh9-dd1c4a1dd3fa49a12604af02f9dd1e2a.webp",
 		],
 		// 背景视频播放地址
 		// 支持单个视频路径（字符串）或多个视频循环（数组，参考上面壁纸配置）
