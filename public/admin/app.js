@@ -7053,6 +7053,11 @@ routes.theme = async () => {
 routes.medialib = async () => {
   view.innerHTML = `<div class="card"><h2>🗂 媒体库 <span class="sub">R2 桶里已上传的文件</span></h2>
     <div class="toolbar" id="ml-chips"></div>
+    <div class="toolbar"><input type="file" id="ml-file" multiple hidden>
+    <button class="btn btn-small" id="ml-upload" type="button">📤 上传文件</button>
+    <span class="hint">传到目录</span>
+    <input type="text" id="ml-dir" placeholder="点上面分类自动填，或手填如 posts/2026/" style="min-width:200px">
+    <span class="hint" id="ml-up-status"></span></div>
     <div class="toolbar"><input type="text" id="ml-filter" placeholder="按文件名筛选…" style="flex:1;min-width:180px"><span class="hint" id="ml-count"></span></div>
     <div class="img-grid" id="ml-grid"></div><p class="hint" id="ml-status">加载中…</p></div>`;
   const grid = $('#ml-grid'), status = $('#ml-status'), count = $('#ml-count');
@@ -7061,8 +7066,28 @@ routes.medialib = async () => {
   const chipsEl = $('#ml-chips');
   chipsEl.innerHTML = CHIPS.map(([p, label]) => `<button class="btn btn-small${p === '' ? '' : ' btn-ghost'}" data-p="${esc(p)}" type="button">${esc(label)}</button>`).join('');
   chipsEl.querySelectorAll('[data-p]').forEach((b) => {
-    b.onclick = () => { prefix = b.dataset.p; chipsEl.querySelectorAll('[data-p]').forEach((x) => x.classList.toggle('btn-ghost', x !== b)); render(); };
+    b.onclick = () => { prefix = b.dataset.p; $('#ml-dir').value = prefix; chipsEl.querySelectorAll('[data-p]').forEach((x) => x.classList.toggle('btn-ghost', x !== b)); render(); };
   });
+  /* 📤 上传：原样传（不转码），目标目录默认跟随当前分类、可手改；传完刷新列表并清选图缓存 */
+  const mlFile = $('#ml-file'), mlDir = $('#ml-dir'), mlUpStatus = $('#ml-up-status');
+  $('#ml-upload').onclick = () => mlFile.click();
+  mlFile.onchange = async () => {
+    const files = [...mlFile.files];
+    mlFile.value = '';
+    if (!files.length) return;
+    const dir = mlDir.value.trim().replace(/^\/+|\/+$/g, '');
+    if (!dir) { toast('先点一个分类、或填个目标目录再传', true); return; }
+    try {
+      mlUpStatus.textContent = `上传中…（${files.length} 个）`;
+      const { urls } = await uploadRawFiles(files, dir);
+      _mlPickerCache = null;
+      objects = await r2ListAll('');
+      mlUpStatus.textContent = '';
+      oplogRecord('媒体库', '上传', dir, `${urls.length} 个文件`);
+      render();
+      toast(`已上传 ${urls.length} 个文件到 ${dir}/`);
+    } catch (e) { mlUpStatus.textContent = ''; toast(e.message, true); }
+  };
   $('#ml-filter').addEventListener('input', (e) => { filterText = e.target.value.trim().toLowerCase(); render(); });
   const isImg = (k) => /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(k);
   function render() {
