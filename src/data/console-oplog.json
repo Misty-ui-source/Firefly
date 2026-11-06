@@ -831,5 +831,12 @@
     "action": "执行",
     "target": "src/config/backgroundWallpaper.ts",
     "detail": "桌面壁纸；手机壁纸；禁用壁纸"
+  },
+  {
+    "ts": "2026-11-06T14:53:43.937Z",
+    "type": "友链",
+    "action": "更新",
+    "target": "友链配置",
+    "detail": ""
   }
 ]
