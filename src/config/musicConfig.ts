@@ -96,6 +96,13 @@ export const musicPlayerConfig: MusicPlayerConfig = {
 				cover: "https://img.lanerc.me/admin/music-cover/mvuywgbw-cover-auto.webp",
 				lrc: "",
 			},
+			{
+				name: "キセキ～未来へ～",
+				artist: "whiteeeen",
+				url: "https://img.lanerc.me/admin/music/mw65t17e-whiteeeen_-_________.mp3",
+				cover: "https://img.lanerc.me/admin/music-cover/mw65s4xx-cover-auto.webp",
+				lrc: "",
+			},
 		],
 	},
 
