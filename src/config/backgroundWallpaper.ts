@@ -133,7 +133,12 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	// 已禁用的壁纸（不参与轮换，保留在上面列表中可随时恢复）。由管理台维护，手动编辑请保持 URL 与上面一致
 	// 顽彩专属壁纸（Alexander Console「图片」页维护）：站点形态「顽彩」下接管壁纸层的单张图
 	brickSrc: "/assets/images/brick/meadow-dogs.jpg",
-	disabled: [],
+	disabled: [
+		"https://img.lanerc.me/admin/wallpaper/mw52z23l-dd0a1339b66587c3251de63f864251ec.webp",
+		"https://img.lanerc.me/admin/wallpaper/mw52zblm-ce9fe362f682ec7da6712e5b5d59f9f2.webp",
+		"https://img.lanerc.me/admin/wallpaper/mw52zijs-5c071cf406905603062ec7f7e4feb5a4.webp",
+		"https://img.lanerc.me/admin/wallpaper/mw52zoh9-dd1c4a1dd3fa49a12604af02f9dd1e2a.webp",
+	],
 	// 横幅壁纸和全屏壁纸共享配置
 	common: {
 		// 壁纸遮罩暗度，让横幅文字显示更清晰，0-1之间，值越大越暗
