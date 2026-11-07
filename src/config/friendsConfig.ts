@@ -204,7 +204,7 @@ export const friendsConfig: FriendLink[] = [
 	},
 	{
 		title: "爱酷语",
-		imgurl: "https://oss.ikuyu.com/site/avatars/biming.png",
+		imgurl: "https://oss.ikuyu.com/site/uhoobnn-avatar-4k.webp",
 		desc: "一份记录惊喜、进步与遗憾的生活札记",
 		siteurl: "https://www.ikuyu.com",
 		tags: ["Blog"],
