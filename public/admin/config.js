@@ -5,6 +5,9 @@ window.ADMIN_CONFIG = {
   repo: 'Firefly',
   branch: 'main',
 
+  // 私有内容仓：日记 / 动态 / 碎碎念配置的读写目标（仅主站；站点条目不配则不分仓）
+  contentRepo: { owner: 'Misty-ui-source', repo: 'lanerc-content', branch: 'main' },
+
   // GitHub OAuth App 的 Client ID（按域名自动切换）
   // 每个域名用各自的 App（pages.dev / lanerc.me / hk / origin 四套）
   // 回调地址填：https://你的域名/admin/

@@ -48,3 +48,8 @@ package/
 .claude
 .mimocode
 .env.local
+
+# 私人内容（存私有仓 lanerc-content，构建时拉取，勿提交回主仓）
+/src/content/diary/*.md
+/src/content/dynamic/*.md
+/src/config/thoughtsConfig.ts

@@ -8,7 +8,7 @@ const CFG = window.ADMIN_CONFIG;
  * 切换 = 记住选择后整页重载（清掉全部内存状态，最稳）。GitHub 令牌共用一份。 */
 const SITE_KEY = 'admin-site';
 const BASE_CFG = {
-  owner: CFG.owner, repo: CFG.repo, branch: CFG.branch,
+  owner: CFG.owner, repo: CFG.repo, branch: CFG.branch, contentRepo: CFG.contentRepo || null,
   collections: CFG.collections, navLayout: CFG.navLayout,
   navExternal: CFG.navExternal, quickLinks: CFG.quickLinks,
 };
@@ -25,9 +25,11 @@ function applySite() {
   SITE_ID = s.id;
   if (s.id === 'main') {
     CFG.owner = BASE_CFG.owner; CFG.repo = BASE_CFG.repo; CFG.branch = BASE_CFG.branch;
+    CFG.contentRepo = BASE_CFG.contentRepo;
     CFG.collections = BASE_CFG.collections; CFG.navLayout = BASE_CFG.navLayout;
     CFG.navExternal = BASE_CFG.navExternal; CFG.quickLinks = BASE_CFG.quickLinks;
   } else {
+    CFG.contentRepo = s.contentRepo || null;
     if (s.owner) CFG.owner = s.owner;
     if (s.repo) CFG.repo = s.repo;
     if (s.branch) CFG.branch = s.branch;
@@ -144,27 +146,41 @@ async function ghAttempt(path, opts, canRefresh) {
   if (res.status === 204) return null;
   return res.json();
 }
-const repoPath = (p) => `/repos/${CFG.owner}/${CFG.repo}/contents/${p}?ref=${CFG.branch}`;
+const repoPath = (p) => { const r = repoFor(p); return `/repos/${r.owner}/${r.repo}/contents/${p}?ref=${r.branch}`; };
+/* 私人内容分仓：日记 / 动态 / 碎碎念配置存私有仓（构建时拉回主仓）。
+   仅主站配置了 contentRepo 时生效（config.js），其余站点不受影响。 */
+const PRIVATE_PATH_PREFIXES = ['src/content/diary/', 'src/content/dynamic/'];
+const PRIVATE_PATH_FILES = ['src/config/thoughtsConfig.ts'];
+function repoFor(p) {
+  const cr = CFG.contentRepo;
+  if (cr && p && (PRIVATE_PATH_FILES.includes(p) || PRIVATE_PATH_PREFIXES.some((x) => p.startsWith(x)))) {
+    return { owner: cr.owner, repo: cr.repo, branch: cr.branch || 'main' };
+  }
+  return { owner: CFG.owner, repo: CFG.repo, branch: CFG.branch };
+}
+const isPrivatePath = (p) => { const r = repoFor(p); return r.repo !== CFG.repo || r.owner !== CFG.owner; };
 async function ghGetFile(path) {
   const data = await gh(repoPath(path));
   if (Array.isArray(data)) return data; // 目录
   return { ...data, text: b64decodeUnicode(data.content.replace(/\n/g, '')) };
 }
 async function ghPutFile(path, text, sha, message, isBase64) {
-  return gh(`/repos/${CFG.owner}/${CFG.repo}/contents/${path}`, {
+  const r = repoFor(path);
+  return gh(`/repos/${r.owner}/${r.repo}/contents/${path}`, {
     method: 'PUT',
     body: JSON.stringify({
       message: message || `更新 ${path} [管理台]`,
       content: isBase64 ? text : b64encodeUnicode(text),
-      branch: CFG.branch,
+      branch: r.branch,
       ...(sha ? { sha } : {}),
     }),
   });
 }
 async function ghDelFile(path, sha, message) {
-  return gh(`/repos/${CFG.owner}/${CFG.repo}/contents/${path}`, {
+  const r = repoFor(path);
+  return gh(`/repos/${r.owner}/${r.repo}/contents/${path}`, {
     method: 'DELETE',
-    body: JSON.stringify({ message: message || `删除 ${path} [管理台]`, sha, branch: CFG.branch }),
+    body: JSON.stringify({ message: message || `删除 ${path} [管理台]`, sha, branch: r.branch }),
   });
 }
 
@@ -210,9 +226,10 @@ function oplogDedup(list) {
   return out;
 }
 /* Git Data API：多文件合成 1 个 commit。files: [{path, content, encoding?} | {path, del: true}] */
-async function ghCommitMulti(files, message) {
-  const base = `/repos/${CFG.owner}/${CFG.repo}`;
-  const ref = await gh(`${base}/git/ref/heads/${CFG.branch}`);
+async function ghCommitMulti(files, message, target) {
+  const T = target || { owner: CFG.owner, repo: CFG.repo, branch: CFG.branch };
+  const base = `/repos/${T.owner}/${T.repo}`;
+  const ref = await gh(`${base}/git/ref/heads/${T.branch}`);
   const baseCommitSha = ref.object.sha;
   const baseCommit = await gh(`${base}/git/commits/${baseCommitSha}`);
   const treeEntries = [];
@@ -240,7 +257,7 @@ async function ghCommitMulti(files, message) {
   /* 注意：GitHub 更新引用端点是复数 /git/refs/（读取单个引用才是单数 /git/ref/），
      写错会 404 Not Found——主题页保存报 Not Found、其余保存静默回落单文件 PUT、
      操作日志文件永远建不出来，都是这个坑（2026-10-26 修复） */
-  await gh(`${base}/git/refs/heads/${CFG.branch}`, {
+  await gh(`${base}/git/refs/heads/${T.branch}`, {
     method: 'PATCH',
     body: JSON.stringify({ sha: commit.sha }),
   });
@@ -272,6 +289,29 @@ async function saveWithLog(path, text, sha, message, op, opts = {}) {
     return ghPutFile(path, text, sha, message);
   }
   const entry = op ? { ts: new Date().toISOString(), type: op.type, action: op.action, target: op.target || '', detail: op.detail || '' } : null;
+  if (isPrivatePath(path)) {
+    /* 私有仓文件单独成 commit；操作日志仍记主仓（单独一次提交，失败转 pending） */
+    const r = await ghCommitMulti([{ path, content: text, encoding: opts.isBase64 ? 'base64' : 'utf-8' }], message, repoFor(path));
+    if (entry) {
+      try {
+        const curText = await oplogCurrentText();
+        let entries = [];
+        try { entries = JSON.parse(curText); } catch (e) { entries = []; }
+        if (!Array.isArray(entries)) entries = [];
+        const merged = oplogDedup([...entries, ...oplogLoadPending(), entry]).slice(-OPLOG_MAX_ENTRIES);
+        const oplogText = JSON.stringify(merged, null, 2) + '\n';
+        await ghCommitMulti([{ path: OPLOG_PATH, content: oplogText, encoding: 'utf-8' }], `oplog: ${entry.type || ''} ${entry.action || ''} [管理台]`);
+        window._oplogText = oplogText;
+        window._oplogEntries = merged;
+        oplogSavePending([]);
+      } catch (e) {
+        const pending = oplogLoadPending();
+        pending.push(entry);
+        oplogSavePending(pending);
+      }
+    }
+    return { content: { sha: r.blobShas[path] }, commitSha: r.commitSha };
+  }
   try {
     const curText = await oplogCurrentText();
     let entries = [];
@@ -313,6 +353,11 @@ async function saveWithLog(path, text, sha, message, op, opts = {}) {
 /* 单文件删除 + 日志同 commit（回落：先删文件，日志留 pending） */
 async function delWithLog(path, sha, message, op) {
   if (!SITE_OPLOG) { await ghDelFile(path, sha, message); return; }
+  if (isPrivatePath(path)) {
+    if (op) oplogRecord(op.type, op.action, op.target || '', op.detail || '');
+    await ghDelFile(path, sha, message);
+    return;
+  }
   const entry = op ? { ts: new Date().toISOString(), type: op.type, action: op.action, target: op.target || '', detail: op.detail || '' } : null;
   try {
     const curText = await oplogCurrentText();
@@ -2149,7 +2194,7 @@ async function mountDiarySection() {
   const sec = document.createElement('div');
   sec.className = 'card';
   sec.innerHTML = `<h2>📔 日记</h2>
-    <p class="hint">日记显示在博客 /diary/ 页（挂不挂导航栏去「🧭 站点导航」里配）。评论区开关在下面那张「💬 评论区开关」卡里，跟友链页/动态页并排。</p>
+    <p class="hint">日记显示在博客 /diary/ 页（挂不挂导航栏去「🧭 站点导航」里配）。评论区开关在下面那张「💬 评论区开关」卡里，跟友链页/动态页并排。<span class="meta">· 本模块内容存于私有仓</span></p>
     <div class="toolbar"><button class="btn" id="btn-diary-new">＋ 新建日记</button>${LV_SEG}<span class="meta copyable" data-copy="/diary/" title="点击复制日记页地址（拿去站点导航里加）">/diary/ 📋</span><span class="spacer"></span><span class="hint copyable" data-copy="src/content/diary" title="点击复制路径">src/content/diary 📋</span></div>
     <div id="diary-list"><div class="card">加载中…</div></div>`;
   anchor.after(sec);
@@ -2764,7 +2809,7 @@ routes.edit = async (arg) => {
       ${pill('pinned', '📌 置顶', isTrue(fm.pinned))}
       <button class="btn btn-small" id="btn-ai-tag" type="button">📰 插入【Muse AI 发布】</button>
     </div></div>
-    <p class="hint">💡 动态支持 Markdown；配图点下方「🖼 插入图片」上传，R2 目录已自动填好今天的日期。</p>`;
+    <p class="hint">💡 动态支持 Markdown；配图点下方「🖼 插入图片」上传，R2 目录已自动填好今天的日期。<span class="meta">· 本模块内容存于私有仓</span></p>`;
   } else if (isDiary) {
     const hasPw = !!(fm.password || fm.passwordHint);
     infoHtml = `
@@ -5535,7 +5580,7 @@ routes.thoughts = async () => {
       <button class="btn btn-ghost hidden" id="btn-thdiscard" type="button">🗑 丢弃草稿</button>
       <button class="btn btn-ghost hidden" id="btn-threstore" type="button">↩ 仍用旧草稿</button>
       <button class="btn" id="btn-thsave" disabled>💾 保存到仓库</button></div>
-    <p class="hint">碎碎念显示在 /gallery/thoughts/ 星空页面。新增自动记录发布时间，编辑自动记录更新时间。保存后重新构建生效。</p>
+    <p class="hint">碎碎念显示在 /gallery/thoughts/ 星空页面。新增自动记录发布时间，编辑自动记录更新时间。保存后重新构建生效。<span class="meta">· 本模块内容存于私有仓</span></p>
     <div id="th-list"></div>`;
   render();
   syncLvSegs();
@@ -6387,7 +6432,8 @@ async function openFileHistory(path, onRestored) {
   body.innerHTML = '<p class="hint">加载提交记录中…</p>';
   let commits;
   try {
-    commits = await gh(`/repos/${CFG.owner}/${CFG.repo}/commits?path=${encodeURIComponent(path)}&per_page=30`);
+    const HR = repoFor(path);
+    commits = await gh(`/repos/${HR.owner}/${HR.repo}/commits?path=${encodeURIComponent(path)}&per_page=30`);
   } catch (e) { body.innerHTML = `<p class="hint">加载失败：${esc(e.message)}</p>`; return; }
   if (!Array.isArray(commits) || !commits.length) { body.innerHTML = '<p class="hint">这个文件还没有提交记录。</p>'; return; }
   body.innerHTML = `<div class="hist-list">${commits.map((c, i) => {
@@ -6403,7 +6449,7 @@ async function openFileHistory(path, onRestored) {
   const textCache = {};
   const getVersionText = async (i) => {
     if (textCache[i] !== undefined) return textCache[i];
-    const d = await gh(`/repos/${CFG.owner}/${CFG.repo}/contents/${path}?ref=${commits[i].sha}`);
+    const d = await gh(`/repos/${HR.owner}/${HR.repo}/contents/${path}?ref=${commits[i].sha}`);
     textCache[i] = b64decodeUnicode(d.content.replace(/\n/g, ''));
     return textCache[i];
   };
