@@ -27,7 +27,7 @@ import { url } from "@/utils/url-utils";
 <!-- 引入消息框组件 -->
 <MessageBox />
 
-<script is:inline define:vars={{ spineModelConfig, modelPath: url(spineModelConfig.model.path), atlasPath: url(spineModelConfig.model.path.replace(".json", ".atlas")), cssPath: url("/pio/static/spine-player.min.css"), jsPath: url("/pio/static/spine-player.min.js") }}>
+<script is:inline define:vars={{ spineModelConfig, modelPath: url(spineModelConfig.model.path), atlasPath: url(spineModelConfig.model.path.replace(".json", ".atlas")), cssPath: url("/pio/static/spine-player.min.css"), jsPath: url("/pio/static/spine-player.min.js"), vendorCssPath: url("/vendor/spine-player-4.2.120.min.css"), vendorJsPath: url("/vendor/spine-player-4.2.120.min.js") }}>
   // 动态加载 Spine CSS（带本地备用）
   function loadSpineCSS() {
     if (!spineModelConfig.enable) return;
@@ -36,19 +36,18 @@ import { url } from "@/utils/url-utils";
     const existingLink = document.querySelector('link[href*="spine-player"]');
     if (existingLink) return;
 
-    // 首先尝试加载 CDN CSS
-    const cdnLink = document.createElement("link");
-    cdnLink.rel = "stylesheet";
-    cdnLink.href =
-      "https://unpkg.com/@esotericsoftware/spine-player@4.2.*/dist/spine-player.min.css";
+    // 首先加载本地自托管 CSS（public/vendor，版本锁定 4.2.120）
+    const vendorLink = document.createElement("link");
+    vendorLink.rel = "stylesheet";
+    vendorLink.href = vendorCssPath;
 
-    // 监听加载失败事件，自动回退到本地文件
-    cdnLink.onerror = function () {
-      console.warn("⚠️ Spine CSS CDN failed, trying local fallback...");
+    // 监听加载失败事件，自动回退到 pio 本地备用文件
+    vendorLink.onerror = function () {
+      console.warn("⚠️ Spine CSS vendor failed, trying local fallback...");
 
-      // 移除失败的 CDN link
-      if (cdnLink.parentNode) {
-        cdnLink.parentNode.removeChild(cdnLink);
+      // 移除失败的 link
+      if (vendorLink.parentNode) {
+        vendorLink.parentNode.removeChild(vendorLink);
       }
 
       // 创建本地备用 CSS link
@@ -62,7 +61,7 @@ import { url } from "@/utils/url-utils";
       document.head.appendChild(localLink);
     };
 
-    document.head.appendChild(cdnLink);
+    document.head.appendChild(vendorLink);
   }
 
   // 消息框功能已移至公共组件 MessageBox.astro
@@ -172,14 +171,13 @@ import { url } from "@/utils/url-utils";
 
         console.log("📦 Loading Spine runtime...");
         const script = document.createElement("script");
-        script.src =
-          "https://unpkg.com/@esotericsoftware/spine-player@4.2.*/dist/iife/spine-player.min.js";
+        script.src = vendorJsPath;
         script.onload = () => {
-          console.log("✅ Spine runtime loaded from CDN");
+          console.log("✅ Spine runtime loaded from local vendor");
           resolve();
         };
         script.onerror = (_error) => {
-          console.warn("⚠️ CDN failed, trying local fallback...");
+          console.warn("⚠️ Vendor failed, trying local fallback...");
 
           // 尝试本地回退
           const fallbackScript = document.createElement("script");

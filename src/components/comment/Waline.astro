@@ -17,9 +17,9 @@ const config = {
 <!-- Waline -->
 <div class="relative w-full">
   <div id="waline"></div>
-  <link rel="stylesheet" href="https://unpkg.com/@waline/client@v3/dist/waline.css" />
+  <link rel="stylesheet" href="/vendor/waline-3.16.2.css" />
   <script type="module" is:inline define:vars={{ config }}>
-    import { init } from 'https://unpkg.com/@waline/client@v3/dist/waline.js';
+    import { init } from '/vendor/waline-3.16.2.js';
     const requestedPath = new URLSearchParams(window.location.search).get("path");
     const effectiveConfig = requestedPath
       ? { ...config, path: requestedPath }
@@ -112,6 +112,70 @@ const config = {
   html.dark .wl-card .wl-nick {
     color: #4ade80 !important;
   }
+
+  /* 颜文字面板（自研，纯文本插入，不走 Waline 图片表情体系）。
+     颜色全用 Waline 自身变量，亮/暗随 html.dark 自动切换 */
+  .muse-kaomoji-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 1.5em;
+    margin: 2px;
+    padding: 0 0.35em;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--waline-color);
+    font-size: 13px;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .muse-kaomoji-btn:hover {
+    color: var(--waline-theme-color);
+  }
+  .muse-kaomoji-popup {
+    position: absolute;
+    inset-inline-start: 1.25em;
+    top: 100%;
+    z-index: 10;
+    display: none;
+    width: 100%;
+    max-width: 526px;
+    margin-top: 4px;
+    border: var(--waline-border);
+    border-radius: 6px;
+    background: var(--waline-bg-color);
+    box-shadow: var(--waline-box-shadow);
+  }
+  .muse-kaomoji-popup.display {
+    display: block;
+  }
+  .muse-kaomoji-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    gap: 2px;
+    max-height: 168px;
+    padding: 0.5em;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+  .muse-kaomoji-item {
+    padding: 0 0.25em;
+    overflow: hidden;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--waline-color);
+    font-size: 12.5px;
+    line-height: 2;
+    text-align: center;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .muse-kaomoji-item:hover {
+    background: var(--waline-bg-color-hover);
+  }
 </style>
 
 <script is:inline>
@@ -140,5 +204,127 @@ const config = {
     } else {
       addBadges();
     }
+  })();
+</script>
+
+<script is:inline>
+  // 颜文字面板：给 Waline 工具栏加一个按钮，点选后把颜文字纯文本插入评论框光标处。
+  // Waline 会重复初始化（自动刷新、回复框、swup 软导航），故用事件委托 + MutationObserver 兜底，
+  // 全局监听只注册一次（window.__museKaomojiWaline 守卫），注入函数幂等。
+  (function() {
+    var KAOMOJI = [
+      "(≧▽≦)", "(｀・ω・´)", "(╥﹏╥)", "(´；ω；`)", "_(:3」∠)_", "(；・∀・)", "(〃'▽'〃)", "Σ(っ °Д °;)っ", "(ノ≧∇≦)ノ", "(┬＿┬)",
+      "(￣▽￣)", "(・∀・)", "(ﾟДﾟ)", "(´・ω・`)", "(≧﹏≦)", "(●'◡'●)", "(╯‵□′)╯︵┻━┻", "(๑•̀ㅂ•́)و✧", "(；´д｀)ゞ", "(づ￣ ³￣)づ",
+      "(｡･ω･｡)ﾉ♡", "(￣ε￣)", "( ´_ゝ`)", "(・ε・)", "(╹▽╹)", "(´▽`)", "(；￣Д￣)", "(〒▽〒)", "(╬￣皿￣)", "(´ε｀)",
+      "(♥∀♥)", "(◕‿◕)", "(✿ﾟ▽ﾟ)ノ", "(ﾉ≧∀≦)ﾉ", "(´∀`)", "(￣﹃￣)", "(´﹃`)", "(⊙_⊙)", "(＿´ω`)", "(；´∀｀)",
+      "(づ｡◕‿‿◕｡)づ", "(⁄ ⁄•⁄ω⁄•⁄ ⁄)", "(*/ω＼*)", "O(∩_∩)O", "(๑˃̵ᴗ˂̵)", "(•̀ω•́)✧", "(ง •_•)ง", "(´▽｀)ノ", "(≧∇≦)ﾉ", "(。・∀・)ノ",
+      "(¬_¬)", "(Φ_Φ)", "(눈_눈)", "(ﾉД`)", "(T▽T)", "(´-ω-`)", "(☆▽☆)", "(✪ω✪)", "(´∀｀)♡", "(◍•ᴗ•◍)",
+      "(￣y▽,￣)╭", "(｡•́︿•̀｡)", "(；′⌒`)", "(￣へ￣)", "(★‿★)", "(≧◡≦)", "(●ˇ∀ˇ●)", "(´▽`)ﾉ", "(´･ᴗ･`)", "(￣ω￣)",
+      "(´･_･`)", "(；一_一)", "(⊙﹏⊙)", "(´Д｀)", "(≡ω≡)", "(づ′▽`)づ", "(≧∀≦)ゞ", "(ﾟ∀ﾟ)", "(´ρ`)", "(´ω`)",
+      "(ﾉ´∀`)ﾉ", "(￣Д￣)ﾉ", "(≧ω≦)", "(◕ᴗ◕✿)", "(♡˙︶˙♡)", "(´▽`ʃ♡ƪ)", "(Ｔ▽Ｔ)", "(╥ω╥)", "(´;ω;`)", "ヾ(≧▽≦*)o",
+      "(๑>◡<๑)", "(´꒳`)", "(꒪꒳꒪)", "( ˙꒳˙ )", "(´ᗜ`)", "(¬‿¬)", "(ʘ‿ʘ)", "(´,,•ω•,,`)", "(๑•̀ㅁ•́๑)✧", "(•‿•)"
+    ];
+
+    function ensureButtons() {
+      document.querySelectorAll('#waline .wl-panel').forEach(function(panel) {
+        if (panel.querySelector('.muse-kaomoji-btn')) return;
+        var actions = panel.querySelector('.wl-actions');
+        if (!actions) return;
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'muse-kaomoji-btn';
+        btn.title = '颜文字';
+        btn.setAttribute('aria-label', '插入颜文字');
+        btn.textContent = '(´∀`)';
+        actions.appendChild(btn);
+
+        var popup = document.createElement('div');
+        popup.className = 'muse-kaomoji-popup';
+        popup.setAttribute('aria-label', '颜文字面板');
+        var grid = document.createElement('div');
+        grid.className = 'muse-kaomoji-grid';
+        KAOMOJI.forEach(function(k) {
+          var item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'muse-kaomoji-item';
+          item.textContent = k;
+          item.title = k;
+          item.setAttribute('data-kaomoji', k);
+          grid.appendChild(item);
+        });
+        popup.appendChild(grid);
+        panel.appendChild(popup);
+      });
+    }
+    // 软导航/重渲染后以最新闭包为准
+    window.__museKaomojiEnsure = ensureButtons;
+
+    if (!window.__museKaomojiWaline) {
+      window.__museKaomojiWaline = true;
+
+      var closeAllPopups = function(except) {
+        document.querySelectorAll('.muse-kaomoji-popup.display').forEach(function(p) {
+          if (p !== except) p.classList.remove('display');
+        });
+      };
+
+      var insertKaomoji = function(panel, text) {
+        var editor = panel.querySelector('.wl-editor');
+        if (!editor) return;
+        var start = editor.selectionStart != null ? editor.selectionStart : editor.value.length;
+        var end = editor.selectionEnd != null ? editor.selectionEnd : editor.value.length;
+        var setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+        setter.call(editor, editor.value.slice(0, start) + text + editor.value.slice(end));
+        // Waline(vue v-model) 靠 input 事件感知内容变化
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+        var pos = start + text.length;
+        editor.focus();
+        try { editor.setSelectionRange(pos, pos); } catch (e) {}
+      };
+
+      document.addEventListener('click', function(e) {
+        if (!(e.target instanceof Element)) return;
+        var item = e.target.closest('.muse-kaomoji-item');
+        if (item) {
+          var panel = item.closest('.wl-panel');
+          if (panel) insertKaomoji(panel, item.getAttribute('data-kaomoji'));
+          return;
+        }
+        var btn = e.target.closest('.muse-kaomoji-btn');
+        if (btn) {
+          var p = btn.closest('.wl-panel');
+          var popup = p ? p.querySelector('.muse-kaomoji-popup') : null;
+          if (popup) {
+            var willShow = !popup.classList.contains('display');
+            closeAllPopups(popup);
+            popup.classList.toggle('display', willShow);
+          }
+          return;
+        }
+        if (!e.target.closest('.muse-kaomoji-popup')) closeAllPopups(null);
+      });
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeAllPopups(null);
+      });
+
+      document.addEventListener('swup:page:view', function() {
+        if (window.__museKaomojiEnsure) window.__museKaomojiEnsure();
+      });
+
+      var observer = new MutationObserver(function() {
+        if (window.__museKaomojiEnsure) window.__museKaomojiEnsure();
+      });
+      var startObserver = function() {
+        if (document.body) observer.observe(document.body, { childList: true, subtree: true });
+      };
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startObserver);
+      } else {
+        startObserver();
+      }
+    }
+
+    ensureButtons();
   })();
 </script>

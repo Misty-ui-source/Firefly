@@ -3011,7 +3011,26 @@ routes.edit = async (arg) => {
     };
   });
   /* ---------- 😊 表情面板：全量 Unicode 表情点选插入（Markdown 原生支持，无需短码） ---------- */
+  /* 颜文字：内部带空格/引号，空格分隔字符串装不下，单独用数组存（renderEmojiGrid 兼容数组入参） */
+  const KAOMOJI = [
+    '(≧▽≦)', '(｀・ω・´)', '(╥﹏╥)', '(´；ω；`)', '_(:3」∠)_', '(；・∀・)', "(〃'▽'〃)", 'Σ(っ °Д °;)っ',
+    '(ノ≧∇≦)ノ', '(┬＿┬)', '(￣▽￣)', '(・∀・)', '(ﾟДﾟ)', '(´・ω・`)', '(≧﹏≦)', "(●'◡'●)",
+    '(╯‵□′)╯︵┻━┻', '(๑•̀ㅂ•́)و✧', '(；´д｀)ゞ', '(づ￣ ³￣)づ', '(｡･ω･｡)ﾉ♡', '(￣ε￣)', '( ´_ゝ`)', '(・ε・)',
+    '(╹▽╹)', '(´▽`)', '(；￣Д￣)', '(〒▽〒)', '(╬￣皿￣)', '(´ε｀)', '(♥∀♥)', '(◕‿◕)',
+    '(✿ﾟ▽ﾟ)ノ', '(┌(┌ ＾o＾)┐', '(ﾉ≧∀≦)ﾉ', '(´∀`)', '(σﾟ∀ﾟ)σ', '(￣﹃￣)', '(´﹃`)', '(⊙_⊙)',
+    '(￣o￣)', '(´ｪ`)', '(≧∀≦)ゞ', '(ﾟ∀ﾟ)', '(´ρ`)', '(＿´ω`)', '(´ω`)', '(；´∀｀)',
+    '(ﾉ´∀`)ﾉ', '(￣Д￣)ﾉ', '(づ｡◕‿‿◕｡)づ', '(⁄ ⁄•⁄ω⁄•⁄ ⁄)', '(*/ω＼*)', 'O(∩_∩)O', '(๑˃̵ᴗ˂̵)', '(•̀ω•́)✧',
+    '(ง •_•)ง', '(´▽｀)ノ', '(≧∇≦)ﾉ', '(。・∀・)ノ', '(¬_¬)', '(Φ_Φ)', '(￣_,￣)', '(눈_눈)',
+    '(╥╯^╰╥)', '(´；д；`)', '(ﾉД`)', '(T▽T)', '(╥ω╥`)', '(´-ω-`)', '( ˘•ω•˘ )', '(≧∀≦)♪',
+    '(ﾉ≧∀≦)ﾉ・*:･ﾟ✧', '(☆▽☆)', '(✪ω✪)', '(￣▽￣)ノ', '(´∀｀)♡', '(◍•ᴗ•◍)', '(˵¯͒〰¯͒˵)', '(￣y▽,￣)╭',
+    '( ´･･)ﾉ(._.`)', '(｡•́︿•̀｡)', '(；′⌒`)', '(´。＿。｀)', '(；￣︿￣)', '(￣へ￣)', '(＃￣～￣＃)', '(σ≧∀≦)σ',
+    '(★‿★)', '(≧◡≦)', '(´⌣`ʃƪ)', '(づ￣3￣)づ╭❤～', '(●ˇ∀ˇ●)', '(´▽`)ﾉ', '(ﾉ*･ω･)ﾉ', '(˶˚ ᗨ ˚˶)',
+    '(´･ᴗ･`)', '(･⌣･)', '(￣ω￣)', '(´･_･`)', '(；一_一)', '(￣﹏￣)', '(⊙﹏⊙)', '(´Д｀)',
+    '(ﾟДﾟ≡ﾟДﾟ)', '(￣(エ)￣)', '(≡ω≡)', '(´･ω･)っ', '(づ′▽`)づ',
+  ];
+  const KAOMOJI_SET = new Set(KAOMOJI);
   const EMOJI_CATS = [
+    ['颜文字', KAOMOJI],
     ['笑脸', '😀 😃 😄 😁 😆 😅 🤣 😂 🙂 🙃 😶‍🌫️ 😉 😊 😇 🥰 😍 🤩 😘 😗 ☺️ 😚 😙 🥲 😋 😛 😜 🤪 😝 🤑 🤗 🤭 🫢 🫣 🤫 🤔 🫡 🤐 🤨 😐 😑 😶 🫥 😏 😒 🙄 😬 😮‍💨 🤥 🫠 😌 😔 😪 🤤 😴 😷 🤒 🤕 🤢 🤮 🤧 🥵 🥶 🥴 😵 😵‍💫 🤯 🤠 🥳 🥸 😎 🤓 🧐 😕 🫤 😟 🙁 ☹️ 😮 😯 😲 😳 🥹 🥺 🥹 😦 😧 😨 😰 😥 😢 😭 😱 😖 😣 😞 😓 😩 😫 🥱 😤 😡 😠 🤬 🥵 😈 👿 💀 ☠️ 💩 🤡 👹 👺 👻 👽 👾 🤖 😺 😸 😹 😻 😼 😽 🙀 😿 😾'],
     ['手势', '👋 🤚 🖐️ ✋ 🖖 🫱 🫲 🫳 🫴 🫷 🫸 👌 🤌 🤏 ✌️ 🤞 🫰 🤟 🤘 🤙 👈 👉 👆 🖕 👇 ☝️ 🫵 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 🫶 👐 🤲 🤝 🙏 ✍️ 💅 🤳 💪 🦾 🦵 🦶 👂 🦻 👃 🧠 🫀 🫁 🦷 🦴 👀 👁️ 👅 👄 🫦 💋 🧑‍💻 👨‍💻 👩‍💻 🧑‍🎓 🧑‍🎨 🧑‍🚀 🧑‍🎄 🎅 🤶 🦸 🦹 🧙 🧚 🧛 🧜 🧝 🧞 🧟 💃 🕺 👯 🧖 🧗 🤺 🏇 ⛷️ 🏂 🪂 🏋️ 🤸 🤾 🧘 🏄 🏊 🚣 🚵 🚴 🤽 🤹'],
     ['情感', '❤️ 🩷 🧡 💛 💚 💙 🩵 💜 🤎 🖤 🩶 🤍 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 ♥️ ❤️‍🔥 ❤️‍🩹 💌 💯 💢 💥 💫 💦 💨 💣 💬 🗨️ 🗯️ 💭 💤 😍 🥰 😻 🤗 💑 💏 👩‍❤️‍👨 👨‍❤️‍👨 👩‍❤️‍👩 👩‍❤️‍💋‍👨 💐 🌹 🥀 🌷 🌺'],
@@ -3031,11 +3050,14 @@ routes.edit = async (arg) => {
   const emojiTabs = emojiPanel.querySelector('.emoji-tabs');
   const emojiGrid = emojiPanel.querySelector('.emoji-grid');
   const emojiRecent = () => { try { return JSON.parse(localStorage.getItem('console-emoji-recent') || '[]'); } catch (e) { return []; } };
-  const renderEmojiGrid = (list) => {
+  const renderEmojiGrid = (list, wide) => {
+    const items = Array.isArray(list) ? list : list.split(' ').filter(Boolean);
+    emojiGrid.classList.toggle('kaomoji', !!wide);
     emojiGrid.innerHTML = '';
-    for (const em of list.split(' ').filter(Boolean)) {
+    for (const em of items) {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'emoji-cell'; b.textContent = em;
+      if (KAOMOJI_SET.has(em)) { b.classList.add('kao'); b.title = em; }
       b.onclick = () => {
         insertAtCursor(em);
         try {
@@ -3053,13 +3075,13 @@ routes.edit = async (arg) => {
     t.onclick = () => {
       emojiTabs.querySelectorAll('.emoji-tab').forEach((x) => x.classList.remove('on'));
       t.classList.add('on');
-      if (i === 0) { const rec = emojiRecent(); renderEmojiGrid(rec.length ? rec.join(' ') : EMOJI_FAVS); }
-      else renderEmojiGrid(EMOJI_CATS[i - 1][1]);
+      if (i === 0) { const rec = emojiRecent(); renderEmojiGrid(rec.length ? rec : EMOJI_FAVS); }
+      else { const data = EMOJI_CATS[i - 1][1]; renderEmojiGrid(data, Array.isArray(data)); }
       emojiGrid.scrollTop = 0;
     };
     emojiTabs.appendChild(t);
   });
-  renderEmojiGrid(emojiRecent().length ? emojiRecent().join(' ') : EMOJI_FAVS);
+  renderEmojiGrid(emojiRecent().length ? emojiRecent() : EMOJI_FAVS);
   const btnEmoji = $('#btn-emoji');
   const placeEmojiPanel = () => {
     const r = btnEmoji.getBoundingClientRect();
