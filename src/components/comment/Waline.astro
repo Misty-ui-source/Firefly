@@ -189,9 +189,8 @@ const config = {
         if (nick && (nick.textContent.trim() === 'zhz-ai' || nick.textContent.trim() === '澜澜')) {
           el.dataset.butlerBadged = '1';
           var badge = document.createElement('span');
-          badge.className = 'muse-butler-badge';
+          badge.className = 'wl-badge muse-butler-badge';
           badge.textContent = 'AI 小助手';
-          badge.style.cssText = 'display:inline-block;margin-left:6px;padding:1px 8px;font-size:11px;line-height:1.6;border-radius:10px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-weight:600;vertical-align:middle;';
           nick.after(badge);
           var disclaimer = document.createElement('div');
           disclaimer.className = 'muse-ai-disclaimer';
