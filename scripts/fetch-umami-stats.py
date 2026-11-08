@@ -89,12 +89,40 @@ def main():
         time.sleep(2)
         return r
 
+    # 域名白名单（2026-11-08 站长定）：只统计自有入口的流量，外站蹭 website-id 的不计入。
+    # 规则：lanerc.me 及全部子域、localhost、本站 Pages 域及预览子域、HK 机 IP（8880 历史流量）。
+    # 拉取前先枚举全时段出现过的域名、按规则筛出清单，作为 hostname 参数（逗号多值、访客自动去重）传给各接口。
+    def host_allowed(h):
+        return (
+            h == "lanerc.me" or h.endswith(".lanerc.me")
+            or h == "localhost"
+            or h == "firefly-6sp.pages.dev" or h.endswith(".firefly-6sp.pages.dev")
+            or h == "20.239.49.52"
+        )
+
+    host_rows = paced_get(f"/api/websites/{WEBSITE_ID}/metrics", {
+        "startAt": 1728000000000,
+        "endAt": now,
+        "type": "hostname",
+    })
+    WL = ",".join(sorted({
+        r.get("x") for r in (host_rows or [])
+        if r.get("x") and host_allowed(r["x"])
+    }))
+    print(f"域名白名单: {WL or '(枚举失败，不过滤)'}")
+
+    def wp(params):
+        """给拉取参数挂白名单（枚举失败时不过滤，保住原有口径）"""
+        if WL:
+            params = {**params, "hostname": WL}
+        return params
+
     # 1. 累计数据（从网站创建时间到现在）
     # Umami 没有直接的 all-time，用一个很大的范围
-    all_stats = paced_get(f"/api/websites/{WEBSITE_ID}/stats", {
+    all_stats = paced_get(f"/api/websites/{WEBSITE_ID}/stats", wp({
         "startAt": 1728000000000,  # 2024-10-01
         "endAt": now,
-    })
+    }))
     if all_stats:
         result["allTime"] = {
             "visitors": all_stats.get("visitors", 0),
@@ -108,10 +136,10 @@ def main():
     beijing = datetime.timezone(datetime.timedelta(hours=8))
     today_start = datetime.datetime.now(beijing).replace(hour=0, minute=0, second=0, microsecond=0)
     today_ms = int(today_start.timestamp() * 1000)
-    today_stats = paced_get(f"/api/websites/{WEBSITE_ID}/stats", {
+    today_stats = paced_get(f"/api/websites/{WEBSITE_ID}/stats", wp({
         "startAt": today_ms,
         "endAt": now,
-    })
+    }))
     if today_stats:
         result["today"] = {
             "visitors": today_stats.get("visitors", 0),
@@ -119,11 +147,11 @@ def main():
         }
 
     # 3. 90天每日数据（图表用，前端按 7/30/90 天切换）
-    pv = paced_get(f"/api/websites/{WEBSITE_ID}/pageviews", {
+    pv = paced_get(f"/api/websites/{WEBSITE_ID}/pageviews", wp({
         "startAt": ms(90),
         "endAt": now,
         "unit": "day",
-    })
+    }))
     if pv:
         result["daily"] = [
             {"date": p.get("x"), "pageviews": p.get("y", 0), "visitors": p.get("z", 0) if "z" in p else 0}
@@ -134,11 +162,11 @@ def main():
             result["daily"] = pv.get("pageviews", [])
 
     # 3.5 小时级数据（访客活跃时间热力图用，近30天按小时聚合）
-    hourly = paced_get(f"/api/websites/{WEBSITE_ID}/pageviews", {
+    hourly = paced_get(f"/api/websites/{WEBSITE_ID}/pageviews", wp({
         "startAt": ms(30),
         "endAt": now,
         "unit": "hour",
-    })
+    }))
     if hourly:
         pv_list = hourly.get("pageviews", []) if isinstance(hourly, dict) else []
         result["hourly"] = [
@@ -147,11 +175,11 @@ def main():
         ]
 
     # 4. 热门页面（注意：Umami v2 用 type=path，不是 url）
-    urls = paced_get(f"/api/websites/{WEBSITE_ID}/metrics", {
+    urls = paced_get(f"/api/websites/{WEBSITE_ID}/metrics", wp({
         "startAt": ms(30),
         "endAt": now,
         "type": "path",
-    })
+    }))
     if urls:
         result["topPages"] = [
             {"url": u.get("x"), "views": u.get("y", 0)}
@@ -159,11 +187,11 @@ def main():
         ][:8]
 
     # 5. 设备
-    devices = paced_get(f"/api/websites/{WEBSITE_ID}/metrics", {
+    devices = paced_get(f"/api/websites/{WEBSITE_ID}/metrics", wp({
         "startAt": ms(30),
         "endAt": now,
         "type": "device",
-    })
+    }))
     if devices:
         result["devices"] = [
             {"name": d.get("x"), "count": d.get("y", 0)}
@@ -171,11 +199,11 @@ def main():
         ]
 
     # 6. 浏览器
-    browsers = paced_get(f"/api/websites/{WEBSITE_ID}/metrics", {
+    browsers = paced_get(f"/api/websites/{WEBSITE_ID}/metrics", wp({
         "startAt": ms(30),
         "endAt": now,
         "type": "browser",
-    })
+    }))
     if browsers:
         result["browsers"] = [
             {"name": b.get("x"), "count": b.get("y", 0)}
@@ -183,11 +211,11 @@ def main():
         ]
 
     # 7. 地域（国家/地区）
-    regions = paced_get(f"/api/websites/{WEBSITE_ID}/metrics", {
+    regions = paced_get(f"/api/websites/{WEBSITE_ID}/metrics", wp({
         "startAt": ms(30),
         "endAt": now,
         "type": "region",
-    })
+    }))
     if regions:
         result["regions"] = [
             {"name": r.get("x"), "count": r.get("y", 0)}
@@ -195,21 +223,26 @@ def main():
         ][:10]
 
     # 8. 来源
-    referrers = paced_get(f"/api/websites/{WEBSITE_ID}/metrics", {
+    referrers = paced_get(f"/api/websites/{WEBSITE_ID}/metrics", wp({
         "startAt": ms(30),
         "endAt": now,
         "type": "referrer",
-    })
+    }))
     if referrers:
         result["referrers"] = [
             {"name": r.get("x"), "count": r.get("y", 0)}
             for r in (referrers if isinstance(referrers, list) else [])
         ][:10]
 
-    # 9. 实时在线
+    # 9. 实时在线（realtime 返回 dict，事件自带 hostname：按白名单数去重会话；
+    #    旧代码按 list 取长度恒为 0，顺手修正）
     realtime = paced_get(f"/api/realtime/{WEBSITE_ID}")
     if realtime:
-        result["online"] = len(realtime) if isinstance(realtime, list) else 0
+        events = realtime.get("events", []) if isinstance(realtime, dict) else []
+        result["online"] = len({
+            e.get("sessionId") for e in events
+            if e.get("sessionId") and host_allowed(e.get("hostname") or "")
+        })
 
     os.makedirs(os.path.dirname(OUTPUT), exist_ok=True)
     with open(OUTPUT, "w", encoding="utf-8") as f:
