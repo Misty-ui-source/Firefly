@@ -153,7 +153,7 @@ const PRIVATE_PATH_PREFIXES = ['src/content/diary/', 'src/content/dynamic/'];
 const PRIVATE_PATH_FILES = ['src/config/thoughtsConfig.ts'];
 function repoFor(p) {
   const cr = CFG.contentRepo;
-  if (cr && p && (PRIVATE_PATH_FILES.includes(p) || PRIVATE_PATH_PREFIXES.some((x) => p.startsWith(x)))) {
+  if (cr && p && (PRIVATE_PATH_FILES.includes(p) || PRIVATE_PATH_PREFIXES.some((x) => p.startsWith(x) || p === x.replace(/\/$/, '')))) {
     return { owner: cr.owner, repo: cr.repo, branch: cr.branch || 'main' };
   }
   return { owner: CFG.owner, repo: CFG.repo, branch: CFG.branch };
