@@ -72,6 +72,62 @@ const config = {
         if (!document.hidden) checkNewComments();
       });
     })();
+
+    // 游客默认头像替换：头像走 libravatar 直链的人里，没在头像服务注册过的只会拿到
+    // 服务自带默认图。用 ?d=404 探针分辨（404 = 没注册过），命中的换成配置里的
+    // defaultAvatar（控制台「单页 → Waline 默认头像」卡维护）。结果按邮箱哈希在
+    // localStorage 缓存 7 天；QQ 头像、自设头像等非 libravatar 地址一律不碰。
+    (function() {
+      const defAvatar = config.defaultAvatar;
+      if (!defAvatar) return;
+      const CACHE_KEY = 'wl-defav-v1';
+      const TTL = 7 * 864e5;
+      let cache = {};
+      try { cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); } catch (e) {}
+      const probing = {};
+      function probe(hash) {
+        if (probing[hash]) return probing[hash];
+        probing[hash] = new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(true);
+          img.onerror = () => resolve(false);
+          img.src = 'https://seccdn.libravatar.org/avatar/' + hash + '?d=404';
+        }).then((has) => {
+          cache[hash] = { has: has ? 1 : 0, t: Date.now() };
+          try { localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); } catch (e) {}
+          return has;
+        });
+        return probing[hash];
+      }
+      function applyTo(img) {
+        if (img.dataset.wlDefav) return;
+        const m = (img.getAttribute('src') || '').match(/libravatar\.org\/avatar\/([0-9a-f]{32})/i);
+        if (!m) return;
+        const hash = m[1].toLowerCase();
+        const hit = cache[hash];
+        if (hit && Date.now() - hit.t < TTL) {
+          if (!hit.has) { img.dataset.wlDefav = '1'; img.src = defAvatar; }
+          return;
+        }
+        probe(hash).then((has) => {
+          if (!has && img.isConnected && (img.getAttribute('src') || '').toLowerCase().includes(hash)) {
+            img.dataset.wlDefav = '1';
+            img.src = defAvatar;
+          }
+        });
+      }
+      function scan() {
+        document.querySelectorAll('#waline img').forEach(applyTo);
+      }
+      const root = document.getElementById('waline');
+      if (root && !root.dataset.wlDefavObs) {
+        root.dataset.wlDefavObs = '1';
+        new MutationObserver(scan).observe(root, {
+          childList: true, subtree: true, attributes: true, attributeFilter: ['src'],
+        });
+      }
+      scan();
+    })();
   </script>
 </div>
 

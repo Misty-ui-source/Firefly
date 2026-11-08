@@ -21,9 +21,10 @@ interface WalineComment {
 interface Props {
 	server: string;
 	limit: number;
+	defaultAvatar?: string;
 }
 
-let { server, limit }: Props = $props();
+let { server, limit, defaultAvatar }: Props = $props();
 
 let comments: WalineComment[] = $state([]);
 let loading = $state(true);
@@ -70,6 +71,52 @@ function commentHref(c: WalineComment): string {
 	return url(raw) + "#" + c.objectId;
 }
 
+// 游客默认头像：libravatar 直链且没注册过头像的人（?d=404 探针返回 404），
+// 换成控制台配置的默认头像；口径与评论区 Waline.astro 一致，缓存共用同一份
+const DEFAV_CACHE_KEY = "wl-defav-v1";
+function probeHasAvatar(hash: string): Promise<boolean> {
+	return new Promise((resolve) => {
+		const img = new Image();
+		img.onload = () => resolve(true);
+		img.onerror = () => resolve(false);
+		img.src = `https://seccdn.libravatar.org/avatar/${hash}?d=404`;
+	});
+}
+async function applyDefaultAvatars(list: WalineComment[]): Promise<WalineComment[]> {
+	if (!defaultAvatar) return list;
+	let cache: Record<string, { has: number; t: number }> = {};
+	try {
+		cache = JSON.parse(localStorage.getItem(DEFAV_CACHE_KEY) || "{}");
+	} catch {
+		// ignore
+	}
+	const jobs = new Map<string, Promise<boolean>>();
+	const out = [...list];
+	await Promise.all(
+		out.map(async (c, i) => {
+			const m = (c.avatar || "").match(/libravatar\.org\/avatar\/([0-9a-f]{32})/i);
+			if (!m) return;
+			const hash = m[1].toLowerCase();
+			const hit = cache[hash];
+			let has: boolean;
+			if (hit && Date.now() - hit.t < 7 * 864e5) {
+				has = !!hit.has;
+			} else {
+				if (!jobs.has(hash)) jobs.set(hash, probeHasAvatar(hash));
+				has = await jobs.get(hash)!;
+				cache[hash] = { has: has ? 1 : 0, t: Date.now() };
+			}
+			if (!has) out[i] = { ...c, avatar: defaultAvatar };
+		}),
+	);
+	try {
+		localStorage.setItem(DEFAV_CACHE_KEY, JSON.stringify(cache));
+	} catch {
+		// ignore
+	}
+	return out;
+}
+
 async function load() {
 	loading = true;
 	error = false;
@@ -85,7 +132,7 @@ async function load() {
 		const apiUrl = `${server.replace(/\/$/, "")}/api/comment?type=recent&count=${limit}`;
 		const json = await fetchWithDedup<{ errno: number; data?: WalineComment[] }>(apiUrl);
 		const list: WalineComment[] = Array.isArray(json?.data) ? json.data : [];
-		comments = list.slice(0, limit);
+		comments = await applyDefaultAvatars(list.slice(0, limit));
 		setCache(comments);
 	} catch {
 		error = true;

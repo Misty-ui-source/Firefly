@@ -39,6 +39,9 @@ export const commentConfig: CommentConfig = {
 		login: "enable",
 		// 是否启用文章访问量统计功能
 		visitorCount: true,
+		// 游客默认头像：邮箱没在头像服务注册过的人，前端会把服务自带默认图换成这张。
+		// 在 Alexander Console「单页 → Waline 默认头像」卡里改；留空 = 不替换
+		defaultAvatar: "/assets/images/default-avatars/rantaro.webp",
 	},
 
 	// artalk评论系统配置

@@ -26,6 +26,8 @@ export type CommentConfig = {
 		emoji: string[];
 		login?: "enable" | "force" | "disable";
 		visitorCount?: boolean; // 是否统计访问量，true 启用访问量，false 关闭
+		// 游客默认头像：邮箱没在头像服务（libravatar）注册过的人，前端把其默认图换成这张；留空则不替换
+		defaultAvatar?: string;
 	};
 	artalk?: {
 		// 后端程序 API 地址

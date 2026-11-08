@@ -2029,6 +2029,78 @@ async function mountFeaturesSection() {
   } catch (e) { box.innerHTML = '<p class="hint">读不到功能开关配置（featuresConfig / dailyBriefingConfig 可能还没上线）。</p>'; }
 }
 
+/* Waline 默认头像：改 src/config/commentConfig.ts 的 waline.defaultAvatar 一行（只动这一行，不重写整文件）。
+ * 前端（评论区 Waline.astro、侧边栏最新评论）对 libravatar 直链头像做 ?d=404 探针：
+ * 邮箱没在头像服务注册过的游客，默认图换成这里选的这张；有自己头像的人不受影响。 */
+async function mountWalineAvatarCard() {
+  if ($('#waline-avatar-sec')) return;
+  const anchor = $('#features-sec') || $('#list');
+  if (!anchor) return;
+  const sec = document.createElement('div');
+  sec.className = 'card';
+  sec.id = 'waline-avatar-sec';
+  sec.innerHTML = '<h2>Waline 默认头像</h2><p class="hint">读取中…</p>';
+  anchor.after(sec);
+  const CPATH = 'src/config/commentConfig.ts';
+  const PRESETS = [
+    { v: '/assets/images/default-avatars/rantaro.webp', label: '天海兰太郎' },
+    { v: '/assets/images/default-avatars/ds-chibi.webp', label: 'Q版ds娘 · 微笑' },
+    { v: '/assets/images/default-avatars/ds-chibi-happy.webp', label: 'Q版ds娘 · 托腮' },
+    { v: '/assets/images/default-avatars/ds-chibi-dizzy.webp', label: 'Q版ds娘 · 蚊香眼' },
+    { v: '/assets/images/default-avatars/ds-chibi-wink.webp', label: 'Q版ds娘 · wink' },
+    { v: '/assets/images/default-avatars/ds-chibi-pout.webp', label: 'Q版ds娘 · 气鼓鼓' },
+    { v: '/assets/images/default-avatars/ds-chibi-pink.webp', label: 'Q版ds娘 · 粉系' },
+    { v: '/assets/images/default-avatars/ds-chibi-mint.webp', label: 'Q版ds娘 · 薄荷' },
+    { v: '/assets/images/default-avatars/ds-chibi-night.webp', label: 'Q版ds娘 · 星空' },
+    { v: '/assets/images/default-avatars/ds-chibi-sticker.webp', label: 'Q版ds娘 · 贴纸' },
+  ];
+  try {
+    const d = await ghGetFile(CPATH);
+    const m = d.text.match(/defaultAvatar\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    let cur = '';
+    if (m) { try { cur = JSON.parse('"' + m[1] + '"'); } catch (e) { cur = m[1]; } }
+    const isPreset = (v) => PRESETS.some((p) => p.v === v);
+    let sel = isPreset(cur) ? cur : '';
+    const tiles = [{ v: '', label: '不替换' }, ...PRESETS].map((p) => `
+      <div class="wa-tile" data-v="${esc(p.v)}" title="${esc(p.label)}" style="width:76px;text-align:center;cursor:pointer">
+        ${p.v ? `<img src="${esc(p.v)}" alt="${esc(p.label)}" style="width:64px;height:64px;object-fit:cover;border-radius:12px;border:3px solid transparent;display:block;margin:0 auto">` : `<span style="width:64px;height:64px;border-radius:12px;border:3px solid transparent;display:flex;align-items:center;justify-content:center;margin:0 auto;background:rgba(127,127,127,.15);font-size:12px">默认图</span>`}
+        <span style="font-size:11px;line-height:1.3;display:block;margin-top:4px">${esc(p.label)}</span>
+      </div>`).join('');
+    sec.innerHTML = `<h2>Waline 默认头像 <span class="sub">${CPATH}</span></h2>
+      <p class="hint">游客用邮箱留言、又没在头像服务注册过头像时，评论区和侧边栏「最新评论」里显示这张图。有自己头像的人不受影响。保存后重新构建生效。</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin:12px 0">${tiles}</div>
+      <div class="field"><label>自定义地址（填了就用这个，盖过上面的选择）</label><input type="text" id="wa-custom" placeholder="https://… 或 /assets/…" value="${!cur || isPreset(cur) ? '' : esc(cur)}"></div>
+      <button class="btn" id="wa-save">💾 保存默认头像</button>`;
+    const paint = () => {
+      sec.querySelectorAll('.wa-tile').forEach((t) => {
+        const on = t.dataset.v === sel && !sec.querySelector('#wa-custom').value.trim();
+        const img = t.querySelector('img, span');
+        if (img) img.style.borderColor = on ? '#3b82f6' : 'transparent';
+      });
+    };
+    sec.querySelectorAll('.wa-tile').forEach((t) => {
+      t.onclick = () => { sel = t.dataset.v; sec.querySelector('#wa-custom').value = ''; paint(); };
+    });
+    sec.querySelector('#wa-custom').oninput = paint;
+    paint();
+    sec.querySelector('#wa-save').onclick = async () => {
+      const val = sec.querySelector('#wa-custom').value.trim() || sel;
+      try {
+        let text = d.text;
+        if (/defaultAvatar\s*:\s*"[^"]*"/.test(text)) {
+          text = text.replace(/defaultAvatar\s*:\s*"[^"]*"/, 'defaultAvatar: ' + JSON.stringify(val));
+        } else if (val) {
+          text = text.replace(/(serverURL:\s*"[^"]*",)/, '$1\n\t\tdefaultAvatar: ' + JSON.stringify(val) + ',');
+        } else { toast('当前就是不替换，没有改动'); return; }
+        if (text === d.text) { toast('没有改动'); return; }
+        const res = await saveWithLog(CPATH, text, d.sha, '更新 Waline 默认头像 [管理台]', { type: '评论', action: '改默认头像', target: val || '不替换' });
+        d.sha = res.content.sha; d.text = text;
+        toast('默认头像已保存，重新构建后生效');
+      } catch (e) { toast(e.message, true); }
+    };
+  } catch (e) { sec.innerHTML = '<h2>Waline 默认头像</h2><p class="hint">读不到 commentConfig.ts，稍后再试。</p>'; }
+}
+
 /* 🗓 日历个人记录：读写仓库 calendar-data/personal-records.json（日期 + 标题 + 备注）。
  * 博客 /calendar/ 页打开时会拉仓库最新版，所以这里保存完立刻生效、不用等构建。 */
 async function mountCalendarRecordsSection() {
@@ -2551,7 +2623,7 @@ function listRoute(key, opts = {}) {
       location.hash = `#/edit/${key}/__new__`;
     };
     if (key === 'posts' && !draftOnly) mountLinkCardButton();
-    if (key === 'spec') { mountSpecCommentCard(); mountDiarySection(); mountGnssSection(); mountResumeSection(); mountFeaturesSection(); mountCalendarRecordsSection(); mountPicbedSection(); }
+    if (key === 'spec') { mountSpecCommentCard(); mountDiarySection(); mountGnssSection(); mountResumeSection(); mountFeaturesSection(); mountCalendarRecordsSection(); mountPicbedSection(); mountWalineAvatarCard(); }
     const listEl = $('#list');
     /* 文章列表排序：默认文件名倒序，点按钮切到发布时间倒序（日期回填完会自动按当前模式重排） */
     let rowsRef = null;

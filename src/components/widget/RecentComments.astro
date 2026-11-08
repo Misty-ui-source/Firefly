@@ -23,6 +23,9 @@ const server =
 	commentConfig.waline?.serverURL ||
 	"";
 
+// 游客默认头像（与评论区同口径，见 commentConfig.waline.defaultAvatar）
+const defaultAvatar = commentConfig.waline?.defaultAvatar || "";
+
 // 只有启用了 Waline 评论才渲染
 const enabled = commentConfig.type === "waline" && server;
 ---
@@ -36,7 +39,7 @@ const enabled = commentConfig.type === "waline" && server;
 			class={className}
 			style={style}
 		>
-			<RecentCommentsSidebar client:load {server} {limit} />
+			<RecentCommentsSidebar client:load {server} {limit} {defaultAvatar} />
 		</WidgetLayout>
 	)
 }
