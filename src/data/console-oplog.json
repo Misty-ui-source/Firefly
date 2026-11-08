@@ -908,5 +908,12 @@
     "action": "更新",
     "target": "src/content/spec/about.md",
     "detail": ""
+  },
+  {
+    "ts": "2026-11-08T10:05:02.958Z",
+    "type": "友链",
+    "action": "更新",
+    "target": "友链配置",
+    "detail": ""
   }
 ]
