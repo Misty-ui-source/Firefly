@@ -1498,6 +1498,8 @@ routes.dashboard = async () => {
   view.innerHTML = `<div class="card"><h2>👋 欢迎回来，<span id="d-user"></span></h2><p class="hint">${esc(siteDef().dashHint || '选个集合开始干活。保存后会自动 commit 到 GitHub，构建发版走 Pages。')}</p></div>`;
   $('#d-user').textContent = localStorage.getItem(USER_KEY) || '';
   view.appendChild(grid);
+  /* 灵感屋没有单页视图，默认头像卡挂首页（读写走灵感屋自己的仓库与候选） */
+  if (SITE_ID === 'idea') { const waHost = document.createElement('div'); view.appendChild(waHost); mountWalineAvatarCard(waHost); }
   const monthPrefix = new Date().toISOString().slice(0, 7); // YYYY-MM
   const isDraft = (fm) => String(fm.draft).toLowerCase() === 'true';
   const isPinned = (fm) => String(fm.pinned).toLowerCase() === 'true';
@@ -2032,18 +2034,24 @@ async function mountFeaturesSection() {
 /* Waline 默认头像：改 src/config/commentConfig.ts 的 waline.defaultAvatar 一行（只动这一行，不重写整文件）。
  * 前端（评论区 Waline.astro、侧边栏最新评论）对 libravatar 直链头像做 ?d=404 探针：
  * 邮箱没在头像服务注册过的游客，默认图换成这里选的这张；有自己头像的人不受影响。 */
-async function mountWalineAvatarCard() {
+async function mountWalineAvatarCard(host) {
   if ($('#waline-avatar-sec')) return;
-  const anchor = $('#features-sec') || $('#list');
-  if (!anchor) return;
   const sec = document.createElement('div');
   sec.className = 'card';
   sec.id = 'waline-avatar-sec';
   sec.innerHTML = '<h2>Waline 默认头像</h2><p class="hint">读取中…</p>';
-  anchor.after(sec);
+  if (host) host.appendChild(sec);
+  else {
+    const anchor = $('#features-sec') || $('#list');
+    if (!anchor) return;
+    anchor.after(sec);
+  }
   const CPATH = 'src/config/commentConfig.ts';
-  const PRESETS = [
-    { v: '/assets/images/default-avatars/rantaro.webp', label: '天海兰太郎' },
+  /* 候选按站点分：灵感屋有专属形象，且瓦片图必须走它自己的域名
+     （控制台在主站域名下打开，相对路径会串到主站的图）。读写走当前站点的仓库，天然分站。 */
+  const IS_IDEA = SITE_ID === 'idea';
+  const IMGBASE = IS_IDEA ? 'https://idea.lanerc.me' : '';
+  const DS_PRESETS = [
     { v: '/assets/images/default-avatars/ds-chibi.webp', label: 'Q版ds娘 · 微笑' },
     { v: '/assets/images/default-avatars/ds-chibi-happy.webp', label: 'Q版ds娘 · 托腮' },
     { v: '/assets/images/default-avatars/ds-chibi-dizzy.webp', label: 'Q版ds娘 · 蚊香眼' },
@@ -2054,6 +2062,15 @@ async function mountWalineAvatarCard() {
     { v: '/assets/images/default-avatars/ds-chibi-night.webp', label: 'Q版ds娘 · 星空' },
     { v: '/assets/images/default-avatars/ds-chibi-sticker.webp', label: 'Q版ds娘 · 贴纸' },
   ];
+  const PRESETS = IS_IDEA
+    ? [
+        { v: '/assets/images/default-avatars/idea-spirit.webp', label: '小屋少女 · 专属' },
+        { v: '/assets/images/default-avatars/idea-bulb-girl.webp', label: '灯泡少女' },
+        { v: '/assets/images/default-avatars/idea-mascot.webp', label: '屋灵' },
+        { v: '/assets/images/default-avatars/rantaro.webp', label: '天海兰太郎' },
+        ...DS_PRESETS,
+      ]
+    : [{ v: '/assets/images/default-avatars/rantaro.webp', label: '天海兰太郎' }, ...DS_PRESETS];
   try {
     const d = await ghGetFile(CPATH);
     const m = d.text.match(/defaultAvatar\s*:\s*"((?:[^"\\]|\\.)*)"/);
@@ -2063,11 +2080,11 @@ async function mountWalineAvatarCard() {
     let sel = isPreset(cur) ? cur : '';
     const tiles = [{ v: '', label: '不替换' }, ...PRESETS].map((p) => `
       <div class="wa-tile" data-v="${esc(p.v)}" title="${esc(p.label)}" style="width:76px;text-align:center;cursor:pointer">
-        ${p.v ? `<img src="${esc(p.v)}" alt="${esc(p.label)}" style="width:64px;height:64px;object-fit:cover;border-radius:12px;border:3px solid transparent;display:block;margin:0 auto">` : `<span style="width:64px;height:64px;border-radius:12px;border:3px solid transparent;display:flex;align-items:center;justify-content:center;margin:0 auto;background:rgba(127,127,127,.15);font-size:12px">默认图</span>`}
+        ${p.v ? `<img src="${esc(IMGBASE + p.v)}" alt="${esc(p.label)}" style="width:64px;height:64px;object-fit:cover;border-radius:12px;border:3px solid transparent;display:block;margin:0 auto">` : `<span style="width:64px;height:64px;border-radius:12px;border:3px solid transparent;display:flex;align-items:center;justify-content:center;margin:0 auto;background:rgba(127,127,127,.15);font-size:12px">默认图</span>`}
         <span style="font-size:11px;line-height:1.3;display:block;margin-top:4px">${esc(p.label)}</span>
       </div>`).join('');
     sec.innerHTML = `<h2>Waline 默认头像 <span class="sub">${CPATH}</span></h2>
-      <p class="hint">游客用邮箱留言、又没在头像服务注册过头像时，评论区和侧边栏「最新评论」里显示这张图。有自己头像的人不受影响。保存后重新构建生效。</p>
+      <p class="hint">游客用邮箱留言、又没在头像服务注册过头像时，${IS_IDEA ? '评论区和留言墙' : '评论区和侧边栏「最新评论」'}里显示这张图。有自己头像的人不受影响。保存后重新构建生效。</p>
       <div style="display:flex;flex-wrap:wrap;gap:10px;margin:12px 0">${tiles}</div>
       <div class="field"><label>自定义地址（填了就用这个，盖过上面的选择）</label><input type="text" id="wa-custom" placeholder="https://… 或 /assets/…" value="${!cur || isPreset(cur) ? '' : esc(cur)}"></div>
       <button class="btn" id="wa-save">💾 保存默认头像</button>`;
