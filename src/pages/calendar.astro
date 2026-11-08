@@ -55,6 +55,7 @@ const payload = JSON.stringify({
 				<span><span class="calendar-mark kind-dynamic"></span>动态</span>
 				<span><span class="calendar-mark kind-diary"></span>日记</span>
 				<span><span class="calendar-mark kind-record"></span>个人记录</span>
+				<span><span class="calendar-mark kind-changelog"></span>日志</span>
 				<span><span class="calendar-mark kind-seu"></span>东南大学校历</span>
 			</div>
 
@@ -104,7 +105,7 @@ const payload = JSON.stringify({
 		data.records = data.records || [];
 		data.events = data.events || [];
 
-		var KIND_GROUPS = [["holiday", "节假日"], ["workday", "调休"], ["seu", "校历"], ["post", "文章"], ["dynamic", "动态"], ["diary", "日记"], ["record", "个人记录"]];
+		var KIND_GROUPS = [["holiday", "节假日"], ["workday", "调休"], ["seu", "校历"], ["post", "文章"], ["dynamic", "动态"], ["diary", "日记"], ["record", "个人记录"], ["changelog", "日志"]];
 		function pad(n) { return (n < 10 ? "0" : "") + n; }
 		function key(y, m, d) { return y + "-" + pad(m + 1) + "-" + pad(d); }
 		function todayKey() {

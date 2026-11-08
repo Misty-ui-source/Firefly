@@ -1776,7 +1776,6 @@ $effect(() => {
 				</button>
 				{/each}
 			</div>
-			<div class="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5">全屏高：进站横幅铺满整个屏幕 · 经典：官方 Firefly 的横幅高度，内容更早露出来</div>
 		</div>
 		{/if}
 

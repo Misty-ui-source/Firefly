@@ -221,6 +221,7 @@
 .calendar-mark.kind-dynamic { background: #f59e0b; }
 .calendar-mark.kind-diary { background: #8b5cf6; }
 .calendar-mark.kind-record { background: #ec4899; }
+.calendar-mark.kind-changelog { background: #14b8a6; }
 .calendar-mark.kind-seu { background: #0ea5e9; }
 
 .calendar-legend {

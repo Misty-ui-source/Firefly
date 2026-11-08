@@ -5,6 +5,7 @@ import seuCalendar from "../../calendar-data/seu-calendar.json";
 import { lunarFestival, type LunarDate, solarToLunar } from "./lunar";
 import { SOLAR_TERMS } from "./solar-terms-data";
 import { getPostUrlBySlug } from "./url-utils";
+import { CHANGELOG } from "@/data/changelog";
 
 // 日历页数据层（构建时）：文章/动态/日记按发布日期归日；节假日、东南大学校历、
 // 个人记录来自仓库根目录 calendar-data/ 的 JSON（个人记录由控制台编辑、
@@ -12,7 +13,7 @@ import { getPostUrlBySlug } from "./url-utils";
 
 export interface CalEvent {
 	date: string; // YYYY-MM-DD（Asia/Shanghai）
-	kind: "post" | "dynamic" | "diary" | "record" | "holiday" | "workday" | "seu";
+	kind: "post" | "dynamic" | "diary" | "record" | "holiday" | "workday" | "seu" | "changelog";
 	title: string;
 	url?: string;
 	note?: string;
@@ -95,6 +96,28 @@ export async function getCalendarEvents(): Promise<CalEvent[]> {
 			kind: "diary",
 			title: d.data.title,
 			url: "/diary/",
+		});
+	}
+
+	// 博客日志联动：同一天的多条记录合成一个事件——标题一行展示，
+	// 当天的记录标题依次拼接，超长用省略号收尾（口径：更新多，一行放不下就 …… 结尾）
+	const logByDate = new Map<string, string[]>();
+	for (const v of CHANGELOG) {
+		for (const c of v.changes) {
+			if (!c.date) continue;
+			const arr = logByDate.get(c.date) ?? [];
+			arr.push(c.text);
+			logByDate.set(c.date, arr);
+		}
+	}
+	for (const [date, texts] of logByDate) {
+		const full = texts.join("；");
+		events.push({
+			date,
+			kind: "changelog",
+			title: full.length > 46 ? `${full.slice(0, 46)}……` : full,
+			url: "/changelog/",
+			note: texts.length > 1 ? `${texts.length} 条更新` : undefined,
 		});
 	}
 
