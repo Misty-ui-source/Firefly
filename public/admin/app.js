@@ -6852,15 +6852,15 @@ routes.theme = async () => {
   }
   /* 看板娘开关：pioConfig 里 spine / live2d 两个配置块各自的第一个 enable */
   function parsePio(t) {
-    const sp = getIn(t, blockOf(t, /spineModelConfig\s*=/), /enable\s*:\s*(true|false)/);
-    const l2 = getIn(t, blockOf(t, /live2dWidgetConfig\s*=/), /enable\s*:\s*(true|false)/);
+    const sp = getIn(t, blockOf(t, /spineModelConfig\s*(?::[^=]*)?=/), /enable\s*:\s*(true|false)/);
+    const l2 = getIn(t, blockOf(t, /live2dWidgetConfig\s*(?::[^=]*)?=/), /enable\s*:\s*(true|false)/);
     if (sp === null || l2 === null) return null;
     return { pioSpine: sp === 'true', pioLive2d: l2 === 'true' };
   }
   function applyPio(t, s) {
-    let out = setIn(t, blockOf(t, /spineModelConfig\s*=/), /enable\s*:\s*(?:true|false)/, `enable: ${s.pioSpine}`);
+    let out = setIn(t, blockOf(t, /spineModelConfig\s*(?::[^=]*)?=/), /enable\s*:\s*(?:true|false)/, `enable: ${s.pioSpine}`);
     if (out === null) return null;
-    out = setIn(out, blockOf(out, /live2dWidgetConfig\s*=/), /enable\s*:\s*(?:true|false)/, `enable: ${s.pioLive2d}`);
+    out = setIn(out, blockOf(out, /live2dWidgetConfig\s*(?::[^=]*)?=/), /enable\s*:\s*(?:true|false)/, `enable: ${s.pioLive2d}`);
     return out;
   }
   function parseFx(t) {
