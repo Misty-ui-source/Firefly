@@ -233,6 +233,12 @@ export const navBarConfig: NavBarConfig = {
 					external: true,
 					icon: "material-symbols:train",
 				},
+				{
+					name: "灵感屋",
+					url: "https://idea.lanerc.me",
+					external: true,
+					icon: "material-symbols:train",
+				},
 			],
 		},
 	],
