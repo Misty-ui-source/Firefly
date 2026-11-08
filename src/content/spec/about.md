@@ -139,7 +139,7 @@ This static blog is based on [Firefly](https://github.com/CuteLeaf/Firefly).
 
 ::github{repo="ImUpXuu/xuhome"}
 
-其余形态也各有出处：璨夜参考 XingHuiSama 的星空毛玻璃，纸面参考[轻笑Chuckle](https://qcqx.cn)，手册参考[终末地博客](https://tblog.amamo.top)。
+其余形态也各有出处：璨夜参考 [XingHuiSama](https://www.xinghuisama.top) 的星空毛玻璃，纸面参考[轻笑Chuckle](https://qcqx.cn)，手册参考[终末地博客](https://tblog.amamo.top)。
 
 如果这些项目也帮到了你，去给它们点个 Star 就是最好的感谢。
 ## 我的项目
