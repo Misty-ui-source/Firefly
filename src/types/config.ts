@@ -2,6 +2,7 @@ export type { AnalyticsConfig } from "./analyticsConfig";
 export type { AnnouncementConfig } from "./announcementConfig";
 export type {
 	BackgroundWallpaperConfig,
+	BannerHeight,
 	FullscreenWallpaperLayout,
 } from "./backgroundWallpaper";
 export type {

@@ -251,3 +251,14 @@
     opacity 0.35s ease-in-out,
     transform 0.35s ease-in-out;
 }
+
+/* 横幅高度二选一（data-banner-height 由 Layout 按「访客 localStorage ?? 控制台默认」在首帧前写到 <html>）：
+   classic = 官方经典高，首页横幅 65vh；tall = 本站全屏高（默认 100vh，不需要规则）。
+   机制要点：--banner-height-home 的默认值由 Layout 的 define:vars 以【内联样式】写在 <html> 与 <body> 上，
+   普通样式表规则（哪怕特异性更高、无 layer）都压不过内联样式——谐彩变量段的 65vh 实际就被内联值挡住、
+   从未生效（实测计算值恒为 100vh）。只有 !important 的样式表声明能盖过内联自定义属性，
+   且 #wallpaper-wrapper 等消费者继承的是 <body> 的值，故 html 与 body 两个元素都要设。 */
+html[data-banner-height="classic"],
+html[data-banner-height="classic"] > body {
+  --banner-height-home: 65vh !important;
+}

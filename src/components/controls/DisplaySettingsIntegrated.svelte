@@ -14,6 +14,7 @@ import {
 	getDefaultCardFollowThemeEnabled,
 	getDefaultFireflyEnabled,
 	getDefaultStarfieldEnabled,
+	getDefaultBannerHeight,
 	getDefaultFullscreenLayout,
 	getDefaultGradientEnabled,
 	getDefaultHue,
@@ -39,6 +40,7 @@ import {
 	getStoredCardFollowThemeEnabled,
 	getStoredFireflyEnabled,
 	getStoredStarfieldEnabled,
+	getStoredBannerHeight,
 	getStoredFullscreenLayout,
 	getStoredNavbarStyle,
 	getPureFontMenu,
@@ -90,6 +92,7 @@ import {
 	setCardFollowThemeEnabled,
 	setFireflyEnabled,
 	setStarfieldEnabled,
+	setBannerHeight,
 	setFullscreenLayout,
 	setGradientEnabled,
 	setHue,
@@ -134,7 +137,7 @@ import {
 	displaySettingsConfig,
 	siteConfig,
 } from "@/config";
-import type { FullscreenWallpaperLayout, WALLPAPER_MODE } from "@/types/config";
+import type { BannerHeight, FullscreenWallpaperLayout, WALLPAPER_MODE } from "@/types/config";
 import { getModeCarouselEnabled } from "@/utils/layout-utils";
 
 type OverlaySliderItem = {
@@ -304,6 +307,13 @@ let fullscreenLayout: FullscreenWallpaperLayout = $state(
 	getDefaultFullscreenLayout(),
 );
 const defaultFullscreenLayout = getDefaultFullscreenLayout();
+// 横幅高度（全屏高 / 经典）：仅横幅模式出现；控制台定默认、这里是访客覆盖
+let bannerHeight: BannerHeight = $state(getStoredBannerHeight());
+const defaultBannerHeight = getDefaultBannerHeight();
+const bannerHeightOptions = [
+	{ value: "tall", label: "全屏高" },
+	{ value: "classic", label: "经典" },
+] as const;
 let currentLayout: "list" | "grid" = $state("list");
 const defaultLayout = siteConfig.postListLayout.defaultMode;
 const mobileDefaultLayout =
@@ -921,6 +931,9 @@ onMount(() => {
 	// 从localStorage读取保存的全屏壁纸布局
 	fullscreenLayout = getStoredFullscreenLayout();
 
+	// 从localStorage读取保存的横幅高度
+	bannerHeight = getStoredBannerHeight();
+
 	// 从localStorage读取水波纹动画状态
 	wavesEnabled = getStoredWavesEnabled();
 
@@ -1072,6 +1085,10 @@ $effect(() => {
 
 $effect(() => {
 	setAstralLayout(astralLayout);
+});
+
+$effect(() => {
+	setBannerHeight(bannerHeight);
 });
 
 $effect(() => {
@@ -1738,6 +1755,28 @@ $effect(() => {
 					<span class="text-xs font-medium">{i18n(I18nKey.wallpaperNoneMode)}</span>
 				</button>
 			</div>
+		</div>
+		{/if}
+
+		<!-- Banner Height Section（仅横幅模式）：全屏高 = 本站整屏横幅，经典 = 官方 65vh -->
+		{#if wallpaperMode === WALLPAPER_BANNER}
+		<div>
+			<div class="text-xs font-bold text-(--btn-content) opacity-80 mt-3 mb-1.5">横幅高度</div>
+			<div class="flex flex-wrap gap-2">
+				{#each bannerHeightOptions as opt}
+				<button
+					aria-label={opt.label}
+					class="flex-1 min-w-[45%] btn-regular rounded-md py-2 px-3 flex items-center justify-center gap-2 active:scale-95 transition-all relative overflow-hidden"
+					class:opacity-60={bannerHeight !== opt.value}
+					class:bg-(--btn-regular-bg-hover)={bannerHeight === opt.value}
+					onclick={() => { bannerHeight = opt.value; }}
+					title={opt.label}
+				>
+					<span class="text-xs font-medium">{opt.label}</span>
+				</button>
+				{/each}
+			</div>
+			<div class="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5">全屏高：进站横幅铺满整个屏幕 · 经典：官方 Firefly 的横幅高度，内容更早露出来</div>
 		</div>
 		{/if}
 

@@ -6837,8 +6837,11 @@ routes.theme = async () => {
     const wM = getIn(t, wv, /mobile\s*:\s*(true|false)/);
     const gD = getIn(t, gr, /desktop\s*:\s*(true|false)/);
     const gM = getIn(t, gr, /mobile\s*:\s*(true|false)/);
+    const bnBlk = blockOf(t, /^\tbanner\s*:/m);
+    const bannerHeightRaw = bnBlk ? getIn(t, bnBlk, /height\s*:\s*"(\w+)"/) : null;
+    const bannerHeightVal = bannerHeightRaw === 'classic' ? 'classic' : 'tall';
     if (!mm || homeTitle === null || carousel === null || wD === null || gD === null || linksEnable === null) return null;
-    return { mode: mm[1], homeTitle: homeTitle === 'true', carousel: carousel === 'true', waves: wD === 'true' && wM !== 'false', gradient: gD === 'true' && gM !== 'false', bannerEnable: linksEnable === 'true', bannerLinks };
+    return { mode: mm[1], homeTitle: homeTitle === 'true', carousel: carousel === 'true', waves: wD === 'true' && wM !== 'false', gradient: gD === 'true' && gM !== 'false', bannerEnable: linksEnable === 'true', bannerLinks, bannerHeight: bannerHeightVal };
   }
   /* 明信播放器形态：mingxinConfig 的 music.playerVariant。值行以逗号结尾，
      接口里的类型行以分号结尾，正则带上逗号不会误配类型行 */
@@ -6905,6 +6908,14 @@ routes.theme = async () => {
     return out;
   }
   function applyBgw(t, s) {
+    {
+      const bnB = blockOf(t, /^\tbanner\s*:/m);
+      if (bnB) {
+        const repH = setIn(t, bnB, /height\s*:\s*"\w+"/, `height: "${s.bannerHeight}"`);
+        if (repH !== null) t = repH;
+        else t = t.slice(0, bnB.open + 1) + `\n\t\theight: "${s.bannerHeight}",` + t.slice(bnB.open + 1);
+      }
+    }
     let out = t.replace(/^\tmode\s*:\s*"\w+"/m, `\tmode: "${s.mode}"`);
     out = setIn(out, blockOf(out, /homeText\s*:/), /enable\s*:\s*(?:true|false)/, `enable: ${s.homeTitle}`);
     if (out === null) return null;
@@ -7053,6 +7064,8 @@ routes.theme = async () => {
       </div>
       <div class="field" style="margin-top:14px"><label>壁纸设置</label><div class="pills">${pill('homeTitle', '首页壁纸标题')}${pill('carousel', '壁纸轮播')}${pill('waves', '水波纹动画')}${pill('gradient', '渐变过渡')}</div>
       <p class="hint">水波纹 / 渐变过渡这两个开关同时管桌面端和移动端的默认值；各模式用哪些图、单独轮不轮播，去「图片设置」里管。</p></div>
+      <div class="field" style="margin-top:10px"><label>横幅高度（默认）</label><div class="pills">${seg('bannerHeight', 'tall', '全屏高')}${seg('bannerHeight', 'classic', '经典矮横幅')}</div>
+      <p class="hint">只在横幅模式下生效：全屏高 = 进站横幅铺满整屏（咱们现在这样）；经典矮横幅 = 官方 Firefly 的高度（首页约 65vh），内容露得更多。访客可以在博客调色板（显示设置）的壁纸页签里自己切换，那是访客本地的选择，不改这里的全站默认。</p></div>
     </div>
     <div class="card">
       <h2>🔗 横幅联系方式 <span class="sub">显示在首页横幅大标题下方的一排小图标；侧边栏资料卡里的联系方式是另一处，不受这里影响</span></h2>

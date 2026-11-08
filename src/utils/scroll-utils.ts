@@ -10,6 +10,19 @@ import { updateSidebarStickySpacing } from "@/utils/grid-layout-utils";
 const backToTopBtn = document.getElementById("back-to-top-btn");
 const navbar = document.getElementById("navbar-wrapper");
 
+// 首页横幅的实际高度（vh）：与 layout-base.css 的变量覆盖口径保持一致——
+// data-banner-height=classic 恒为 65；tall 时谐彩被双属性规则抬到 100、其余形态用默认变量（100）。
+// 属性缺失（老页面/异常）时回退：谐彩 65、其余 BANNER_HEIGHT_HOME。
+function getBannerHomeHeightVh(): number {
+	const html = document.documentElement;
+	const bh = html.getAttribute("data-banner-height");
+	if (bh === "classic") return 65;
+	if (bh === "tall") return 100;
+	return html.getAttribute("data-site-mode") === "harmony"
+		? 65
+		: BANNER_HEIGHT_HOME;
+}
+
 // 动态导航栏：记录上一次滚动位置，用于判断滚动方向（下滑隐藏 / 上滑显示）
 let lastScrollTop = 0;
 // 动态导航栏方向锚点：只有越过锚点足够距离才翻转显隐，避免临界点附近小幅抖动反复横跳。
@@ -54,7 +67,7 @@ export function scrollFunction(): void {
 		// 动态：下滑隐藏 / 轻微上滑立即显示 / 滚回顶部(<80px)常显
 		operations.push(() => {
 			const isHome = document.body.classList.contains("is-home");
-			// 壁纸/hero 边界：banner 首页 65vh、非首页 45vh；fullscreen 仅首页整屏（100lvh），非首页无 hero 为 0。
+			// 壁纸/hero 边界：banner 首页高度随 data-banner-height（tall 100vh / classic 65vh，谐彩 classic 同值）、非首页 45vh；fullscreen 仅首页整屏（100lvh），非首页无 hero 为 0。
 			// 越过该边界才启用「下滑隐藏 / 上滑显示」。overHero 不 gate isHome，故非首页 banner 也会跨壁纸保持
 			const heroBoundary = isFullscreenMode()
 				? isHome
@@ -62,7 +75,8 @@ export function scrollFunction(): void {
 					: 0
 				: isBannerMode()
 					? window.innerHeight *
-						((isHome ? BANNER_HEIGHT_HOME : BANNER_HEIGHT_NON_HOME) / 100)
+						((isHome ? getBannerHomeHeightVh() : BANNER_HEIGHT_NON_HOME) /
+							100)
 					: 0;
 			const overHero = scrollTop < heroBoundary;
 			const isSegmentStyle =
@@ -102,7 +116,8 @@ export function scrollFunction(): void {
 			const threshold = isFullscreenMode()
 				? window.innerHeight - 88
 				: window.innerHeight *
-						((isHome ? BANNER_HEIGHT_HOME : BANNER_HEIGHT_NON_HOME) / 100) -
+						((isHome ? getBannerHomeHeightVh() : BANNER_HEIGHT_NON_HOME) /
+							100) -
 					88;
 
 			if (scrollTop >= threshold) {

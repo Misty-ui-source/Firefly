@@ -247,6 +247,8 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	},
 	// Banner模式特有配置
 	banner: {
+		// 横幅高度（全站默认，Alexander Console「主题」页维护）：tall = 全屏高（首页 100vh，进站整屏横幅），classic = 官方经典高（首页 65vh）
+		height: "tall",
 		// 图片位置
 		// 支持所有CSS object-position值，如: 'top', 'center', 'bottom', 'left top', 'right bottom', '25% 75%', '10px 20px'..
 		// 如果不知道怎么配置百分百之类的配置，推荐直接使用：'center'居中，'top'顶部居中，'bottom' 底部居中，'left'左侧居中，'right'右侧居中

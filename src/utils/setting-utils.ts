@@ -9,6 +9,7 @@ import {
 	WALLPAPER_OVERLAY,
 } from "@constants/constants";
 import type {
+	BannerHeight,
 	FullscreenWallpaperLayout,
 	LIGHT_DARK_MODE,
 	NavbarStyle,
@@ -373,6 +374,56 @@ export function setFullscreenLayout(layout: FullscreenWallpaperLayout): void {
 		localStorage.setItem("fullscreenLayout", safeLayout);
 	}
 	applyFullscreenLayoutToDocument(safeLayout);
+}
+
+export function getDefaultBannerHeight(): BannerHeight {
+	return backgroundWallpaper.banner?.height ?? "tall";
+}
+
+export function getStoredBannerHeight(): BannerHeight {
+	const defaultHeight = getDefaultBannerHeight();
+	if (
+		typeof localStorage === "undefined" ||
+		typeof localStorage.getItem !== "function"
+	) {
+		return defaultHeight;
+	}
+	const stored = localStorage.getItem("bannerHeight");
+	return stored === "classic" || stored === "tall" ? stored : defaultHeight;
+}
+
+export function applyBannerHeightToDocument(
+	height: BannerHeight,
+	animate = true,
+): void {
+	if (typeof document === "undefined") return;
+	const safeHeight: BannerHeight = height === "classic" ? "classic" : "tall";
+	const html = document.documentElement;
+	// 复用壁纸过渡类：#wallpaper-wrapper 的 height 与 .content-panel 的 top 已有 450ms 过渡规则
+	if (animate) {
+		html.classList.add("is-wallpaper-transitioning");
+		window.setTimeout(
+			() => html.classList.remove("is-wallpaper-transitioning"),
+			520,
+		);
+	}
+	html.setAttribute("data-banner-height", safeHeight);
+	window.dispatchEvent(
+		new CustomEvent("bannerHeightChange", {
+			detail: { height: safeHeight },
+		}),
+	);
+}
+
+export function setBannerHeight(height: BannerHeight): void {
+	const safeHeight: BannerHeight = height === "classic" ? "classic" : "tall";
+	if (
+		typeof localStorage !== "undefined" &&
+		typeof localStorage.setItem === "function"
+	) {
+		localStorage.setItem("bannerHeight", safeHeight);
+	}
+	applyBannerHeightToDocument(safeHeight);
 }
 
 const NAVBAR_STYLES: NavbarStyle[] = ["classic", "float", "capsule", "segment"];

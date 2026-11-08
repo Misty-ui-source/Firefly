@@ -1,5 +1,8 @@
 export type FullscreenWallpaperLayout = "classic" | "hero";
 
+// 横幅高度：tall = 本站全屏高（首页 100vh），classic = 官方经典高（首页 65vh）
+export type BannerHeight = "tall" | "classic";
+
 export type BackgroundWallpaperConfig = {
 	mode: "banner" | "fullscreen" | "overlay" | "none"; // 壁纸模式：banner横幅模式、fullscreen全屏壁纸、overlay全屏透明覆盖模式或none纯色背景
 	modeSrc?: {
@@ -80,6 +83,8 @@ export type BackgroundWallpaperConfig = {
 
 	// Banner模式特有配置
 	banner?: {
+		// 横幅高度（全站默认）：tall 全屏高 / classic 官方经典高；访客可在显示设置里覆盖
+		height?: BannerHeight;
 		position?:
 			| "top"
 			| "center"

@@ -178,7 +178,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
 ---
 
 <!doctype html>
-<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"} data-navbar-style={siteConfig.navbar.navbarStyle ?? "classic"} data-site-mode={siteConfig.siteMode ?? "full"} data-harmony-font={siteConfig.harmonyFont ?? "default"} data-brick-font={siteConfig.brickFont ?? "default"} data-star-font={siteConfig.starFont ?? "default"} data-astral-theme={siteConfig.astralTheme ?? "solid"} data-paper-theme={siteConfig.paperTheme ?? "ink"} data-astral-layout={siteConfig.astralLayout ?? "bento"} data-texture-preset={mingxinConfig.texturePreset ?? "jigsaw"} data-mingxin-afterglow={mingxinConfig.afterglowDefault ?? "hero"}>
+<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-banner-height={backgroundWallpaper.banner?.height ?? "tall"} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"} data-navbar-style={siteConfig.navbar.navbarStyle ?? "classic"} data-site-mode={siteConfig.siteMode ?? "full"} data-harmony-font={siteConfig.harmonyFont ?? "default"} data-brick-font={siteConfig.brickFont ?? "default"} data-star-font={siteConfig.starFont ?? "default"} data-astral-theme={siteConfig.astralTheme ?? "solid"} data-paper-theme={siteConfig.paperTheme ?? "ink"} data-astral-layout={siteConfig.astralLayout ?? "bento"} data-texture-preset={mingxinConfig.texturePreset ?? "jigsaw"} data-mingxin-afterglow={mingxinConfig.afterglowDefault ?? "hero"}>
   <head>
     <meta charset="UTF-8" />
     {commentConfig?.type === "waline" && commentConfig?.waline?.serverURL && (
@@ -373,6 +373,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
         configHue,
         defaultMode: siteConfig.themeColor.defaultMode ?? "light",
         defaultWallpaperMode: backgroundWallpaper.mode,
+        defaultBannerHeight: backgroundWallpaper.banner?.height ?? "tall",
         isWallpaperSwitchable:
           displaySettingsConfig.wallpaperModeSwitchable,
         isFullscreenLayoutSwitchable:
@@ -475,6 +476,17 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
       document.documentElement.setAttribute(
         "data-wallpaper-mode",
         wallpaperMode
+      );
+
+      // 初始化横幅高度 - 优先 localStorage（显示设置里改过时），否则用配置默认
+      const bannerHeightStored = localStorage.getItem("bannerHeight");
+      const resolvedBannerHeight =
+        bannerHeightStored === "classic" || bannerHeightStored === "tall"
+          ? bannerHeightStored
+          : defaultBannerHeight;
+      document.documentElement.setAttribute(
+        "data-banner-height",
+        resolvedBannerHeight,
       );
 
       // 初始化导航栏样式 - 优先 localStorage（显示设置里改过时），否则用配置默认
