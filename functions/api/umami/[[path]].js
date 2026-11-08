@@ -46,6 +46,15 @@ async function resolveWhitelist(request, websiteId) {
 }
 
 export async function onRequest({ request, params }) {
+  // 封禁 breezexing（2026-11-08 站长定）：该站整套搬运本站、沿用本站统计与图床，
+  // 其页面发来的请求一律拒绝（统计卡等经本代理的读取直接失效）。
+  const ref = request.headers.get('referer') || request.headers.get('origin') || '';
+  let refHost = '';
+  try { refHost = new URL(ref).hostname; } catch { /* 无来源头则放行 */ }
+  if (refHost === 'breezexing.xyz' || refHost.endsWith('.breezexing.xyz')) {
+    return new Response('Forbidden', { status: 403 });
+  }
+
   const segs = params.path || [];
   const url = new URL(request.url);
   // 注意：前端请求形如 /api/umami/api/share/...，segs 首段已是 "api"，此处不能再拼一层 /api
