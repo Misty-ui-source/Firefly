@@ -53,6 +53,8 @@ def parse_date(s):
     for fmt in (
         "%a, %d %b %Y %H:%M:%S %z",
         "%a, %d %b %Y %H:%M:%S %Z",
+        "%Y-%m-%dT%H:%M:%S.%f%z",
+        "%Y-%m-%dT%H:%M:%S.%fZ",
         "%Y-%m-%dT%H:%M:%S%z",
         "%Y-%m-%dT%H:%M:%SZ",
         "%Y-%m-%d %H:%M:%S",
@@ -141,9 +143,16 @@ def main():
         try:
             xml = fetch_rss(f["rss"])
             posts = parse_feed(xml, f["name"], f["site"], f["avatar"])
-            print(f"  ✓ {f['name']}: {len(posts)} 篇", flush=True)
-            all_posts.extend(posts)
-            if posts:
+            # 站长规则（2026-11-09）：无日期或日期解析失败的条目不收录，
+            # 避免页面出现「未知日期」分组
+            dated = [p for p in posts if p["date"]]
+            dropped = len(posts) - len(dated)
+            if dropped:
+                print(f"  ✓ {f['name']}: {len(dated)} 篇（剔除无日期 {dropped} 篇）", flush=True)
+            else:
+                print(f"  ✓ {f['name']}: {len(dated)} 篇", flush=True)
+            all_posts.extend(dated)
+            if dated:
                 ok_sources += 1
         except Exception as e:
             print(f"  ✗ {f['name']}: {e}", flush=True)

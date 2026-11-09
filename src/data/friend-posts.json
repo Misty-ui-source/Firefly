@@ -1,8 +1,233 @@
 {
-  "updated_at": "2026-10-31T08:12:58.845695+00:00",
-  "total": 68,
-  "sources": 7,
+  "updated_at": "2026-11-09T04:40:53.091284+00:00",
+  "total": 173,
+  "sources": 18,
   "posts": [
+    {
+      "title": "扣子下线，云端那张画布未来趋势如何？",
+      "link": "https://blog.onlycc.ltd/archives/pG9EsPmz",
+      "date": "2026-11-09T01:28:00+00:00",
+      "excerpt": "扣子没下线，死掉的是云端那张画布 这两天很多人在传，说字节的扣子要下线了。 我去翻了官方公告。下线的是企业版。 公告叫《扣子企业版下线公告》，10 月 29 日发布在官方文档站。企业标准版和旗舰版从 11 月 30 日起不再接受新客户，存量套餐最晚 2027 年 12 月 31 日退场。 新浪科技报",
+      "source": "楠香自语",
+      "source_site": "https://blog.onlycc.ltd",
+      "avatar": "https://blog.onlycc.ltd/upload/onlynn_avatar.png"
+    },
+    {
+      "title": "「说说」已严肃在workbuddy运行Windows 10",
+      "link": "https://upxuu.com/talk/2026-11-08-已严肃在workbuddy运行window--10/",
+      "date": "2026-11-08T13:36:06+00:00",
+      "excerpt": "crazy！ 这你敢想 最开始我发现workbuddy移动端的这个逆天功能还是看到云电脑仨字，在wb的任务上面 比较逆天的是它没法和桌面端共享 直到昨天我魔改了一下openlist的前后端通讯协议以兼容它的发布应用网关https://pan.upxuu.com/ 一个跑在wb的后端的256gb硬盘就这么水灵灵诞生了 起初我以为它的32h 128gb是虚拟化出来可以用的 结果还开了cgroup限制4",
+      "source": "UpXuu's blog",
+      "source_site": "https://upxuu.com",
+      "avatar": "https://upxuu.com/images/me.jpg"
+    },
+    {
+      "title": "Codex，能不能先看懂我在说什么",
+      "link": "https://detached.online/blog/codex-understand-me-first/",
+      "date": "2026-11-08T04:26:00+00:00",
+      "excerpt": "最近用 Codex 的几次糟心体验：没读评论就追问、误判截图里的问题、忽略项目里的笔记约定，还有反复把新案例拆成独立的 MD 文件。",
+      "source": "Detached",
+      "source_site": "https://detached.online/",
+      "avatar": "https://detached.online/icon-512.png"
+    },
+    {
+      "title": "[更新中] C 语言学习笔记",
+      "link": "https://blog.nekro.top/c-study/",
+      "date": "2026-11-08T00:00:00+00:00",
+      "excerpt": "记录我的第一门正式语言学习历程。包含我遇到的问题，疑难点，解决方案等。",
+      "source": "Nekro's SEKAI",
+      "source_site": "https://www.nekro.top/",
+      "avatar": "https://avatars.githubusercontent.com/u/90670998?v=4"
+    },
+    {
+      "title": "他真好看",
+      "link": "https://blog.8765777.xyz/talks/talk_qheyuvoccvqe/",
+      "date": "2026-11-07T02:02:00+00:00",
+      "excerpt": "他真好看",
+      "source": "YIYAN ✦ 拾色之域",
+      "source_site": "https://blog.8765777.xyz",
+      "avatar": "https://blogr2.8765777.xyz/assets/my/7590A261E0E39A642ABF4873E89EAFF9.jpg"
+    },
+    {
+      "title": "沃要开始复习了",
+      "link": "https://blog.8765777.xyz/talks/talk_mfyba8e6m8yi/",
+      "date": "2026-11-07T02:01:00+00:00",
+      "excerpt": "沃要开始复习了",
+      "source": "YIYAN ✦ 拾色之域",
+      "source_site": "https://blog.8765777.xyz",
+      "avatar": "https://blogr2.8765777.xyz/assets/my/7590A261E0E39A642ABF4873E89EAFF9.jpg"
+    },
+    {
+      "title": "听雨茶室更新小记：今天，又添了点小功能",
+      "link": "https://rainzt.cn/posts/tingyu-tea-room-update-2026-11-07/",
+      "date": "2026-11-07T00:00:00+00:00",
+      "excerpt": "消息可以撤回，离开后也能接着读了。聊聊听雨茶室今天新增的聊天搜索、小猫回应、草稿恢复，还有尤诺宝宝和岸宝表情包。",
+      "source": "朝朝听雨",
+      "source_site": "https://rainzt.cn/",
+      "avatar": "https://rainzt.cn/zzty.png"
+    },
+    {
+      "title": "初中的太阳很好看",
+      "link": "https://blog.8765777.xyz/posts/post-20261107-dojrza/",
+      "date": "2026-11-07T00:00:00+00:00",
+      "excerpt": "回忆录",
+      "source": "YIYAN ✦ 拾色之域",
+      "source_site": "https://blog.8765777.xyz",
+      "avatar": "https://blogr2.8765777.xyz/assets/my/7590A261E0E39A642ABF4873E89EAFF9.jpg"
+    },
+    {
+      "title": "艾雪周刊 V.18—社交类游戏感想",
+      "link": "https://daily.yybb.us/posts/weekly/18/",
+      "date": "2026-11-06T11:15:26+00:00",
+      "excerpt": "关于本刊 这是艾雪期刊的第 18 期，作为一个独立系列进行更新，更新时间在周末，主要内容为周内内容汇集以及碎碎念，有时会分享一些有趣的项目，有时是一些生活的碎碎念",
+      "source": "AIOVTUE-雪",
+      "source_site": "https://daily.yybb.us",
+      "avatar": "https://r2tc.20030327.xyz/file/博客/主题/xGAV3car.webp"
+    },
+    {
+      "title": "听雨茶室-上线啦~",
+      "link": "https://rainzt.cn/posts/tingyu-tea-room-launch/",
+      "date": "2026-11-06T00:00:00+00:00",
+      "excerpt": "从评论区里的闲聊，到一个可以分享日常的聊天室，听雨茶室上线啦。",
+      "source": "朝朝听雨",
+      "source_site": "https://rainzt.cn/",
+      "avatar": "https://rainzt.cn/zzty.png"
+    },
+    {
+      "title": "MoeRT-GuideGen：一个在浏览器里拼轨道交通导视牌的 Web 编辑器",
+      "link": "https://blog.yaria.top/posts/d018fa9a",
+      "date": "2026-11-05T14:20:01+00:00",
+      "excerpt": "是大肥鱼写的...所以不要抱怨AI味嘛，真的懒了（RSS 阅读器可能渲染错误。查看原文：https://blog.yaria.top/posts/d018fa9aMoeRT-GuideGen：一个在浏览器里拼轨道交通导视牌的 Web 编辑器 ！！！以下内容由蓝色大肥鱼生成！！！ 前言 最早做这个项目的动机很简单：拍了太多地铁站里的悬挂牌和导向牌，想不想自己也能拼一块出来？ MoeRT-GuideG",
+      "source": "Ariasakaの小窝",
+      "source_site": "https://blog.yaria.top",
+      "avatar": "https://img.0v0.my/2024/12/05/67517bcf104da.png"
+    },
+    {
+      "title": "免费域名邮箱-CyberPersons",
+      "link": "https://daily.yybb.us/posts/memos/free-email-smtp/",
+      "date": "2026-11-05T12:40:48+00:00",
+      "excerpt": "简介 这是一个简介 内容 好啦不开玩笑，是因为雪发现一个有趣的东西，忍不住分享一下，那么有人问了，这么好的水字数的机会咋不写周刊里呢，嘿嘿，因为没人看，言归正传，雪发现的是一个名为CyberPersons 的免费域名邮箱项目",
+      "source": "AIOVTUE-雪",
+      "source_site": "https://daily.yybb.us",
+      "avatar": "https://r2tc.20030327.xyz/file/博客/主题/xGAV3car.webp"
+    },
+    {
+      "title": "雪有自己的表情包啦~",
+      "link": "https://daily.yybb.us/posts/painting/biaoqinbao-xue/",
+      "date": "2026-11-05T02:55:29+00:00",
+      "excerpt": "AI生成的哦 一张张画还是太累了 感谢AI",
+      "source": "AIOVTUE-雪",
+      "source_site": "https://daily.yybb.us",
+      "avatar": "https://r2tc.20030327.xyz/file/博客/主题/xGAV3car.webp"
+    },
+    {
+      "title": "嗯，对，14天后期中考，我应该得要好好学习了吧（）",
+      "link": "https://blog.8765777.xyz/talks/talk_3t6kxdwnogxz/",
+      "date": "2026-11-04T11:49:00+00:00",
+      "excerpt": "嗯，对，14天后期中考，我应该得要好好学习了吧（）",
+      "source": "YIYAN ✦ 拾色之域",
+      "source_site": "https://blog.8765777.xyz",
+      "avatar": "https://blogr2.8765777.xyz/assets/my/7590A261E0E39A642ABF4873E89EAFF9.jpg"
+    },
+    {
+      "title": "“万物之间皆有引力，所以我遇见你”丨Everything has gravity",
+      "link": "https://blog.8765777.xyz/talks/talk_3r1sz46vzscl/",
+      "date": "2026-11-04T11:48:00+00:00",
+      "excerpt": "“万物之间皆有引力，所以我遇见你”丨Everything has gravity, so I met you. （注：跳蚤市场 and 开玩笑的owo）",
+      "source": "YIYAN ✦ 拾色之域",
+      "source_site": "https://blog.8765777.xyz",
+      "avatar": "https://blogr2.8765777.xyz/assets/my/7590A261E0E39A642ABF4873E89EAFF9.jpg"
+    },
+    {
+      "title": "AI预测的美国中期选举",
+      "link": "https://blog.onlycc.ltd/archives/l2eTZDDk",
+      "date": "2026-11-04T06:33:00+00:00",
+      "excerpt": "六个聊天机器人都扛住了选举谣言，也全都造得出假照片 今天是美国中期选举投票日。谁赢我猜不出来，也不打算猜，计票要几天才知道。我想说的是一件跟结果无关的事。 Brennan Center 今年做了一组测试，二月到八月跑完第一轮，十月又复测了一遍。对象是六个最常用的 AI 产品，ChatGPT、Gemi",
+      "source": "楠香自语",
+      "source_site": "https://blog.onlycc.ltd",
+      "avatar": "https://blog.onlycc.ltd/upload/onlynn_avatar.png"
+    },
+    {
+      "title": "小馋猫的第二个100天",
+      "link": "https://blog.8765777.xyz/talks/talk_5acluyj29icd/",
+      "date": "2026-11-03T15:22:00+00:00",
+      "excerpt": "小馋猫的第二个100天",
+      "source": "YIYAN ✦ 拾色之域",
+      "source_site": "https://blog.8765777.xyz",
+      "avatar": "https://blogr2.8765777.xyz/assets/my/7590A261E0E39A642ABF4873E89EAFF9.jpg"
+    },
+    {
+      "title": "DeepSeek V5 疑似出现",
+      "link": "https://blog.onlycc.ltd/archives/JJvu2Itu",
+      "date": "2026-11-03T07:14:00+00:00",
+      "excerpt": "DeepSeek V5 还没发，我先把官方仓库翻了一遍 11 月 3 日下午，我拿自己的 API key 调了一次 DeepSeek 的 models 接口。 返回两个 id，deepseek-flash 和 deepseek-v4-pro。就这样。 这事本来没什么可写的。但六天前，10 月 28",
+      "source": "楠香自语",
+      "source_site": "https://blog.onlycc.ltd",
+      "avatar": "https://blog.onlycc.ltd/upload/onlynn_avatar.png"
+    },
+    {
+      "title": "博客4.5周年祭——迟到了！！！",
+      "link": "https://blog.yaria.top/posts/5766f9d3",
+      "date": "2026-11-01T14:45:00+00:00",
+      "excerpt": "那就继续吧，让时间的洪流继续推动这个小小的互联网角落吧。RSS 阅读器可能渲染错误。查看原文：https://blog.yaria.top/posts/5766f9d3随便说说什么呢 心血来潮启动了轰轰烈烈的 Vibe 计划，花了大几十、上百块钱蹬了好多好多模型，最初的目标其实就是博客，结果就在这短短半个月里，由浅到深把博客翻新了个遍！翻到最后才突然发现，原来博客早就四年半了，而且我居然还没有继承",
+      "source": "Ariasakaの小窝",
+      "source_site": "https://blog.yaria.top",
+      "avatar": "https://img.0v0.my/2024/12/05/67517bcf104da.png"
+    },
+    {
+      "title": "人生不是所有问题都需要答案，而是要学会与自己和解",
+      "link": "https://rainzt.cn/posts/learning-to-make-peace-with-yourself/",
+      "date": "2026-11-01T08:46:17+00:00",
+      "excerpt": "尽力解决能够改变的，坦然接受无法改变的，不以结果定义努力，也不以遗憾否定人生。聊聊努力、接受、边界与遗憾，以及如何在没有答案的日子里继续认真生活。",
+      "source": "朝朝听雨",
+      "source_site": "https://rainzt.cn/",
+      "avatar": "https://rainzt.cn/zzty.png"
+    },
+    {
+      "title": "拼图纹理、角色喵声与默认皮肤：这轮站点打磨的零额外负担做法",
+      "link": "https://blog.fqzlr.top/posts/tech/texture-character-default-theme/",
+      "date": "2026-11-01T02:50:00+00:00",
+      "excerpt": "把首页的拼图底纹搬进显示设置的七种纹理、修掉卡片等高与备案错位、给卡通角色换上自己的头像并补上点击喵声、把关于页的致谢补全到 Shirone，最后让 mmz 成为默认皮肤——每一处都按零额外负担来做。",
+      "source": "番茄主理人",
+      "source_site": "https://blog.fqzlr.top/",
+      "avatar": "https://q1.qlogo.cn/g?b=qq&nk=20447289&s=640"
+    },
+    {
+      "title": "从一张明信片到五幕横滑：mmz 首页复刻的取舍",
+      "link": "https://blog.fqzlr.top/posts/tech/mmz-home-postcard-replica/",
+      "date": "2026-11-01T02:20:00+00:00",
+      "excerpt": "把参考站 mmz 的首页搬进 Shirone：双层明信片收缩、五幕横滑、终幕放大文案、两列内容区、页脚与悬浮个人信息卡，以及一套 rAF 控制器怎么把这些互不相干的动画串成一个连续场景。",
+      "source": "番茄主理人",
+      "source_site": "https://blog.fqzlr.top/",
+      "avatar": "https://q1.qlogo.cn/g?b=qq&nk=20447289&s=640"
+    },
+    {
+      "title": "倒霉倒霉倒霉",
+      "link": "https://detached.online/blog/a-run-of-bad-luck/",
+      "date": "2026-10-30T14:52:00+00:00",
+      "excerpt": "Claude MAX 才用一天就被封号，还不退款；网站 IP 从 10 月 28 日下午开始被墙；用了很久的 Claude Pro 老账号完成强制 KYC 后也被封禁。这几天光顾着处理这些破事了。",
+      "source": "Detached",
+      "source_site": "https://detached.online/",
+      "avatar": "https://detached.online/icon-512.png"
+    },
+    {
+      "title": "Aemeath 主题博客后台要来啦",
+      "link": "https://rainzt.cn/posts/aemeath-xiaoai-admin/",
+      "date": "2026-10-30T10:59:43+00:00",
+      "excerpt": "给 Aemeath 做了一个小爱后台，把 AI 评论回复、评论审核、友链申请、状态管理和每日回链检查放到了一起，也终于理顺了静态博客修改与 GitHub Actions 部署之间的关系。",
+      "source": "朝朝听雨",
+      "source_site": "https://rainzt.cn/",
+      "avatar": "https://rainzt.cn/zzty.png"
+    },
+    {
+      "title": "艾雪周刊 V.17—又又又更新啦—身份标识！",
+      "link": "https://daily.yybb.us/posts/weekly/17/",
+      "date": "2026-10-30T08:16:43+00:00",
+      "excerpt": "关于本刊 这是艾雪期刊的第 17 期，作为一个独立系列进行更新，更新时间在周末，主要内容为周内内容汇集以及碎碎念，有时会分享一些有趣的项目，有时是一些生活的碎碎念",
+      "source": "AIOVTUE-雪",
+      "source_site": "https://daily.yybb.us",
+      "avatar": "https://r2tc.20030327.xyz/file/博客/主题/xGAV3car.webp"
+    },
     {
       "title": "Apple Music Windows 真是拉了坨大的",
       "link": "https://lengxiqwq.com/posts/apple-music-windows-%E7%9C%9F%E6%98%AF%E6%8B%89%E4%BA%86%E5%9D%A8%E5%A4%A7%E7%9A%84/",
@@ -13,6 +238,51 @@
       "avatar": "https://weavatar.com/avatar/20ac1fc492bcd37c6f1e6435250a00a490403efd468f632c11fcbe87c1c3287b?s=256"
     },
     {
+      "title": "评论区升级",
+      "link": "https://detached.online/blog/comment-live-preview-and-image-upload/",
+      "date": "2026-10-29T16:46:00+00:00",
+      "excerpt": "评论框换成了即时渲染的 Markdown 编辑器：打完一段，样式当场就出来。图片可以直接粘贴、拖进框里，或者点按钮选，浏览器先压缩好再上传。顺带说说表情、换行这些小改动，以及还没做好的地方。",
+      "source": "Detached",
+      "source_site": "https://detached.online/",
+      "avatar": "https://detached.online/icon-512.png"
+    },
+    {
+      "title": "月刊 · 第三期：他们以为击败我就是终结，而我必归来将之改写",
+      "link": "https://rainzt.cn/posts/monthly-2026-10/",
+      "date": "2026-10-29T06:53:59+00:00",
+      "excerpt": "这个月先不折腾大篇幅月刊，聊聊写月刊的初心，回顾本月文章，也分享三位新推荐的博友。",
+      "source": "朝朝听雨",
+      "source_site": "https://rainzt.cn/",
+      "avatar": "https://rainzt.cn/zzty.png"
+    },
+    {
+      "title": "静态博客后台-开源啦！",
+      "link": "https://daily.yybb.us/posts/aiovtue/aiovtue-cms/cms-gen/",
+      "date": "2026-10-27T14:08:13+00:00",
+      "excerpt": "介绍 总览 之前有发过一篇主题升级—Hugo博客后台,那么现在，项目开源啦（一半），本次开源的是通配版本，适配各种静态架构，理论上只要是走的github仓库托管，都能使用，其实在周刊写过介绍了，但是还是单独发一篇介绍一下，也可以直接跳转开源文档 AIOVTUE-CMS 是基于 Pages CMS 的自托管内容管理系统，源Pages CMS项目已经能做到后台管理，但是个人觉得不太够用，同时英文界面不",
+      "source": "AIOVTUE-雪",
+      "source_site": "https://daily.yybb.us",
+      "avatar": "https://r2tc.20030327.xyz/file/博客/主题/xGAV3car.webp"
+    },
+    {
+      "title": "4280 亿参数开源了，我那台 4G 服务器还是只能调 API",
+      "link": "https://blog.onlycc.ltd/archives/hJ9NIuMW",
+      "date": "2026-10-27T07:52:00+00:00",
+      "excerpt": "对于普通开发者来说，API始终是首选 10 月 26 日晚上我在服务器上改一个部署脚本，等命令跑完的空档刷了下时间线，才发现三家把模型挤在一周里全发完了。 10 月 19 日 MiniMax M3.1 Flash 上线，10 月 23 日把权重开源。10 月 24 日零点，月之暗面推了 Kimi K",
+      "source": "楠香自语",
+      "source_site": "https://blog.onlycc.ltd",
+      "avatar": "https://blog.onlycc.ltd/upload/onlynn_avatar.png"
+    },
+    {
+      "title": "又一个爱好-石塑黏土！",
+      "link": "https://daily.yybb.us/posts/memos/day-26-10-26/",
+      "date": "2026-10-26T13:40:56+00:00",
+      "excerpt": "简介 突然发现写文的时候每次都喜欢在顶上写个简介的标题哈哈，不知道咋开头了属于是，本期浅浅分享一下最近的一些小玩意儿，因为突然发现好久没发普通文章了，一直在更新周刊，今天就发一篇啦（水一篇），最近雪迷上了捏黏土，不知道大家刷到过没有，或者听说过没，就是拿着黏土捏处各种各样的手办，雪刷的大部分都是捏的人物，还有一些小摆件什么的，看着可心动了，浅浅了解了一下，黏土的种类还怪多的，有什么石塑黏土，超轻黏",
+      "source": "AIOVTUE-雪",
+      "source_site": "https://daily.yybb.us",
+      "avatar": "https://r2tc.20030327.xyz/file/博客/主题/xGAV3car.webp"
+    },
+    {
       "title": "给软件换个图标，怎么比写软件还难？",
       "link": "https://lengxiqwq.com/posts/%E7%BB%99%E8%BD%AF%E4%BB%B6%E6%8D%A2%E4%B8%AA%E5%9B%BE%E6%A0%87%E6%80%8E%E4%B9%88%E6%AF%94%E5%86%99%E8%BD%AF%E4%BB%B6%E8%BF%98%E9%9A%BE/",
       "date": "2026-10-26T09:32:00+00:00",
@@ -20,6 +290,24 @@
       "source": "冷汐的杂货铺",
       "source_site": "https://lengxiqwq.com",
       "avatar": "https://weavatar.com/avatar/20ac1fc492bcd37c6f1e6435250a00a490403efd468f632c11fcbe87c1c3287b?s=256"
+    },
+    {
+      "title": "Komari 反复报 WSL 离线排查",
+      "link": "https://www.ikuyu.com/archives/komari-wsl-offline-tcp-retries2",
+      "date": "2026-10-25T14:11:05+00:00",
+      "excerpt": "现象 Komari 一直推送公司电脑上那台 WSL2 的离线告警，过十几分钟又恢复。可 WSL 已经连续运行 6 天，SSH 也一直能连。 原因 对照面板和 agent 两边的日志： 时间 面板 agent 19:34 75 秒没收到心跳，判定断开 没发现 19:36 超过 180 秒宽限期，发 Offline 没发现 19:49 收到重连，发 Online 报 close 1006，1 秒后重连",
+      "source": "爱酷语",
+      "source_site": "https://www.ikuyu.com",
+      "avatar": "https://oss.ikuyu.com/site/avatars/biming.png"
+    },
+    {
+      "title": "10月24日程序员节特别篇",
+      "link": "https://rainzt.cn/posts/programmer-day-2026-dynamic-blog/",
+      "date": "2026-10-24T10:35:58+00:00",
+      "excerpt": "从第一次用豆包写博客，到让 Codex 和 Claude 参与工作流与项目开发，记录我这一年多对 AI 的真实感受。",
+      "source": "朝朝听雨",
+      "source_site": "https://rainzt.cn/",
+      "avatar": "https://rainzt.cn/zzty.png"
     },
     {
       "title": "什么，都2026年了 你还在为ai模型付费？！盘点我用的免费api渠道",
@@ -38,6 +326,33 @@
       "source": "UpXuu's blog",
       "source_site": "https://upxuu.com",
       "avatar": "https://upxuu.com/images/me.jpg"
+    },
+    {
+      "title": "Cloudflare优选加速网站访问",
+      "link": "https://detached.online/blog/cloudflare%E4%BC%98%E9%80%89/",
+      "date": "2026-10-23T13:33:00+00:00",
+      "excerpt": "把 Cloudflare 上的网站解析到国内连得更快的 Cloudflare IP。先讲清任播和小黄云的原理，再按官方文档和实测整理 SaaS 自定义主机名的做法、踩到的坑和测速结果，附 Worker 路由与 R2 两种做法。",
+      "source": "Detached",
+      "source_site": "https://detached.online/",
+      "avatar": "https://detached.online/icon-512.png"
+    },
+    {
+      "title": "艾雪周刊 V.16—开源博客管理后台-AIOVTUE-CMS-gen",
+      "link": "https://daily.yybb.us/posts/weekly/16/",
+      "date": "2026-10-23T11:20:00+00:00",
+      "excerpt": "关于本刊 这是艾雪期刊的第 16 期，作为一个独立系列进行更新，更新时间在周末，主要内容为周内内容汇集以及碎碎念，有时会分享一些有趣的项目，有时是一些生活的碎碎念",
+      "source": "AIOVTUE-雪",
+      "source_site": "https://daily.yybb.us",
+      "avatar": "https://r2tc.20030327.xyz/file/博客/主题/xGAV3car.webp"
+    },
+    {
+      "title": "给站点统计安个家：自建 Umami + 公开统计页 /analytics 的完整复刻手册",
+      "link": "https://azuma.mstzuomu.space/posts/azuma.zuomu-blog-24/",
+      "date": "2026-10-23T00:00:00+00:00",
+      "excerpt": "不再挂不蒜子、不租统计面板，也能有带趋势图和热力图的公开统计页。本文记录本站把站点统计迁到自建 Umami 并移植 /analytics 的全过程：Docker 部署与版本钉死、share_id 直写 SQL、v2.20 API 语义差异、历史数据重放、Astro 端接入与布局修整，附踩坑表与从零复刻清单",
+      "source": "左沐の手册",
+      "source_site": "https://azuma.mstzuomu.space/",
+      "avatar": "https://tu.mstzuomu.space/file/%E5%A4%B4%E5%83%8F/1786942479049_azumahead.jpg"
     },
     {
       "title": "评论系统 Twikoo 好多 bug！被迫换成了 Waline",
@@ -76,6 +391,15 @@
       "avatar": "https://img.0v0.my/2024/12/05/67517bcf104da.png"
     },
     {
+      "title": "给 Obsidian 找个家：轻量服务器自建 WebDAV 同步 + Remotely Save 的完整复刻手册",
+      "link": "https://azuma.mstzuomu.space/posts/azuma.zuomu-blog-23/",
+      "date": "2026-10-21T00:00:00+00:00",
+      "excerpt": "不买官方 Obsidian Sync、不跑 CouchDB、不上 Nextcloud，也能让手机电脑多端笔记互相同步。本文记录本站把一台已有腾讯云轻量服务器改造出独立 Obsidian WebDAV 后端的全过程：为什么选 WebDAV + Remotely Save（四方案对比）、rclone serve webdav 的 systemd 部署与 127.0.0.1 隔离、Nginx 反代 + ",
+      "source": "左沐の手册",
+      "source_site": "https://azuma.mstzuomu.space/",
+      "avatar": "https://tu.mstzuomu.space/file/%E5%A4%B4%E5%83%8F/1786942479049_azumahead.jpg"
+    },
+    {
       "title": "记录一次被创飞的经历",
       "link": "https://upxuu.com/posts/20261019/",
       "date": "2026-10-19T12:51:55+00:00",
@@ -83,6 +407,24 @@
       "source": "UpXuu's blog",
       "source_site": "https://upxuu.com",
       "avatar": "https://upxuu.com/images/me.jpg"
+    },
+    {
+      "title": "小爱Agents来啦~",
+      "link": "https://rainzt.cn/posts/auto-listing-update-2026-10-19/",
+      "date": "2026-10-19T05:08:39+00:00",
+      "excerpt": "把原本独立的小爱 Agents 接入自动上架，让同事通过 AI 聊天排查报错，也能由面向跨境电商的 DeepSeek Harness 主控规划任务、调用 Browser Use 等工具并检查结果。文章介绍新增的 11 项上架工具，以及本轮上传提速和容错更新。",
+      "source": "朝朝听雨",
+      "source_site": "https://rainzt.cn/",
+      "avatar": "https://rainzt.cn/zzty.png"
+    },
+    {
+      "title": "Claude 桌面端 Remote Control 初始化失败排查",
+      "link": "https://www.ikuyu.com/archives/claude-desktop-remote-control-disable-telemetry",
+      "date": "2026-10-18T14:18:22+00:00",
+      "excerpt": "前言 在 Claude 桌面客户端的 Claude Code 会话里打开 Remote Control（手机或网页远程接管本机会话），一直弹出： Remote Control failed to connect: Remote Control initialization failed 这个问题一直存在，卸载重装客户端也没有解决。奇怪的是，同一台机器的终端里，claude CLI 开 Remote",
+      "source": "爱酷语",
+      "source_site": "https://www.ikuyu.com",
+      "avatar": "https://oss.ikuyu.com/site/avatars/biming.png"
     },
     {
       "title": "「说说」Google的反重力有大病",
@@ -94,6 +436,15 @@
       "avatar": "https://upxuu.com/images/me.jpg"
     },
     {
+      "title": "艾雪周刊 V.15—QQ宠物复活啦",
+      "link": "https://daily.yybb.us/posts/weekly/15/",
+      "date": "2026-10-18T10:40:20+00:00",
+      "excerpt": "关于本刊 这是艾雪期刊的第 15 期，作为一个独立系列进行更新，更新时间在周末，主要内容为周内内容汇集以及碎碎念，有时会分享一些有趣的项目，有时是一些生活的碎碎念",
+      "source": "AIOVTUE-雪",
+      "source_site": "https://daily.yybb.us",
+      "avatar": "https://r2tc.20030327.xyz/file/博客/主题/xGAV3car.webp"
+    },
+    {
       "title": "我原本真的只想导出一个歌单",
       "link": "https://lengxiqwq.com/posts/%E6%88%91%E5%8E%9F%E6%9C%AC%E7%9C%9F%E7%9A%84%E5%8F%AA%E6%83%B3%E5%AF%BC%E5%87%BA%E4%B8%80%E4%B8%AA%E6%AD%8C%E5%8D%95/",
       "date": "2026-10-18T09:28:00+00:00",
@@ -101,6 +452,96 @@
       "source": "冷汐的杂货铺",
       "source_site": "https://lengxiqwq.com",
       "avatar": "https://weavatar.com/avatar/20ac1fc492bcd37c6f1e6435250a00a490403efd468f632c11fcbe87c1c3287b?s=256"
+    },
+    {
+      "title": "使用 LiveSync 实现多端 Obsidian 秒级同步",
+      "link": "https://blog.tsh520.cn/posts/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/%E4%BD%BF%E7%94%A8livesync%E5%AE%9E%E7%8E%B0%E5%A4%9A%E7%AB%AFobsidian%E7%A7%92%E7%BA%A7%E5%90%8C%E6%AD%A5/",
+      "date": "2026-10-17T00:00:00+00:00",
+      "excerpt": "在宝塔面板上用 Docker 部署 CouchDB，配合 Obsidian 插件 Self-hosted LiveSync 实现电脑、手机多端笔记实时同步的完整教程。",
+      "source": "团子和蛋糕",
+      "source_site": "https://blog.tsh520.cn",
+      "avatar": "https://blog.tsh520.cn/assets/ziyuan/tx.webp"
+    },
+    {
+      "title": "备案通过后的图床重生记：把 CloudFlare-ImgBed 从 Telegram 渠道搬回境内服务器的完整复刻手册",
+      "link": "https://azuma.mstzuomu.space/posts/azuma.zuomu-blog-22/",
+      "date": "2026-10-17T00:00:00+00:00",
+      "excerpt": "ICP 备案下证后，本站完成从 Cloudflare 全家桶到腾讯云生态的整体迁移。本文以图床为主线：为什么 CloudFlare-ImgBed 在国内必死（Telegram 渠道、workers.dev 污染、EO 反代 522、CF 封死子域 zone 四重死因），如何无损导出数据，并在轻量服务器上用 Docker 原版程序 + Nginx + rclone WebDAV 重建出「网页上传 +",
+      "source": "左沐の手册",
+      "source_site": "https://azuma.mstzuomu.space/",
+      "avatar": "https://tu.mstzuomu.space/file/%E5%A4%B4%E5%83%8F/1786942479049_azumahead.jpg"
+    },
+    {
+      "title": "Claude会话同步",
+      "link": "https://detached.online/blog/claude-desktop%E5%88%87%E6%8D%A2%E8%B4%A6%E5%8F%B7%E5%90%8E%E4%BC%9A%E8%AF%9D%E6%B6%88%E5%A4%B1/",
+      "date": "2026-10-16T18:25:00+00:00",
+      "excerpt": "Claude Desktop 一条 Code 会话的数据分散在好几个地方：正文、侧边栏记录、归档清单、删除墓碑、worktree。数据目录还会按登录方式分成两套，商店版又被 Windows 重定向了一次。搞清楚这些，切换账号后会话「消失」、报 Git 错、在资源管理器里找不到目录，就都能解释了。",
+      "source": "Detached",
+      "source_site": "https://detached.online/",
+      "avatar": "https://detached.online/icon-512.png"
+    },
+    {
+      "title": "和朋友吵完一架后又重归于好的感觉就像新生的树苗破图而出沐浴阳光的感觉",
+      "link": "https://blog.8765777.xyz/talks/talk_7pk66ibuiaj8/",
+      "date": "2026-10-16T18:19:00+00:00",
+      "excerpt": "和朋友吵完一架后又重归于好的感觉就像新生的树苗破图而出沐浴阳光的感觉",
+      "source": "YIYAN ✦ 拾色之域",
+      "source_site": "https://blog.8765777.xyz",
+      "avatar": "https://blogr2.8765777.xyz/assets/my/7590A261E0E39A642ABF4873E89EAFF9.jpg"
+    },
+    {
+      "title": "《关于因为自己太想学习就开发了个终生可用的数据库软件这件事》\n嘿嘿，最后一版的学",
+      "link": "https://blog.8765777.xyz/talks/talk_1n83x3hfdbyj/",
+      "date": "2026-10-16T18:14:00+00:00",
+      "excerpt": "《关于因为自己太想学习就开发了个终生可用的数据库软件这件事》 嘿嘿，最后一版的学习软件更新(maybe) 这下真是地表最强数据库了 代码量是blog项目的2倍awa https://jiyiku.8765777.xyz",
+      "source": "YIYAN ✦ 拾色之域",
+      "source_site": "https://blog.8765777.xyz",
+      "avatar": "https://blogr2.8765777.xyz/assets/my/7590A261E0E39A642ABF4873E89EAFF9.jpg"
+    },
+    {
+      "title": "跳票九年，Roadster 飞起来了，续航却砍了一半",
+      "link": "https://blog.onlycc.ltd/archives/vMPuz0ih",
+      "date": "2026-10-16T09:07:00+00:00",
+      "excerpt": "北京时间 10 月 16 日上午，得克萨斯州 SpaceX 试验场。一台白色跑车贴着一段近乎垂直的坡道往上爬，爬到顶端悬停了几秒，倒车加速，脱离路面飞了出去。空中翻了个身，靠车底喷出的气流落地。 马斯克开场先说了句实在话，大意是他确定没问题，只是万一不巧，现场的缓冲距离不太够。 这就是第二代特斯拉",
+      "source": "楠香自语",
+      "source_site": "https://blog.onlycc.ltd",
+      "avatar": "https://blog.onlycc.ltd/upload/onlynn_avatar.png"
+    },
+    {
+      "title": "尊界 V800 的踏板，3000N 没断，1612N 断了",
+      "link": "https://blog.onlycc.ltd/archives/haTCYvQm",
+      "date": "2026-10-16T08:57:00+00:00",
+      "excerpt": "尊界V800汽车刹车踏板支架断裂问题 10 月 15 日晚上，工信部的政务号发了一条不到两百字的消息，说针对网络反映的「尊界 V800 汽车刹车踏板支架断裂问题」，工信部、中央网信办、市场监管总局成立联合调查组开展核查。 管行业标准的、管质量执法的、管网信舆情的，三个部门一次凑齐。这个规格不像在处理",
+      "source": "楠香自语",
+      "source_site": "https://blog.onlycc.ltd",
+      "avatar": "https://blog.onlycc.ltd/upload/onlynn_avatar.png"
+    },
+    {
+      "title": "江月年年，人间一程",
+      "link": "https://rainzt.cn/posts/jiangyue-renjian-yicheng/",
+      "date": "2026-10-16T07:31:31+00:00",
+      "excerpt": "建站一百天，写一次夜里路过城中村时的触动，也写白发、江月、家人与那些总想留到以后的日子。",
+      "source": "朝朝听雨",
+      "source_site": "https://rainzt.cn/",
+      "avatar": "https://rainzt.cn/zzty.png"
+    },
+    {
+      "title": "AI时代程序员的护城河",
+      "link": "https://detached.online/blog/ai%E6%97%B6%E4%BB%A3%E7%A8%8B%E5%BA%8F%E5%91%98%E7%9A%84%E6%8A%A4%E5%9F%8E%E6%B2%B3/",
+      "date": "2026-10-16T00:03:00+00:00",
+      "excerpt": "AI 把学习的门槛降下来了，也把学习的收益一起降了下来。学会三件套也只能说出「帮我检查有没有冗余」这种话，要学到能说出不一样的东西，中间是一段很长、几乎没有反馈的路。这篇主要写这一路上的痛苦和焦虑：只有采药人看得见的根、空中楼阁一样的心智模型、被火车拖着走、狼可能永远不来、被抽掉的中间台阶。最后那点「解脱」只是我现在能说服自己的几条，当参考就好。",
+      "source": "Detached",
+      "source_site": "https://detached.online/",
+      "avatar": "https://detached.online/icon-512.png"
+    },
+    {
+      "title": "为什么开了系统代理，微软商店反而连不上？",
+      "link": "https://detached.online/blog/%E5%BE%AE%E8%BD%AF%E5%95%86%E5%BA%97%E5%BC%80%E7%B3%BB%E7%BB%9F%E4%BB%A3%E7%90%86%E8%BF%9E%E4%B8%8D%E4%B8%8A/",
+      "date": "2026-10-15T01:51:00+00:00",
+      "excerpt": "开 TUN 能用、完全不代理也能用，偏偏开系统代理时微软商店报「无法连接」。原因是 UWP 应用的回环隔离：商店连的不是外网，而是 127.0.0.1 上的代理端口，这一步就被沙箱拦了。附三种解法：EnableLoopback 图形工具、CheckNetIsolation 命令、让 AI 帮你排查。",
+      "source": "Detached",
+      "source_site": "https://detached.online/",
+      "avatar": "https://detached.online/icon-512.png"
     },
     {
       "title": "博客部署折腾记：从 Actions 到 VPS + EdgeOne 自动发布",
@@ -121,6 +562,69 @@
       "avatar": "https://img.0v0.my/2024/12/05/67517bcf104da.png"
     },
     {
+      "title": "Chrome 拦截页上的 thisisunsafe",
+      "link": "https://detached.online/blog/chrome-hsts%E7%9A%84%E5%B0%8F%E5%BD%A9%E8%9B%8B/",
+      "date": "2026-10-13T15:50:00+00:00",
+      "excerpt": "HSTS 网站证书出错时 Chrome 不给「继续前往」，但在拦截页上盲打 thisisunsafe 就能进去。按 RFC 6797、Chromium 源码和一次实测讲清楚：为什么没有按钮、这串字母怎么生效、放行记多久、什么时候不该用。",
+      "source": "Detached",
+      "source_site": "https://detached.online/",
+      "avatar": "https://detached.online/icon-512.png"
+    },
+    {
+      "title": "AI不应该伤害人",
+      "link": "https://detached.online/blog/ai%E4%B8%8D%E5%BA%94%E8%AF%A5%E4%BC%A4%E5%AE%B3%E4%BA%BA/",
+      "date": "2026-10-13T12:26:00+00:00",
+      "excerpt": "一条评论让我不舒服，我去找 Claude 吐槽，他开口第一句是「说实话，我觉得谈不上气人」。来回十几轮，他终于明白了问题出在哪，我也让他把这次的教训写成了一个 skill：聊情绪、聊意义、帮人回评论的时候，先接住感受，别造成二次伤害。文末有下载。",
+      "source": "Detached",
+      "source_site": "https://detached.online/",
+      "avatar": "https://detached.online/icon-512.png"
+    },
+    {
+      "title": "全站动效补完与 anime.js 数字滚动：五项动效计划的落地、四轮实测踩坑与复刻清单",
+      "link": "https://azuma.mstzuomu.space/posts/azuma.zuomu-blog-21/",
+      "date": "2026-10-13T00:00:00+00:00",
+      "excerpt": "完整记录 Firefly 博客一次「按门禁筛出来的动效改造」：五项动效计划（浮层开合/模态进出场/公告折叠/翻页桥接/切标签）的病灶定位、精确参数与四个实测才现形的 bug，以及用 anime.js 给侧栏统计做数字滚动的选型决策、v4 API 与零面积 IntersectionObserver 抢跑坑，附可照做的复刻清单",
+      "source": "左沐の手册",
+      "source_site": "https://azuma.mstzuomu.space/",
+      "avatar": "https://tu.mstzuomu.space/file/%E5%A4%B4%E5%83%8F/1786942479049_azumahead.jpg"
+    },
+    {
+      "title": "AI时代的净土",
+      "link": "https://detached.online/blog/ai%E5%A4%9F%E4%B8%8D%E7%9D%80%E7%9A%84%E5%9C%B0%E6%96%B9/",
+      "date": "2026-10-12T14:06:00+00:00",
+      "excerpt": "从同事找我请教网络经验说起。AI 从问答、Cursor 一路走到接管几乎全部代码工作，可一碰网络、路由器这些基础设施，又退回了「你问我答、我来跑腿」的第一阶段。我觉得原因有三个：它得先连得上才能修连不上，改动之后看不到结果没法试错，网络方面能学的公开经验也少。所以这可能是这一行在 AI 时代受冲击最小的一块。",
+      "source": "Detached",
+      "source_site": "https://detached.online/",
+      "avatar": "https://detached.online/icon-512.png"
+    },
+    {
+      "title": "最近，来交作业了",
+      "link": "https://rainzt.cn/posts/recently-one-more-step/",
+      "date": "2026-10-12T10:29:18+00:00",
+      "excerpt": "接着上周的《最近》，记录我为自动上架加入图片哈希值校验，也兑现了国庆后改版的打算，让博客精简主题 Aemeath-Pure 正式上线。",
+      "source": "朝朝听雨",
+      "source_site": "https://rainzt.cn/",
+      "avatar": "https://rainzt.cn/zzty.png"
+    },
+    {
+      "title": "读者凭什么知道这篇是我写的",
+      "link": "https://blog.onlycc.ltd/archives/duem8zjV",
+      "date": "2026-10-12T03:42:00+00:00",
+      "excerpt": "灵光乍现 前几天我把一个问题打进了对话框。你写的这个东西，和 AI 写的区别在哪？我如何知道这是你写的？ 问完我愣了一下。我问的是 AI，可这句话其实是问我自己。 它替我写的东西越来越多。真要往下问，问题是两个。如果它也能写，我为什么还要写下去。以及，读者凭什么认得出哪一段是我。 那阵子我刚好在删稿",
+      "source": "楠香自语",
+      "source_site": "https://blog.onlycc.ltd",
+      "avatar": "https://blog.onlycc.ltd/upload/onlynn_avatar.png"
+    },
+    {
+      "title": "全站视觉移植复刻：把 Firefly 改造成 animal-island-ui 风格的七期工程（含复刻清单与踩坑全录）",
+      "link": "https://azuma.mstzuomu.space/posts/azuma.zuomu-blog-20/",
+      "date": "2026-10-12T00:00:00+00:00",
+      "excerpt": "完整记录如何把一个 Astro + Svelte 博客移植成 animal-island-ui 的治愈系海岛风格：决策依据（为什么不引库、不重写）、规范获取方式、七期改造的逐文件实录与精确色值、Tailwind 层序覆盖等关键机制、Nunito 字体接入、验证三件套，附他人可照做的复刻清单与未尽事项",
+      "source": "左沐の手册",
+      "source_site": "https://azuma.mstzuomu.space/",
+      "avatar": "https://tu.mstzuomu.space/file/%E5%A4%B4%E5%83%8F/1786942479049_azumahead.jpg"
+    },
+    {
       "title": "WorkBuddy AI 国际版 API 逆向全解析：把免费的 DeepSeek V4.1 Flash 变成自己的 OpenAI 接口",
       "link": "https://upxuu.com/posts/workbuddy-api-reverse/",
       "date": "2026-10-11T09:40:00+00:00",
@@ -130,6 +634,33 @@
       "avatar": "https://upxuu.com/images/me.jpg"
     },
     {
+      "title": "国庆七天，AI 圈出了六件大事",
+      "link": "https://blog.onlycc.ltd/archives/GK66Wnv9",
+      "date": "2026-10-10T07:36:00+00:00",
+      "excerpt": "国庆七天，AI圈没一天消停 假期第一天凌晨，我手机里同时躺着三条发布消息。Anthropic 9 月 28 日发的 Sonnet 5.5，OpenAI 9 月 30 日的 DevDay，还有 Google 10 月 1 日凌晨的 Gemini 4 Argon。到第三天，我自己服务器上那个智能体框架也",
+      "source": "楠香自语",
+      "source_site": "https://blog.onlycc.ltd",
+      "avatar": "https://blog.onlycc.ltd/upload/onlynn_avatar.png"
+    },
+    {
+      "title": "艾雪周刊 V.14—拾起记忆，继续前行",
+      "link": "https://daily.yybb.us/posts/weekly/14/",
+      "date": "2026-10-09T11:10:40+00:00",
+      "excerpt": "关于本刊 这是艾雪期刊的第 14 期，作为一个独立系列进行更新，更新时间在周末，主要内容为周内内容汇集以及碎碎念，有时会分享一些有趣的项目，有时是一些生活的碎碎念",
+      "source": "AIOVTUE-雪",
+      "source_site": "https://daily.yybb.us",
+      "avatar": "https://r2tc.20030327.xyz/file/博客/主题/xGAV3car.webp"
+    },
+    {
+      "title": "明天月考qwq\n听一百遍反方向的钟能回到国庆的第一天吗(˙꒫˙`)",
+      "link": "https://blog.8765777.xyz/talks/talk_k034h8b8ejmw/",
+      "date": "2026-10-07T07:16:00+00:00",
+      "excerpt": "明天月考qwq 听一百遍反方向的钟能回到国庆的第一天吗(˙꒫˙`)",
+      "source": "YIYAN ✦ 拾色之域",
+      "source_site": "https://blog.8765777.xyz",
+      "avatar": "https://blogr2.8765777.xyz/assets/my/7590A261E0E39A642ABF4873E89EAFF9.jpg"
+    },
+    {
       "title": "「说说」简单优化了下博客，lighthouse终于绿了",
       "link": "https://upxuu.com/talk/2026-10-06-简单优化了下博客lighthou-e终于绿了/",
       "date": "2026-10-06T13:36:35+00:00",
@@ -137,6 +668,15 @@
       "source": "UpXuu's blog",
       "source_site": "https://upxuu.com",
       "avatar": "https://upxuu.com/images/me.jpg"
+    },
+    {
+      "title": "噔噔，一个小官网\nmy app-记忆库\n\n[点击直达](http://jiyik",
+      "link": "https://blog.8765777.xyz/talks/talk_374mtc0uvzba/",
+      "date": "2026-10-06T09:47:00+00:00",
+      "excerpt": "噔噔，一个小官网 my app-记忆库 [点击直达](http://jiyiku.8765777.xyz)",
+      "source": "YIYAN ✦ 拾色之域",
+      "source_site": "https://blog.8765777.xyz",
+      "avatar": "https://blogr2.8765777.xyz/assets/my/7590A261E0E39A642ABF4873E89EAFF9.jpg"
     },
     {
       "title": "🔒 制作流程",
@@ -157,6 +697,15 @@
       "avatar": "https://upxuu.com/images/me.jpg"
     },
     {
+      "title": "导航栏 UI 改造全记录：卡片边框、悬浮胶囊、三段收拢与 PC 收拢态快捷面板（附完整复现指南）",
+      "link": "https://azuma.mstzuomu.space/posts/azuma.zuomu-blog-19/",
+      "date": "2026-10-05T00:00:00+00:00",
+      "excerpt": "一次连续迭代的完整复盘——从卡片边框体系、悬浮胶囊导航，到三段结构拆分、下滑收拢动画，再到 PC 收拢态汉堡的控件快捷面板与\"行点击原位弹卡\"的两处根因修复，追加 PC 搜索控件图标化与收拢动画卡顿的逐帧诊断修复。每个批次改了哪些文件、为什么这么改、踩了哪些坑（CSS 层序、正圆公式、包含块、Vite 缓存、Playwright headless 动画冻结），附 git 重放与手工重做两条复现路径",
+      "source": "左沐の手册",
+      "source_site": "https://azuma.mstzuomu.space/",
+      "avatar": "https://tu.mstzuomu.space/file/%E5%A4%B4%E5%83%8F/1786942479049_azumahead.jpg"
+    },
+    {
       "title": "如何爽用 glm 免费用 glm-5.3-flash 实现 token 自由",
       "link": "https://upxuu.com/posts/free-glm/",
       "date": "2026-10-04T08:25:19+00:00",
@@ -164,6 +713,15 @@
       "source": "UpXuu's blog",
       "source_site": "https://upxuu.com",
       "avatar": "https://upxuu.com/images/me.jpg"
+    },
+    {
+      "title": "博客性能优化全记录：Lighthouse 报告拆解到帧率根因排查（A–F 六项实战）",
+      "link": "https://azuma.mstzuomu.space/posts/azuma.zuomu-blog-18/",
+      "date": "2026-10-04T00:00:00+00:00",
+      "excerpt": "从两份 Lighthouse 对比报告出发，完整记录六项性能优化的排查方法、根因定位与修复代码：字体子集化、封面图尺寸 API、CSS 内联、强制重排归零、以及\"只有 Chrome 掉帧\"的浏览器设置级根因，附全部可复现命令与工具脚本",
+      "source": "左沐の手册",
+      "source_site": "https://azuma.mstzuomu.space/",
+      "avatar": "https://tu.mstzuomu.space/file/%E5%A4%B4%E5%83%8F/1786942479049_azumahead.jpg"
     },
     {
       "title": "一行gh cli 我的一百个star没了！",
@@ -175,6 +733,51 @@
       "avatar": "https://upxuu.com/images/me.jpg"
     },
     {
+      "title": "Firefly 博客实战：从零搭建任意设备可用的发布台（Vercel + GitHub API）",
+      "link": "https://azuma.mstzuomu.space/posts/azuma.zuomu-blog-17/",
+      "date": "2026-10-03T00:00:00+00:00",
+      "excerpt": "静态博客只能守在电脑前发文章？本文完整复盘如何用 Vercel 无框架函数 + GitHub API 搭一套带登录的发布后台——发文、改稿、删除、预览全部在浏览器里完成，附我们真实踩过的五个部署坑与安全边界设计，照着做可以从零复刻。",
+      "source": "左沐の手册",
+      "source_site": "https://azuma.mstzuomu.space/",
+      "avatar": "https://tu.mstzuomu.space/file/%E5%A4%B4%E5%83%8F/1786942479049_azumahead.jpg"
+    },
+    {
+      "title": "Win11 资源管理器大小列只显示 KB？开启 KB / MB / GB 自适应显示完整教程",
+      "link": "https://azuma.mstzuomu.space/posts/azuma.zuomu-blog-16/",
+      "date": "2026-10-03T00:00:00+00:00",
+      "excerpt": "Win11 详细信息视图的大小列长期以来一律用 KB 显示，4 GB 的文件写成 4,194,304 KB 根本没法看。微软其实已经原生支持自适应单位了，本文给出先更新系统、再用 ViveTool 强制开启（功能 ID 61014711）的完整教程，含回滚方法与常见问题。",
+      "source": "左沐の手册",
+      "source_site": "https://azuma.mstzuomu.space/",
+      "avatar": "https://tu.mstzuomu.space/file/%E5%A4%B4%E5%83%8F/1786942479049_azumahead.jpg"
+    },
+    {
+      "title": "更新公告20261003",
+      "link": "https://azuma.mstzuomu.space/posts/web-update-8/",
+      "date": "2026-10-03T00:00:00+00:00",
+      "excerpt": "网站更新公告",
+      "source": "左沐の手册",
+      "source_site": "https://azuma.mstzuomu.space/",
+      "avatar": "https://tu.mstzuomu.space/file/%E5%A4%B4%E5%83%8F/1786942479049_azumahead.jpg"
+    },
+    {
+      "title": "艾雪周刊 V.13—国庆快乐！",
+      "link": "https://daily.yybb.us/posts/weekly/13/",
+      "date": "2026-10-02T13:50:56+00:00",
+      "excerpt": "关于本刊 这是艾雪期刊的第 13 期，作为一个独立系列进行更新，更新时间在周末，主要内容为周内内容汇集以及碎碎念，有时会分享一些有趣的项目，有时是一些生活的碎碎念",
+      "source": "AIOVTUE-雪",
+      "source_site": "https://daily.yybb.us",
+      "avatar": "https://r2tc.20030327.xyz/file/博客/主题/xGAV3car.webp"
+    },
+    {
+      "title": "DeepSeek Harness 出桌面版了，顺手把这几个月的更新捋一遍",
+      "link": "https://blog.onlycc.ltd/archives/b8wcrXGA",
+      "date": "2026-09-30T02:46:00+00:00",
+      "excerpt": "今天聊聊DeepSeek Harness 我服务器上跑的那个 DeepSeek Harness，版本号查出来是 0.1.0-rc.7。 而它官方的 GitHub 上，最新的标签已经是 0.2.0-rc.2。中间隔了七个版本号，8 月到 9 月这一个月里几乎每周都在动。我在自己机器上按老教程搭完就没再",
+      "source": "楠香自语",
+      "source_site": "https://blog.onlycc.ltd",
+      "avatar": "https://blog.onlycc.ltd/upload/onlynn_avatar.png"
+    },
+    {
       "title": "🔒 lora 训练",
       "link": "https://blog.fqzlr.top/posts/notes/lora-xun-lian/",
       "date": "2026-09-30T00:00:00+00:00",
@@ -184,13 +787,13 @@
       "avatar": "https://q1.qlogo.cn/g?b=qq&nk=20447289&s=640"
     },
     {
-      "title": "「说说」这才是应广而告之的广告——如何把听力变成阅读",
-      "link": "https://upxuu.com/talk/20261021/",
-      "date": "2026-09-28T22:39:35+00:00",
-      "excerpt": "!https://img.upxuu.lcrworld.xyz/images/2026/10/21/20261021225631312.jpg 这是我在朋友圈看到的最有价值的广告",
-      "source": "UpXuu's blog",
-      "source_site": "https://upxuu.com",
-      "avatar": "https://upxuu.com/images/me.jpg"
+      "title": "Space Bunny 收费那天，我会不会迁回去",
+      "link": "https://blog.onlycc.ltd/archives/dYDaAMBD",
+      "date": "2026-09-29T09:46:57+00:00",
+      "excerpt": "聊聊最近很火的 Space Bunny 前天夜里快一点，群里有人扔了张截图，是 OpenRouter 的调用量榜，第一名是一只看不出跟谁有关系的兔子。我点进模型页看了两眼。规格写着 100 万上下文、原生吃文本图像视频、可调推理强度，价格那一栏写着限时免费。 我第一反应不是它到底强不强。是我不知道限",
+      "source": "楠香自语",
+      "source_site": "https://blog.onlycc.ltd",
+      "avatar": "https://blog.onlycc.ltd/upload/onlynn_avatar.png"
     },
     {
       "title": "站点更新：背景视频、公告板与音乐播放器的一批打磨",
@@ -220,6 +823,24 @@
       "avatar": "https://q1.qlogo.cn/g?b=qq&nk=20447289&s=640"
     },
     {
+      "title": "CloudFlare-ImgBed系列-本地备份脚本使用指南",
+      "link": "https://blog.tsh520.cn/posts/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/cloudflare-imgbed%E7%B3%BB%E5%88%97-%E6%9C%AC%E5%9C%B0%E5%A4%87%E4%BB%BD%E8%84%9A%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97/",
+      "date": "2026-09-19T00:00:00+00:00",
+      "excerpt": "图床图片全存在 Telegram，早晚要落到自己硬盘上才安心。这篇介绍我写的本地备份脚本：双击一次，把图床里的文件按原有目录树和文件名全量下载到本地，带清单、能续传、可反复跑。含完整参数表和我踩过的坑。",
+      "source": "团子和蛋糕",
+      "source_site": "https://blog.tsh520.cn",
+      "avatar": "https://blog.tsh520.cn/assets/ziyuan/tx.webp"
+    },
+    {
+      "title": "Obsidian插件系列-ImageManager图床上传管理指南",
+      "link": "https://blog.tsh520.cn/posts/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/obsidian%E6%8F%92%E4%BB%B6%E7%B3%BB%E5%88%97-imagemanager%E5%9B%BE%E5%BA%8A%E4%B8%8A%E4%BC%A0%E7%AE%A1%E7%90%86%E6%8C%87%E5%8D%97/",
+      "date": "2026-09-19T00:00:00+00:00",
+      "excerpt": "自制 Obsidian 插件 Image Manager 的完整使用文档——笔记图片一键直传 CloudFlare-ImgBed 图床、整个文件夹批量上传、文章封面图自动转 WebP 压缩上传、链接自动替换、本地图片安全清理。插件每次更新，这篇文档同步更新。",
+      "source": "团子和蛋糕",
+      "source_site": "https://blog.tsh520.cn",
+      "avatar": "https://blog.tsh520.cn/assets/ziyuan/tx.webp"
+    },
+    {
       "title": "实况照片到底是什么？为什么换个手机就可能打不开？",
       "link": "https://lengxiqwq.com/posts/%E5%AE%9E%E5%86%B5%E7%85%A7%E7%89%87%E5%88%B0%E5%BA%95%E6%98%AF%E4%BB%80%E4%B9%88%E4%B8%BA%E4%BB%80%E4%B9%88%E6%8D%A2%E4%B8%AA%E6%89%8B%E6%9C%BA%E5%B0%B1%E5%8F%AF%E8%83%BD%E6%89%93%E4%B8%8D%E5%BC%80/",
       "date": "2026-09-17T09:44:00+00:00",
@@ -229,6 +850,33 @@
       "avatar": "https://weavatar.com/avatar/20ac1fc492bcd37c6f1e6435250a00a490403efd468f632c11fcbe87c1c3287b?s=256"
     },
     {
+      "title": "NodeWarden",
+      "link": "https://seasir.top/posts/nodewarden/",
+      "date": "2026-09-17T00:00:00+00:00",
+      "excerpt": "最近想自己折腾密码管理，就盯上了 NodeWarden 这个开源项目。今天就来聊聊我是怎么把它搭起来、日常用起来感觉如何，顺便分享点配置时的踩坑经验。如果你也想把数据安全握在自己手里，不妨跟我一起看看。",
+      "source": "Hyde Blog",
+      "source_site": "https://seasir.top",
+      "avatar": "https://seasir.top/assets/avatar.avif"
+    },
+    {
+      "title": "AstrBot 插件新功能：公众号文章一键转载到博客",
+      "link": "https://blog.tsh520.cn/posts/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/astrbot%E6%8F%92%E4%BB%B6%E6%96%B0%E5%8A%9F%E8%83%BD-%E5%85%AC%E4%BC%97%E5%8F%B7%E6%96%87%E7%AB%A0%E4%B8%80%E9%94%AE%E8%BD%AC%E8%BD%BD/",
+      "date": "2026-09-16T00:00:00+00:00",
+      "excerpt": "给 AstrBot BlogWriter 插件加了一条 /转载 命令——把公众号文章链接发过去，插件自动抓取正文、转存图片、生成博客文章并提交，全程一条命令。",
+      "source": "团子和蛋糕",
+      "source_site": "https://blog.tsh520.cn",
+      "avatar": "https://blog.tsh520.cn/assets/ziyuan/tx.webp"
+    },
+    {
+      "title": "超强自驱力是哪来的",
+      "link": "https://blog.tsh520.cn/posts/%E8%BD%AC%E8%BD%BD/%E8%B6%85%E5%BC%BA%E8%87%AA%E9%A9%B1%E5%8A%9B%E6%98%AF%E5%93%AA%E6%9D%A5%E7%9A%84/",
+      "date": "2026-09-16T00:00:00+00:00",
+      "excerpt": "这篇文章之前发在小号“六镇”，尾部流量非常大，有些话没说完，所以我再发到这边来。以下正文。 假期跟一个老友瞎唠嗑，他之前",
+      "source": "团子和蛋糕",
+      "source_site": "https://blog.tsh520.cn",
+      "avatar": "https://blog.tsh520.cn/assets/ziyuan/tx.webp"
+    },
+    {
       "title": "零成本搭建 Firefly（Astro）个人博客，AI 全自动部署教程",
       "link": "https://blog.fqzlr.top/posts/tech/firefly-ai-blog-setup/",
       "date": "2026-09-15T00:00:00+00:00",
@@ -236,6 +884,15 @@
       "source": "番茄主理人",
       "source_site": "https://blog.fqzlr.top/",
       "avatar": "https://q1.qlogo.cn/g?b=qq&nk=20447289&s=640"
+    },
+    {
+      "title": "基于第三方系统的斐讯 N1 Armbian 无头安装实测：无需显示器与有线网络",
+      "link": "https://blog.nekro.top/n1-armbian/",
+      "date": "2026-09-11T00:00:00+00:00",
+      "excerpt": "前提：N1 已运行支持在启动阶段切换至 USB 启动的修改版 Android 固件。",
+      "source": "Nekro's SEKAI",
+      "source_site": "https://www.nekro.top/",
+      "avatar": "https://avatars.githubusercontent.com/u/90670998?v=4"
     },
     {
       "title": "实况照片工具箱：从一个小工具到现在",
@@ -265,24 +922,6 @@
       "avatar": "https://q1.qlogo.cn/g?b=qq&nk=20447289&s=640"
     },
     {
-      "title": "关于页改造：一张 MDX 卡片承载四个交互组件的内容复刻",
-      "link": "https://blog.fqzlr.top/posts/tech/about-page-mdx-components/",
-      "date": "2026-09-05T03:05:00+00:00",
-      "excerpt": "博客系列第14期。关于页不做多卡片拼盘，而是一张 MDX 卡片承载正文，人物悬浮卡、技术栈手风琴、魔改时间线、品牌色社交链接以 not-prose 区块嵌入正文流，附 MDX 内嵌组件的几个坑。",
-      "source": "番茄主理人",
-      "source_site": "https://blog.fqzlr.top/",
-      "avatar": "https://q1.qlogo.cn/g?b=qq&nk=20447289&s=640"
-    },
-    {
-      "title": "友链页面设计：二态卡片、粒子特效与死链坟场的三层玩法",
-      "link": "https://blog.fqzlr.top/posts/tech/friends-page-design/",
-      "date": "2026-09-05T03:00:00+00:00",
-      "excerpt": "博客系列第13期。友链页不止是链接列表：M3E 卡片体系统一视觉、站长/推荐二态卡片配 canvas 星芒流星、死链检测的暂存区与墓碑墙设计，附悬浮预览的 transform 陷阱。",
-      "source": "番茄主理人",
-      "source_site": "https://blog.fqzlr.top/",
-      "avatar": "https://q1.qlogo.cn/g?b=qq&nk=20447289&s=640"
-    },
-    {
       "title": "PEAK：和朋友们一起爬山",
       "link": "https://mccsjs.cn/posts/0eaf9f57",
       "date": "2026-08-27T11:47:00+00:00",
@@ -290,6 +929,42 @@
       "source": "mccsjs",
       "source_site": "https://mccsjs.cn/",
       "avatar": "https://mccsjs.cn/img/ico.jpg"
+    },
+    {
+      "title": "Cloudflare Worker 反代 TMDB：国内服务器也能稳定获取影视封面",
+      "link": "https://blog.tsh520.cn/posts/%E5%8D%9A%E5%AE%A2%E6%8C%87%E5%8D%97/cloudflareworker%E5%8F%8D%E4%BB%A3tmdb%E8%8E%B7%E5%8F%96%E5%BD%B1%E8%A7%86%E5%B0%81%E9%9D%A2/",
+      "date": "2026-08-23T00:00:00+00:00",
+      "excerpt": "腾讯云服务器直连 TMDB API 超时连不上，用 Cloudflare Worker 搭一个带缓存的反向代理，绑定自己的域名后五分钟恢复访问，微信机器人从此能稳定获取影视封面。",
+      "source": "团子和蛋糕",
+      "source_site": "https://blog.tsh520.cn",
+      "avatar": "https://blog.tsh520.cn/assets/ziyuan/tx.webp"
+    },
+    {
+      "title": "DeepSeek 涨价用量变少？别慌，OpenCode Go 这个 Muse Spark 1.2 直接平替还更强",
+      "link": "https://blog.tsh520.cn/posts/%E7%BE%8A%E6%AF%9B%E5%88%86%E4%BA%AB/opencode-go-muse-spark-12-%E6%8E%A8%E8%8D%90/",
+      "date": "2026-08-19T00:00:00+00:00",
+      "excerpt": "DeepSeek 官方涨价导致 OpenCode Go 订阅里的用量变少了？完全不影响。因为新上的 Muse Spark 1.2 Contributor 和 DeepSeek V4 Flash 一样根本用不完，还支持多模态、100 万上下文、图片理解开箱即用，实测比 DeepSeek V4 Pro 还强一丢丢。用我的链接订阅咱俩各得 \\$5。",
+      "source": "团子和蛋糕",
+      "source_site": "https://blog.tsh520.cn",
+      "avatar": "https://blog.tsh520.cn/assets/ziyuan/tx.webp"
+    },
+    {
+      "title": "Obsidian 插件：Category Autofill——自动维护文章分类",
+      "link": "https://blog.tsh520.cn/posts/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/obsidian%E6%8F%92%E4%BB%B6-category-autofill-%E8%87%AA%E5%8A%A8%E7%BB%B4%E6%8A%A4%E6%96%87%E7%AB%A0%E5%88%86%E7%B1%BB/",
+      "date": "2026-08-15T00:00:00+00:00",
+      "excerpt": "一个自动维护文章分类的 Obsidian 插件：category 自动等于所在文件夹名，新建文章自动带齐属性，只处理你指定的目录，安全可控。",
+      "source": "团子和蛋糕",
+      "source_site": "https://blog.tsh520.cn",
+      "avatar": "https://blog.tsh520.cn/assets/ziyuan/tx.webp"
+    },
+    {
+      "title": "Obsidian 插件：Slash Menu——写作时输入 / 就好",
+      "link": "https://blog.tsh520.cn/posts/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/obsidian%E6%8F%92%E4%BB%B6-slash-menu-%E5%86%99%E4%BD%9C%E6%96%9C%E6%9D%A0%E5%91%BD%E4%BB%A4/",
+      "date": "2026-08-15T00:00:00+00:00",
+      "excerpt": "一个写作向的 Obsidian 斜杠命令插件：输入 / 或 、 弹出命令卡片，插入标题、表格、代码块、Callout，支持拼音搜索，代码块内自动屏蔽，心流不断。",
+      "source": "团子和蛋糕",
+      "source_site": "https://blog.tsh520.cn",
+      "avatar": "https://blog.tsh520.cn/assets/ziyuan/tx.webp"
     },
     {
       "title": "CPA网络防护",
@@ -301,6 +976,42 @@
       "avatar": "https://tu.pasule.com/file/wallpaper/1784014500478.png"
     },
     {
+      "title": "PNPM 11 适配 CNB 构建安全兼容方案",
+      "link": "https://seasir.top/posts/pnpm-workspace/",
+      "date": "2026-08-02T00:00:00+00:00",
+      "excerpt": "解决PNPM 11+ 版本 升级安全策略后，CNB（Cloud Native Buildpacks）云构建环境依赖安装失败 的问题，同时明确临时兼容方案、长期安全最优方案、团队使用规范，兼顾项目构建可用性与供应链安全。 适用场景：使用 PNPM 11+、CNB 流水线构建、项目存在带构建脚本的第三方依赖/私有依赖 适配环境：本地开发环境、CNB 容器构建环境",
+      "source": "Hyde Blog",
+      "source_site": "https://seasir.top",
+      "avatar": "https://seasir.top/assets/avatar.avif"
+    },
+    {
+      "title": "Fedora 个人配置",
+      "link": "https://blog.nekro.top/fedora-1/",
+      "date": "2026-07-30T00:00:00+00:00",
+      "excerpt": "RedmiBook Pro 15 2023 + Fedora 44 个人配置备份",
+      "source": "Nekro's SEKAI",
+      "source_site": "https://www.nekro.top/",
+      "avatar": "https://avatars.githubusercontent.com/u/90670998?v=4"
+    },
+    {
+      "title": "AI 摘要实现",
+      "link": "https://seasir.top/posts/ai-summary-tutorial/",
+      "date": "2026-07-27T00:00:00+00:00",
+      "excerpt": "最近给博客折腾了个 AI 摘要功能，效果挺有意思。今天就把我在 Firefly 项目里摸爬滚打总结的实战经验全盘托出。从挑大模型、写构建脚本到搞定打字机动画，顺便分享几个我踩过的坑，希望能帮想给博客加 AI 元素的你少走点弯路。",
+      "source": "Hyde Blog",
+      "source_site": "https://seasir.top",
+      "avatar": "https://seasir.top/assets/avatar.avif"
+    },
+    {
+      "title": "自助友链申请",
+      "link": "https://seasir.top/posts/friends-apply/",
+      "date": "2026-07-27T00:00:00+00:00",
+      "excerpt": "最近折腾了一下，终于把站里的自助友链申请功能搞定了！对比一圈后，我选了 Supabase 搭配 EdgeOne 边缘函数。从数据库配置、前端改造到函数部署，完整流程都整理好了。想给博客加个友链入口的朋友，直接来抄作业吧！",
+      "source": "Hyde Blog",
+      "source_site": "https://seasir.top",
+      "avatar": "https://seasir.top/assets/avatar.avif"
+    },
+    {
       "title": "在 Astro 中实现 Markdown Wiki Link 内部链接",
       "link": "https://blog.cuteleaf.cn/posts/dev-notes/astro-wiki-link-implementation/",
       "date": "2026-07-26T00:00:00+00:00",
@@ -308,6 +1019,15 @@
       "source": "夏夜流萤",
       "source_site": "https://blog.cuteleaf.cn",
       "avatar": "https://weavatar.com/avatar/d252655d40d6874417a720bad0a6c5f77f8f6a1fd2f882f8f338402dc37e4190?s=640"
+    },
+    {
+      "title": "十八岁",
+      "link": "https://blog.nekro.top/18-yo/",
+      "date": "2026-07-22T00:00:00+00:00",
+      "excerpt": "一次阶段性总结。",
+      "source": "Nekro's SEKAI",
+      "source_site": "https://www.nekro.top/",
+      "avatar": "https://avatars.githubusercontent.com/u/90670998?v=4"
     },
     {
       "title": "域名备案中，部分组件和服务可能无法使用",
@@ -328,6 +1048,78 @@
       "avatar": "https://tu.pasule.com/file/wallpaper/1784014500478.png"
     },
     {
+      "title": "一些手办推荐",
+      "link": "https://homulilly.com/post/figure-recommendations.html",
+      "date": "2026-07-12T11:54:30+00:00",
+      "excerpt": "大概还是 2015 年的时候，日元汇率跌倒了 4.9 ，沉迷过一阵子从日亚海淘一些手办，一个大概要 3、400 元左右，屯了不少。后来手办的价格就逐渐离谱起来了，像 Alter 的都要",
+      "source": "Homulilly",
+      "source_site": "https://homulilly.com",
+      "avatar": "https://homulilly.com/images/avatar.jpg"
+    },
+    {
+      "title": "自动上架系统：用 Playwright 构建可控发布流程",
+      "link": "https://rainzt.cn/posts/auto-listing-system/",
+      "date": "2026-07-09T09:03:22+00:00",
+      "excerpt": "记录一个运行在 Windows 桌面上的 BigSeller 自动化系统：从 Excel、图库和模板配置开始，经由 Shopee/TikTok Shop 独立 Worker 执行，再用身份校验、变种精确匹配、暂停恢复、SSE 日志和历史记录把一次高风险的批量发布变成可追踪流程。",
+      "source": "朝朝听雨",
+      "source_site": "https://rainzt.cn/",
+      "avatar": "https://rainzt.cn/zzty.png"
+    },
+    {
+      "title": "Hexo Theme Flatpaper 加入朋友圈大家庭",
+      "link": "https://homulilly.com/post/hexo-theme-flapaper-now-support-friend-circle-md.html",
+      "date": "2026-06-24T17:04:04+00:00",
+      "excerpt": "以前比较佛系，在只有少量友链的情况下也获得过其他博客的朋友圈带来的流量，所以这次做了 Flatpaper 这个主题后，我也希望能支持这个功能。 但是 Hexo 毕竟是静态站点，自身不支持抓取 RSS 的，本来想说造个轮子走 Cloudflare Workers",
+      "source": "Homulilly",
+      "source_site": "https://homulilly.com",
+      "avatar": "https://homulilly.com/images/avatar.jpg"
+    },
+    {
+      "title": "修复 Apple Developer 邮箱与 Apple 账户邮箱不一致的问题",
+      "link": "https://homulilly.com/post/fix-apple-developer-apple-account-email-mismatch.html",
+      "date": "2026-06-22T08:31:59+00:00",
+      "excerpt": "问题描述我的 Apple 账户换过地区，而且也换了邮箱，由 A[at]gmail.com 换到 <code",
+      "source": "Homulilly",
+      "source_site": "https://homulilly.com",
+      "avatar": "https://homulilly.com/images/avatar.jpg"
+    },
+    {
+      "title": "Hexo 主题 Flatpaper 现在支持开屏大图了",
+      "link": "https://homulilly.com/post/hexo-theme-flapaper-now-support-hero-image.html",
+      "date": "2026-06-22T06:46:00+00:00",
+      "excerpt": "Hexo 主题 Flatpaper 现在支持设置开屏大图(Hero Image)了。 Hero 部分的信息默认复用站点标题、简介、头像、社交链接，也支持自定义显示的信息。 支持设置背景图片，也可以不设置。 还支持放一些 Sticker 贴纸，可以拖动。",
+      "source": "Homulilly",
+      "source_site": "https://homulilly.com",
+      "avatar": "https://homulilly.com/images/avatar.jpg"
+    },
+    {
+      "title": "集成朋友圈与笔记本功能",
+      "link": "https://seasir.top/posts/moments/",
+      "date": "2026-06-21T00:00:00+00:00",
+      "excerpt": "最近折腾博客，参考大佬方案把朋友圈和笔记本功能安排上了。这篇算是我的实操复盘，补充了不少配置细节。从前端组件到后台管理，一步步带你用 GitHub Gist 零成本搞定这两个模块，想给博客加点料的朋友直接来抄作业啦。",
+      "source": "Hyde Blog",
+      "source_site": "https://seasir.top",
+      "avatar": "https://seasir.top/assets/avatar.avif"
+    },
+    {
+      "title": "一加 13T PixelOS 的模块推荐与环境隐藏",
+      "link": "https://blog.nekro.top/13t-pixelos2/",
+      "date": "2026-06-18T00:00:00+00:00",
+      "excerpt": "针对 PixelOS 存在的问题进行简单优化，并通过 Play Integrity 验证。",
+      "source": "Nekro's SEKAI",
+      "source_site": "https://www.nekro.top/",
+      "avatar": "https://avatars.githubusercontent.com/u/90670998?v=4"
+    },
+    {
+      "title": "一加 13T 刷入 PixelOS 的过程记录",
+      "link": "https://blog.nekro.top/13t-pixelos1/",
+      "date": "2026-06-13T00:00:00+00:00",
+      "excerpt": "记录从购买设备到刷入的全流程，含确定 9008 熔断状态等。",
+      "source": "Nekro's SEKAI",
+      "source_site": "https://www.nekro.top/",
+      "avatar": "https://avatars.githubusercontent.com/u/90670998?v=4"
+    },
+    {
       "title": "什么是Agent，它能干什么",
       "link": "https://mccsjs.cn/posts/d29e4129",
       "date": "2026-06-11T12:38:05+00:00",
@@ -346,6 +1138,51 @@
       "avatar": "https://weavatar.com/avatar/d252655d40d6874417a720bad0a6c5f77f8f6a1fd2f882f8f338402dc37e4190?s=640"
     },
     {
+      "title": "隐藏封面图",
+      "link": "https://seasir.top/posts/HideCoverImage/",
+      "date": "2026-06-03T00:00:00+00:00",
+      "excerpt": "最近在折腾博客的封面图显示逻辑，加了个「隐藏封面图」的开关功能——从类型定义、配置项、工具函数到 UI 控件和样式，一步步把整个流程补全了。代码分散在多个文件里，但核心就一件事：让用户能一键收起或展开文章封面，既保持页面简洁，又不丢失视觉层次。顺手还做了多语言支持，中文、英文切换也一起配上了。",
+      "source": "Hyde Blog",
+      "source_site": "https://seasir.top",
+      "avatar": "https://seasir.top/assets/avatar.avif"
+    },
+    {
+      "title": "归档统计",
+      "link": "https://seasir.top/posts/ArchiveStatistics/",
+      "date": "2026-06-02T00:00:00+00:00",
+      "excerpt": "最近在折腾博客的归档统计功能，从获取归档列表开始，一路写到更新内容的工具函数、类型定义，再到多语言配置的拆分与管理——每一处改动都为了让归档页更清晰、更易维护，也顺便理清了自己代码里的逻辑脉络。",
+      "source": "Hyde Blog",
+      "source_site": "https://seasir.top",
+      "avatar": "https://seasir.top/assets/avatar.avif"
+    },
+    {
+      "title": "给博客增加单个和全部分类页面",
+      "link": "https://seasir.top/posts/categories/",
+      "date": "2026-06-02T00:00:00+00:00",
+      "excerpt": "最近给博客加了个小功能：点击分类名就能跳转到该分类下的所有文章，还能一键查看全部分类列表——整个过程其实挺顺的，从创建页面、写 URL 工具函数，到更新导航栏和多语言支持，一步步配下来，连分类链接都自动带上了本地化路径，现在逛自己博客像逛图书馆一样清爽 😄",
+      "source": "Hyde Blog",
+      "source_site": "https://seasir.top",
+      "avatar": "https://seasir.top/assets/avatar.avif"
+    },
+    {
+      "title": "恋爱计时组件",
+      "link": "https://seasir.top/posts/RelationshipTimer/",
+      "date": "2026-06-02T00:00:00+00:00",
+      "excerpt": "最近给博客加了个小彩蛋——「恋爱计时组件」，从零撸了一个记录纪念日的小工具。写了组件代码、配了全局注册、还兼顾了桌面端侧边栏和移动端的显示逻辑，连 TypeScript 类型定义和双方昵称/日期的配置项都琢磨得挺细。虽然只是个轻量小功能，但每次看到倒计时跳动，心里都悄悄甜一下 😊",
+      "source": "Hyde Blog",
+      "source_site": "https://seasir.top",
+      "avatar": "https://seasir.top/assets/avatar.avif"
+    },
+    {
+      "title": "国烤爱莉六箱冲榜后记",
+      "link": "https://blog.nekro.top/pjsk-airi6/",
+      "date": "2026-05-31T00:00:00+00:00",
+      "excerpt": "对本次冲榜 (T300) 经历的总结，以及给还未尝试的朋友一些建议。",
+      "source": "Nekro's SEKAI",
+      "source_site": "https://www.nekro.top/",
+      "avatar": "https://avatars.githubusercontent.com/u/90670998?v=4"
+    },
+    {
       "title": "在 Astro 博客实现 Live2D 看板娘",
       "link": "https://blog.cuteleaf.cn/posts/dev-notes/astro-live2d-mascot/",
       "date": "2026-05-20T00:00:00+00:00",
@@ -355,6 +1192,33 @@
       "avatar": "https://weavatar.com/avatar/d252655d40d6874417a720bad0a6c5f77f8f6a1fd2f882f8f338402dc37e4190?s=640"
     },
     {
+      "title": "又一个 Hexo 博客的主题：FlatPaper",
+      "link": "https://homulilly.com/post/yet-another-flat-theme-for-hexo.html",
+      "date": "2026-05-16T07:31:35+00:00",
+      "excerpt": "2026 年了 ，还有人给 Hexo 整新的主题，只能说 AI 还是太好用了。 主要还是 因为 Hexo 和 NEXT 主题都已经用了超过 10 年了，略微有些腻了。 制作的过程也很简单，描述一下想要的效果，发送给 ChatGPT，让他使用 <",
+      "source": "Homulilly",
+      "source_site": "https://homulilly.com",
+      "avatar": "https://homulilly.com/images/avatar.jpg"
+    },
+    {
+      "title": "待办",
+      "link": "https://seasir.top/posts/todo/",
+      "date": "2026-05-09T00:00:00+00:00",
+      "excerpt": "最近又在折腾我的 Astro 博客啦，顺手整理了一份接下来的开发小计划。想给博客加个朋友圈和友链申请，顺便修一修之前遇到的小 Bug。这里也记了几个好用的工具链接当备忘录，大家一起来看看我最近又搞了哪些新花样吧。",
+      "source": "Hyde Blog",
+      "source_site": "https://seasir.top",
+      "avatar": "https://seasir.top/assets/avatar.avif"
+    },
+    {
+      "title": "使用 Zoho 快速搭建个人域名邮箱",
+      "link": "https://blog.nekro.top/zoho-mail/",
+      "date": "2026-05-08T00:00:00+00:00",
+      "excerpt": "零成本快速拥有一个自己的域名邮箱 (稳定性未知)。",
+      "source": "Nekro's SEKAI",
+      "source_site": "https://www.nekro.top/",
+      "avatar": "https://avatars.githubusercontent.com/u/90670998?v=4"
+    },
+    {
       "title": "不用服务器，零成本搭建一个自己的个人博客",
       "link": "https://blog.fqzlr.top/posts/tech/zero-cost-blog-setup/",
       "date": "2026-05-02T00:00:00+00:00",
@@ -362,6 +1226,15 @@
       "source": "番茄主理人",
       "source_site": "https://blog.fqzlr.top/",
       "avatar": "https://q1.qlogo.cn/g?b=qq&nk=20447289&s=640"
+    },
+    {
+      "title": "软件下载",
+      "link": "https://blog.tsh520.cn/posts/%E8%B5%84%E6%BA%90%E6%95%B4%E7%90%86/%E8%BD%AF%E4%BB%B6%E4%B8%8B%E8%BD%BD/",
+      "date": "2026-04-14T00:00:00+00:00",
+      "excerpt": "常用软件的下载链接",
+      "source": "团子和蛋糕",
+      "source_site": "https://blog.tsh520.cn",
+      "avatar": "https://blog.tsh520.cn/assets/ziyuan/tx.webp"
     },
     {
       "title": "近期",
@@ -436,6 +1309,15 @@
       "avatar": "https://weavatar.com/avatar/d252655d40d6874417a720bad0a6c5f77f8f6a1fd2f882f8f338402dc37e4190?s=640"
     },
     {
+      "title": "适用于部分创维电视 (酷开系统 9.0) 的替换默认桌面方案",
+      "link": "https://blog.nekro.top/skyworth-launcher/",
+      "date": "2026-02-23T00:00:00+00:00",
+      "excerpt": "简洁至上，告别开机广告和信息流。",
+      "source": "Nekro's SEKAI",
+      "source_site": "https://www.nekro.top/",
+      "avatar": "https://avatars.githubusercontent.com/u/90670998?v=4"
+    },
+    {
       "title": "新年快乐，马到成功",
       "link": "https://mccsjs.cn/posts/eb007bb7",
       "date": "2026-02-17T00:00:00+00:00",
@@ -452,6 +1334,24 @@
       "source": "夏夜流萤",
       "source_site": "https://blog.cuteleaf.cn",
       "avatar": "https://weavatar.com/avatar/d252655d40d6874417a720bad0a6c5f77f8f6a1fd2f882f8f338402dc37e4190?s=640"
+    },
+    {
+      "title": "整了一个明日方舟 终末地的基质刷取小工具",
+      "link": "https://homulilly.com/post/build-a-toolkit-for-arknights-endfield.html",
+      "date": "2026-02-06T01:06:43+00:00",
+      "excerpt": "《明日方舟 终末地》目前看起来还可以，最近的更新降低了最高探索等级的怪物等级，说明运营还在关心玩家。 两个星期体验下来，发现在前期搭建完基建与产线后，后期主要就是刷取基质了，刷出武器适配的基质的概率是 1&#x2F;24 ，但是我脸黑，刷了将近 100 个才",
+      "source": "Homulilly",
+      "source_site": "https://homulilly.com",
+      "avatar": "https://homulilly.com/images/avatar.jpg"
+    },
+    {
+      "title": "手游观察：明日方舟 终末地",
+      "link": "https://homulilly.com/post/game-endfield.html",
+      "date": "2026-01-28T07:10:47+00:00",
+      "excerpt": "又忍不住玩手游了，试试新出的 《明日方舟:终末地》，开服居然只开放第二章。 卡池机制看起来有些良心，但是当感觉抽卡游戏良心时就需要意识到已经上当了，实际上由于大保底不继承且会提前取消的机制使其没有看上去的那么好。 1 月 22 开服下载的，记录一下，看看这次能玩多久。 Update: 前半个月感觉很好，每天都有新鲜感，但是平均每天都要重复劳动 30min 左右还是太久了（",
+      "source": "Homulilly",
+      "source_site": "https://homulilly.com",
+      "avatar": "https://homulilly.com/images/avatar.jpg"
     },
     {
       "title": "2025——年复年兮连年念",
@@ -517,6 +1417,15 @@
       "avatar": "https://img.0v0.my/2024/12/05/67517bcf104da.png"
     },
     {
+      "title": "在局域网中部署 Dokploy 并配合 dnsChallenge(Cloudflare) 签发证书",
+      "link": "https://homulilly.com/post/use-dokploy-in-local-network.html",
+      "date": "2025-12-15T10:03:44+00:00",
+      "excerpt": "之前看见过很多人推荐 Dokploy，可以方便的部署、管理项目，印象颇深。 但是我还是一直在使用古法手动 docker compose 以及 pnpm start 运行一些项目。 随着现在 AI 的进步，整的小工具多了起来，确实管理起来略微麻烦，当然之前使用过 Dpanel 管理一些 Docker 应用，但是 Dpanel 的 2FA 是付费功能，略微不喜。 于是打算先在我的局域网设备上体验一下。",
+      "source": "Homulilly",
+      "source_site": "https://homulilly.com",
+      "avatar": "https://homulilly.com/images/avatar.jpg"
+    },
+    {
       "title": "Fuwari/Firefly 升级到 Content Layer API",
       "link": "https://blog.cuteleaf.cn/posts/dev-notes/astro-v5-content-layer-update/",
       "date": "2025-11-17T00:00:00+00:00",
@@ -562,6 +1471,15 @@
       "avatar": "https://tu.pasule.com/file/wallpaper/1784014500478.png"
     },
     {
+      "title": "我的家庭网络解决方案",
+      "link": "https://www.ikuyu.com/archives/home-network-setup",
+      "date": "2025-09-25T06:42:25+00:00",
+      "excerpt": "写在前面 家里的联网设备越来越多：手机、电脑、电视、智能家电、摄像头和各种传感器，加起来有几十台；另外还有 NAS 和家庭影院。对大多数家庭来说，运营商光猫加一台主流路由器就够用了。但如果要跑 NAS、内网经常传大文件，或者需要在外面访问家里的设备，就得认真规划一下网络架构。 这篇文章介绍我家目前的网络方案，希望能给有类似需求的朋友一些参考。我的目标有四个： 外网跑满：千兆宽带一般有富余，全链路用",
+      "source": "爱酷语",
+      "source_site": "https://www.ikuyu.com",
+      "avatar": "https://oss.ikuyu.com/site/avatars/biming.png"
+    },
+    {
       "title": "MySQL索引优化完全指南：从原理到实战",
       "link": "https://pasule.com/posts/mysql%E7%B4%A2%E5%BC%95%E4%BC%98%E5%8C%96%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/",
       "date": "2025-09-15T00:00:00+00:00",
@@ -571,6 +1489,15 @@
       "avatar": "https://tu.pasule.com/file/wallpaper/1784014500478.png"
     },
     {
+      "title": "Meilisearch 在 1Panel 中快速升级",
+      "link": "https://www.ikuyu.com/archives/meilisearch-1panel-upgrade",
+      "date": "2025-08-29T06:43:52+00:00",
+      "excerpt": "2026 年 10 月更新：本文的方法已经过时，留作记录。 1Panel 已经内置这个参数：2025 年 12 月起，1Panel 应用商店的 Meilisearch 模板默认开启 dumpless 升级。现在模板里是环境变量 MEILI_UPGRADE_DB: true，在 1Panel 里直接点「升级」就行，不需要再改 docker-compose。我的实例现在已经通过 1Panel 升级到 ",
+      "source": "爱酷语",
+      "source_site": "https://www.ikuyu.com",
+      "avatar": "https://oss.ikuyu.com/site/avatars/biming.png"
+    },
+    {
       "title": "奔向梦想与未来！BW2025&&沪苏游记",
       "link": "https://blog.yaria.top/posts/ef75ee8a",
       "date": "2025-08-20T13:28:59+00:00",
@@ -578,6 +1505,15 @@
       "source": "Ariasakaの小窝",
       "source_site": "https://blog.yaria.top",
       "avatar": "https://img.0v0.my/2024/12/05/67517bcf104da.png"
+    },
+    {
+      "title": "我的 2025 装机记录",
+      "link": "https://www.ikuyu.com/archives/pc-build-2025",
+      "date": "2025-08-12T08:18:47+00:00",
+      "excerpt": "2025 年自用主机装机：AMD 9950X3D 开发、游戏两不误 作为程序员，我日常要做大量代码编译、跑容器、开多个虚拟机，偶尔也玩玩中轻度游戏。这次决定装一台白色主题的高颜值主机，开发要扛得住，游戏性能也要过得去。核心选了 AMD 顶级的 9950X3D，目标是一台能用好几年的全能工作站。 💻 硬件配置清单 组件 规格型号 京东参考价 购买渠道 实际到手价 购买日期 CPU AMD 锐龙 9 ",
+      "source": "爱酷语",
+      "source_site": "https://www.ikuyu.com",
+      "avatar": "https://oss.ikuyu.com/site/avatars/biming.png"
     },
     {
       "title": "家里云（树莓派）搭建VaultWarden，然后白嫖CF Tunnel隧道喵！",
@@ -598,22 +1534,31 @@
       "avatar": "https://img.0v0.my/2024/12/05/67517bcf104da.png"
     },
     {
-      "title": "发生什么事情了捏？记博客图片丢失与被黑删文——用CFR2当图床！",
-      "link": "https://blog.yaria.top/posts/730cf317",
-      "date": "2025-08-02T03:15:41+00:00",
-      "excerpt": "呜呜呜咱到底招谁惹谁了这么久没更新就变成这样惹！RSS 阅读器可能渲染错误。查看原文：https://blog.yaria.top/posts/730cf317图全炸了！ 六月一个风和日丽的早晨，突然想起博客图床大概是到期了吧，于是打开博客看了一眼！ 炸了喵！发现所有图片都是404的状态呜呜呜。 心情甚是崩溃，询问杜老师告诉我一个月未续费图床会被删图，他那边无法恢复！但是他的onedrive备份节",
-      "source": "Ariasakaの小窝",
-      "source_site": "https://blog.yaria.top",
-      "avatar": "https://img.0v0.my/2024/12/05/67517bcf104da.png"
+      "title": "Hexo 7.3 添加友链页面（Hexo Theme NexT）",
+      "link": "https://homulilly.com/post/hexo-7-add-links-page.html",
+      "date": "2025-08-07T14:15:53+00:00",
+      "excerpt": "闲来无事，更新了一下 Hexo 博客的版本，从 5.4.2 升级到 7.3.0 了，粗略一看没啥大问题，直到我打开友链页面，链接一个都没了 之前的创建方法在这里 更新 Hexo 和 NexT 主题 - 设置 Links 页面 链接是保存在 _data/links.yaml 中的。 问了问 Claude Code ，说是可能 Liquid 模板语法 &#123;% for %&#125; 在 Hex",
+      "source": "Homulilly",
+      "source_site": "https://homulilly.com",
+      "avatar": "https://homulilly.com/images/avatar.jpg"
     },
     {
-      "title": "十五岁、迷茫还是梦与希冀？——我的2024",
-      "link": "https://blog.yaria.top/posts/f445e0f8",
-      "date": "2024-12-31T00:00:00+00:00",
-      "excerpt": "梦想的篇章是否尽数展开？初心的种子是否已经发芽？不知如何拥抱清冷与孤独，却仍必迎接未知的2025。RSS 阅读器可能渲染错误。查看原文：https://blog.yaria.top/posts/f445e0f8人们常说， 新的一年，新的开始。 我 来年 犹记得上次说这句话还是十来个月前罢，时光与我的人生擦肩而过的这一刻，才发现毫无留念却常萦绕在眼前的 “2024” 将要失去。总之是新的 2025 ",
-      "source": "Ariasakaの小窝",
-      "source_site": "https://blog.yaria.top",
-      "avatar": "https://img.0v0.my/2024/12/05/67517bcf104da.png"
+      "title": "使用 Docker 与 Gitea 部署私人 Git 服务器",
+      "link": "https://homulilly.com/post/use-docker-deploy-gitea.html",
+      "date": "2025-07-17T07:22:35+00:00",
+      "excerpt": "前言Git 用来同步一些文档、代码确实非常的方便，但是总会有一些文件不希望同步至 GitHub 或是其他的公共服务商，这时可以使用开源项目自建一个属于私人的 Git 服务器。 我是有一些文件在只需要局域网内同步就可以了，在这之前我是使用的 GitLab 社区版部署的私人 Git 服务器。 不得不说，GitLab 也是非常强大的，但相对的占用资源也比较高，需要较多的内存，而且也遇到过跨版本升级的问题",
+      "source": "Homulilly",
+      "source_site": "https://homulilly.com",
+      "avatar": "https://homulilly.com/images/avatar.jpg"
+    },
+    {
+      "title": "OPPO A9 (MT6771T) 刷入 PixelExperience 13 的过程记录",
+      "link": "https://blog.nekro.top/a9-pe13/",
+      "date": "2025-04-20T00:00:00+00:00",
+      "excerpt": "告别老旧的 ColorOS 11 系统。",
+      "source": "Nekro's SEKAI",
+      "source_site": "https://www.nekro.top/",
+      "avatar": "https://avatars.githubusercontent.com/u/90670998?v=4"
     }
   ]
 }
