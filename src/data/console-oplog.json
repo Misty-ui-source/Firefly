@@ -957,5 +957,12 @@
     "action": "新建",
     "target": "src/content/diary/2026-11-08.md",
     "detail": ""
+  },
+  {
+    "ts": "2026-11-09T09:08:56.740Z",
+    "type": "公告",
+    "action": "更新",
+    "target": "网站公告",
+    "detail": ""
   }
 ]

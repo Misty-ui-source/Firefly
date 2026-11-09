@@ -5,7 +5,7 @@ export const announcementConfig: AnnouncementConfig = {
 	title: "",
 
 	// 公告内容（静态模式用）
-	content: "欢迎来到Alexander，这里是我的小站，希望你能在这里找到对自己有价值的东西。如果国内访问不顺畅，可以使用备用线路！",
+	content: "欢迎来到Alexander，这里是我的小站，希望你能在这里找到对自己有价值的东西。",
 
 	// 显示模式：static=静态公告 / geo=访客检测公告（控制台公告页可切换）
 	mode: "static",
@@ -36,7 +36,7 @@ export const announcementConfig: AnnouncementConfig = {
 		// 链接文本
 		text: "备用线路",
 		// 链接 URL
-		url: "https://hk.lanerc.me",
+		url: "https://origin.lanerc.me",
 		// 内部链接
 		external: false,
 	},
@@ -51,6 +51,7 @@ export const announcementConfig: AnnouncementConfig = {
 
 	// 历史公告存档（控制台自动维护）
 	history: [
+		{ date: "2026-11-09T09:08:56.740Z", content: "欢迎来到Alexander，这里是我的小站，希望你能在这里找到对自己有价值的东西。如果国内访问不顺畅，可以使用备用线路！" },
 		{ date: "2026-11-03T01:34:50.186Z", content: "欢迎来到Alexander，国内访问可能较慢，正在寻找优化方案。评论后台被主包小猪手搞崩了，但评论功能正常。" },
 	],
 };
