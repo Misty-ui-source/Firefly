@@ -22,6 +22,7 @@ const umamiOrigin = (() => {
 })();
 const publicShareUrl = hasPublicStats && umamiOrigin ? `${umamiOrigin}/share/${shareId}` : "";
 const walineServerUrl = commentConfig.waline?.serverURL ?? "";
+const walineDefaultAvatar = commentConfig.waline?.defaultAvatar ?? "";
 ---
 
 <MainGridLayout title="站点统计" description="基于 Umami 的公开站点访问统计">
@@ -501,6 +502,7 @@ const walineServerUrl = commentConfig.waline?.serverURL ?? "";
 					aria-labelledby="analytics-comments-title"
 					data-recent-comments
 					data-comment-server={walineServerUrl}
+					data-default-avatar={walineDefaultAvatar}
 				>
 					<header class="analytics-panel__header analytics-comments__header">
 						<div>
@@ -1912,10 +1914,45 @@ const walineServerUrl = commentConfig.waline?.serverURL ?? "";
 			list.dataset.commentsAnimationPhase = "idle";
 		};
 
+		const defavCacheKey = "wl-defav-v1";
+		const defavProbe = (hash) =>
+			new Promise((resolve) => {
+				const probeImage = new Image();
+				probeImage.onload = () => resolve(true);
+				probeImage.onerror = () => resolve(false);
+				probeImage.src = `https://seccdn.libravatar.org/avatar/${hash}?d=404`;
+			});
+		const applyDefaultAvatar = (image, url, defaultAvatar) => {
+			if (!defaultAvatar) return;
+			const match = (url || "").match(/libravatar\.org\/avatar\/([0-9a-f]{32})/i);
+			if (!match) return;
+			const hash = match[1].toLowerCase();
+			let cache = {};
+			try {
+				cache = JSON.parse(localStorage.getItem(defavCacheKey) || "{}");
+			} catch (e) {}
+			const hit = cache[hash];
+			if (hit && Date.now() - hit.t < 7 * 864e5) {
+				if (!hit.has) image.src = defaultAvatar;
+				return;
+			}
+			defavProbe(hash).then((has) => {
+				try {
+					const next = JSON.parse(localStorage.getItem(defavCacheKey) || "{}");
+					next[hash] = { has: has ? 1 : 0, t: Date.now() };
+					localStorage.setItem(defavCacheKey, JSON.stringify(next));
+				} catch (e) {}
+				if (!has && image.isConnected && (image.getAttribute("src") || "").toLowerCase().includes(hash)) {
+					image.src = defaultAvatar;
+				}
+			});
+		};
+
 		const renderRecentComments = (root, payload) => {
 			const list = root.querySelector("[data-comments-list]");
 			const status = root.querySelector("[data-comments-status]");
 			const aiAvatarSrc = "/favicon/chaoc-tingyu-avatar-512.png?v=20260907";
+			const defaultAvatar = root.querySelector("[data-recent-comments]")?.dataset.defaultAvatar || "";
 			if (!list) return;
 
 			const comments = getRecentCommentRows(payload)
@@ -1962,6 +1999,7 @@ const walineServerUrl = commentConfig.waline?.serverURL ?? "";
 					image.referrerPolicy = "no-referrer";
 					image.addEventListener("error", () => avatar.replaceChildren(initial), { once: true });
 					avatar.replaceChildren(image);
+					if (!isAi) applyDefaultAvatar(image, avatarUrl, defaultAvatar);
 				}
 
 				const body = document.createElement("div");
