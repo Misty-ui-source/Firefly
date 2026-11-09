@@ -1,7 +1,7 @@
 /* GET/POST /api/umami/* → 代理到 Umami 后端，解决浏览器跨域问题
  * 对应 VPS 上 nginx 的 /api/umami/ 反代，搬到 Pages 后由 Function 接管
  */
-const UPSTREAM = 'https://umami.lanerc.me';
+const UPSTREAM = 'https://tide.lanerc.me';
 
 // 站点统计域名白名单（2026-11-08 站长定）：数据接口强制只拉自有入口流量，
 // 外站蹭 website-id 的不计入。Umami 的 hostname 过滤只认精确名单、不认通配，

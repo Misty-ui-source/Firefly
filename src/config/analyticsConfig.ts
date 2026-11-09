@@ -16,9 +16,9 @@ export const analyticsConfig: AnalyticsConfig = {
 		// Umami 上线之前的历史量（本站统计一直走 Umami，无历史量可叠）
 		historicalStats: { visitors: 0, pageviews: 0 },
 		// Umami JS地址，支持使用自建
-		scriptUrl: "https://umami.lanerc.me/script.js",
+		scriptUrl: "https://tide.lanerc.me/script.js",
 		// Umami 会话回放脚本地址，支持使用自建
-		replaysScriptUrl: "https://umami.lanerc.me/recorder.js",
+		replaysScriptUrl: "https://tide.lanerc.me/recorder.js",
 		// 是否追踪出站链接
 		trackOutboundLinks: true,
 		// 是否收集浏览器性能指标

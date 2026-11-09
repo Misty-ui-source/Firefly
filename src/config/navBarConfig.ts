@@ -200,7 +200,7 @@ export const navBarConfig: NavBarConfig = {
 				},
 				{
 					name: "网站统计",
-					url: "https://umami.lanerc.me",
+					url: "https://tide.lanerc.me",
 					external: true,
 					icon: "material-symbols:analytics",
 				},
