@@ -8,7 +8,7 @@ export const announcementConfig: AnnouncementConfig = {
 	content: "欢迎来到Alexander，这里是我的小站，希望你能在这里找到对自己有价值的东西。",
 
 	// 显示模式：static=静态公告 / geo=访客检测公告（控制台公告页可切换）
-	mode: "static",
+	mode: "geo",
 
 	// 链接跳转方式：smart=智能选路线 / original=原链接（控制台公告页可切换）
 	linkRouting: "smart",
