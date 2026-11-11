@@ -11,6 +11,16 @@ export const timelineConfig: TimelineConfig = {
 	title: "时间线",
 	items: [
 		{
+			date: '2026.11.11',
+			type: '里程碑',
+			featured: true,
+			title: '买下阿里云服务器',
+			subtitle: '备案提上日程',
+			description: '双十一花 99 块在阿里云拿下一台杭州的服务器，2 核 2G、3M 固定带宽，先当备案锚点闲置养着：域名月底解锁转入阿里云，备案一批下来，就给小站接上国内 CDN。站本身不搬，继续跑 Cloudflare Pages。',
+			details: ['99 元/年，续费同价，最长能一年一续到 2030 年', '机器公网 IP 8.136.247.73，系统最后换成了 Debian 13', '备案只为挂机作锚点，不迁站'],
+			tags: ['阿里云', '备案', 'CDN', '服务器']
+		},
+		{
 			date: '2026.11.09',
 			type: '里程碑',
 			featured: true,
