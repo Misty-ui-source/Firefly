@@ -61,12 +61,16 @@ window.ADMIN_CONFIG = {
       ],
     },
     {
-      /* 二期跨站搬文的转投目标（旧站）：只登记仓库坐标供 transfer.js 写入，
-       * transferOnly = 不进顶栏站点切换器、不开任何普通编辑入口——
-       * 旧站只读接入是三期范围，这里不提前开。 */
+      /* 旧站：二期起是跨站搬文的转投目标（transfer.js 按 id 找坐标，坐标别改）；
+       * 三期起进顶栏切换器，但只读——readOnly 让控制台只给文章列表与阅读页，
+       * 一切写请求在 API 层被拦下。旧站文章在 Obsidian 里写、自动发布，
+       * 这里只看不动，防两边对撞。 */
       id: 'archive', label: '🕰️ 旧站',
       owner: 'Misty-ui-source', repo: 'fuwari', branch: 'main',
-      transferOnly: true,
+      readOnly: true,
+      oplog: false, // 只读站不写操作日志
+      pages: ['dashboard', 'posts', 'edit', 'login'], // 只开放这些页面，其余路由回首页
+      dashHint: '旧站只读：文章在 Obsidian 里写、保存后自动发布，这里只能看。',
       collections: {
         posts: {
           label: '文章',
@@ -75,6 +79,17 @@ window.ADMIN_CONFIG = {
           fields: ['title', 'published', 'updated', 'description', 'image', 'tags', 'category', 'draft'],
         },
       },
+      navLayout: {
+        primary: ['dashboard', 'posts'],
+        secondary: [],
+        homeCards: ['posts'],
+        labels: { posts: '📝 文章' },
+      },
+      navExternal: { blog: 'https://www.lanerc.me/' },
+      quickLinks: [
+        { icon: '🌐', label: '旧站首页', url: 'https://www.lanerc.me/' },
+        { icon: '🐙', label: 'GitHub 仓库', url: 'https://github.com/Misty-ui-source/fuwari' },
+      ],
     },
   ],
 

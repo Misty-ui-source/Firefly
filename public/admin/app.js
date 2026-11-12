@@ -19,6 +19,7 @@ function siteDef() {
   return sites.find((s) => s.id === SITE_ID) || sites[0] || { id: 'main', label: '主站' };
 }
 let SITE_OPLOG = true;
+let SITE_READONLY = false;
 let SITE_PAGES = null;
 function applySite() {
   const s = siteDef();
@@ -39,6 +40,7 @@ function applySite() {
     if (s.quickLinks) CFG.quickLinks = s.quickLinks;
   }
   SITE_OPLOG = s.oplog !== false;
+  SITE_READONLY = s.readOnly === true;
   SITE_PAGES = Array.isArray(s.pages) ? s.pages : null;
   try { document.documentElement.dataset.site = s.id; } catch (e) {}
 }
@@ -113,6 +115,9 @@ async function refreshAccessToken() {
 async function gh(path, opts = {}) { return ghAttempt(path, opts, true); }
 async function ghAttempt(path, opts, canRefresh) {
   const isGet = !opts.method || opts.method === 'GET';
+  /* 只读站点（如旧站）的硬闸：一切非 GET 请求在发出前拦下——按钮藏没藏全都不怕，
+   * 写请求根本出不了门。跨站搬文是从别的站点往旧站写，那时当前站点不是旧站，不受影响。 */
+  if (SITE_READONLY && !isGet) throw new Error('旧站是只读的：文章在 Obsidian 里改，这里不能保存');
   /* GitHub 的 GET 响应带 Cache-Control: private, max-age=60，浏览器会缓存；
    * 而写入用的 URL（无参数）与读取用的（带 ?ref=）不同，写操作不会让缓存失效——
    * 刚保存就读回会拿到旧内容（新建相册后立刻打开报「找不到相册」的元凶）。
@@ -2633,17 +2638,18 @@ function listRoute(key, opts = {}) {
     const col = CFG.collections[key];
     const draftOnly = !!opts.draftOnly;
     view.innerHTML = `<div class="toolbar">
-        <button class="btn" id="btn-new">＋ 新建${draftOnly ? '点子' : col.label}</button>
-        ${key === 'posts' && !draftOnly ? '<button class="btn" id="btn-sort">🕒 按时间排</button>' : ''}
-        ${key === 'posts' && !draftOnly ? '<button class="btn" id="btn-linkcard" disabled>🔗 链接卡片…</button>' : ''}
+        ${SITE_READONLY ? '<span class="hint">🕰️ 只读：在 Obsidian 里写，保存后自动发布</span>' : `<button class="btn" id="btn-new">＋ 新建${draftOnly ? '点子' : col.label}</button>`}
+        ${key === 'posts' && !draftOnly && !SITE_READONLY ? '<button class="btn" id="btn-sort">🕒 按时间排</button>' : ''}
+        ${key === 'posts' && !draftOnly && !SITE_READONLY ? '<button class="btn" id="btn-linkcard" disabled>🔗 链接卡片…</button>' : ''}
         ${LV_SEG}
         <span class="spacer"></span><span class="hint copyable" data-copy="${col.path}" title="点击复制路径">${col.path} 📋</span>
       </div><div id="list"></div>`;
-    $('#btn-new').onclick = () => {
+    const btnNew = $('#btn-new');
+    if (btnNew) btnNew.onclick = () => {
       if (draftOnly) { try { sessionStorage.setItem('admin-new-idea', '1'); } catch (e) {} }
       location.hash = `#/edit/${key}/__new__`;
     };
-    if (key === 'posts' && !draftOnly) mountLinkCardButton();
+    if (key === 'posts' && !draftOnly && !SITE_READONLY) mountLinkCardButton();
     if (key === 'spec') { mountSpecCommentCard(); mountDiarySection(); mountGnssSection(); mountResumeSection(); mountFeaturesSection(); mountCalendarRecordsSection(); mountPicbedSection(); mountWalineAvatarCard(); }
     const listEl = $('#list');
     /* 文章列表排序：默认文件名倒序，点按钮切到发布时间倒序（日期回填完会自动按当前模式重排） */
@@ -2686,11 +2692,11 @@ function listRoute(key, opts = {}) {
           dateHtml = '<span class="date"></span>'; // 稍后异步回填 published
         }
         div.innerHTML = `<span class="title">${esc(e.name)}</span>${dateHtml}<span class="meta">${e.type}</span>
-          <button class="btn btn-small">编辑</button>
-          <button class="btn btn-small btn-danger">删除</button>`;
+          <button class="btn btn-small">${SITE_READONLY ? '查看' : '编辑'}</button>
+          ${SITE_READONLY ? '' : '<button class="btn btn-small btn-danger">删除</button>'}`;
         const [btnEdit, btnDel] = div.querySelectorAll('button');
         btnEdit.onclick = () => { location.hash = `#/edit/${key}/${encodeURIComponent(e.name)}`; };
-        btnDel.onclick = async () => {
+        if (btnDel) btnDel.onclick = async () => {
           if (!confirm(`确定删除 ${e.name}？`)) return;
           try {
             if (e.type === 'dir') {
@@ -2811,10 +2817,42 @@ for (const key of Object.keys(CFG.collections)) routes[key] = listRoute(key);
 /* 「点子」视图 = posts 里 draft 的文章（站点配置 ideas:true 才注册，如灵感屋） */
 if (siteDef().ideas && CFG.collections.posts) routes.ideas = listRoute('posts', { draftOnly: true });
 
+/* 只读站点（如旧站）的文章阅读页：只有标题、元信息和全文，没有任何输入框与保存入口；
+ * 修改走 Obsidian（旧站的写作流），控制台这边只看。写请求另有 ghAttempt 硬闸兜底。 */
+async function archiveReadView(key, name, col) {
+  view.innerHTML = '<div class="card"><h2>加载中…</h2></div>';
+  try {
+    let filePath = '';
+    let text = '';
+    if (col.mode === 'dir' && !/\.mdx?$/.test(name)) {
+      const files = await ghGetFile(`${col.path}/${name}`);
+      const md = (Array.isArray(files) ? files : []).find((f) => f.name.endsWith('.md'));
+      if (!md) throw new Error('这个目录里没有 Markdown 文件');
+      filePath = `${col.path}/${name}/${md.name}`;
+      text = (await ghGetFile(filePath)).text;
+    } else {
+      filePath = `${col.path}/${name}`;
+      text = (await ghGetFile(filePath)).text;
+    }
+    const { fm, body } = parseFrontmatter(text);
+    const meta = [fm.published ? '📅 ' + String(fm.published).slice(0, 10) : '', fm.category ? '📂 ' + fm.category : '', fm.draft ? '草稿' : ''].filter(Boolean).join(' · ');
+    view.innerHTML = `<div class="toolbar"><button class="btn" id="btn-back">← 返回列表</button><span class="spacer"></span><span class="hint copyable" data-copy="${esc(filePath)}" title="点击复制路径">${esc(filePath)} 📋</span></div>
+      <div class="card"><h2>${esc(fm.title || name)}</h2>
+      ${meta ? `<p class="meta">${esc(meta)}</p>` : ''}
+      <p class="hint">🕰️ 旧站只读：文章在 Obsidian 里修改，保存后自动发布；这里只看不动。</p>
+      <pre style="white-space:pre-wrap;word-break:break-word;font:inherit;line-height:1.7">${esc(body)}</pre></div>`;
+    $('#btn-back').onclick = () => { location.hash = `#/${key}`; };
+  } catch (e) {
+    view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`;
+  }
+}
+
 /* 编辑页 */
 routes.edit = async (arg) => {
   const [key, name] = arg.split('/');
   const col = CFG.collections[key];
+  /* 只读站点不进编辑器，走阅读页 */
+  if (SITE_READONLY) { await archiveReadView(key, name, col); return; }
   const isNew = name === '__new__';
   /* 本地草稿键：按 集合+目标 区分（文章/动态/项目/单页 各自独立，互不覆盖） */
   const draftKey = siteKey(`admin-edit-draft:${key}:${name}`);
