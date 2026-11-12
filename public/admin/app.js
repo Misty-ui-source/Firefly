@@ -4696,6 +4696,178 @@ async function friendsMgr(body, invalidateCache) {
 };
 
 /* ---------- 书签导航管理 ---------- */
+/* ── 灵感屋书签导航（数据源 collectionsApiConfig.ts，就是站点的 /collections/ 工具导航页）：
+ * 两级单元保序：分组与条目未改的逐字保留；icon 记住来源形态（favicon("域名") 或原始字符串），
+ * 重写时按原形态写回。标题/描述走文件头定点替换。 ── */
+const BOOKNAV_IDEA_PATH = 'src/config/collectionsApiConfig.ts';
+async function ideaBooknav() {
+  view.innerHTML = '<div class="card"><h2>🔖 书签导航</h2><p class="hint">正在读取仓库…</p></div>';
+  let data;
+  try { data = await ghGetFile(BOOKNAV_IDEA_PATH); } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+  let snapshot = data.text;
+  let sha = data.sha;
+  function arrOf(text, key, fromIdx = 0) {
+    const re = new RegExp(`(^|\\n)(\\s*)${key}\\s*:\\s*\\[`, 'g');
+    re.lastIndex = fromIdx;
+    const m = re.exec(text);
+    if (!m) return null;
+    const openIdx = m.index + m[0].length - 1;
+    let depth = 0; let closeIdx = -1;
+    for (let i = openIdx; i < text.length; i++) {
+      if (text[i] === '[') depth++;
+      else if (text[i] === ']') { depth--; if (!depth) { closeIdx = i; break; } }
+    }
+    if (closeIdx < 0) return null;
+    return { start: m.index + (m[1] ? 1 : 0), openIdx, closeIdx };
+  }
+  function parseUnits(body) {
+    const us = []; let buf = ''; let i = 0;
+    while (i < body.length) {
+      if (body[i] === '{') {
+        let d = 0; let j = i;
+        for (; j < body.length; j++) { if (body[j] === '{') d++; else if (body[j] === '}') { d--; if (!d) break; } }
+        us.push({ prefix: buf, objText: body.slice(i, j + 1), dirty: false, fields: null });
+        buf = ''; i = j + 1;
+      } else { buf += body[i]; i++; }
+    }
+    return { units: us, tail: buf };
+  }
+  function serializeUnits(parsed, renderFn) {
+    let out = '';
+    parsed.units.forEach((u, idx) => {
+      let pre = u.prefix;
+      if (idx === 0 && pre.startsWith(',')) pre = pre.slice(1);
+      if (idx > 0 && !pre.startsWith(',')) pre = `,${pre}`;
+      out += pre + (u.dirty ? renderFn(u) : u.objText);
+    });
+    return out + parsed.tail;
+  }
+  function itemFields(o) {
+    const fav = o.match(/icon\s*:\s*favicon\("([^"]+)"\)/);
+    return {
+      name: tsGetStr(o, 'name'), url: tsGetStr(o, 'url'), description: tsGetStr(o, 'description'),
+      icon: fav ? fav[1] : tsGetStr(o, 'icon'), iconMode: fav ? 'favicon' : 'raw',
+      enabled: tsGetBool(o, 'enabled', true),
+    };
+  }
+  function renderItem(u) {
+    const f = u.fields;
+    const icon = f.iconMode === 'favicon' ? `favicon("${tsEsc(f.icon)}")` : `"${tsEsc(f.icon)}"`;
+    return ['\t\t\t\t{',
+      `\t\t\t\t\tname: "${tsEsc(f.name)}",`,
+      `\t\t\t\t\turl: "${tsEsc(f.url)}",`,
+      `\t\t\t\t\tdescription: "${tsEsc(f.description)}",`,
+      `\t\t\t\t\ticon: ${icon},`,
+      `\t\t\t\t\tenabled: ${f.enabled ? 'true' : 'false'},`,
+      '\t\t\t\t}'].join('\n');
+  }
+  function groupFields(o) {
+    const a = arrOf(o, 'items');
+    const items = a ? parseUnits(o.slice(a.openIdx + 1, a.closeIdx)) : { units: [], tail: '' };
+    items.units.forEach((u) => { u.fields = itemFields(u.objText); });
+    return { category: tsGetStr(o, 'category'), description: tsGetStr(o, 'description'), items };
+  }
+  function renderGroup(u) {
+    const f = u.fields;
+    const itemsBody = serializeUnits(f.items, renderItem);
+    return ['\t\t{',
+      `\t\t\tcategory: "${tsEsc(f.category)}",`,
+      `\t\t\tdescription: "${tsEsc(f.description)}",`,
+      `\t\t\titems: [${itemsBody}],`,
+      '\t\t}'].join('\n');
+  }
+  const apisArr = arrOf(snapshot, 'apis');
+  if (!apisArr) { view.innerHTML = '<div class="card"><h2>🔖 书签导航</h2><p class="hint">collectionsApiConfig.ts 里找不到 apis 数组。</p></div>'; return; }
+  const groups = parseUnits(snapshot.slice(apisArr.openIdx + 1, apisArr.closeIdx));
+  groups.units.forEach((u) => { u.fields = groupFields(u.objText); });
+  let pageTitle = tsGetStr(snapshot.slice(0, apisArr.start), 'title');
+  let pageDesc = tsGetStr(snapshot.slice(0, apisArr.start), 'description');
+
+  function markGroupDirty(g) { g.dirty = true; }
+  function render() {
+    view.innerHTML = '';
+    const head = document.createElement('div');
+    head.className = 'card';
+    head.innerHTML = `<h2>🔖 书签导航 <span class="sub">${BOOKNAV_IDEA_PATH} · /collections/ 页</span></h2>
+      <p class="hint">分组与条目都能增删改、调顺序。图标默认走 favicon 服务（填域名即可），也可以切到「原始」填完整图标地址。保存一次提交，Vercel 重建后生效。</p>
+      <div class="row2">
+        <div class="field"><label>页面标题（可空走默认）</label><input type="text" id="bn-title" value="${esc(pageTitle)}"></div>
+        <div class="field"><label>页面描述（可空走默认）</label><input type="text" id="bn-desc" value="${esc(pageDesc)}"></div>
+      </div>
+      <div class="toolbar"><button class="btn btn-small btn-ghost" id="bn-add-group" type="button">＋ 添加分组</button><button class="btn" id="bn-save" type="button">💾 保存书签导航</button></div>`;
+    view.appendChild(head);
+    head.querySelector('#bn-title').onchange = (e) => { pageTitle = e.target.value.trim(); };
+    head.querySelector('#bn-desc').onchange = (e) => { pageDesc = e.target.value.trim(); };
+    head.querySelector('#bn-add-group').onclick = () => {
+      groups.units.push({ prefix: ',\n', objText: '', dirty: true, fields: { category: '新分组', description: '', items: { units: [], tail: '\n\t\t\t' } } });
+      render();
+    };
+    groups.units.forEach((g, gi) => {
+      const f = g.fields;
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `<div class="row2">
+          <div class="field"><label>分组名</label><input type="text" data-g="category" value="${esc(f.category)}"></div>
+          <div class="field"><label>分组描述</label><input type="text" data-g="description" value="${esc(f.description)}"></div>
+          <div class="field"><label>分组操作</label><span><button class="mini-btn" data-ga="up" type="button">↑</button> <button class="mini-btn" data-ga="down" type="button">↓</button> <button class="mini-btn danger" data-ga="del" type="button">删除分组</button></span></div>
+        </div><div class="bn-items"></div>
+        <button class="btn btn-small btn-ghost" data-ga="add" type="button">＋ 添加条目</button>`;
+      card.querySelectorAll('[data-g]').forEach((inp) => { inp.onchange = () => { f[inp.dataset.g] = inp.value.trim(); markGroupDirty(g); }; });
+      card.querySelector('[data-ga=up]').onclick = () => { if (gi === 0) return; [groups.units[gi - 1], groups.units[gi]] = [groups.units[gi], groups.units[gi - 1]]; render(); };
+      card.querySelector('[data-ga=down]').onclick = () => { if (gi === groups.units.length - 1) return; [groups.units[gi + 1], groups.units[gi]] = [groups.units[gi], groups.units[gi + 1]]; render(); };
+      card.querySelector('[data-ga=del]').onclick = () => { if (!confirm(`删掉分组「${f.category}」和它的 ${f.items.units.length} 条？`)) return; groups.units.splice(gi, 1); render(); };
+      card.querySelector('[data-ga=add]').onclick = () => {
+        f.items.units.push({ prefix: ',\n', objText: '', dirty: true, fields: { name: '', url: '', description: '', icon: '', iconMode: 'favicon', enabled: true } });
+        markGroupDirty(g);
+        render();
+      };
+      const box = card.querySelector('.bn-items');
+      f.items.units.forEach((u, ii) => {
+        const it = u.fields;
+        const row = document.createElement('div');
+        row.className = 'row2';
+        row.innerHTML = `
+          <div class="field"><label>名称</label><input type="text" data-k="name" value="${esc(it.name)}"></div>
+          <div class="field"><label>网址</label><input type="text" data-k="url" value="${esc(it.url)}"></div>
+          <div class="field"><label>描述</label><input type="text" data-k="description" value="${esc(it.description)}"></div>
+          <div class="field"><label>图标${it.iconMode === 'favicon' ? '（域名）' : '（完整地址）'}</label><input type="text" data-k="icon" value="${esc(it.icon)}"></div>
+          <div class="field"><label>图标来源</label><select data-k="iconMode"><option value="favicon" ${it.iconMode === 'favicon' ? 'selected' : ''}>favicon 服务</option><option value="raw" ${it.iconMode === 'raw' ? 'selected' : ''}>原始地址</option></select></div>
+          <div class="field"><label>启用</label><input type="checkbox" data-k="enabled" ${it.enabled ? 'checked' : ''}></div>
+          <div class="field"><label>操作</label><span><button class="mini-btn" data-a="up" type="button">↑</button> <button class="mini-btn" data-a="down" type="button">↓</button> <button class="mini-btn danger" data-a="del" type="button">删除</button></span></div>`;
+        row.querySelectorAll('[data-k]').forEach((inp) => {
+          inp.onchange = () => {
+            const k = inp.dataset.k;
+            it[k] = inp.type === 'checkbox' ? inp.checked : inp.value.trim();
+            u.dirty = true; markGroupDirty(g);
+            if (k === 'iconMode') render();
+          };
+        });
+        row.querySelector('[data-a=up]').onclick = () => { if (ii === 0) return; [f.items.units[ii - 1], f.items.units[ii]] = [f.items.units[ii], f.items.units[ii - 1]]; markGroupDirty(g); render(); };
+        row.querySelector('[data-a=down]').onclick = () => { if (ii === f.items.units.length - 1) return; [f.items.units[ii + 1], f.items.units[ii]] = [f.items.units[ii], f.items.units[ii + 1]]; markGroupDirty(g); render(); };
+        row.querySelector('[data-a=del]').onclick = () => { if (!confirm(`删掉「${it.name || it.url}」？`)) return; f.items.units.splice(ii, 1); markGroupDirty(g); render(); };
+        box.appendChild(row);
+      });
+      view.appendChild(card);
+    });
+    head.querySelector('#bn-save').onclick = async () => {
+      const cur = await ghGetFile(BOOKNAV_IDEA_PATH).catch(() => null);
+      if (!cur || cur.text !== snapshot) { toast('配置刚被别处改动过，已中止保存，请重新打开书签导航页', true); return; }
+      const a2 = arrOf(snapshot, 'apis');
+      let next = snapshot.slice(0, a2.openIdx + 1) + serializeUnits(groups, renderGroup) + snapshot.slice(a2.closeIdx);
+      const headSeg = next.slice(0, a2.start);
+      let newHead = headSeg.replace(/title\s*:\s*"(?:[^"\\]|\\.)*"/, `title: "${tsEsc(pageTitle)}"`);
+      newHead = newHead.replace(/description\s*:\s*"(?:[^"\\]|\\.)*"/, `description: "${tsEsc(pageDesc)}"`);
+      next = newHead + next.slice(a2.start);
+      try {
+        const r = await saveWithLog(BOOKNAV_IDEA_PATH, next, sha, '更新书签导航 [管理台]', { type: '书签导航', action: '更新', target: '工具导航' });
+        sha = r.content.sha; snapshot = next;
+        toast('书签导航已保存（Vercel 重新构建后生效）');
+      } catch (e) { toast(e.message, true); }
+    };
+  }
+  render();
+}
+
 const BOOKNAV_PATH = 'src/config/booknavConfig.ts';
 function booknavExtract(src) {
   const ks = src.indexOf('export const booknavConfig');
@@ -4788,6 +4960,8 @@ function booknavToTs(groups) {
   return lines.join('\n');
 }
 routes.booknav = async () => {
+  /* 灵感屋没有 booknavConfig，它的书签导航是 collectionsApiConfig（/collections/ 页），走专用编辑器 */
+  if (typeof SITE_ID !== 'undefined' && SITE_ID === 'idea') { await ideaBooknav(); return; }
   view.innerHTML = '<div class="card"><h2>🔖 书签导航</h2><p class="hint">正在读取仓库…</p></div>';
   let sha = null, head = '', tail = '', groups = [];
   try {
@@ -5102,6 +5276,168 @@ routes.navmgr = async () => {
 };
 
 /* ---------- 站点导航管理：src/config/navBarConfig.ts（博客顶栏，非控制台自己的导航） ---------- */
+/* ── 灵感屋站点导航：它的导航栏是代码按预置+页面开关拼的，没有主站那种链接数组。
+ * 能编辑的是两处真实数据源：navBarConfig.ts 的 personalSites 列表（Logo 资料卡站点面板），
+ * 和 siteConfig.ts 的 pages 开关（同时决定页面本身开不开、导航项显不显）。 ── */
+const SITENAV_IDEA_PATH = 'src/config/navBarConfig.ts';
+async function ideaSitenav() {
+  view.innerHTML = '<div class="card"><h2>🧭 站点导航</h2><p class="hint">正在读取仓库…</p></div>';
+  let navData, siteData;
+  try {
+    [navData, siteData] = await Promise.all([ghGetFile(SITENAV_IDEA_PATH), ghGetFile('src/config/siteConfig.ts')]);
+  } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+  let navSnapshot = navData.text;
+  let navSha = navData.sha;
+  let siteSnapshot = siteData.text;
+  let siteSha = siteData.sha;
+  function arrOf(text, key) {
+    const re = new RegExp(`(^|\\n)(\\s*)${key}\\s*:\\s*\\[`, 'g');
+    const m = re.exec(text);
+    if (!m) return null;
+    const openIdx = m.index + m[0].length - 1;
+    let depth = 0; let closeIdx = -1;
+    for (let i = openIdx; i < text.length; i++) {
+      if (text[i] === '[') depth++;
+      else if (text[i] === ']') { depth--; if (!depth) { closeIdx = i; break; } }
+    }
+    if (closeIdx < 0) return null;
+    return { start: m.index + (m[1] ? 1 : 0), openIdx, closeIdx };
+  }
+  function arrDeclOf(text, key) {
+    const ks = text.indexOf(key);
+    if (ks < 0) return null;
+    const eq = text.indexOf('=', ks);
+    const openIdx = text.indexOf('[', eq);
+    if (openIdx < 0) return null;
+    let depth = 0; let closeIdx = -1;
+    for (let i = openIdx; i < text.length; i++) {
+      if (text[i] === '[') depth++;
+      else if (text[i] === ']') { depth--; if (!depth) { closeIdx = i; break; } }
+    }
+    if (closeIdx < 0) return null;
+    return { start: ks, openIdx, closeIdx };
+  }
+  function parseUnits(body) {
+    const us = []; let buf = ''; let i = 0;
+    while (i < body.length) {
+      if (body[i] === '{') {
+        let d = 0; let j = i;
+        for (; j < body.length; j++) { if (body[j] === '{') d++; else if (body[j] === '}') { d--; if (!d) break; } }
+        us.push({ prefix: buf, objText: body.slice(i, j + 1), dirty: false, fields: null });
+        buf = ''; i = j + 1;
+      } else { buf += body[i]; i++; }
+    }
+    return { units: us, tail: buf };
+  }
+  function serializeUnits(parsed, renderFn) {
+    let out = '';
+    parsed.units.forEach((u, idx) => {
+      let pre = u.prefix;
+      if (idx === 0 && pre.startsWith(',')) pre = pre.slice(1);
+      if (idx > 0 && !pre.startsWith(',')) pre = `,${pre}`;
+      out += pre + (u.dirty ? renderFn(u.fields) : u.objText);
+    });
+    return out + parsed.tail;
+  }
+  const sitesArr = arrDeclOf(navSnapshot, 'personalSites');
+  if (!sitesArr) { view.innerHTML = '<div class="card"><h2>🧭 站点导航</h2><p class="hint">navBarConfig.ts 里找不到 personalSites。</p></div>'; return; }
+  const sites = parseUnits(navSnapshot.slice(sitesArr.openIdx + 1, sitesArr.closeIdx));
+  sites.units.forEach((u) => { u.fields = { name: tsGetStr(u.objText, 'name'), url: tsGetStr(u.objText, 'url'), icon: tsGetStr(u.objText, 'icon') }; });
+  const renderSite = (f) => ['\t{',
+    `\t\tname: "${tsEsc(f.name)}",`,
+    `\t\turl: "${tsEsc(f.url)}",`,
+    `\t\ticon: "${tsEsc(f.icon)}",`,
+    '\t}'].join('\n');
+  /* pages 开关 */
+  const PAGE_KEYS = [
+    ['friends', '友链页'], ['sponsor', '打赏页'], ['guestbook', '留言板'], ['gallery', '相册'],
+    ['picbed', '图床'], ['collections', '工具导航'], ['postList', '文档列表'], ['archive', '归档'],
+    ['about', '关于'], ['categories', '图谱'],
+  ];
+  function segOf(text, key) {
+    const re = new RegExp(`(^|\\n)(\\s*)${key}\\s*:\\s*\\{`, 'g');
+    const m = re.exec(text);
+    if (!m) return null;
+    const openIdx = m.index + m[0].length - 1;
+    let depth = 0; let closeIdx = -1;
+    for (let i = openIdx; i < text.length; i++) {
+      if (text[i] === '{') depth++;
+      else if (text[i] === '}') { depth--; if (!depth) { closeIdx = i; break; } }
+    }
+    if (closeIdx < 0) return null;
+    return { start: m.index + (m[1] ? 1 : 0), openIdx, closeIdx };
+  }
+  const pagesSeg = segOf(siteSnapshot, 'pages');
+  const pagesText = pagesSeg ? siteSnapshot.slice(pagesSeg.start, pagesSeg.closeIdx + 1) : '';
+  const pageState = {};
+  PAGE_KEYS.forEach(([k]) => { pageState[k] = tsGetBool(pagesText, k, false); });
+
+  function render() {
+    view.innerHTML = '';
+    const c1 = document.createElement('div');
+    c1.className = 'card';
+    c1.innerHTML = `<h2>🧭 站点导航 <span class="sub">personalSites · Logo 资料卡的站点面板</span></h2>
+      <p class="hint">灵感屋的导航栏条目由代码按预置拼装，这里能改的是资料卡站点面板的列表（名字/地址/图标），以及下面的页面开关。保存写两个文件、各一次提交。</p>
+      <div id="sn-sites"></div>
+      <div class="toolbar"><button class="btn btn-small btn-ghost" id="sn-add" type="button">＋ 添加站点</button></div>`;
+    const box = c1.querySelector('#sn-sites');
+    sites.units.forEach((u, i) => {
+      const f = u.fields;
+      const row = document.createElement('div');
+      row.className = 'row2';
+      row.innerHTML = `
+        <div class="field"><label>名字</label><input type="text" data-k="name" value="${esc(f.name)}"></div>
+        <div class="field"><label>地址</label><input type="text" data-k="url" value="${esc(f.url)}"></div>
+        <div class="field"><label>图标</label><input type="text" data-k="icon" value="${esc(f.icon)}"></div>
+        <div class="field"><label>操作</label><span><button class="mini-btn" data-a="up" type="button">↑</button> <button class="mini-btn" data-a="down" type="button">↓</button> <button class="mini-btn danger" data-a="del" type="button">删除</button></span></div>`;
+      row.querySelectorAll('[data-k]').forEach((inp) => { inp.onchange = () => { u.fields[inp.dataset.k] = inp.value.trim(); u.dirty = true; }; });
+      row.querySelector('[data-a=up]').onclick = () => { if (i === 0) return; [sites.units[i - 1], sites.units[i]] = [sites.units[i], sites.units[i - 1]]; render(); };
+      row.querySelector('[data-a=down]').onclick = () => { if (i === sites.units.length - 1) return; [sites.units[i + 1], sites.units[i]] = [sites.units[i], sites.units[i + 1]]; render(); };
+      row.querySelector('[data-a=del]').onclick = () => { if (!confirm(`删掉「${f.name}」？`)) return; sites.units.splice(i, 1); render(); };
+      box.appendChild(row);
+    });
+    c1.querySelector('#sn-add').onclick = () => { sites.units.push({ prefix: ',\n', objText: '', dirty: true, fields: { name: '', url: '', icon: '' } }); render(); };
+    view.appendChild(c1);
+
+    const c2 = document.createElement('div');
+    c2.className = 'card';
+    c2.innerHTML = `<h2>🔀 页面开关 <span class="sub">siteConfig.pages · 同时管页面与导航显隐</span></h2>
+      <p class="hint">关掉的页面会直接 404，导航里对应的入口也跟着消失。改完和上面的列表一起保存。</p>
+      <div class="pills">${PAGE_KEYS.map(([k, label]) => `<label class="pill${pageState[k] ? ' on' : ''}"><input type="checkbox" data-p="${k}" ${pageState[k] ? 'checked' : ''}> ${label}</label>`).join('')}</div>
+      <div class="toolbar"><button class="btn" id="sn-save" type="button">💾 保存站点导航</button></div>`;
+    c2.querySelectorAll('[data-p]').forEach((inp) => { inp.onchange = () => { pageState[inp.dataset.p] = inp.checked; }; });
+    view.appendChild(c2);
+
+    c2.querySelector('#sn-save').onclick = async () => {
+      const [curNav, curSite] = await Promise.all([ghGetFile(SITENAV_IDEA_PATH).catch(() => null), ghGetFile('src/config/siteConfig.ts').catch(() => null)]);
+      if (!curNav || curNav.text !== navSnapshot || !curSite || curSite.text !== siteSnapshot) { toast('配置刚被别处改动过，已中止保存，请重新打开导航页', true); return; }
+      const a2 = arrDeclOf(navSnapshot, 'personalSites');
+      const nextNav = navSnapshot.slice(0, a2.openIdx + 1) + serializeUnits(sites, renderSite) + navSnapshot.slice(a2.closeIdx);
+      let nextSite = siteSnapshot;
+      const seg = segOf(nextSite, 'pages');
+      if (seg) {
+        let segText = nextSite.slice(seg.start, seg.closeIdx + 1);
+        PAGE_KEYS.forEach(([k]) => {
+          segText = segText.replace(new RegExp(`(${k}\\s*:\\s*)(true|false)`), `$1${pageState[k]}`);
+        });
+        nextSite = nextSite.slice(0, seg.start) + segText + nextSite.slice(seg.closeIdx + 1);
+      }
+      try {
+        if (nextNav !== navSnapshot) {
+          const r = await saveWithLog(SITENAV_IDEA_PATH, nextNav, navSha, '更新站点面板 [管理台]', { type: '导航', action: '更新', target: '站点面板' });
+          navSha = r.content.sha; navSnapshot = nextNav;
+        }
+        if (nextSite !== siteSnapshot) {
+          const r2 = await saveWithLog('src/config/siteConfig.ts', nextSite, siteSha, '更新页面开关 [管理台]', { type: '导航', action: '更新', target: '页面开关' });
+          siteSha = r2.content.sha; siteSnapshot = nextSite;
+        }
+        toast('站点导航已保存（Vercel 重新构建后生效）');
+      } catch (e) { toast(e.message, true); }
+    };
+  }
+  render();
+}
+
 const SITENAV_PATH = 'src/config/navBarConfig.ts';
 /* 找一段 [...] 的配平结尾下标（字符串感知） */
 function snBracketEnd(s, start) {
@@ -5177,6 +5513,8 @@ export const navBarSearchConfig: NavBarSearchConfig = {
 `;
 }
 routes.sitenav = async () => {
+  /* 灵感屋导航由预置+页面开关拼装，走专用编辑器（personalSites + pages 开关） */
+  if (typeof SITE_ID !== 'undefined' && SITE_ID === 'idea') { await ideaSitenav(); return; }
   view.innerHTML = '<p class="hint">加载中…</p>';
   let sha = null, items = null;
   try {
@@ -5937,8 +6275,173 @@ routes.videos = async () => {
 };
 
 /* ---------- 简介卡片管理 ---------- */
+/* ── 灵感屋简介（数据源 homeConfig.ts 头部的身份字段 + links 链接表）：
+ * 身份标量在 hero 之前的头部段定点替换（避开 links 里的同名 name 字段），
+ * bio 是字符串列表（未改不重写），links 走单元保序。关于页正文在「单页」里改。 ── */
+async function ideaProfile() {
+  view.innerHTML = '<div class="card"><h2>👤 简介</h2><p class="hint">正在读取仓库…</p></div>';
+  let data;
+  try { data = await ghGetFile(POSTER_PATH); } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+  let snapshot = data.text;
+  let sha = data.sha;
+  function segOf(text, key, fromIdx = 0) {
+    const re = new RegExp(`(^|\\n)(\\s*)${key}\\s*:\\s*\\{`, 'g');
+    re.lastIndex = fromIdx;
+    const m = re.exec(text);
+    if (!m) return null;
+    const openIdx = m.index + m[0].length - 1;
+    let depth = 0; let closeIdx = -1;
+    for (let i = openIdx; i < text.length; i++) {
+      if (text[i] === '{') depth++;
+      else if (text[i] === '}') { depth--; if (!depth) { closeIdx = i; break; } }
+    }
+    if (closeIdx < 0) return null;
+    return { start: m.index + (m[1] ? 1 : 0), openIdx, closeIdx };
+  }
+  function arrOf(text, key, fromIdx = 0) {
+    const re = new RegExp(`(^|\\n)(\\s*)${key}\\s*:\\s*\\[`, 'g');
+    re.lastIndex = fromIdx;
+    const m = re.exec(text);
+    if (!m) return null;
+    const openIdx = m.index + m[0].length - 1;
+    let depth = 0; let closeIdx = -1;
+    for (let i = openIdx; i < text.length; i++) {
+      if (text[i] === '[') depth++;
+      else if (text[i] === ']') { depth--; if (!depth) { closeIdx = i; break; } }
+    }
+    if (closeIdx < 0) return null;
+    return { start: m.index + (m[1] ? 1 : 0), openIdx, closeIdx };
+  }
+  function parseUnits(body) {
+    const us = []; let buf = ''; let i = 0;
+    while (i < body.length) {
+      if (body[i] === '{') {
+        let d = 0; let j = i;
+        for (; j < body.length; j++) { if (body[j] === '{') d++; else if (body[j] === '}') { d--; if (!d) break; } }
+        us.push({ prefix: buf, objText: body.slice(i, j + 1), dirty: false, fields: null });
+        buf = ''; i = j + 1;
+      } else { buf += body[i]; i++; }
+    }
+    return { units: us, tail: buf };
+  }
+  function serializeUnits(parsed, renderFn) {
+    let out = '';
+    parsed.units.forEach((u, idx) => {
+      let pre = u.prefix;
+      if (idx === 0 && pre.startsWith(',')) pre = pre.slice(1);
+      if (idx > 0 && !pre.startsWith(',')) pre = `,${pre}`;
+      out += pre + (u.dirty ? renderFn(u.fields) : u.objText);
+    });
+    return out + parsed.tail;
+  }
+  function parseStrList(body) {
+    const out = [];
+    const re = /"((?:[^"\\]|\\.)*)"/g;
+    let m;
+    while ((m = re.exec(body))) { try { out.push(JSON.parse(`"${m[1]}"`)); } catch (e) { out.push(m[1]); } }
+    return out;
+  }
+  const heroSeg = segOf(snapshot, 'hero');
+  if (!heroSeg) { view.innerHTML = '<div class="card"><h2>👤 简介</h2><p class="hint">homeConfig.ts 里找不到 hero 段。</p></div>'; return; }
+  const head = snapshot.slice(0, heroSeg.start);
+  const state = {
+    avatarBanner: tsGetStr(head, 'avatarBanner'),
+    name: tsGetStr(head, 'name'),
+    displayName: tsGetStr(head, 'displayName'),
+    occupation: tsGetStr(head, 'occupation'),
+  };
+  const bioArr = arrOf(head, 'bio');
+  let bio = bioArr ? parseStrList(head.slice(bioArr.openIdx + 1, bioArr.closeIdx)) : [];
+  const bioOrig = [...bio];
+  const linksArr = arrOf(snapshot, 'links');
+  const links = linksArr ? parseUnits(snapshot.slice(linksArr.openIdx + 1, linksArr.closeIdx)) : { units: [], tail: '' };
+  links.units.forEach((u) => { u.fields = { name: tsGetStr(u.objText, 'name'), icon: tsGetStr(u.objText, 'icon'), url: tsGetStr(u.objText, 'url'), color: tsGetStr(u.objText, 'color') }; });
+  const renderLink = (f) => ['\t\t{',
+    `\t\t\tname: "${tsEsc(f.name)}",`,
+    `\t\t\ticon: "${tsEsc(f.icon)}",`,
+    `\t\t\turl: "${tsEsc(f.url)}",`,
+    `\t\t\tcolor: "${tsEsc(f.color)}",`,
+    '\t\t}'].join('\n');
+
+  function render() {
+    view.innerHTML = '';
+    const c1 = document.createElement('div');
+    c1.className = 'card';
+    c1.innerHTML = `<h2>👤 简介 <span class="sub">${POSTER_PATH} · 身份字段</span></h2>
+      <p class="hint">名字、签名和资料卡横幅在这里改；关于页的正文在「单页」里改（spec/about.mdx）。</p>
+      <div class="field"><label>资料卡横幅图（可空回退头像模糊）</label><input type="text" id="pf-avatarBanner" value="${esc(state.avatarBanner)}"></div>
+      <div class="row2">
+        <div class="field"><label>名字 name</label><input type="text" id="pf-name" value="${esc(state.name)}"></div>
+        <div class="field"><label>展示名 displayName</label><input type="text" id="pf-displayName" value="${esc(state.displayName)}"></div>
+        <div class="field"><label>职业/身份标签</label><input type="text" id="pf-occupation" value="${esc(state.occupation)}"></div>
+      </div>
+      <div class="field"><label>签名 bio（每行一条，循环打字）</label><textarea id="pf-bio" rows="3">${esc(bio.join('\n'))}</textarea></div>`;
+    view.appendChild(c1);
+    ['avatarBanner', 'name', 'displayName', 'occupation'].forEach((k) => {
+      c1.querySelector(`#pf-${k}`).onchange = (e) => { state[k] = e.target.value.trim(); };
+    });
+    c1.querySelector('#pf-bio').onchange = (e) => {
+      bio = e.target.value.split('\n').map((s) => s.trim()).filter(Boolean);
+    };
+    const c2 = document.createElement('div');
+    c2.className = 'card';
+    c2.innerHTML = '<h2>🔗 社交链接 <span class="sub">links</span></h2><div id="pf-links"></div><div class="toolbar"><button class="btn btn-small btn-ghost" id="pf-add" type="button">＋ 添加链接</button><button class="btn" id="pf-save" type="button">💾 保存简介</button></div>';
+    const box = c2.querySelector('#pf-links');
+    links.units.forEach((u, i) => {
+      const f = u.fields;
+      const row = document.createElement('div');
+      row.className = 'row2';
+      row.innerHTML = `
+        <div class="field"><label>名字</label><input type="text" data-k="name" value="${esc(f.name)}"></div>
+        <div class="field"><label>图标（iconify 代码）</label><input type="text" data-k="icon" value="${esc(f.icon)}"></div>
+        <div class="field"><label>地址</label><input type="text" data-k="url" value="${esc(f.url)}"></div>
+        <div class="field"><label>颜色</label><input type="text" data-k="color" value="${esc(f.color)}"></div>
+        <div class="field"><label>操作</label><span><button class="mini-btn" data-a="up" type="button">↑</button> <button class="mini-btn" data-a="down" type="button">↓</button> <button class="mini-btn danger" data-a="del" type="button">删除</button></span></div>`;
+      row.querySelectorAll('[data-k]').forEach((inp) => { inp.onchange = () => { u.fields[inp.dataset.k] = inp.value.trim(); u.dirty = true; }; });
+      row.querySelector('[data-a=up]').onclick = () => { if (i === 0) return; [links.units[i - 1], links.units[i]] = [links.units[i], links.units[i - 1]]; render(); };
+      row.querySelector('[data-a=down]').onclick = () => { if (i === links.units.length - 1) return; [links.units[i + 1], links.units[i]] = [links.units[i], links.units[i + 1]]; render(); };
+      row.querySelector('[data-a=del]').onclick = () => { if (!confirm(`删掉「${f.name}」？`)) return; links.units.splice(i, 1); render(); };
+      box.appendChild(row);
+    });
+    c2.querySelector('#pf-add').onclick = () => { links.units.push({ prefix: ',\n', objText: '', dirty: true, fields: { name: '', icon: '', url: '', color: '#888888' } }); render(); };
+    view.appendChild(c2);
+    c2.querySelector('#pf-save').onclick = async () => {
+      const cur = await ghGetFile(POSTER_PATH).catch(() => null);
+      if (!cur || cur.text !== snapshot) { toast('配置刚被别处改动过，已中止保存，请重新打开简介页', true); return; }
+      let next = snapshot;
+      /* 身份标量：只在 hero 之前的头部段替换 */
+      const hSeg = segOf(next, 'hero');
+      let headText = next.slice(0, hSeg.start);
+      const setH = (key, val) => { headText = headText.replace(new RegExp(`(${key}\\s*:\\s*)"(?:[^"\\\\]|\\\\.)*"`), `$1"${tsEsc(val)}"`); };
+      setH('avatarBanner', state.avatarBanner);
+      setH('displayName', state.displayName);
+      setH('occupation', state.occupation);
+      /* name 最后换且只换第一处（头部段内只有身份 name 一处） */
+      setH('name', state.name);
+      if (JSON.stringify(bio) !== JSON.stringify(bioOrig)) {
+        const bA = arrOf(headText, 'bio');
+        if (bA) {
+          const body = bio.length ? `\n${bio.map((s) => `\t\t"${tsEsc(s)}",`).join('\n')}\n\t` : '';
+          headText = headText.slice(0, bA.openIdx + 1) + body + headText.slice(bA.closeIdx);
+        }
+      }
+      next = headText + next.slice(hSeg.start);
+      const lA = arrOf(next, 'links');
+      if (lA) next = next.slice(0, lA.openIdx + 1) + serializeUnits(links, renderLink) + next.slice(lA.closeIdx);
+      try {
+        const r = await saveWithLog(POSTER_PATH, next, sha, '更新简介 [管理台]', { type: '简介', action: '更新', target: '简介' });
+        sha = r.content.sha; snapshot = next;
+        toast('简介已保存（Vercel 重新构建后生效）');
+      } catch (e) { toast(e.message, true); }
+    };
+  }
+  render();
+}
+
 const PROFILE_PATH = 'src/config/profileConfig.ts';
 routes.profile = async () => {
+  /* 灵感屋没有 profileConfig，简介是 homeConfig 的身份字段 + links，走专用编辑器 */
+  if (typeof SITE_ID !== 'undefined' && SITE_ID === 'idea') { await ideaProfile(); return; }
   view.innerHTML = '<div class="card"><h2>👤 简介</h2><p class="hint">正在读取仓库…</p></div>';
   let sha = null, src = '';
   try {
@@ -6089,8 +6592,425 @@ routes.profile = async () => {
 };
 
 /* ---------- 横幅文字管理 ---------- */
+/* ── 灵感屋海报（首页迎客海报系统，数据源 homeConfig.ts 的 hero + homeBlinds）：
+ * 标量走「分段定点替换」，列表走「单元保序」（未改的条目逐字保留，改过的才重写），
+ * 保存前快照校验，文件被别处改过就中止。手感参数（滚动距离/时序）只搬运不改数。 ── */
+const POSTER_PATH = 'src/config/homeConfig.ts';
+async function ideaPoster() {
+  view.innerHTML = '<div class="card"><h2>🎋 海报</h2><p class="hint">正在读取仓库…</p></div>';
+  let data;
+  try { data = await ghGetFile(POSTER_PATH); } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+  let snapshot = data.text;
+  let sha = data.sha;
+
+  /* ---------- 通用小工具 ---------- */
+  function segOf(text, key, fromIdx = 0) {
+    const re = new RegExp(`(^|\\n)(\\s*)${key}\\s*:\\s*\\{`, 'g');
+    re.lastIndex = fromIdx;
+    const m = re.exec(text);
+    if (!m) return null;
+    const openIdx = m.index + m[0].length - 1;
+    let depth = 0; let closeIdx = -1;
+    for (let i = openIdx; i < text.length; i++) {
+      if (text[i] === '{') depth++;
+      else if (text[i] === '}') { depth--; if (!depth) { closeIdx = i; break; } }
+    }
+    if (closeIdx < 0) return null;
+    return { start: m.index + (m[1] ? 1 : 0), openIdx, closeIdx };
+  }
+  function arrOf(text, key, fromIdx = 0) {
+    const re = new RegExp(`(^|\\n)(\\s*)${key}\\s*:\\s*\\[`, 'g');
+    re.lastIndex = fromIdx;
+    const m = re.exec(text);
+    if (!m) return null;
+    const openIdx = m.index + m[0].length - 1;
+    let depth = 0; let closeIdx = -1;
+    for (let i = openIdx; i < text.length; i++) {
+      if (text[i] === '[') depth++;
+      else if (text[i] === ']') { depth--; if (!depth) { closeIdx = i; break; } }
+    }
+    if (closeIdx < 0) return null;
+    return { start: m.index + (m[1] ? 1 : 0), openIdx, closeIdx, indent: m[2] };
+  }
+  function getStr(segText, key) { return tsGetStr(segText, key); }
+  function getNum(segText, key, def) { return tsGetNum(segText, key, def); }
+  function getBool(segText, key, def) { return tsGetBool(segText, key, def); }
+  /* 在 [from,to) 段内替换 key 的值（字符串/数字/布尔），返回新文本 */
+  function setScalar(text, from, to, key, rawVal) {
+    const seg = text.slice(from, to);
+    const re = new RegExp(`(${key}\\s*:\\s*)("(?:[^"\\\\]|\\\\.)*"|-?[\\d.]+|true|false)`);
+    if (!re.test(seg)) return text;
+    const next = seg.replace(re, `$1${rawVal}`);
+    return text.slice(0, from) + next + text.slice(to);
+  }
+  const rawStr = (v) => `"${tsEsc(v)}"`;
+  const rawNum = (v) => `${Number.isFinite(+v) ? +v : 0}`;
+  const rawBool = (v) => `${!!v}`;
+  /* 单元列表：把数组体解析成 prefix+objText 单元 */
+  function parseUnits(body) {
+    const us = []; let buf = ''; let i = 0;
+    while (i < body.length) {
+      if (body[i] === '{') {
+        let d = 0; let j = i;
+        for (; j < body.length; j++) { if (body[j] === '{') d++; else if (body[j] === '}') { d--; if (!d) break; } }
+        us.push({ prefix: buf, objText: body.slice(i, j + 1), dirty: false, fields: null });
+        buf = ''; i = j + 1;
+      } else { buf += body[i]; i++; }
+    }
+    return { units: us, tail: buf };
+  }
+  function serializeUnits(parsed, renderFn) {
+    let out = '';
+    parsed.units.forEach((u, idx) => {
+      let pre = u.prefix;
+      if (idx === 0 && pre.startsWith(',')) pre = pre.slice(1);
+      if (idx > 0 && !pre.startsWith(',')) pre = `,${pre}`;
+      out += pre + (u.dirty ? renderFn(u.fields) : u.objText);
+    });
+    return out + parsed.tail;
+  }
+  /* 字符串列表：解析/序列化（indent = 条目缩进） */
+  function parseStrList(body) {
+    const out = [];
+    const re = /"((?:[^"\\]|\\.)*)"/g;
+    let m;
+    while ((m = re.exec(body))) { try { out.push(JSON.parse(`"${m[1]}"`)); } catch (e) { out.push(m[1]); } }
+    return out;
+  }
+  function serializeStrList(list, indent) {
+    if (!list.length) return '';
+    return `\n${list.map((s) => `${indent}"${tsEsc(s)}",`).join('\n')}\n${indent.slice(0, -1)}`;
+  }
+
+  /* ---------- 读出当前状态 ---------- */
+  const heroSeg = segOf(snapshot, 'hero');
+  const blindsSeg = segOf(snapshot, 'homeBlinds');
+  if (!heroSeg || !blindsSeg) { view.innerHTML = '<div class="card"><h2>🎋 海报</h2><p class="hint">homeConfig.ts 里找不到 hero / homeBlinds 段。</p></div>'; return; }
+  const heroText = snapshot.slice(heroSeg.start, heroSeg.closeIdx + 1);
+  const blindsText = snapshot.slice(blindsSeg.start, blindsSeg.closeIdx + 1);
+
+  const S = {}; // 标量状态：name -> {seg:'hero'|'blinds'|子段key, key, type, value, segKey?}
+  function regScalar(name, segText, key, type, segName) {
+    const v = type === 'num' ? getNum(segText, key, 0) : type === 'bool' ? getBool(segText, key, false) : getStr(segText, key);
+    S[name] = { key, type, value: v, segName };
+  }
+  const mosaicSeg = segOf(heroText, 'mosaic');
+  const mosaicText = heroText.slice(mosaicSeg.start, mosaicSeg.closeIdx + 1);
+  ['rows', 'columns', 'idleVisible', 'seed', 'desktopScrollDistance', 'mobileScrollDistance', 'desktopDialogueTailDistance', 'mobileDialogueTailDistance'].forEach((k) => regScalar(`mosaic.${k}`, mosaicText, k, 'num', 'mosaic'));
+  ['scrub', 'desktopMinViewports', 'mobileMinViewports', 'interactionHold'].forEach((k) => regScalar(`mosaic.${k}`, mosaicText, k, 'num', 'mosaic'));
+  const contactSeg = segOf(heroText, 'contact');
+  const contactText = heroText.slice(contactSeg.start, contactSeg.closeIdx + 1);
+  regScalar('contact.platform', contactText, 'platform', 'str', 'contact');
+  regScalar('contact.handle', contactText, 'handle', 'str', 'contact');
+  const stickerSeg = segOf(heroText, 'sticker');
+  const stickerText = heroText.slice(stickerSeg.start, stickerSeg.closeIdx + 1);
+  regScalar('sticker.image', stickerText, 'image', 'str', 'sticker');
+  regScalar('sticker.alt', stickerText, 'alt', 'str', 'sticker');
+  const soundsSeg = segOf(stickerText, 'sounds');
+  const soundsText = stickerText.slice(soundsSeg.start, soundsSeg.closeIdx + 1);
+  regScalar('sticker.press', soundsText, 'press', 'str', 'sounds');
+  regScalar('sticker.loosen', soundsText, 'loosen', 'str', 'sounds');
+  const photoSeg = segOf(heroText, 'photo');
+  const photoText = heroText.slice(photoSeg.start, photoSeg.closeIdx + 1);
+  const mainSeg = segOf(photoText, 'main');
+  const mainText = photoText.slice(mainSeg.start, mainSeg.closeIdx + 1);
+  regScalar('photo.main.image', mainText, 'image', 'str', 'main');
+  regScalar('photo.main.author', mainText, 'author', 'str', 'main');
+  const overlaySeg = segOf(photoText, 'overlay');
+  const overlayText = photoText.slice(overlaySeg.start, overlaySeg.closeIdx + 1);
+  regScalar('photo.overlay.image', overlayText, 'image', 'str', 'overlay');
+  regScalar('photo.overlay.author', overlayText, 'author', 'str', 'overlay');
+  const introSeg = segOf(photoText, 'intro');
+  const introText = photoText.slice(introSeg.start, introSeg.closeIdx + 1);
+  regScalar('intro.direction', introText, 'direction', 'str', 'intro');
+  regScalar('intro.hobby', introText, 'hobby', 'str', 'intro');
+  regScalar('intro.bio', introText, 'bio', 'str', 'intro');
+  const dialogueSeg = segOf(heroText, 'dialogue');
+  const dialogueText = heroText.slice(dialogueSeg.start, dialogueSeg.closeIdx + 1);
+  regScalar('dialogue.enabled', dialogueText, 'enabled', 'bool', 'dialogue');
+  const rainSeg = segOf(heroText, 'rain');
+  const rainText = heroText.slice(rainSeg.start, rainSeg.closeIdx + 1);
+  regScalar('rain.enabled', rainText, 'enabled', 'bool', 'rain');
+  regScalar('rain.intensity', rainText, 'intensity', 'num', 'rain');
+  regScalar('rain.color', rainText, 'color', 'str', 'rain');
+
+  regScalar('blinds.enabled', blindsText, 'enabled', 'bool', 'homeBlinds');
+  const revealSeg = segOf(blindsText, 'reveal');
+  const revealText = blindsText.slice(revealSeg.start, revealSeg.closeIdx + 1);
+  regScalar('reveal.backgroundImage', revealText, 'backgroundImage', 'str', 'reveal');
+  const headlineSeg = segOf(revealText, 'headline');
+  const headlineText = revealText.slice(headlineSeg.start, headlineSeg.closeIdx + 1);
+  regScalar('headline.title', headlineText, 'title', 'str', 'headline');
+  ['enterDuration', 'messageHold', 'messageFlipDuration'].forEach((k) => regScalar(`headline.${k}`, headlineText, k, 'num', 'headline'));
+  const scenesSeg = segOf(blindsText, 'scenes');
+  const scenesText = blindsText.slice(scenesSeg.start, scenesSeg.closeIdx + 1);
+  regScalar('scenes.scrollDistance', scenesText, 'scrollDistance', 'num', 'scenes');
+  regScalar('scenes.cycleDuration', scenesText, 'cycleDuration', 'num', 'scenes');
+  const cbSeg = segOf(scenesText, 'commentBubble');
+  const cbText = scenesText.slice(cbSeg.start, cbSeg.closeIdx + 1);
+  regScalar('commentBubble.enabled', cbText, 'enabled', 'bool', 'commentBubble');
+  regScalar('commentBubble.weight', cbText, 'weight', 'num', 'commentBubble');
+  const compSeg = segOf(scenesText, 'composite');
+  const compText = scenesText.slice(compSeg.start, compSeg.closeIdx + 1);
+  regScalar('composite.title', compText, 'title', 'str', 'composite');
+  regScalar('composite.description', compText, 'description', 'str', 'composite');
+  regScalar('composite.alt', compText, 'alt', 'str', 'composite');
+  regScalar('composite.date', compText, 'date', 'str', 'composite');
+
+  /* 列表状态 */
+  function loadUnits(segText, key, fieldFn) {
+    const a = arrOf(segText, key);
+    if (!a) return { parsed: { units: [], tail: '' }, arr: null };
+    const body = segText.slice(a.openIdx + 1, a.closeIdx);
+    const parsed = parseUnits(body);
+    parsed.units.forEach((u) => { u.fields = fieldFn(u.objText); });
+    return { parsed, arr: a };
+  }
+  const layoutList = loadUnits(mosaicText, 'initialLayout', (o) => ({
+    x: getNum(o, 'x', 0), y: getNum(o, 'y', 0), width: getNum(o, 'width', 0), height: getNum(o, 'height', 0),
+    blur: /blur\s*:/.test(o) ? getNum(o, 'blur', 0) : null,
+  }));
+  const dialogueLines = (() => { const a = arrOf(dialogueText, 'lines'); return a ? parseStrList(dialogueText.slice(a.openIdx + 1, a.closeIdx)) : []; })();
+  const dialogueLinesOrig = [...dialogueLines];
+  const headlineMsgs = (() => { const a = arrOf(headlineText, 'messages'); return a ? parseStrList(headlineText.slice(a.openIdx + 1, a.closeIdx)) : []; })();
+  const headlineMsgsOrig = [...headlineMsgs];
+  const standList = (() => { const a = arrOf(scenesText, 'standImages'); return a ? parseStrList(scenesText.slice(a.openIdx + 1, a.closeIdx)) : []; })();
+  const standListOrig = [...standList];
+  const blindsItems = loadUnits(scenesText, 'items', (o) => ({
+    title: getStr(o, 'title'), description: getStr(o, 'description'), image: getStr(o, 'image'), alt: getStr(o, 'alt'), date: getStr(o, 'date'),
+  }));
+  const bubbles = loadUnits(scenesText, 'bubbleMessages', (o) => ({
+    text: getStr(o, 'text'), weight: getNum(o, 'weight', 1), image: getStr(o, 'image'),
+  }));
+
+  const renderLayout = (f) => `{ x: ${rawNum(f.x)}, y: ${rawNum(f.y)}, width: ${rawNum(f.width)}, height: ${rawNum(f.height)}${f.blur !== null && f.blur !== undefined ? `, blur: ${rawNum(f.blur)}` : ''} }`;
+  const renderBlindItem = (f) => {
+    const L = ['\t\t\t{',
+      `\t\t\t\ttitle: ${rawStr(f.title)},`,
+      `\t\t\t\tdescription: ${rawStr(f.description)},`,
+      `\t\t\t\timage: ${rawStr(f.image)},`,
+      `\t\t\t\talt: ${rawStr(f.alt)},`];
+    if (f.date) L.push(`\t\t\t\tdate: ${rawStr(f.date)},`);
+    L.push('\t\t\t}');
+    return L.join('\n');
+  };
+  const renderBubble = (f) => `{ text: ${rawStr(f.text)}, weight: ${rawNum(f.weight)}${f.image ? `, image: ${rawStr(f.image)}` : ''} }`;
+
+  /* ---------- 保存：把全部状态写回文本 ---------- */
+  function applyAll(text) {
+    let t = text;
+    /* 先写列表（整段替换数组体） */
+    function replaceArrBody(segKey, arrKey, newBody, segFrom) {
+      const seg = segOf(t, segKey, segFrom || 0);
+      if (!seg) return;
+      const a = arrOf(t.slice(seg.start, seg.closeIdx + 1), arrKey);
+      if (!a) return;
+      const absOpen = seg.start + a.openIdx;
+      const absClose = seg.start + a.closeIdx;
+      t = t.slice(0, absOpen + 1) + newBody + t.slice(absClose);
+    }
+    replaceArrBody('mosaic', 'initialLayout', serializeUnits(layoutList.parsed, renderLayout));
+    replaceArrBody('scenes', 'items', serializeUnits(blindsItems.parsed, renderBlindItem));
+    replaceArrBody('scenes', 'bubbleMessages', serializeUnits(bubbles.parsed, renderBubble));
+    /* 字符串列表 */
+    function replaceStrList(segKey, arrKey, list, indent, orig) {
+      if (orig && JSON.stringify(list) === JSON.stringify(orig)) return;
+      const seg = segOf(t, segKey);
+      if (!seg) return;
+      const segText = t.slice(seg.start, seg.closeIdx + 1);
+      const a = arrOf(segText, arrKey);
+      if (!a) return;
+      const absOpen = seg.start + a.openIdx;
+      const absClose = seg.start + a.closeIdx;
+      t = t.slice(0, absOpen + 1) + serializeStrList(list, indent) + t.slice(absClose);
+    }
+    replaceStrList('dialogue', 'lines', dialogueLines, '\t\t\t\t', dialogueLinesOrig);
+    replaceStrList('headline', 'messages', headlineMsgs, '\t\t\t\t\t', headlineMsgsOrig);
+    replaceStrList('scenes', 'standImages', standList, '\t\t\t\t', standListOrig);
+    /* 再写标量（逐个按段定位） */
+    const segPath = {
+      mosaic: ['hero', 'mosaic'], contact: ['hero', 'contact'], sticker: ['hero', 'sticker'], sounds: ['hero', 'sticker', 'sounds'],
+      main: ['hero', 'photo', 'main'], overlay: ['hero', 'photo', 'overlay'], intro: ['hero', 'photo', 'intro'],
+      dialogue: ['hero', 'dialogue'], rain: ['hero', 'rain'],
+      homeBlinds: ['homeBlinds'], reveal: ['homeBlinds', 'reveal'], headline: ['homeBlinds', 'reveal', 'headline'],
+      scenes: ['homeBlinds', 'scenes'], commentBubble: ['homeBlinds', 'scenes', 'commentBubble'], composite: ['homeBlinds', 'scenes', 'composite'],
+    };
+    for (const [name, s] of Object.entries(S)) {
+      const path = segPath[s.segName];
+      if (!path) continue;
+      let from = 0; let seg = null;
+      for (const k of path) { seg = segOf(t, k, from); if (!seg) break; from = seg.start; }
+      if (!seg) continue;
+      const raw = s.type === 'num' ? rawNum(s.value) : s.type === 'bool' ? rawBool(s.value) : rawStr(s.value);
+      t = setScalar(t, seg.start, seg.closeIdx + 1, s.key, raw);
+    }
+    return t;
+  }
+
+  /* ---------- 界面 ---------- */
+  const numField = (name, label) => `<div class="field"><label>${label}</label><input type="number" step="any" data-s="${name}" value="${S[name].value}"></div>`;
+  const strField = (name, label, ph = '') => `<div class="field"><label>${label}</label><input type="text" data-s="${name}" value="${esc(S[name].value)}" placeholder="${ph}"></div>`;
+  const boolField = (name, label) => `<div class="field"><label>${label}</label><input type="checkbox" data-s="${name}" ${S[name].value ? 'checked' : ''}></div>`;
+  const textField = (name, label) => `<div class="field"><label>${label}</label><textarea data-s="${name}" rows="2">${esc(S[name].value)}</textarea></div>`;
+
+  function unitRows(parsed, fieldsHtml, renderNew) {
+    const wrap = document.createElement('div');
+    parsed.units.forEach((u, i) => {
+      const row = document.createElement('div');
+      row.className = 'card';
+      row.innerHTML = fieldsHtml(u.fields) + `<div class="toolbar">
+        <button class="mini-btn" data-a="up" type="button">↑</button>
+        <button class="mini-btn" data-a="down" type="button">↓</button>
+        <button class="mini-btn danger" data-a="del" type="button">删除</button></div>`;
+      row.querySelectorAll('[data-k]').forEach((inp) => {
+        inp.onchange = () => {
+          const k = inp.dataset.k;
+          u.fields[k] = inp.type === 'number' ? (inp.value === '' ? null : parseFloat(inp.value)) : inp.value.trim();
+          u.dirty = true;
+        };
+      });
+      row.querySelector('[data-a=up]').onclick = () => { if (i === 0) return; [parsed.units[i - 1], parsed.units[i]] = [parsed.units[i], parsed.units[i - 1]]; render(); };
+      row.querySelector('[data-a=down]').onclick = () => { if (i === parsed.units.length - 1) return; [parsed.units[i + 1], parsed.units[i]] = [parsed.units[i], parsed.units[i + 1]]; render(); };
+      row.querySelector('[data-a=del]').onclick = () => { if (!confirm('删掉这一条？')) return; parsed.units.splice(i, 1); render(); };
+      wrap.appendChild(row);
+    });
+    const add = document.createElement('button');
+    add.className = 'btn btn-small btn-ghost';
+    add.type = 'button';
+    add.textContent = '＋ 添加一条';
+    add.onclick = () => { parsed.units.push({ prefix: ',\n', objText: '', dirty: true, fields: renderNew() }); render(); };
+    wrap.appendChild(add);
+    return wrap;
+  }
+  function strListEditor(list, label) {
+    const wrap = document.createElement('div');
+    wrap.className = 'field';
+    wrap.innerHTML = `<label>${label}（每行一条）</label>`;
+    const ta = document.createElement('textarea');
+    ta.rows = Math.min(12, Math.max(3, list.length + 1));
+    ta.value = list.join('\n');
+    ta.onchange = () => {
+      const lines = ta.value.split('\n').map((s) => s.trim()).filter(Boolean);
+      list.length = 0;
+      lines.forEach((l) => list.push(l));
+    };
+    wrap.appendChild(ta);
+    return wrap;
+  }
+
+  function render() {
+    view.innerHTML = '';
+    const head = document.createElement('div');
+    head.className = 'card';
+    head.innerHTML = `<h2>🎋 海报 <span class="sub">${POSTER_PATH} · 首页迎客海报系统</span></h2>
+      <p class="hint">马赛克拼图、拼合照片、黑猫贴纸、气泡台词、雨珠、五幕滚动叙事都在这一页。图片填站内路径或外链；手感参数（滚动距离、时序、碎片坐标）原样搬运，改数请慎重。保存一次提交，Vercel 重建后生效。</p>
+      <div class="toolbar"><button class="btn" id="poster-save" type="button">💾 保存海报设置</button></div>`;
+    view.appendChild(head);
+
+    const c1 = document.createElement('div');
+    c1.className = 'card';
+    c1.innerHTML = '<h2>🧩 马赛克拼图 <span class="sub">拼图源图就是下面「拼合照片」的主图</span></h2>';
+    const g1 = document.createElement('div');
+    g1.className = 'row2';
+    g1.innerHTML = [numField('mosaic.rows', '行数 rows'), numField('mosaic.columns', '列数 columns'), numField('mosaic.idleVisible', '静止可见块数'), numField('mosaic.seed', '随机种子 seed'), numField('mosaic.scrub', 'scrub'), numField('mosaic.desktopScrollDistance', '桌面滚动距离'), numField('mosaic.mobileScrollDistance', '移动滚动距离'), numField('mosaic.desktopDialogueTailDistance', '桌面台词尾程'), numField('mosaic.mobileDialogueTailDistance', '移动台词尾程'), numField('mosaic.desktopMinViewports', '桌面最少屏高'), numField('mosaic.mobileMinViewports', '移动最少屏高'), numField('mosaic.interactionHold', 'interactionHold')].join('');
+    c1.appendChild(g1);
+    const lh = document.createElement('p');
+    lh.className = 'hint';
+    lh.textContent = '首屏碎片布局（initialLayout，坐标/尺寸为 0-1 比例，blur 可空）：';
+    c1.appendChild(lh);
+    c1.appendChild(unitRows(layoutList.parsed, (f) => `<div class="row2">
+      <div class="field"><label>x</label><input type="number" step="any" data-k="x" value="${f.x}"></div>
+      <div class="field"><label>y</label><input type="number" step="any" data-k="y" value="${f.y}"></div>
+      <div class="field"><label>宽</label><input type="number" step="any" data-k="width" value="${f.width}"></div>
+      <div class="field"><label>高</label><input type="number" step="any" data-k="height" value="${f.height}"></div>
+      <div class="field"><label>blur（可空）</label><input type="number" step="any" data-k="blur" value="${f.blur === null ? '' : f.blur}"></div></div>`,
+      () => ({ x: 0.1, y: 0.1, width: 0.1, height: 0.2, blur: null })));
+    view.appendChild(c1);
+
+    const c2 = document.createElement('div');
+    c2.className = 'card';
+    c2.innerHTML = '<h2>🖼 拼合照片与贴纸</h2>';
+    const g2 = document.createElement('div');
+    g2.innerHTML = [strField('photo.main.image', '主图（也是拼图源图）'), strField('photo.main.author', '主图作者标牌（可空）'), strField('photo.overlay.image', '叠图（可空）'), strField('photo.overlay.author', '叠图作者标牌（可空）'), strField('sticker.image', '黑猫贴纸图'), strField('sticker.alt', '贴纸 alt'), strField('sticker.press', '按压音效'), strField('sticker.loosen', '松开音效'), strField('contact.platform', '联系平台名'), strField('contact.handle', '联系账号')].join('');
+    c2.appendChild(g2);
+    const g2b = document.createElement('div');
+    g2b.innerHTML = [textField('intro.direction', '介绍卡 · 方向'), textField('intro.hobby', '介绍卡 · 爱好'), textField('intro.bio', '介绍卡 · bio')].join('');
+    c2.appendChild(g2b);
+    view.appendChild(c2);
+
+    const c3 = document.createElement('div');
+    c3.className = 'card';
+    c3.innerHTML = '<h2>💬 气泡台词与雨珠</h2>';
+    const g3 = document.createElement('div');
+    g3.className = 'row2';
+    g3.innerHTML = [boolField('dialogue.enabled', '台词气泡开启'), boolField('rain.enabled', '雨珠开启'), numField('rain.intensity', '雨珠强度'), strField('rain.color', '雨珠颜色（可空随主题）')].join('');
+    c3.appendChild(g3);
+    c3.appendChild(strListEditor(dialogueLines, '台词 lines'));
+    view.appendChild(c3);
+
+    const c4 = document.createElement('div');
+    c4.className = 'card';
+    c4.innerHTML = '<h2>🎬 五幕滚动叙事 <span class="sub">homeBlinds</span></h2>';
+    const g4 = document.createElement('div');
+    g4.innerHTML = [boolField('blinds.enabled', '五幕开启'), strField('reveal.backgroundImage', '揭示背景图'), strField('headline.title', '揭示标题'), numField('headline.enterDuration', '入场时长'), numField('headline.messageHold', '祝福停留'), numField('headline.messageFlipDuration', '翻页时长'), numField('scenes.scrollDistance', '横滚距离'), numField('scenes.cycleDuration', '拼图循环秒数'), boolField('commentBubble.enabled', '混入真实留言'), numField('commentBubble.weight', '留言权重')].join('');
+    c4.appendChild(g4);
+    c4.appendChild(strListEditor(headlineMsgs, '揭示祝福语 messages'));
+    const comp = document.createElement('div');
+    comp.innerHTML = '<p class="hint">第一幕（composite，固定幕）：</p>' + [strField('composite.title', '标题'), textField('composite.description', '描述'), strField('composite.alt', 'alt'), strField('composite.date', '日期（可空）')].join('');
+    c4.appendChild(comp);
+    const ih = document.createElement('p');
+    ih.className = 'hint';
+    ih.textContent = '第二至五幕（items）：';
+    c4.appendChild(ih);
+    c4.appendChild(unitRows(blindsItems.parsed, (f) => `<div class="row2">
+      <div class="field"><label>标题</label><input type="text" data-k="title" value="${esc(f.title)}"></div>
+      <div class="field"><label>图片</label><input type="text" data-k="image" value="${esc(f.image)}"></div>
+      <div class="field"><label>alt</label><input type="text" data-k="alt" value="${esc(f.alt)}"></div>
+      <div class="field"><label>日期（可空）</label><input type="text" data-k="date" value="${esc(f.date)}"></div></div>
+      <div class="field"><label>描述</label><textarea data-k="description" rows="2">${esc(f.description)}</textarea></div>`,
+      () => ({ title: '', description: '', image: '', alt: '', date: '' })));
+    const sh = document.createElement('p');
+    sh.className = 'hint';
+    sh.textContent = '立绘轮播（standImages，每行一个地址）：';
+    c4.appendChild(sh);
+    c4.appendChild(strListEditor(standList, 'standImages'));
+    const bh = document.createElement('p');
+    bh.className = 'hint';
+    bh.textContent = '留言墙气泡池（bubbleMessages）：';
+    c4.appendChild(bh);
+    c4.appendChild(unitRows(bubbles.parsed, (f) => `<div class="row2">
+      <div class="field"><label>文案</label><input type="text" data-k="text" value="${esc(f.text)}"></div>
+      <div class="field"><label>权重</label><input type="number" step="any" data-k="weight" value="${f.weight}"></div>
+      <div class="field"><label>配图（可空）</label><input type="text" data-k="image" value="${esc(f.image)}"></div></div>`,
+      () => ({ text: '', weight: 1, image: '' })));
+    view.appendChild(c4);
+
+    view.querySelectorAll('[data-s]').forEach((inp) => {
+      inp.onchange = () => {
+        const s = S[inp.dataset.s];
+        if (!s) return;
+        s.value = inp.type === 'checkbox' ? inp.checked : inp.type === 'number' ? parseFloat(inp.value) : inp.value.trim();
+      };
+    });
+    view.querySelector('#poster-save').onclick = async () => {
+      const cur = await ghGetFile(POSTER_PATH).catch(() => null);
+      if (!cur || cur.text !== snapshot) { toast('配置刚被别处改动过，已中止保存，请重新打开海报页', true); return; }
+      const next = applyAll(snapshot);
+      if (next === snapshot) { toast('没有改动'); return; }
+      try {
+        const r = await saveWithLog(POSTER_PATH, next, sha, '更新海报设置 [管理台]', { type: '海报', action: '更新', target: '首页海报' });
+        sha = r.content.sha; snapshot = next;
+        toast('海报设置已保存（Vercel 重新构建后生效）');
+      } catch (e) { toast(e.message, true); }
+    };
+  }
+  render();
+}
+
 const BANNER_PATH = 'src/config/backgroundWallpaper.ts';
 routes.banner = async () => {
+  /* 灵感屋海报是 homeConfig 的迎客海报系统，与主站横幅完全不同，走专用编辑器 */
+  if (typeof SITE_ID !== 'undefined' && SITE_ID === 'idea') { await ideaPoster(); return; }
   view.innerHTML = '<div class="card"><h2>🖼️ 横幅</h2><p class="hint">正在读取仓库…</p></div>';
   let sha = null, src = '';
   try {
