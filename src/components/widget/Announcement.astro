@@ -138,7 +138,20 @@ const smartLink = config.linkRouting === "smart" && isLineLink;
           /* 常见城市英文名 → 中文（能显示城市就显示城市） */
           const CITY_ZH = { Beijing: '北京', Shanghai: '上海', Tianjin: '天津', Chongqing: '重庆', Guangzhou: '广州', Shenzhen: '深圳', Chengdu: '成都', Hangzhou: '杭州', Wuhan: '武汉', "Xi'an": '西安', Nanjing: '南京', Suzhou: '苏州', Zhengzhou: '郑州', Changsha: '长沙', Shenyang: '沈阳', Qingdao: '青岛', Dalian: '大连', Xiamen: '厦门', Kunming: '昆明', Hefei: '合肥', Fuzhou: '福州', Jinan: '济南', Changchun: '长春', Harbin: '哈尔滨', Shijiazhuang: '石家庄', Taiyuan: '太原', Nanning: '南宁', Guiyang: '贵阳', Nanchang: '南昌', Lanzhou: '兰州', Haikou: '海口', Hohhot: '呼和浩特', Yinchuan: '银川', Xining: '西宁', Urumqi: '乌鲁木齐', Lhasa: '拉萨', Ningbo: '宁波', Wuxi: '无锡', Dongguan: '东莞', Foshan: '佛山', Zhuhai: '珠海', Wenzhou: '温州', Xuzhou: '徐州', Nantong: '南通', Yangzhou: '扬州', Changzhou: '常州', Zhenjiang: '镇江', Yancheng: '盐城', Lianyungang: '连云港', Suqian: '宿迁', Luoyang: '洛阳', Tangshan: '唐山', Yantai: '烟台', Weifang: '潍坊', Baotou: '包头', Guilin: '桂林', Sanya: '三亚', Mianyang: '绵阳', Leshan: '乐山', Baoji: '宝鸡', Zhongshan: '中山', Huizhou: '惠州', Shantou: '汕头', Shaoxing: '绍兴', Jiaxing: '嘉兴', Jinhua: '金华', Kaifeng: '开封', Pingdingshan: '平顶山', Anyang: '安阳', Hebi: '鹤壁', Xinxiang: '新乡', Jiaozuo: '焦作', Puyang: '濮阳', Xuchang: '许昌', Luohe: '漯河', Sanmenxia: '三门峡', Nanyang: '南阳', Shangqiu: '商丘', Xinyang: '信阳', Zhoukou: '周口', Zhumadian: '驻马店', Jiyuan: '济源' };
           const GREET = [[0, '夜深了，还在熬夜冲浪呀'], [5, '早上好，新的一天开始啦'], [8, '上午好，精神不错'], [11, '中午好，吃饱了再来逛'], [13, '下午好，懒懒地睡个午觉吧'], [17, '傍晚好，夕阳无限好'], [19, '晚上好，今晚月色不错'], [23, '夜深了，早点休息吧']];
-          const greeting = () => { const h = new Date().getHours(); let g = GREET[0][1]; for (const pair of GREET) if (h >= pair[0]) g = pair[1]; return g; };
+          // 问候语按访客所在地时区算（/api/visitor 返回的 IANA 时区名），不再读访客
+          // 设备自己的钟——设备时区与所在地对不上（挂代理测试、手动改时区、带着
+          // 设备旅行）时旧写法会错位：人在美国、钟还是北京时间，就成了大白天
+          // 说「晚上好」。时区缺失或解析失败时回落设备本地小时。
+          const greeting = (tz) => {
+            let h = NaN;
+            if (tz) {
+              try {
+                h = parseInt(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hourCycle: 'h23' }).format(new Date()), 10) % 24;
+              } catch {}
+            }
+            if (Number.isNaN(h)) h = new Date().getHours();
+            let g = GREET[0][1]; for (const pair of GREET) if (h >= pair[0]) g = pair[1]; return g;
+          };
           const render = (vals) => {
             setAll(geoTemplate
               .replaceAll('{place}', vals.place || vals.country || '远方')
@@ -147,7 +160,7 @@ const smartLink = config.linkRouting === "smart" && isLineLink;
               .replaceAll('{region}', vals.region || '')
               .replaceAll('{city}', vals.city || '')
               .replaceAll('{distance}', vals.distance != null ? String(vals.distance) : '好几千')
-              .replaceAll('{greeting}', greeting()));
+              .replaceAll('{greeting}', greeting(vals.timezone)));
           };
           render({});
           // 两个实例的脚本都会跑，共用同一个请求 Promise，避免重复打 /api/visitor
@@ -176,7 +189,7 @@ const smartLink = config.linkRouting === "smart" && isLineLink;
             else if (v.country === 'MO') { place = '中国澳门'; local = '大三巴前留个影，再来这儿逛逛'; }
             else if (v.country === 'TW') { place = '中国台湾'; local = '海峡对岸的缘分，夜市小吃先想为敬'; }
             else { place = COUNTRY[v.country] || v.country; local = COUNTRY_LINE[v.country] || ''; }
-            render({ place, local, country: COUNTRY[v.country] || v.country, region: provZh, city: cityZh, distance });
+            render({ place, local, country: COUNTRY[v.country] || v.country, region: provZh, city: cityZh, distance, timezone: v.timezone });
           }).catch(() => { setAll(staticContent); });
         })();
       </script>
