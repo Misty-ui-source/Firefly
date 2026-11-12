@@ -2701,6 +2701,15 @@ function listRoute(key, opts = {}) {
             router();
           } catch (err) { toast(err.message, true); }
         };
+        /* 二期跨站搬文：灵感屋的文章行加「转投」入口（逻辑在 transfer.js） */
+        if (key === 'posts' && e.type === 'dir' && SITE_ID === 'idea' && typeof window.openTransfer === 'function') {
+          const btnTr = document.createElement('button');
+          btnTr.className = 'btn btn-small';
+          btnTr.type = 'button';
+          btnTr.textContent = '📤 转投';
+          btnTr.onclick = () => window.openTransfer(key, e.name);
+          div.insertBefore(btnTr, btnDel);
+        }
         if (key === 'spec') {
           const isShow = ['about', 'friends', 'guestbook'].includes(e.name.replace(/\.(md|mdx)$/, ''));
           const grp = isShow ? 'show' : 'gen';
@@ -2962,6 +2971,7 @@ routes.edit = async (arg) => {
     <span class="spacer"></span>
     <button class="btn btn-ghost" id="btn-preview">👁 预览</button>
     ${isNew ? '' : '<button class="btn btn-ghost" id="btn-history" type="button">🕘 历史</button>'}
+    ${(!isNew && key === 'posts' && SITE_ID === 'idea') ? '<button class="btn btn-ghost" id="btn-transfer" type="button">📤 转投</button>' : ''}
     <button class="btn btn-ghost hidden" id="btn-discard-draft" type="button">🗑 丢弃草稿</button>
     <button class="btn btn-ghost hidden" id="btn-restore-draft" type="button">↩ 仍用旧草稿</button>
     <button class="btn" id="btn-save">💾 保存发布</button>
@@ -3548,6 +3558,10 @@ routes.edit = async (arg) => {
   /* 🕘 历史版本：git 历史本来就在仓库里，这里把它露出来（列表 / 对比 / 恢复） */
   const btnHistory = $('#btn-history');
   if (btnHistory) btnHistory.onclick = () => openFileHistory(filePath, () => { router(); });
+
+  /* 📤 跨站转投（二期，逻辑在 transfer.js）：仅灵感屋的已有文章显示入口 */
+  const btnTransfer = $('#btn-transfer');
+  if (btnTransfer) btnTransfer.onclick = () => { if (typeof window.openTransfer === 'function') window.openTransfer(key, dirName || name); };
 
   /* ---------- 拖文件导入：拖到编辑页松手即导入，只填草稿不自动保存 ---------- */
   /* 把解析出的 frontmatter 填进表单字段（走现有 [data-f] 字段，保存流程不变） */
@@ -7645,7 +7659,8 @@ async function init() {
     const sel = document.getElementById('site-switch');
     if (!sel) return;
     if (!Array.isArray(CFG.sites) || CFG.sites.length < 2) { sel.style.display = 'none'; return; }
-    sel.innerHTML = CFG.sites.map((s) => `<option value="${s.id}">${s.label}</option>`).join('');
+    /* transferOnly 的站点（如旧站）只是跨站搬文的转投目标，不进切换器、不开编辑入口（三期才做只读接入） */
+    sel.innerHTML = CFG.sites.filter((s) => !s.transferOnly).map((s) => `<option value="${s.id}">${s.label}</option>`).join('');
     sel.value = SITE_ID;
     sel.onchange = () => switchSite(sel.value);
   })();

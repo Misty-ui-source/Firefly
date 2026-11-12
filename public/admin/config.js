@@ -54,6 +54,22 @@ window.ADMIN_CONFIG = {
         { icon: '▲', label: 'Vercel', url: 'https://vercel.com/dashboard' },
       ],
     },
+    {
+      /* 二期跨站搬文的转投目标（旧站）：只登记仓库坐标供 transfer.js 写入，
+       * transferOnly = 不进顶栏站点切换器、不开任何普通编辑入口——
+       * 旧站只读接入是三期范围，这里不提前开。 */
+      id: 'archive', label: '🕰️ 旧站',
+      owner: 'Misty-ui-source', repo: 'fuwari', branch: 'main',
+      transferOnly: true,
+      collections: {
+        posts: {
+          label: '文章',
+          path: 'src/content/posts',
+          mode: 'dir',
+          fields: ['title', 'published', 'updated', 'description', 'image', 'tags', 'category', 'draft'],
+        },
+      },
+    },
   ],
 
   // R2 图床公开访问前缀（Function 返回的 URL 会拼成 公开前缀 + 路径）
