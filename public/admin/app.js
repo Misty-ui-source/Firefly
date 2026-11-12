@@ -6936,12 +6936,103 @@ async function ideaPoster() {
     return wrap;
   }
 
+
+  /* ---------- 图片字段增强：缩略预览 + 上传到图床 ----------
+   * 上传走 app.js 的 uploadImages（与主站同一条 /api/r2-upload 通道，自动转 WebP），
+   * 传完把图床地址回填输入框并触发 change，状态与保存路径和手填地址完全一致。 */
+  const posterPreviewUrl = (v) => {
+    v = String(v || '').trim();
+    if (!v) return '';
+    if (/^https?:\/\//i.test(v)) return v;
+    return 'https://idea.lanerc.me' + (v.startsWith('/') ? v : '/' + v);
+  };
+  async function posterUploadOne(file) {
+    const { urls } = await uploadImages([file], 'idea/home');
+    if (!urls || !urls[0]) throw new Error('图床没有返回地址');
+    return urls[0];
+  }
+  function enhanceOneImg(input) {
+    if (!input || input.dataset.imgEnhanced) return;
+    input.dataset.imgEnhanced = '1';
+    const box = document.createElement('div');
+    box.style.cssText = 'margin-top:6px;display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap';
+    const img = document.createElement('img');
+    img.alt = '预览';
+    img.style.cssText = 'max-width:200px;max-height:120px;border-radius:8px;border:1px solid var(--card-border,#ddd);object-fit:cover';
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-small btn-ghost';
+    btn.type = 'button';
+    btn.textContent = '⬆ 上传到图床';
+    const file = document.createElement('input');
+    file.type = 'file';
+    file.accept = 'image/*';
+    file.className = 'hidden';
+    const paint = () => { const u = posterPreviewUrl(input.value); if (u) { img.src = u; img.style.display = ''; } else { img.removeAttribute('src'); img.style.display = 'none'; } };
+    btn.onclick = () => file.click();
+    file.onchange = async () => {
+      const f = file.files && file.files[0];
+      if (!f) return;
+      btn.disabled = true; btn.textContent = '上传中…';
+      try {
+        input.value = await posterUploadOne(f);
+        input.dispatchEvent(new Event('change'));
+        paint();
+        toast('已上传到图床，地址已填入（记得点保存海报设置）');
+      } catch (e) { toast(e.message, true); }
+      btn.disabled = false; btn.textContent = '⬆ 上传到图床';
+      file.value = '';
+    };
+    input.addEventListener('change', paint);
+    box.appendChild(img); box.appendChild(btn); box.appendChild(file);
+    const host = input.closest('.field');
+    if (host) host.appendChild(box);
+    paint();
+  }
+  function enhanceImages() {
+    ['photo.main.image', 'photo.overlay.image', 'sticker.image', 'reveal.backgroundImage'].forEach((n) => {
+      const inp = view.querySelector(`[data-s="${n}"]`);
+      if (inp) enhanceOneImg(inp);
+    });
+    view.querySelectorAll('input[data-k="image"]').forEach((inp) => enhanceOneImg(inp));
+    /* standImages 是逐行文本域：给它一个「上传并追加一行」 */
+    view.querySelectorAll('.field').forEach((fld) => {
+      const lab = fld.querySelector('label');
+      const ta = fld.querySelector('textarea');
+      if (!lab || !ta || !lab.textContent.includes('standImages') || fld.dataset.imgEnhanced) return;
+      fld.dataset.imgEnhanced = '1';
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-small btn-ghost';
+      btn.type = 'button';
+      btn.textContent = '⬆ 上传立绘到图床（自动追加一行）';
+      const file = document.createElement('input');
+      file.type = 'file';
+      file.accept = 'image/*';
+      file.className = 'hidden';
+      btn.onclick = () => file.click();
+      file.onchange = async () => {
+        const f = file.files && file.files[0];
+        if (!f) return;
+        btn.disabled = true; btn.textContent = '上传中…';
+        try {
+          const url = await posterUploadOne(f);
+          const cur = ta.value.replace(/\s+$/, '');
+          ta.value = (cur ? cur + '\n' : '') + url;
+          ta.dispatchEvent(new Event('change'));
+          toast('已上传并追加到立绘列表（记得点保存海报设置）');
+        } catch (e) { toast(e.message, true); }
+        btn.disabled = false; btn.textContent = '⬆ 上传立绘到图床（自动追加一行）';
+        file.value = '';
+      };
+      fld.appendChild(btn); fld.appendChild(file);
+    });
+  }
+
   function render() {
     view.innerHTML = '';
     const head = document.createElement('div');
     head.className = 'card';
     head.innerHTML = `<h2>🎋 海报 <span class="sub">${POSTER_PATH} · 首页迎客海报系统</span></h2>
-      <p class="hint">马赛克拼图、拼合照片、黑猫贴纸、气泡台词、雨珠、五幕滚动叙事都在这一页。图片填站内路径或外链；手感参数（滚动距离、时序、碎片坐标）原样搬运，改数请慎重。保存一次提交，Vercel 重建后生效。</p>
+      <p class="hint">马赛克拼图、拼合照片、黑猫贴纸、气泡台词、雨珠、五幕滚动叙事都在这一页。图片字段带预览，也能直接上传到图床（自动回填地址，和主站一样）；手感参数（滚动距离、时序、碎片坐标）原样搬运，改数请慎重。保存一次提交，Vercel 重建后生效。</p>
       <div class="toolbar"><button class="btn" id="poster-save" type="button">💾 保存海报设置</button></div>`;
     view.appendChild(head);
 
@@ -7041,6 +7132,7 @@ async function ideaPoster() {
         toast('海报设置已保存（Vercel 重新构建后生效）');
       } catch (e) { toast(e.message, true); }
     };
+    enhanceImages();
   }
   render();
 }
