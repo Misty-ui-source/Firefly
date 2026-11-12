@@ -115,6 +115,61 @@
     return text;
   }
 
+
+  /* downloads（附件）单独处理：parseFrontmatter 只认扁平结构，会把 downloads 的
+   * 对象数组读成坏字符串，所以从源文本里按 YAML 块原样提取、写出时再注入。
+   * 目标为主站时字段原样带过去（灵感屋/主站 schema 同形状）；目标为旧站时字段丢弃、
+   * 改成正文末尾的直链列表（映射表：旧站无 downloads 字段，转直链）。 */
+  function extractDownloads(text) {
+    const m = String(text || '').match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    if (!m) return [];
+    const lines = m[1].split('\n');
+    const items = [];
+    let cur = null;
+    let inDl = false;
+    const unq = (v) => { v = String(v).trim(); if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1); return v; };
+    for (const line of lines) {
+      if (/^downloads:\s*$/.test(line)) { inDl = true; continue; }
+      if (inDl && /^[^\s#][^:]*:/.test(line)) break; // 下一个顶层字段
+      if (!inDl) continue;
+      const li = line.match(/^\s*-\s*([A-Za-z]+):\s*(.*)$/);
+      if (li) { cur = {}; items.push(cur); cur[li[1]] = unq(li[2]); continue; }
+      const kv = line.match(/^\s+([A-Za-z]+):\s*(.*)$/);
+      if (kv && cur) { cur[kv[1]] = unq(kv[2]); continue; }
+    }
+    return items.filter((d) => d && d.name && d.url).map((d) => ({ name: String(d.name), url: String(d.url), size: String(d.size || ''), desc: String(d.desc || '') }));
+  }
+
+  function yamlScalar(v) {
+    const t = String(v);
+    if (/^\s|\s$|:\s|:$|(\s)#|[\[\]{}&*!|>'"%@`]/.test(t)) return '"' + t.replace(/"/g, '\\"') + '"';
+    return t;
+  }
+
+  /* 把 downloads 块注入已序列化的 frontmatter（第二个 --- 之前） */
+  function injectDownloads(text, items) {
+    if (!items || !items.length) return String(text);
+    const block = ['downloads:'];
+    for (const d of items) {
+      block.push(`  - name: ${yamlScalar(d.name)}`);
+      block.push(`    url: ${yamlScalar(d.url)}`);
+      if (d.size) block.push(`    size: ${yamlScalar(d.size)}`);
+      if (d.desc) block.push(`    desc: ${yamlScalar(d.desc)}`);
+    }
+    return String(text).replace(/\n---\n/, '\n' + block.join('\n') + '\n---\n');
+  }
+
+  /* 旧站口径：downloads 转正文末尾的直链列表 */
+  function downloadsToLinks(items) {
+    if (!items || !items.length) return '';
+    const lines = ['', '', '## 附件下载', ''];
+    for (const d of items) {
+      const meta = [d.size, d.desc].filter(Boolean).join(' · ');
+      lines.push(`- [${d.name}](${d.url})${meta ? `（${meta}）` : ''}`);
+    }
+    return lines.join('\n') + '\n';
+  }
+
   /* frontmatter 转换。fm 为 parseFrontmatter 的产物（值是字符串或字符串数组）。
    * opts: { target:'main'|'fuwari'|'idea', category, tags(数组), draft('true'|'false'),
    *         series, seriesOrder } —— category/tags/draft 由界面给定（含默认值）。 */
@@ -125,6 +180,7 @@
     const keys = Object.keys(fm || {});
     for (const k of keys) {
       if (drop.has(k)) continue;
+      if (k === 'downloads') continue; // 附件走单独通道（见 extractDownloads），别让解析坏值漏进输出
       picked[k] = fm[k];
     }
     if (target === 'fuwari') {
@@ -164,7 +220,7 @@
   }
 
   /* 一次转投的完整纯转换（UI 与干跑共用）。
-   * input: { fm, body, files:[相对路径] }
+   * input: { fm, body, files:[相对路径], downloads:[{name,url,size,desc}] }
    * opts: 同 convertFrontmatter，外加 approxDirectives(是否已确认近似转换)
    * 返回 { fm, body, plan, warnings:{ directives:[], hasPassword } } */
   function convertTransfer(input, opts) {
@@ -176,6 +232,8 @@
     if (directives.length && opts.approxDirectives) body = approximateDirectives(body);
     if (target !== 'fuwari') body = stripLeadingH1(body);
     body = convertHighlight(body, target);
+    const dlItems = Array.isArray(input.downloads) ? input.downloads : [];
+    if (target === 'fuwari' && dlItems.length) body = body.replace(/\s+$/, '') + downloadsToLinks(dlItems);
     const plan = planFiles(input.files, target, coverName);
     if (target === 'main') {
       for (const p of plan) {
@@ -185,6 +243,7 @@
     return {
       fm: convertFrontmatter(fm, opts),
       body,
+      downloads: target === 'fuwari' ? [] : dlItems,
       plan,
       warnings: {
         directives,
@@ -209,6 +268,7 @@
     toPureDate, detectDirectives, approximateDirectives,
     stripLeadingH1, convertHighlight, rewriteImageRef,
     convertFrontmatter, planFiles, convertTransfer, finalizeText,
+    extractDownloads, injectDownloads, downloadsToLinks,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = TransferCore;
   if (typeof window === 'undefined') return;
@@ -258,7 +318,7 @@
       if (!mdFile) throw new Error('源目录里没有 md 文件');
       const data = await ghGetFile(`${col.path}/${dirName}/${mdFile.rel}`);
       const parsed = parseFrontmatter(data.text);
-      src = { files, mdFile, fm: parsed.fm, body: parsed.body };
+      src = { files, mdFile, fm: parsed.fm, body: parsed.body, downloads: extractDownloads(data.text) };
     } catch (e) {
       body.innerHTML = `<p class="hint">读取失败：${esc(e.message)}</p>`;
       return;
@@ -338,7 +398,7 @@
       try {
         /* 1) 转换（纯逻辑） */
         const conv = convertTransfer(
-          { fm: src.fm, body: src.body, files: src.files.map((f) => f.rel) },
+          { fm: src.fm, body: src.body, files: src.files.map((f) => f.rel), downloads: src.downloads },
           {
             target: coreTarget,
             category: $q('#tr-category').value.trim(),
@@ -348,7 +408,7 @@
             seriesOrder: $q('#tr-series-order') ? $q('#tr-series-order').value : '',
             approxDirectives: directives.length > 0,
           });
-        const newText = finalizeText(serializeFrontmatter(conv.fm, conv.body), conv.fm);
+        const newText = injectDownloads(finalizeText(serializeFrontmatter(conv.fm, conv.body), conv.fm), conv.downloads);
 
         /* 2) 目标仓撞名检查：同编辑器口径顺延 (1)(2)… */
         let slug = slug0;
