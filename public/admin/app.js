@@ -4279,12 +4279,16 @@ function wireClipFill(formEl) {
 }
 function friendToTs(f, weight) {
   const q = (s) => `"${String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
-  return `\t{\n\t\ttitle: ${q(f.title)},\n\t\timgurl: ${q(f.imgurl)},\n\t\tdesc: ${q(f.desc)},\n\t\tsiteurl: ${q(f.siteurl)},\n\t\ttags: [${(f.tags || []).map(q).join(', ')}],\n\t\tweight: ${weight},\n\t\tenabled: ${f.enabled ? 'true' : 'false'},\n\t\trss: ${q(f.rss)},\n\t},`;
+  /* 灵感屋的 FriendLink 类型没有 rss 字段，不写这一行，免得它的配置里多出无用字段 */
+  const rssLine = (typeof SITE_ID !== 'undefined' && SITE_ID === 'idea') ? '' : `\n\t\trss: ${q(f.rss)},`;
+  return `\t{\n\t\ttitle: ${q(f.title)},\n\t\timgurl: ${q(f.imgurl)},\n\t\tdesc: ${q(f.desc)},\n\t\tsiteurl: ${q(f.siteurl)},\n\t\ttags: [${(f.tags || []).map(q).join(', ')}],\n\t\tweight: ${weight},\n\t\tenabled: ${f.enabled ? 'true' : 'false'},${rssLine}\n\t},`;
 }
 routes.friends = async () => {
+  /* 灵感屋友链不存 rss，RSS 巡查页签对它没用，只留管理页签 */
+  const isIdea = typeof SITE_ID !== 'undefined' && SITE_ID === 'idea';
   view.innerHTML = `<div class="toolbar">
       <button class="btn" data-tab="mgr">🔗 友链管理</button>
-      <button class="btn btn-ghost" data-tab="rss">📡 RSS 管理</button>
+      ${isIdea ? '' : '<button class="btn btn-ghost" data-tab="rss">📡 RSS 管理</button>'}
     </div><div id="friends-body"><div class="card"><p class="hint">正在读取仓库…</p></div></div>`;
   const body = $('#friends-body');
   const tabs = view.querySelectorAll('[data-tab]');
