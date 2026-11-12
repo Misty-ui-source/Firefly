@@ -3813,7 +3813,138 @@ export const announcementConfig: AnnouncementConfig = {
 };
 `;
 }
+/* ── 灵感屋公告（announcementConfig 的 items 结构与主站不同，专用编辑器）：
+ * 条目连同上方注释/空白作为单元，调序/删除时整体移动；只有改过的条目才重写，
+ * 未动的逐字保留；标题与 closable 走定点替换，其余原文不动。 ── */
+async function ideaAnnounce() {
+  view.innerHTML = '<div class="card"><h2>📢 公告</h2><p class="hint">正在读取仓库…</p></div>';
+  let data;
+  try { data = await ghGetFile(ANN_PATH); } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+  let snapshot = data.text;
+  let sha = data.sha;
+  function parseItems(text) {
+    const m = text.match(/^(\s*)items\s*:\s*\[/m);
+    if (!m) return null;
+    const openIdx = m.index + m[0].length - 1;
+    let depth = 0; let closeIdx = -1;
+    for (let i = openIdx; i < text.length; i++) {
+      if (text[i] === '[') depth++;
+      else if (text[i] === ']') { depth--; if (!depth) { closeIdx = i; break; } }
+    }
+    if (closeIdx < 0) return null;
+    const body = text.slice(openIdx + 1, closeIdx);
+    const us = []; let buf = ''; let i = 0;
+    while (i < body.length) {
+      if (body[i] === '{') {
+        let d = 0; let j = i;
+        for (; j < body.length; j++) { if (body[j] === '{') d++; else if (body[j] === '}') { d--; if (!d) break; } }
+        const objText = body.slice(i, j + 1);
+        us.push({ prefix: buf, objText, dirty: false, fields: {
+          tag: tsGetStr(objText, 'tag'), title: tsGetStr(objText, 'title'),
+          content: tsGetStr(objText, 'content'), time: tsGetStr(objText, 'time'),
+          link: tsGetStr(objText, 'link'), sort: tsGetNum(objText, 'sort', 0),
+        } });
+        buf = ''; i = j + 1;
+      } else { buf += body[i]; i++; }
+    }
+    return { openIdx, closeIdx, units: us, tail: buf };
+  }
+  function renderItem(f) {
+    const lines = ['\t\t{',
+      `\t\t\ttag: "${tsEsc(f.tag)}",`,
+      `\t\t\ttitle: "${tsEsc(f.title)}",`,
+      `\t\t\tcontent: "${tsEsc(f.content)}",`,
+      `\t\t\ttime: "${tsEsc(f.time)}",`];
+    if (f.link) lines.push(`\t\t\tlink: "${tsEsc(f.link)}",`);
+    lines.push(`\t\t\tsort: ${Number.isFinite(f.sort) ? f.sort : 0},`, '\t\t}');
+    return lines.join('\n');
+  }
+  function serializeItems(parsed) {
+    let out = '[';
+    parsed.units.forEach((u, idx) => {
+      let pre = u.prefix;
+      if (idx === 0 && pre.startsWith(',')) pre = pre.slice(1);
+      if (idx > 0 && !pre.startsWith(',')) pre = `,${pre}`;
+      out += pre + (u.dirty ? renderItem(u.fields) : u.objText);
+    });
+    return out + parsed.tail + ']';
+  }
+  let parsed = parseItems(snapshot);
+  if (!parsed) { view.innerHTML = '<div class="card"><h2>📢 公告</h2><p class="hint">announcementConfig.ts 里找不到 items 数组。</p></div>'; return; }
+  let titleVal = tsGetStr(snapshot.slice(0, parsed.openIdx), 'title');
+  let closableVal = tsGetBool(snapshot, 'closable', true);
+  function render() {
+    view.innerHTML = `
+    <div class="card">
+      <h2>📢 公告 <span class="sub">${ANN_PATH} · 共 ${parsed.units.length} 条 · sort 越大越靠前</span></h2>
+      <div class="row2">
+        <div class="field"><label>公告区标题</label><input type="text" id="ann-title" value="${esc(titleVal)}"></div>
+        <div class="field"><label>允许访客关闭</label><input type="checkbox" id="ann-closable" ${closableVal ? 'checked' : ''}></div>
+      </div>
+      <div id="ann-rows"></div>
+      <div class="toolbar">
+        <button class="btn btn-small btn-ghost" id="ann-add" type="button">＋ 添加公告</button>
+        <button class="btn" id="ann-save" type="button">💾 保存公告</button>
+      </div>
+    </div>`;
+    const rows = view.querySelector('#ann-rows');
+    parsed.units.forEach((u, i) => {
+      const f = u.fields;
+      const row = document.createElement('div');
+      row.className = 'card';
+      row.innerHTML = `
+        <div class="row2">
+          <div class="field"><label>标签</label><input type="text" data-k="tag" value="${esc(f.tag)}"></div>
+          <div class="field"><label>标题</label><input type="text" data-k="title" value="${esc(f.title)}"></div>
+          <div class="field"><label>日期</label><input type="text" data-k="time" value="${esc(f.time)}" placeholder="2026-11-05"></div>
+          <div class="field"><label>排序 sort</label><input type="number" data-k="sort" value="${f.sort}"></div>
+        </div>
+        <div class="field"><label>正文</label><textarea data-k="content" rows="3">${esc(f.content)}</textarea></div>
+        <div class="row2">
+          <div class="field"><label>链接（可空）</label><input type="text" data-k="link" value="${esc(f.link)}" placeholder="/about/"></div>
+          <div class="field"><label>操作</label><span><button class="mini-btn" data-a="up" type="button">↑</button> <button class="mini-btn" data-a="down" type="button">↓</button> <button class="mini-btn danger" data-a="del" type="button">删除</button></span></div>
+        </div>`;
+      row.querySelectorAll('[data-k]').forEach((inp) => {
+        inp.onchange = () => {
+          const k = inp.dataset.k;
+          u.fields[k] = k === 'sort' ? (parseFloat(inp.value) || 0) : inp.value.trim();
+          u.dirty = true;
+        };
+      });
+      row.querySelector('[data-a=up]').onclick = () => { if (i === 0) return; [parsed.units[i - 1], parsed.units[i]] = [parsed.units[i], parsed.units[i - 1]]; render(); };
+      row.querySelector('[data-a=down]').onclick = () => { if (i === parsed.units.length - 1) return; [parsed.units[i + 1], parsed.units[i]] = [parsed.units[i], parsed.units[i + 1]]; render(); };
+      row.querySelector('[data-a=del]').onclick = () => { if (!confirm(`删掉公告「${f.title || f.tag}」？`)) return; parsed.units.splice(i, 1); render(); };
+      rows.appendChild(row);
+    });
+    view.querySelector('#ann-title').onchange = (e) => { titleVal = e.target.value.trim(); };
+    view.querySelector('#ann-closable').onchange = (e) => { closableVal = e.target.checked; };
+    view.querySelector('#ann-add').onclick = () => {
+      parsed.units.push({ prefix: ',\n', objText: '', dirty: true, fields: { tag: '公告', title: '', content: '', time: '', link: '', sort: 0 } });
+      render();
+    };
+    view.querySelector('#ann-save').onclick = async () => {
+      const cur = await ghGetFile(ANN_PATH).catch(() => null);
+      if (!cur || cur.text !== snapshot) { toast('配置刚被别处改动过，已中止保存，请重新打开公告页', true); return; }
+      const p2 = parseItems(snapshot);
+      let next = snapshot.slice(0, p2.openIdx) + serializeItems(parsed) + snapshot.slice(p2.closeIdx + 1);
+      next = next.replace(/title\s*:\s*"(?:[^"\\]|\\.)*"/, `title: "${tsEsc(titleVal)}"`);
+      next = next.replace(/closable\s*:\s*(true|false)/, `closable: ${closableVal}`);
+      try {
+        const r = await saveWithLog(ANN_PATH, next, sha, '更新公告 [管理台]', { type: '公告', action: '更新', target: '公告' });
+        sha = r.content.sha; snapshot = next;
+        const re = parseItems(snapshot);
+        if (re) parsed = re;
+        render();
+        toast('公告已保存（Vercel 重新构建后生效）');
+      } catch (e) { toast(e.message, true); }
+    };
+  }
+  render();
+}
+
 routes.announce = async () => {
+  /* 灵感屋的公告是 items 列表结构，与主站的静态/访客检测公告完全不同，走专用编辑器 */
+  if (typeof SITE_ID !== 'undefined' && SITE_ID === 'idea') { await ideaAnnounce(); return; }
   view.innerHTML = '<div class="card"><h2>加载中…</h2></div>';
   let sha = null, external = false, geoExternal = false;
   let content = '', closable = true, linkEnable = true, linkText = '', linkUrl = '';
@@ -7420,7 +7551,69 @@ function parseFontsList(src) {
   while ((m = re.exec(src))) out.push({ name: m[1], var: m[2] });
   return out;
 }
+/* ── 灵感屋字体（fontConfig 结构与主站不同：id 键的字体表 + selected 数组）：
+ * 控制台只管「启用开关 / 预加载 / 全局选哪款」，字体库本身在代码里维护。
+ * 保存走定点替换，其余原文不动。 ── */
+async function ideaFonts() {
+  view.innerHTML = '<div class="card"><h2>🔤 字体</h2><p class="hint">正在读取仓库…</p></div>';
+  let data;
+  try { data = await ghGetFile(FONT_PATH); } catch (e) { view.innerHTML = `<div class="card">加载失败：${esc(e.message)}</div>`; return; }
+  let snapshot = data.text;
+  let sha = data.sha;
+  function parseFonts(text) {
+    const list = [];
+    const re = /id:\s*"([^"]+)",\s*\n\s*name:\s*"([^"]+)"/g;
+    let m;
+    while ((m = re.exec(text))) list.push({ id: m[1], name: m[2] });
+    return list;
+  }
+  function parseSelected(text) {
+    const m = text.match(/selected:\s*\[([^\]]*)\]/);
+    if (!m) return ['system'];
+    const ids = [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]);
+    return ids.length ? ids : ['system'];
+  }
+  const fonts = parseFonts(snapshot);
+  if (!fonts.length) { view.innerHTML = '<div class="card"><h2>🔤 字体</h2><p class="hint">fontConfig.ts 里没解析到字体条目。</p></div>'; return; }
+  let sel = parseSelected(snapshot)[0] || 'system';
+  let enable = tsGetBool(snapshot, 'enable', true);
+  let preload = tsGetBool(snapshot, 'preload', true);
+  function render() {
+    view.innerHTML = `
+    <div class="card">
+      <h2>🔤 字体 <span class="sub">${FONT_PATH} · 字体库 ${fonts.length} 款</span></h2>
+      <p class="hint">全局字体单选，保存后 Vercel 重新构建生效。本地中文字体已按常用字集子集化；英文字体只影响英文与数字。字体库增删在代码里维护，这里只做选择。</p>
+      <div class="field"><label>选项</label><div class="pills">
+        <label class="pill${enable ? ' on' : ''}"><input type="checkbox" id="idf-enable" ${enable ? 'checked' : ''}> 启用自定义字体</label>
+        <label class="pill${preload ? ' on' : ''}"><input type="checkbox" id="idf-preload" ${preload ? 'checked' : ''}> 预加载字体文件</label>
+      </div></div>
+      <div class="field"><label>全局字体</label><div id="idf-list">
+        ${fonts.map((f) => `<label class="pill${sel === f.id ? ' on' : ''}" style="display:inline-block;margin:0 6px 6px 0"><input type="radio" name="idf-sel" value="${esc(f.id)}" ${sel === f.id ? 'checked' : ''}> ${esc(f.name)}</label>`).join('')}
+      </div></div>
+      <div class="toolbar"><button class="btn" id="idf-save" type="button">💾 保存字体设置</button></div>
+    </div>`;
+    view.querySelector('#idf-enable').onchange = (e) => { enable = e.target.checked; render(); };
+    view.querySelector('#idf-preload').onchange = (e) => { preload = e.target.checked; render(); };
+    view.querySelectorAll('[name=idf-sel]').forEach((r) => { r.onchange = () => { sel = r.value; render(); }; });
+    view.querySelector('#idf-save').onclick = async () => {
+      const cur = await ghGetFile(FONT_PATH).catch(() => null);
+      if (!cur || cur.text !== snapshot) { toast('配置刚被别处改动过，已中止保存，请重新打开字体页', true); return; }
+      let next = snapshot.replace(/selected:\s*\[[^\]]*\]/, `selected: ["${sel}"]`);
+      next = next.replace(/(\benable:\s*)(true|false)/, `$1${enable}`);
+      next = next.replace(/(\bpreload:\s*)(true|false)/, `$1${preload}`);
+      try {
+        const r = await saveWithLog(FONT_PATH, next, sha, '修改字体设置 [管理台]', { type: '字体', action: '更新', target: '字体设置' });
+        sha = r.content.sha; snapshot = next;
+        toast('字体设置已保存（Vercel 重新构建后生效）');
+      } catch (e) { toast(e.message, true); }
+    };
+  }
+  render();
+}
+
 routes.fonts = async () => {
+  /* 灵感屋的 fontConfig 是 id 键字体表，与主站结构不同，走专用编辑器 */
+  if (typeof SITE_ID !== 'undefined' && SITE_ID === 'idea') { await ideaFonts(); return; }
   view.innerHTML = '<div class="card"><h2>加载中…</h2></div>';
   let sha = null, fonts = [], cfg = null, src = '';
   try {
