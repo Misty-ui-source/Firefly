@@ -31,6 +31,7 @@ export const commentConfig: CommentConfig = {
 			"/vendor/waline-emojis/weibo",
 			"/vendor/waline-emojis/bilibili",
 			"/vendor/waline-emojis/bmoji",
+			"/vendor/waline-emojis/miku",
 		],
 		// 评论登录模式。可选值如下：
 		//   'enable'   —— 默认，允许访客匿名评论和用第三方 OAuth 登录评论，兼容性最佳。
