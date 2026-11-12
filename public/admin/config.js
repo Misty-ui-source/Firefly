@@ -31,7 +31,7 @@ window.ADMIN_CONFIG = {
       owner: 'halozray', repo: 'my-blog', branch: 'master',
       oplog: false, // 该仓库不写操作日志文件，保存走单文件直存
       ideas: true, // 开「点子」视图（posts 的 draft 筛选）
-      pages: ['dashboard', 'posts', 'ideas', 'edit', 'login', 'music', 'gallery', 'gallery-album', 'gallery-new', 'gallery-edit', 'images', 'friends', 'spec', 'announce', 'fonts'], // 只开放这些页面，其余路由回首页
+      pages: ['dashboard', 'posts', 'ideas', 'edit', 'login', 'music', 'gallery', 'gallery-album', 'gallery-new', 'gallery-edit', 'images', 'friends', 'spec', 'announce', 'fonts', 'banner'], // 只开放这些页面，其余路由回首页
       dashHint: '选个集合开始干活。保存后会自动 commit 到 GitHub，构建发版走 Vercel。',
       collections: {
         posts: {
@@ -48,10 +48,10 @@ window.ADMIN_CONFIG = {
         },
       },
       navLayout: {
-        primary: ['dashboard', 'posts', 'ideas', 'music', 'gallery', 'images', 'friends', 'spec', 'announce', 'fonts'],
+        primary: ['dashboard', 'posts', 'ideas', 'music', 'gallery', 'images', 'friends', 'spec', 'announce', 'fonts', 'banner'],
         secondary: [],
         homeCards: ['posts', 'music', 'gallery', 'friends', 'spec'],
-        labels: { posts: '📝 文章', ideas: '💡 点子', music: '🎵 音乐', gallery: '📷 相册', images: '🖼 图床', friends: '🔗 友链', spec: '📄 单页', announce: '📢 公告', fonts: '🔤 字体' },
+        labels: { posts: '📝 文章', ideas: '💡 点子', music: '🎵 音乐', gallery: '📷 相册', images: '🖼 图床', friends: '🔗 友链', spec: '📄 单页', announce: '📢 公告', fonts: '🔤 字体', banner: '🖼 海报' },
       },
       navExternal: { blog: 'https://idea.lanerc.me/' },
       quickLinks: [
