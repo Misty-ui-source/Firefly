@@ -129,9 +129,10 @@ const description =
               {/* 头像 */}
               <div class="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-black/5 dark:border-white/5 group-hover:scale-105 transition-transform duration-300">
                 <img
-                  src={item.imgurl}
+                  src={item.imgurl || "/assets/images/default-avatars/rantaro.webp"}
                   alt={item.title}
                   class="w-full h-full object-cover"
+                  onerror="this.onerror=null;this.src='/assets/images/default-avatars/rantaro.webp'"
                 />
               </div>
 
