@@ -4339,6 +4339,7 @@ function friendsParseBody(body) {
     const tags = tagsM ? tagsM[1].split(',').map((x) => x.trim().replace(/^["']|["']$/g, '')).filter(Boolean) : [];
     list.push({
       title: get('title'), imgurl: get('imgurl'), desc: get('desc'), siteurl: get('siteurl'),
+      image: get('image'),
       tags, weight: parseInt((block.match(/weight\s*:\s*(\d+)/) || [])[1] || '0', 10),
       enabled: /enabled\s*:\s*true/.test(block), rss: get('rss'),
     });
@@ -4459,7 +4460,9 @@ function friendToTs(f, weight) {
   const q = (s) => `"${String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
   /* 灵感屋的 FriendLink 类型没有 rss 字段，不写这一行，免得它的配置里多出无用字段 */
   const rssLine = (typeof SITE_ID !== 'undefined' && SITE_ID === 'idea') ? '' : `\n\t\trss: ${q(f.rss)},`;
-  return `\t{\n\t\ttitle: ${q(f.title)},\n\t\timgurl: ${q(f.imgurl)},\n\t\tdesc: ${q(f.desc)},\n\t\tsiteurl: ${q(f.siteurl)},\n\t\ttags: [${(f.tags || []).map(q).join(', ')}],\n\t\tweight: ${weight},\n\t\tenabled: ${f.enabled ? 'true' : 'false'},${rssLine}\n\t},`;
+  /* mmz 格式的封面截图：填了才写这一行，不填就是无图卡片（可选字段，缺失不影响解析） */
+  const imgLine = f.image ? `\n\t\timage: ${q(f.image)},` : '';
+  return `\t{\n\t\ttitle: ${q(f.title)},\n\t\timgurl: ${q(f.imgurl)},\n\t\tdesc: ${q(f.desc)},\n\t\tsiteurl: ${q(f.siteurl)},${imgLine}\n\t\ttags: [${(f.tags || []).map(q).join(', ')}],\n\t\tweight: ${weight},\n\t\tenabled: ${f.enabled ? 'true' : 'false'},${rssLine}\n\t},`;
 }
 routes.friends = async () => {
   /* 灵感屋友链不存 rss，RSS 巡查页签对它没用，只留管理页签 */
@@ -4568,14 +4571,17 @@ async function friendsMgr(body, invalidateCache) {
   }
   function formHtml(f) {
     const inp = (k, label, v, ph) => `<div class="field"><label>${label}</label><input type="text" data-k="${k}" value="${esc(v || '')}" placeholder="${ph || ''}"></div>`;
+    /* RSS 是主站 moments 聚合用的，灵感屋的友链类型里没有这个字段，表单里也不出现 */
+    const isIdeaF = typeof SITE_ID !== 'undefined' && SITE_ID === 'idea';
     return `<div class="card"><div class="grid2">
       ${inp('title', '站名 *', f.title)}
       ${inp('siteurl', '网址 *', f.siteurl, 'https://')}
       ${inp('imgurl', '头像 URL', f.imgurl)}
-      <div class="field"><label>RSS（用于 moments 聚合）</label>
+      ${inp('image', '封面截图（可空，卡面图＋悬停大图预览）', f.image)}
+      ${isIdeaF ? '' : `<div class="field"><label>RSS（用于 moments 聚合）</label>
         <div class="cover-row"><input type="text" data-k="rss" value="${esc(f.rss || '')}" placeholder="https://…/rss.xml" style="flex:1">
         <button class="btn btn-small" data-a="rsstest" type="button">🔍 测试</button></div>
-        <div class="hint rss-test-tip"></div></div>
+        <div class="hint rss-test-tip"></div></div>`}
       ${inp('desc', '描述', f.desc)}
       ${inp('tags', '标签（逗号分隔）', (f.tags || []).join(', '))}
     </div>
@@ -4591,6 +4597,43 @@ async function friendsMgr(body, invalidateCache) {
       <textarea class="clip-ta" rows="4" placeholder="站点名称：……&#10;站点链接：https://……&#10;头像链接：https://……&#10;站点描述：……"></textarea></div>
       <button class="btn btn-small" data-a="clipgo" type="button">按粘贴内容填充</button>
     </div></div>`;
+  }
+  /* 封面截图字段：缩略预览＋上传到图床（与海报页同一套交互），上传走既有 R2 通道 */
+  function wireFriendImg(formEl) {
+    const input = formEl.querySelector('[data-k="image"]');
+    if (!input || input.dataset.imgEnhanced) return;
+    input.dataset.imgEnhanced = '1';
+    const box = document.createElement('div');
+    box.style.cssText = 'margin-top:6px;display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap';
+    const img = document.createElement('img');
+    img.alt = '封面预览';
+    img.style.cssText = 'max-width:220px;max-height:124px;border-radius:8px;border:1px solid var(--card-border,#ddd);object-fit:cover';
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-small btn-ghost';
+    btn.type = 'button';
+    btn.textContent = '⬆ 上传到图床';
+    const file = document.createElement('input');
+    file.type = 'file';
+    file.accept = 'image/*';
+    file.className = 'hidden';
+    const paint = () => { const u = input.value.trim(); if (u) { img.src = u; img.style.display = ''; } else { img.removeAttribute('src'); img.style.display = 'none'; } };
+    btn.onclick = () => file.click();
+    file.onchange = async () => {
+      const fl = file.files && file.files[0];
+      if (!fl) return;
+      btn.disabled = true; btn.textContent = '上传中…';
+      try {
+        const urls = await uploadImages([fl], 'friends');
+        if (urls && urls[0]) { input.value = urls[0]; paint(); toast('封面已上传并回填'); }
+        else toast('上传没返回地址', true);
+      } catch (e) { toast('上传失败：' + e.message, true); }
+      btn.disabled = false; btn.textContent = '⬆ 上传到图床';
+      file.value = '';
+    };
+    input.addEventListener('input', paint);
+    box.appendChild(img); box.appendChild(btn); box.appendChild(file);
+    input.after(box);
+    paint();
   }
   async function runRssTest(formEl) {
     const btn = formEl.querySelector('[data-a=rsstest]');
@@ -4663,6 +4706,7 @@ async function friendsMgr(body, invalidateCache) {
         wireRssTest(fe);
         wireRssAuto(fe);
         wireClipFill(fe);
+        wireFriendImg(fe);
         fe.querySelector('[data-a=cancel]').onclick = () => { fe.classList.add('hidden'); fe.innerHTML = ''; };
         fe.querySelector('[data-a=oksave]').onclick = () => {
           const f = list[i];
@@ -4702,10 +4746,11 @@ async function friendsMgr(body, invalidateCache) {
   $('#btn-fadd').onclick = () => {
     const box = $('#friend-new');
     if (box.innerHTML) { box.innerHTML = ''; return; }
-    box.innerHTML = formHtml({ title: '', siteurl: '', imgurl: '', desc: '', tags: ['Blog'], rss: '', enabled: true });
+    box.innerHTML = formHtml({ title: '', siteurl: '', imgurl: '', desc: '', image: '', tags: ['Blog'], rss: '', enabled: true });
     wireRssTest(box);
     wireRssAuto(box);
     wireClipFill(box);
+    wireFriendImg(box);
     box.querySelector('[data-a=cancel]').onclick = () => { box.innerHTML = ''; };
     box.querySelector('[data-a=oksave]').onclick = () => {
       const f = { tags: [] };
