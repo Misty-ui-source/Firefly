@@ -3549,6 +3549,9 @@ routes.edit = async (arg) => {
       else if (keeping) keptLines.push(line);
     }
     let text = serializeFrontmatter(newFm, newBody);
+    /* 原文件没有 frontmatter、表单也没填任何字段时（如灵感屋的单页文件），
+     * 不硬塞一个空 frontmatter 块，原文直接写回 */
+    if (!rawBlock && !Object.values(newFm).some((v) => v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && !v.length))) text = newBody;
     if (keptLines.length) text = text.replace(/\n---\n/, `\n${keptLines.join('\n')}\n---\n`);
     $('#btn-save').disabled = true;
     try {
