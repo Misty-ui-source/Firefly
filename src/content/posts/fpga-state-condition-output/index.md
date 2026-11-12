@@ -6,6 +6,7 @@ tags:
   - Verilog
   - 数字电路
 description: 准备 FPGA 考试时，把四道往年题、两道模拟题和一道练习题放在一起看，提炼出反复出现的状态划分和常用小模块：三段分工、九个小模块和四个实测的坑，题目全文收在文末附录。
+image: ./cover.webp
 draft: true
 pinned: false
 published: 2026-11-12T13:30:00+08:00
