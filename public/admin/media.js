@@ -1631,7 +1631,8 @@ routes.music = async () => {
       return { start: m.index, end: end + 1, enabled: !/enabled\s*:\s*false/.test(blk), quality: qm ? qm[1] : '320k', playlists };
     }
     let fp = parseFp(cfg.text);
-    if (!fp) { fpCard.innerHTML = '<h2>🎧 浮动播放器歌单</h2><p class="hint">musicConfig.ts 里找不到 floatingPlayer 段。</p>'; return; }
+    /* 没有 floatingPlayer 段的站点（如灵感屋）整卡不渲染，不留占位提示 */
+    if (!fp) { fpCard.remove(); return; }
     function renderFp() {
       fpCard.innerHTML = `
         <h2>🎧 浮动播放器歌单 <span class="sub">璨夜左下角常驻播放器 · 共 ${fp.playlists.length} 张</span></h2>
@@ -1739,6 +1740,134 @@ routes.music = async () => {
       } catch (e) { toast(e.message, true); }
     }
     renderFp();
+  })();
+
+  /* ── 在线歌单（灵感屋 musicConfig 的 playlists 数组）：条目连同它上方的注释行
+   * 作为一个单元，调序/删除时注释跟着条目走；只有改过的条目才重写，未动的逐字保留。
+   * 保存前若文件已被别处刷新（快照不一致），中止并重读，不拿旧偏移写文件。 ── */
+  if (typeof SITE_ID !== 'undefined' && SITE_ID === 'idea') (() => {
+    const opCard = document.createElement('div');
+    opCard.className = 'card';
+    view.appendChild(opCard);
+    let snapshot = '';
+    let units = [];
+    let tail = '';
+    function parsePlaylists(text) {
+      const blk = extractConfigValue(text, 'playlists');
+      if (!blk) return null;
+      const body = blk.raw.slice(1, -1);
+      const us = [];
+      let buf = '';
+      let i = 0;
+      while (i < body.length) {
+        if (body[i] === '{') {
+          let depth = 0;
+          let j = i;
+          for (; j < body.length; j++) {
+            if (body[j] === '{') depth++;
+            else if (body[j] === '}') { depth--; if (!depth) break; }
+          }
+          const objText = body.slice(i, j + 1);
+          us.push({
+            prefix: buf, objText, dirty: false,
+            fields: {
+              label: getStrField(objText, 'label'), server: getStrField(objText, 'server'),
+              id: getStrField(objText, 'id'), api: getStrField(objText, 'api'),
+              local: /local\s*:\s*true/.test(objText),
+            },
+          });
+          buf = '';
+          i = j + 1;
+        } else { buf += body[i]; i++; }
+      }
+      return { units: us, tail: buf };
+    }
+    function renderEntry(f) {
+      if (f.local) return `{ label: "${escConfigStr(f.label)}", local: true }`;
+      const base = `{ label: "${escConfigStr(f.label)}", server: "${escConfigStr(f.server)}", id: "${escConfigStr(f.id)}"`;
+      return f.api ? `${base}, api: "${escConfigStr(f.api)}" }` : `${base} }`;
+    }
+    function serializePlaylists() {
+      let out = '[';
+      units.forEach((u, idx) => {
+        let pre = u.prefix;
+        if (idx === 0 && pre.startsWith(',')) pre = pre.slice(1);
+        if (idx > 0 && !pre.startsWith(',')) pre = `,${pre}`;
+        out += pre + (u.dirty ? renderEntry(u.fields) : u.objText);
+      });
+      return out + tail + ']';
+    }
+    function renderOp() {
+      opCard.innerHTML = `
+        <h2>🎶 在线歌单 <span class="sub">playlists · 共 ${units.length} 张 · 首张为默认</span></h2>
+        <p class="hint">播放器顶部的歌单切换标签按这里的顺序生成：在线歌单填平台与歌单 ID，解析方式「自建」走本站解析（整曲），「Meting」走公共接口。改完点保存一次提交，Vercel 重建后生效。</p>
+        <div id="op-rows"></div>
+        <div class="row2">
+          <div class="field"><label>新歌单名</label><input type="text" id="op-new-label" placeholder="如 我喜欢的音乐"></div>
+          <div class="field"><label>平台</label><select id="op-new-server"><option value="netease">网易云</option><option value="tencent">QQ音乐</option></select></div>
+          <div class="field"><label>歌单 ID</label><input type="text" id="op-new-id" placeholder="如 2804070207"></div>
+        </div>
+        <div class="toolbar"><button class="btn btn-small btn-ghost" id="op-add" type="button">＋ 添加歌单</button><button class="btn" id="op-save" type="button">💾 保存在线歌单</button></div>`;
+      const rows = opCard.querySelector('#op-rows');
+      units.forEach((u, i) => {
+        const f = u.fields;
+        const row = document.createElement('div');
+        row.className = 'row2';
+        row.innerHTML = u.fields.local
+          ? `<div class="field"><label>显示名</label><input type="text" data-k="label" value="${esc(f.label)}"></div>
+             <div class="field"><label>类型</label><input type="text" value="本地歌单（歌曲在下方歌单里改）" disabled></div>
+             <div class="field"><label>操作</label><span><button class="mini-btn" data-a="up" type="button">↑</button> <button class="mini-btn" data-a="down" type="button">↓</button> <button class="mini-btn danger" data-a="del" type="button">删除</button></span></div>`
+          : `<div class="field"><label>显示名</label><input type="text" data-k="label" value="${esc(f.label)}"></div>
+             <div class="field"><label>平台</label><select data-k="server"><option value="netease" ${f.server === 'netease' ? 'selected' : ''}>网易云</option><option value="tencent" ${f.server === 'tencent' ? 'selected' : ''}>QQ音乐</option></select></div>
+             <div class="field"><label>歌单 ID</label><input type="text" data-k="id" value="${esc(f.id)}"></div>
+             <div class="field"><label>解析</label><select data-k="api"><option value="self" ${f.api === 'self' ? 'selected' : ''}>自建</option><option value="" ${!f.api ? 'selected' : ''}>Meting</option></select></div>
+             <div class="field"><label>操作</label><span><button class="mini-btn" data-a="up" type="button">↑</button> <button class="mini-btn" data-a="down" type="button">↓</button> <button class="mini-btn danger" data-a="del" type="button">删除</button></span></div>`;
+        row.querySelectorAll('[data-k]').forEach((inp) => {
+          inp.onchange = () => { u.fields[inp.dataset.k] = inp.value.trim(); u.dirty = true; };
+        });
+        row.querySelector('[data-a=up]').onclick = () => { if (i === 0) return; [units[i - 1], units[i]] = [units[i], units[i - 1]]; renderOp(); };
+        row.querySelector('[data-a=down]').onclick = () => { if (i === units.length - 1) return; [units[i + 1], units[i]] = [units[i], units[i + 1]]; renderOp(); };
+        row.querySelector('[data-a=del]').onclick = () => {
+          if (!confirm(`删掉歌单「${f.label || f.id}」？`)) return;
+          units.splice(i, 1);
+          renderOp();
+        };
+        rows.appendChild(row);
+      });
+      opCard.querySelector('#op-add').onclick = () => {
+        const label = opCard.querySelector('#op-new-label').value.trim();
+        const id = opCard.querySelector('#op-new-id').value.trim();
+        const server = opCard.querySelector('#op-new-server').value;
+        if (!label || !id) { toast('歌单名和 ID 都要填', true); return; }
+        units.push({ prefix: ',\n\t\t', objText: '', dirty: true, fields: { label, server, id, api: 'self', local: false } });
+        renderOp();
+      };
+      opCard.querySelector('#op-save').onclick = async () => {
+        if (cfg.text !== snapshot) {
+          const re = parsePlaylists(cfg.text);
+          if (!re) { toast('playlists 段找不到了，已中止保存', true); return; }
+          units = re.units; tail = re.tail; snapshot = cfg.text;
+          renderOp();
+          toast('配置文件刚被刷新过，已按最新内容重读，请确认后再保存', true);
+          return;
+        }
+        const blk = extractConfigValue(cfg.text, 'playlists');
+        if (!blk) { toast('playlists 段找不到了，已中止保存', true); return; }
+        const next = cfg.text.slice(0, blk.start) + blk.indent + 'playlists: ' + serializePlaylists() + cfg.text.slice(blk.end);
+        try {
+          await saveWithLog(MUSIC_CONFIG, next, cfg.sha, '更新在线歌单 [管理台]', { type: '音乐', action: '更新', target: '在线歌单' });
+          cfg = await ghGetFile(MUSIC_CONFIG);
+          const re = parsePlaylists(cfg.text);
+          units = re.units; tail = re.tail; snapshot = cfg.text;
+          renderOp();
+          toast('在线歌单已保存（Vercel 重新构建后生效）');
+        } catch (e) { toast(e.message, true); }
+      };
+    }
+    const parsed = parsePlaylists(cfg.text);
+    if (!parsed) { opCard.remove(); return; }
+    units = parsed.units; tail = parsed.tail; snapshot = cfg.text;
+    renderOp();
   })();
 
   let mp3File = null, coverUrl = '';
