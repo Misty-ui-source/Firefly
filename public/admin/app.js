@@ -2650,7 +2650,13 @@ function listRoute(key, opts = {}) {
       location.hash = `#/edit/${key}/__new__`;
     };
     if (key === 'posts' && !draftOnly && !SITE_READONLY) mountLinkCardButton();
-    if (key === 'spec') { mountSpecCommentCard(); mountDiarySection(); mountGnssSection(); mountResumeSection(); mountFeaturesSection(); mountCalendarRecordsSection(); mountPicbedSection(); mountWalineAvatarCard(); }
+    if (key === 'spec') {
+      /* 这些附加卡都是主站专属的（日记、GNSS、简历、功能开关、日历记录、图床门面、评论区开关），
+       * 灵感屋仓库里没有对应文件与页面，挂上去只会报错，日记卡还会给出往灵感屋仓库新建日记的
+       * 错误入口——只在主站挂。头像卡本身按站适配（灵感屋首页挂的是同一张），保留。 */
+      if (SITE_ID === 'main') { mountSpecCommentCard(); mountDiarySection(); mountGnssSection(); mountResumeSection(); mountFeaturesSection(); mountCalendarRecordsSection(); mountPicbedSection(); }
+      mountWalineAvatarCard();
+    }
     const listEl = $('#list');
     /* 文章列表排序：默认文件名倒序，点按钮切到发布时间倒序（日期回填完会自动按当前模式重排） */
     let rowsRef = null;
