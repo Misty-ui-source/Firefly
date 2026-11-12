@@ -647,9 +647,13 @@ function parseFrontmatter(text) {
 }
 /* 防误伤：纯数字的字符串值写回 frontmatter 时自动加引号。
    不加引号 YAML 会把纯数字读成 number，碰上 schema 要求 string 的字段（如日记 password、
-   纯数字标题/标签）直接卡死整站构建（2026-10-30 日记 password 事件）。其他值一律原样。 */
-function fmScalarOut(v) {
+   纯数字标题/标签）直接卡死整站构建（2026-10-30 日记 password 事件）。其他值一律原样。
+   例外见 FM_NUMERIC_KEYS：seriesOrder（文章）与 order（项目）在 schema 里本就是 number，
+   给它们加引号反而会把 number 写成 string、同样卡死构建——这两个键不走加引号。 */
+const FM_NUMERIC_KEYS = new Set(['seriesOrder', 'order']);
+function fmScalarOut(v, k) {
   const s = String(v);
+  if (k && FM_NUMERIC_KEYS.has(k)) return s;
   return /^\d+$/.test(s) ? `"${s}"` : s;
 }
 function serializeFrontmatter(fm, body) {
@@ -661,7 +665,7 @@ function serializeFrontmatter(fm, body) {
       lines.push(`${k}:`);
       for (const item of v) lines.push(`  - ${fmScalarOut(item)}`);
     } else {
-      lines.push(`${k}: ${fmScalarOut(v)}`);
+      lines.push(`${k}: ${fmScalarOut(v, k)}`);
     }
   }
   lines.push('---', '');
