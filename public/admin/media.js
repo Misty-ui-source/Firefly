@@ -1817,6 +1817,7 @@ routes.music = async () => {
           <div class="field"><label>新歌单名</label><input type="text" id="op-new-label" placeholder="如 我喜欢的音乐"></div>
           <div class="field"><label>平台</label><select id="op-new-server"><option value="netease">网易云</option><option value="tencent">QQ音乐</option></select></div>
           <div class="field"><label>歌单 ID</label><input type="text" id="op-new-id" placeholder="如 2804070207"></div>
+          <div class="field"><label>解析</label><select id="op-new-api"><option value="self" selected>自建</option><option value="">Meting</option></select></div>
         </div>
         <div class="toolbar"><button class="btn btn-small btn-ghost" id="op-add" type="button">＋ 添加歌单</button><button class="btn" id="op-save" type="button">💾 保存在线歌单</button></div>`;
       const rows = opCard.querySelector('#op-rows');
@@ -1849,8 +1850,9 @@ routes.music = async () => {
         const label = opCard.querySelector('#op-new-label').value.trim();
         const id = opCard.querySelector('#op-new-id').value.trim();
         const server = opCard.querySelector('#op-new-server').value;
+        const api = opCard.querySelector('#op-new-api').value;
         if (!label || !id) { toast('歌单名和 ID 都要填', true); return; }
-        units.push({ prefix: ',\n\t\t', objText: '', dirty: true, fields: { label, server, id, api: 'self', local: false } });
+        units.push({ prefix: ',\n\t\t', objText: '', dirty: true, fields: { label, server, id, api, local: false } });
         renderOp();
       };
       opCard.querySelector('#op-save').onclick = async () => {
