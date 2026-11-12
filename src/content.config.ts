@@ -3,6 +3,13 @@ import type { CollectionConfig } from "astro/content/config";
 import { glob } from "astro/loaders";
 import { type ZodType, z } from "astro/zod";
 
+type PostDownload = {
+	name: string;
+	url: string;
+	size: string;
+	desc: string;
+};
+
 type PostData = {
 	title: string;
 	published: Date;
@@ -24,6 +31,7 @@ type PostData = {
 	passwordHint: string;
 	series: string;
 	seriesOrder?: number;
+	downloads: PostDownload[];
 	prevTitle: string;
 	prevSlug: string;
 	nextTitle: string;
@@ -93,6 +101,17 @@ const postsCollection: ContentCollection<PostData> = defineCollection({
 		passwordHint: z.string().optional().default(""),
 		series: z.string().optional().default(""),
 		seriesOrder: z.number().optional(),
+		downloads: z
+			.array(
+				z.object({
+					name: z.string(),
+					url: z.string(),
+					size: z.string().optional().default(""),
+					desc: z.string().optional().default(""),
+				}),
+			)
+			.optional()
+			.default([]),
 
 		/* For internal use */
 		prevTitle: z.string().default(""),

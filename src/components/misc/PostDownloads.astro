@@ -1,0 +1,64 @@
+---
+import { Icon } from "astro-icon/components";
+
+interface DownloadItem {
+	name: string;
+	url: string;
+	size: string;
+	desc: string;
+}
+
+interface Props {
+	downloads: DownloadItem[];
+	class?: string;
+}
+
+const { downloads, class: className } = Astro.props;
+
+const extOf = (name: string) => {
+	const m = name.match(/\.([A-Za-z0-9]+)$/);
+	return m ? m[1].toUpperCase() : "FILE";
+};
+
+const metaOf = (d: DownloadItem) => [d.size, d.desc].filter(Boolean).join(" · ");
+---
+
+<div
+  class:list={[
+    "mb-6 rounded-2xl border border-black/10 dark:border-white/10 bg-(--license-block-bg) px-5 py-4",
+    className,
+  ]}
+>
+  <div class="flex items-center gap-2">
+    <Icon name="material-symbols:download-rounded" class="text-xl text-(--primary)" />
+    <span class="font-bold text-black/80 dark:text-white/80">附件下载</span>
+  </div>
+  {
+    downloads.map((d, i) => (
+      <div
+        class:list={[
+          "flex items-center gap-3.5 py-3",
+          i > 0 && "border-t border-dashed border-black/10 dark:border-white/10",
+        ]}
+      >
+        <div class="w-11 h-11 rounded-lg bg-(--primary)/10 text-(--primary) flex items-center justify-center font-bold text-xs shrink-0">
+          {extOf(d.name)}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="font-semibold text-black/85 dark:text-white/85 break-all">{d.name}</div>
+          {metaOf(d) && (
+            <div class="text-sm text-black/45 dark:text-white/45 mt-0.5">{metaOf(d)}</div>
+          )}
+        </div>
+        <a
+          href={d.url}
+          download
+          class="shrink-0 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-(--primary) text-white dark:text-black/70 font-medium transition-all hover:opacity-85 active:scale-95"
+        >
+          <Icon name="material-symbols:download-rounded" class="text-lg" />
+          下载
+        </a>
+      </div>
+    ))
+  }
+</div>

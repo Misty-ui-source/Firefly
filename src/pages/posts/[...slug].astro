@@ -6,6 +6,7 @@ import Markdown from "@components/common/Markdown.astro";
 import EncryptedPost from "@components/features/EncryptedPost.astro";
 import KatexManager from "@components/features/KatexManager.astro";
 import License from "@components/misc/License.astro";
+import PostDownloads from "@components/misc/PostDownloads.astro";
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
@@ -434,6 +435,10 @@ const seriesData = await getSeriesPosts(entry);
             <Content />
           </Markdown>
 
+          {entry.data.downloads.length > 0 && (
+            <PostDownloads downloads={entry.data.downloads} class="onload-animation" />
+          )}
+
           {/* 打赏按钮 & 分享按钮 */}
           {
             showPostActionCard && (
@@ -523,6 +528,10 @@ const seriesData = await getSeriesPosts(entry);
           <Markdown class="mb-6 markdown-content onload-animation">
             <Content />
           </Markdown>
+
+          {entry.data.downloads.length > 0 && (
+            <PostDownloads downloads={entry.data.downloads} class="onload-animation" />
+          )}
 
           {/* 打赏按钮 & 分享按钮 */}
           {
