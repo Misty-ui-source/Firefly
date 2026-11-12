@@ -264,6 +264,17 @@ const STICKER_CONFIG = 'src/config/stickerConfig.ts';
 const GALLERY_CONFIG = 'src/config/galleryConfig.ts';
 
 routes.images = async (arg) => {
+  /* 灵感屋没有主站的壁纸配置：它的图床是独立门面页 /picbed/（与主站共用同一个 R2 桶），
+   * 口令哈希在 Vercel 环境变量里，控制台这边只给入口，不硬套主站壁纸编辑器。 */
+  if (typeof SITE_ID !== 'undefined' && SITE_ID === 'idea') {
+    view.innerHTML = `
+    <div class="card">
+      <h2>🖼 图床 <span class="sub">与主站共用同一个 R2 图库</span></h2>
+      <p class="hint">灵感屋的图床是它自己的门面页：输口令后按目录翻图、上传、点图复制外链，和主站看到的是同一个图库。口令在 Vercel 环境变量里维护（改口令要去 Vercel 后台），这里只放入口。</p>
+      <div class="toolbar"><a class="btn" href="https://idea.lanerc.me/picbed/" target="_blank" rel="noopener">打开灵感屋图床 →</a></div>
+    </div>`;
+    return;
+  }
   view.innerHTML = '<div class="card"><h2>🖼 加载中…</h2></div>';
   let bg, sticker, gallery;
   try {
