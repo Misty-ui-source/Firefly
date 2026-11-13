@@ -64,11 +64,14 @@ const lqipProps = isLocal
 		? getLqipProps(src, basePath, true)
 		: getLqipProps(src);
 
-// 列表卡片和文章详情共享同一组封面产物
-const widths = [828];
+// 列表卡片封面只出 828 一档；详情页封面（naturalHeight）实际显示宽度远超 828，
+// 只给一档会被浏览器放大而发糊，故补 1280/1600 两档让浏览器按显示宽度选图
+const widths = naturalHeight ? [828, 1280, 1600] : [828];
 const sizes = preview
 	? "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 320px"
-	: "(max-width: 768px) 100vw, 828px";
+	: naturalHeight
+		? "(max-width: 768px) 100vw, (max-width: 1320px) calc(100vw - 3rem), 1250px"
+		: "(max-width: 768px) 100vw, 828px";
 const quality = configQuality;
 
 // 是否显示加载动画
@@ -115,7 +118,7 @@ const remoteReferrerPolicy =
 			formats={formats}
 			quality={quality}
 			layout={layout}
-			width={828}
+			width={naturalHeight ? 1600 : 828}
 			widths={widths}
 			sizes={sizes}
 			dataCoverImg={true}
