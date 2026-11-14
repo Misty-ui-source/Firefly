@@ -264,7 +264,7 @@ export const friendsConfig: FriendLink[] = [
 	},
 	{
 		title: "Xia's blog",
-		imgurl: "https://storage.549900.xyz/d/server/bk-tx.png",
+		imgurl: "https://weavatar.com/avatar/8f6961029c569eacca8478546f34519a5e041bad0a08975f0e2fc077f9a3939e?s=256",
 		desc: "我叫夏，是个笨蛋",
 		siteurl: "https://xiau.net/",
 		tags: ["Blog"],
