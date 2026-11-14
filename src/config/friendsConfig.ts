@@ -262,6 +262,16 @@ export const friendsConfig: FriendLink[] = [
 		enabled: true,
 		rss: "https://www.dreamcenter.top/BlogRss.xml",
 	},
+	{
+		title: "夏的博客",
+		imgurl: "https://xiau.net/wp-content/uploads/2024/09/avatar.png",
+		desc: "Xia's blog",
+		siteurl: "https://xiau.net/",
+		tags: ["Blog"],
+		weight: 1,
+		enabled: true,
+		rss: "https://xiau.net/feed/",
+	},
 ];
 
 // 获取启用的友链并进行排序
