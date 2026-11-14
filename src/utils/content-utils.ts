@@ -49,6 +49,7 @@ export async function getSortedPosts(): Promise<CollectionEntry<"posts">[]> {
 export type PostForList = {
 	id: string;
 	data: CollectionEntry<"posts">["data"];
+	filePath: string;
 };
 export async function getSortedPostsList(): Promise<PostForList[]> {
 	const sortedFullPosts = await getRawSortedPosts();
@@ -57,6 +58,7 @@ export async function getSortedPostsList(): Promise<PostForList[]> {
 	const sortedPostsList = sortedFullPosts.map((post) => ({
 		id: post.id,
 		data: post.data,
+		filePath: post.filePath,
 	}));
 
 	return sortedPostsList;
@@ -331,7 +333,11 @@ export async function getRelatedPosts(
 
 	for (const s of withTagMatch) {
 		if (result.length >= maxCount) break;
-		result.push({ id: s.post.id, data: s.post.data });
+		result.push({
+			id: s.post.id,
+			data: s.post.data,
+			filePath: s.post.filePath,
+		});
 	}
 
 	// 不足时从剩余候选中按 timeFreshnessScore + categoryBonus 降序补充
@@ -344,7 +350,11 @@ export async function getRelatedPosts(
 		);
 		for (const s of withoutTagMatch) {
 			if (result.length >= maxCount) break;
-			result.push({ id: s.post.id, data: s.post.data });
+			result.push({
+				id: s.post.id,
+				data: s.post.data,
+				filePath: s.post.filePath,
+			});
 		}
 	}
 

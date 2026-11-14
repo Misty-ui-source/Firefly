@@ -2369,5 +2369,19 @@ html[data-site-mode="paper"][data-paper-theme="manual"] #display-setting .opacit
 
 }
 
+/* —— 层外规则：内容区顶格 ——
+   全屏·经典布局的非首页，基座在 layout-styles.css（层外）给 .content-panel 直接写了
+   top: calc(var(--banner-height-non-home) - 3.5rem) !important（给壁纸舞台留位）。
+   纸舟下壁纸已隐藏，这截预留变成大片空白；而层内那条 --content-top: 5.25rem 只改
+   变量、压不住层外 !important 的 top 本身（素简同坑已修，纸舟此前漏了）。
+   同为层外、同口径把 top 与 min-height 一起压回顶栏下方，全站非首页一并生效
+   （2026-11-14 站长报障：全屏切纸舟后文章页下垂；冷加载同中） */
+html[data-site-mode="paper"][data-wallpaper-mode="fullscreen"][data-fullscreen-layout="classic"]
+	body:not(.is-home)
+	.content-panel {
+	top: 5.25rem !important;
+	min-height: calc(100vh - 5.25rem) !important;
+}
+
 /* 形态自愈探针：本形态样式真生效时探针=本形态名（Layout 脚本据此自检） */
 html[data-site-mode="paper"] body { --mx-probe: paper; }

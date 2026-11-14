@@ -3698,5 +3698,20 @@ html[data-site-mode="mingxin"] #navbar-wrapper.navbar-hidden {
 	}
 }
 
+/* —— 层外规则：内容区顶格 ——
+   全屏·经典布局的非首页，基座在 layout-styles.css（层外）给 .content-panel 直接写了
+   top: calc(var(--banner-height-non-home) - 3.5rem) !important（给壁纸舞台留位）。
+   明信内页壁纸横幅已整块退场，这截预留变成大片空白；而层内那条 --content-top: 5.5rem
+   只改变量、压不住层外 !important 的 top 本身——2026-11-01 那次修的是 banner 壁纸
+   模式（走变量），全屏模式这条直写 top 的路径当时没发现（素简同坑已修）。
+   同为层外、同口径把 top 与 min-height 一起压回明信胶囊顶栏下方（5.5rem 与层内
+   --content-top 口径一致），全站非首页一并生效（2026-11-14 站长报障）。 */
+html[data-site-mode="mingxin"][data-wallpaper-mode="fullscreen"][data-fullscreen-layout="classic"]
+	body:not(.is-home)
+	.content-panel {
+	top: 5.5rem !important;
+	min-height: calc(100vh - 5.5rem) !important;
+}
+
 /* 形态自愈探针：本形态样式真生效时探针=本形态名（Layout 脚本据此自检） */
 html[data-site-mode="mingxin"] body { --mx-probe: mingxin; }
