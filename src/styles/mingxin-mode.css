@@ -2144,6 +2144,18 @@ html[data-site-mode="mingxin"] #navbar-wrapper.navbar-hidden {
 		right: 1rem;
 		z-index: 80;
 	}
+	/* 搜索面板同理走 fixed（面板本体是 absolute，落点全靠控制器把它挪到
+	   #top-row 下、由包含块决定；挪窝/还原链一旦在 swup 生命周期里断裂，
+	   面板不是滞留在隐藏的标准顶栏里出不来，就是挂错包含块只在屏幕左缘
+	   露出一小条——站长 2026-11-15 实拍）。fixed 只认视口，与父级无关：
+	   顶距沿用它自带的 top-20（5rem），右距 1rem 与 right-4 同值，宽度
+	   沿用 md:w-120 的 30rem 并给窄屏留 1rem 边距。 */
+	html[data-site-mode="mingxin"] #search-panel {
+		position: fixed !important;
+		left: auto !important;
+		width: min(30rem, calc(100vw - 2rem)) !important;
+		z-index: 80;
+	}
 	/* 内容面板从视口顶开始（影像层自带满屏舞台）。变量必须直接写在
 	   .content-panel 上：layout-base 把 --content-top:100vh（fullscreen 首页）
 	   直接声明在面板元素上，body 级变量（哪怕 !important）也压不过元素

@@ -2250,9 +2250,11 @@ html[data-site-mode="paper"][data-paper-theme="manual"] #display-setting :is(but
 /* 浮层在手册 rail 下的落位：音乐/显示设置面板在基座里按顶栏设计用 right-16
    锚在导航条内，手册 ≥1024 导航条是 12rem 左栏，面板会被推出屏幕左侧
    （站长 2026-11-01 图 101/102 报障，本地实测设置面板左半截在屏外 x<0）。
-   改 fixed 锚到 rail 右缘外侧、与栏顶对齐——两个面板同病同治 */
+   改 fixed 锚到 rail 右缘外侧、与栏顶对齐——两个面板同病同治。
+   搜索面板同病：480px 宽按 right 锚进 12rem 栏内包含块，实测 x=-320、
+   只剩右 160px 一条露在屏内（站长 2026-11-15 图 599 报障），一并入列 */
 @media (min-width: 1024px) {
-	html[data-site-mode="paper"][data-paper-theme="manual"] :is(#music-nav-panel, #display-setting) {
+	html[data-site-mode="paper"][data-paper-theme="manual"] :is(#music-nav-panel, #display-setting, #search-panel) {
 		position: fixed !important;
 		left: calc(12rem + 0.75rem) !important;
 		right: auto !important;

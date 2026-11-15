@@ -91,6 +91,18 @@ const handleResultClick = (event: Event, url: string): void => {
 	navigateToPage(url);
 };
 
+/* 回车直达完整结果页（与「查看更多」同一目的地）：两个输入框都不在
+   <form> 里，此前没有回车处理、按回车毫无反应（站长实报）。组词中
+   （IME）不触发；导航走 navigateToPage 与结果点击同路（swup 软导航）。 */
+const handleInputEnter = (event: KeyboardEvent, keyword: string): void => {
+	if (event.key !== "Enter" || event.isComposing) return;
+	const q = keyword.trim();
+	if (!q) return;
+	event.preventDefault();
+	closeSearchPanel();
+	navigateToPage(getSearchUrl(q));
+};
+
 // --- Core Search Logic ---
 const search = async (keyword: string, isDesktop: boolean): Promise<void> => {
 	if (!keyword) {
@@ -192,6 +204,7 @@ $: if (initialized && (keywordMobile || keywordMobile === "")) {
     <input id="search-input-desktop" placeholder="{i18n(I18nKey.search)}" bind:value={keywordDesktop}
            aria-controls="search-panel" data-floating-panel-no-expanded
            on:focus={handleDesktopFocus}
+           on:keydown={(e) => handleInputEnter(e, keywordDesktop)}
            class="transition-all pl-10 text-sm bg-transparent outline-0
          h-full w-40 active:w-60 focus:w-60 text-black/50 dark:text-white/50"
     >
@@ -217,6 +230,7 @@ top-20 left-4 md:left-[unset] right-4 shadow-2xl rounded-2xl p-2"
               class="absolute text-[1.25rem] pointer-events-none ml-3 transition my-auto text-black/30 dark:text-white/30"></Icon>
         <input placeholder={i18n(I18nKey.search)} bind:value={keywordMobile}
                on:focus={requestPagefind}
+               on:keydown={(e) => handleInputEnter(e, keywordMobile)}
                class="pl-10 absolute inset-0 text-sm bg-transparent outline-0
                focus:w-60 text-black/50 dark:text-white/50"
         >

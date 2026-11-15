@@ -111,7 +111,9 @@ function initHoverSlider(
 
 	function getIconParts(): IconParts | null {
 		const layer = nav.querySelector<HTMLElement>("[data-mxnav-moving-icon]");
-		const current = layer?.querySelector<HTMLElement>("[data-mxnav-icon-current]");
+		const current = layer?.querySelector<HTMLElement>(
+			"[data-mxnav-icon-current]",
+		);
 		const next = layer?.querySelector<HTMLElement>("[data-mxnav-icon-next]");
 		return layer && current && next ? { layer, current, next } : null;
 	}
@@ -148,12 +150,17 @@ function initHoverSlider(
 			Number.parseFloat(getComputedStyle(parts.layer).opacity) || 0;
 		return {
 			rect:
-				markup && layerOpacity > 0.01 ? parts.layer.getBoundingClientRect() : null,
+				markup && layerOpacity > 0.01
+					? parts.layer.getBoundingClientRect()
+					: null,
 			markup,
 		};
 	}
 
-	function setIconBox(layer: HTMLElement, template: HTMLElement): DOMRect | null {
+	function setIconBox(
+		layer: HTMLElement,
+		template: HTMLElement,
+	): DOMRect | null {
 		const navRect = nav.getBoundingClientRect();
 		const templateRect = template.getBoundingClientRect();
 		if (templateRect.width === 0 || templateRect.height === 0) return null;
@@ -247,10 +254,11 @@ function initHoverSlider(
 			parts.current.style.opacity = "1";
 			parts.next.innerHTML = "";
 			parts.next.style.opacity = "0";
-			const fadeOut = parts.layer.animate(
-				[{ opacity: 1 }, { opacity: 0 }],
-				{ duration: 180, easing: "ease-out", fill: "both" },
-			);
+			const fadeOut = parts.layer.animate([{ opacity: 1 }, { opacity: 0 }], {
+				duration: 180,
+				easing: "ease-out",
+				fill: "both",
+			});
 			iconAnimations = [fadeOut];
 			finishIconAnimations(revision, [fadeOut], () => {
 				parts.layer.style.opacity = "0";
@@ -284,16 +292,22 @@ function initHoverSlider(
 				{ transform: `translate3d(${deltaX}px, ${deltaY}px, 0)` },
 				{ transform: "translate3d(0, 0, 0)" },
 			],
-			{ duration: NAVBAR_ICON_DURATION, easing: NAVBAR_ICON_EASING, fill: "both" },
+			{
+				duration: NAVBAR_ICON_DURATION,
+				easing: NAVBAR_ICON_EASING,
+				fill: "both",
+			},
 		);
-		const outgoing = parts.current.animate(
-			[{ opacity: 1 }, { opacity: 0 }],
-			{ duration: NAVBAR_ICON_DURATION, easing: "ease-in-out", fill: "both" },
-		);
-		const incoming = parts.next.animate(
-			[{ opacity: 0 }, { opacity: 1 }],
-			{ duration: NAVBAR_ICON_DURATION, easing: "ease-in-out", fill: "both" },
-		);
+		const outgoing = parts.current.animate([{ opacity: 1 }, { opacity: 0 }], {
+			duration: NAVBAR_ICON_DURATION,
+			easing: "ease-in-out",
+			fill: "both",
+		});
+		const incoming = parts.next.animate([{ opacity: 0 }, { opacity: 1 }], {
+			duration: NAVBAR_ICON_DURATION,
+			easing: "ease-in-out",
+			fill: "both",
+		});
 		const animations = [movement, outgoing, incoming];
 		iconAnimations = animations;
 		finishIconAnimations(revision, animations, () => {
@@ -404,10 +418,9 @@ function initHoverSlider(
 		resizeFrame = requestAnimationFrame(() => {
 			resizeFrame = null;
 			if (hasRunningIconAnimation()) return;
-			const current =
-				activeItem?.isConnected
-					? activeItem
-					: nav.querySelector<HTMLElement>(".mxnav-item.is-active-item");
+			const current = activeItem?.isConnected
+				? activeItem
+				: nav.querySelector<HTMLElement>(".mxnav-item.is-active-item");
 			const parts = getIconParts();
 			const template = getIconTemplate(current);
 			if (parts && template) setIconBox(parts.layer, template);
@@ -532,9 +545,26 @@ function reparent(el: HTMLElement, target: Node): ReparentRecord {
 	return record;
 }
 
+/* 按记录原位放回：记录的 next 兄弟可能已被 swup 换页/其他挪窝弄失效，
+   直接 insertBefore 会抛 NotFoundError 并中断整条 destroy 链（实测：
+   destroy 中途抛错 → active 置不了空 → 下一页跳过 init、搜索面板
+   滞留在隐藏顶栏里出不来）。兄弟失效就退到 appendChild，任何情况下
+   都不许抛。 */
+function insertBack(parent: Node, el: Node, next: Node | null): void {
+	try {
+		if (next && next.parentNode === parent) {
+			parent.insertBefore(el, next);
+		} else {
+			parent.appendChild(el);
+		}
+	} catch {
+		/* 放不回去也比生命周期链断裂强：节点留在现父级，后续 init 会再挪 */
+	}
+}
+
 function restoreReparent(record: ReparentRecord): void {
 	if (!record.el.isConnected || record.el.parentNode === record.parent) return;
-	record.parent.insertBefore(record.el, record.next);
+	insertBack(record.parent, record.el, record.next);
 }
 
 /* ================= 工具面板（原作工具面板一套 + 本站动作接线） ================= */
@@ -597,7 +627,7 @@ function initToolsPanel(
 			};
 			document.body.appendChild(settingsPanel);
 		} else if (!inMingxin && settingsHome) {
-			settingsHome.parent.insertBefore(settingsPanel, settingsHome.next);
+			insertBack(settingsHome.parent, settingsPanel, settingsHome.next);
 			settingsHome = null;
 		}
 	}
@@ -616,7 +646,7 @@ function initToolsPanel(
 			settingsPanel.setAttribute("aria-hidden", "true");
 		}
 		if (settingsHome) {
-			settingsHome.parent.insertBefore(settingsPanel, settingsHome.next);
+			insertBack(settingsHome.parent, settingsPanel, settingsHome.next);
 			settingsHome = null;
 		}
 	};
@@ -739,11 +769,7 @@ function initToolsPanel(
 			},
 			{ signal },
 		);
-		box.addEventListener(
-			"pointerleave",
-			() => highlightRow(null),
-			{ signal },
-		);
+		box.addEventListener("pointerleave", () => highlightRow(null), { signal });
 		box.addEventListener(
 			"focusin",
 			(event) => highlightRow(rowOf(event.target)),
@@ -874,6 +900,22 @@ function initToolsPanel(
 		searchComposing = false;
 	});
 
+	/* 回车直达结果页：不依赖表单隐式提交——本站实测单输入框表单按回车
+	   不触发 submit（站长真机同报回车无反应）。与下面 submit 处理同一条
+	   路（close + navigateToPage 走 swup），组词中不触发；preventDefault
+	   同时挡掉可能发生的隐式提交，防双重导航。 */
+	searchInput?.addEventListener("keydown", (event) => {
+		if (event.key !== "Enter" || searchComposing || event.isComposing) return;
+		event.preventDefault();
+		const q = searchInput.value.trim();
+		if (!q) {
+			searchInput.focus();
+			return;
+		}
+		close();
+		navigateToPage(getSearchUrl(q));
+	});
+
 	searchBox?.addEventListener("submit", (event) => {
 		event.preventDefault();
 		const q = searchInput?.value.trim();
@@ -917,13 +959,17 @@ function initToolsPanel(
 			}
 			const glowChip = target.closest<HTMLElement>("[data-mxnav-afterglow]");
 			if (glowChip) {
-				applyAfterglow(glowChip.dataset.mxnavAfterglow === "classic" ? "classic" : "hero");
+				applyAfterglow(
+					glowChip.dataset.mxnavAfterglow === "classic" ? "classic" : "hero",
+				);
 				syncAfterglowChips();
 				return;
 			}
 			const playerChip = target.closest<HTMLElement>("[data-mxnav-player]");
 			if (playerChip) {
-				applyPlayerVariant(playerChip.dataset.mxnavPlayer === "pill" ? "pill" : "sidebar");
+				applyPlayerVariant(
+					playerChip.dataset.mxnavPlayer === "pill" ? "pill" : "sidebar",
+				);
 				syncPlayerChips();
 				return;
 			}
@@ -1004,7 +1050,8 @@ function initToolsPanel(
 		panel.querySelectorAll<HTMLElement>("[data-mxnav-player]"),
 	);
 	function currentAfterglow(): "hero" | "classic" {
-		return document.documentElement.getAttribute("data-mingxin-afterglow") === "classic"
+		return document.documentElement.getAttribute("data-mingxin-afterglow") ===
+			"classic"
 			? "classic"
 			: "hero";
 	}
@@ -1158,9 +1205,7 @@ function initProfilePanel(
 	const panel = document.querySelector<HTMLElement>(
 		"[data-mxnav-profile-panel]",
 	);
-	const leftSeg = document.querySelector<HTMLElement>(
-		"[data-mxnav-left-seg]",
-	);
+	const leftSeg = document.querySelector<HTMLElement>("[data-mxnav-left-seg]");
 	const mask = panel?.querySelector<HTMLElement>("[data-mxnav-profile-mask]");
 	if (!panel) return { close: () => {}, isOpen: () => false };
 
@@ -1198,7 +1243,9 @@ function initProfilePanel(
 		sites.style.height = `${String(sitesTargetHeight())}px`;
 	}
 
-	function avatarRects(scope: HTMLElement | null | undefined): Map<string, DOMRect> {
+	function avatarRects(
+		scope: HTMLElement | null | undefined,
+	): Map<string, DOMRect> {
 		const rects = new Map<string, DOMRect>();
 		scope
 			?.querySelectorAll<HTMLElement>("[data-mxprofile-avatar]")
@@ -1258,11 +1305,9 @@ function initProfilePanel(
 		syncSitesHeight();
 	}
 
-	sitesToggle?.addEventListener(
-		"click",
-		() => setSitesOpen(!sitesOpen),
-		{ signal },
-	);
+	sitesToggle?.addEventListener("click", () => setSitesOpen(!sitesOpen), {
+		signal,
+	});
 	/* 站点图标加载失败：撤下 img，露出底下垫底的首字符（捕获阶段接 error） */
 	card?.addEventListener(
 		"error",
@@ -1485,8 +1530,7 @@ function markCurrentLineRow(): void {
 		)
 		.forEach((el) => {
 			const h = el.getAttribute("data-line-host") ?? "";
-			const on =
-				h === host || (h === "lanerc.me" && mainHosts.includes(host));
+			const on = h === host || (h === "lanerc.me" && mainHosts.includes(host));
 			el.classList.toggle("is-current-line", on);
 		});
 }
@@ -1550,7 +1594,11 @@ function init(): void {
 			closeMxnavDropdownPanel();
 		},
 		destroy: () => {
-			tools?.restore();
+			try {
+				tools?.restore();
+			} catch {
+				/* 还原失败不许中断销毁：监听摘除与挪窝还原必须走完 */
+			}
 			ac.abort();
 			reparents.forEach(restoreReparent);
 		},
@@ -1580,7 +1628,12 @@ export function initMingxinNavbar(): void {
 		}
 	});
 	document.addEventListener("swup:visit:start", () => {
-		active?.destroy();
-		active = null;
+		try {
+			active?.destroy();
+		} finally {
+			/* 无论 destroy 是否抛错都要置空：留着非空 active 会让下一页
+			   page:view 走 sync 而非 init，挪窝不再执行（面板滞留事故源头） */
+			active = null;
+		}
 	});
 }
