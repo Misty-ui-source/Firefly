@@ -1664,7 +1664,7 @@ routes.dashboard = async () => {
     /* Lanmist 专用卡：只在 lanmist 站的 homeCards 里出现 */
     'lm-home': { label: 'Lanmist 总览', icon: '🌫', nav: true, details: [['🗂️', '内容计数与本地条目', '']] },
     'lm-publish': { label: '发布到 Lanmist', icon: '✍️', nav: true, details: [['📝', '文章 / 动态 / 日记 / 碎碎念', '']] },
-    'lm-theme': { label: 'Lanmist 主题', icon: '🎨', nav: true, details: [['🖼️', '色相 · 默认形态 · 开场图', '']] },
+    'lm-theme': { label: 'Lanmist 主题', icon: '🎨', nav: true, details: [['🖼️', '色相 · 默认形态 · 开场图 · 关于页背景', '']] },
     'lm-texts': { label: 'Lanmist 文案', icon: '📝', nav: true, details: [['✒️', '站名 · 五幕 · 各处文案', '']] },
   };
   const homeOrder = (() => {
@@ -2022,6 +2022,7 @@ routes['lm-theme'] = async () => {
   for (const m of htmlTxt.matchAll(/data-form="([^"]+)" data-hue="(\d+)"/g)) forms.push({ name: m[1], hue: Number(m[2]) });
   const defM = htmlTxt.match(/<html[^>]*\bdata-default-form="([^"]+)"/);
   const heroM = htmlTxt.match(/id="stageBg" src="([^"]+)"/);
+  const hubM = htmlTxt.match(/id="hubBg" src="([^"]+)"/);
   if (!hueM || !forms.length || !heroM) {
     view.innerHTML = '<div class="card"><h2>🎨 主题</h2><p class="hint">锚点缺失（--hue / 调色板行 / 开场图），为防写坏页面，本页停用。</p></div>';
     return;
@@ -2030,6 +2031,8 @@ routes['lm-theme'] = async () => {
   let form = defM ? defM[1] : '澜雾';
   let heroFile = null; /* {name, b64} */
   let heroUrl = '';
+  let hubFile = null; /* {name, b64} */
+  let hubUrl = '';
   view.innerHTML = `
     <div class="card"><h2>🎨 主题 <span class="sub">改 core/tokens.css 与 core/index.html · 一次保存一个 commit</span></h2>
     <div class="field"><label>默认形态（访客没选过形态时打开看到的样子；选定后色相自动跟到该形态的签名色）</label>
@@ -2046,6 +2049,12 @@ routes['lm-theme'] = async () => {
       <input type="file" id="lm-hero-file" accept="image/*">
       <input type="text" id="lm-hero-url" placeholder="或填外链 URL（填了优先用外链，不上传）" style="margin-top:8px">
       <p class="hint" id="lm-hero-note"></p></div>
+    ${hubM ? `<div class="field"><label>关于页背景（「关于」浮层的专属底图，与开场图相互独立；换图 = 传新文件 + 改引用，旧图文件保留在仓库里不覆写）</label>
+      <p class="hint">当前：${esc(hubM[1])}</p>
+      <img id="lm-hub-preview" src="${esc('https://lanmist.pages.dev/' + hubM[1])}" alt="当前关于页背景" style="max-width:420px;width:100%;border-radius:10px;display:block;margin:6px 0">
+      <input type="file" id="lm-hub-file" accept="image/*">
+      <input type="text" id="lm-hub-url" placeholder="或填外链 URL（填了优先用外链，不上传）" style="margin-top:8px">
+      <p class="hint" id="lm-hub-note"></p></div>` : '<p class="hint">关于页背景：index.html 里暂无 hubBg 锚点（Lanmist 侧新版未上线），本项暂不可改。</p>'}
     <div class="modal-ops"><button class="btn" id="lm-theme-save" type="button">保存主题</button></div></div>`;
   const syncHueUi = () => {
     $('#lm-hue-val').textContent = String(hue);
@@ -2075,6 +2084,22 @@ routes['lm-theme'] = async () => {
     rd.readAsDataURL(f);
   });
   $('#lm-hero-url').addEventListener('input', (e) => { heroUrl = e.target.value.trim(); });
+  if (hubM) {
+    $('#lm-hub-file').addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) { hubFile = null; return; }
+      const rd = new FileReader();
+      rd.onload = () => {
+        const b64 = String(rd.result).split(',')[1] || '';
+        const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+        hubFile = { path: `core/assets/hub-bg-${Date.now()}.${ext}`, b64 };
+        $('#lm-hub-preview').src = String(rd.result);
+        $('#lm-hub-note').textContent = `将上传为 ${hubFile.path} 并把浮层背景引用指过去（旧图不删）。`;
+      };
+      rd.readAsDataURL(f);
+    });
+    $('#lm-hub-url').addEventListener('input', (e) => { hubUrl = e.target.value.trim(); });
+  }
 
   $('#lm-theme-save').onclick = async () => {
     const btn = $('#lm-theme-save');
@@ -2100,9 +2125,21 @@ routes['lm-theme'] = async () => {
         newHtml = newHtml.replace(/id="stageBg" src="[^"]+"/, `id="stageBg" src="${heroPath}"`);
       }
       if (heroFile && !heroUrl) files.push({ path: heroFile.path, content: heroFile.b64, encoding: 'base64' });
+      let hubChanged = false;
+      if (hubM) {
+        let hubPath = hubM[1];
+        if (hubUrl) hubPath = hubUrl;
+        else if (hubFile) hubPath = hubFile.path.replace(/^core\//, '');
+        if (hubPath !== hubM[1]) {
+          if (!/id="hubBg" src="[^"]+"/.test(newHtml)) throw new Error('关于页背景锚点缺失，已中止');
+          newHtml = newHtml.replace(/id="hubBg" src="[^"]+"/, `id="hubBg" src="${hubPath}"`);
+          hubChanged = true;
+        }
+        if (hubFile && !hubUrl) files.push({ path: hubFile.path, content: hubFile.b64, encoding: 'base64' });
+      }
       if (newHtml !== htmlTxt) files.push({ path: 'core/index.html', content: newHtml, encoding: 'utf-8' });
       if (!files.length) { toast('没有改动'); btn.disabled = false; return; }
-      await lmCommit(files, `主题：默认形态 ${form} / 色相 ${hue}${heroPath !== heroM[1] ? ' / 开场图' : ''} [管理台]`);
+      await lmCommit(files, `主题：默认形态 ${form} / 色相 ${hue}${heroPath !== heroM[1] ? ' / 开场图' : ''}${hubChanged ? ' / 关于页背景' : ''} [管理台]`);
       toast('主题已保存，Lanmist 重新部署后生效');
       routes['lm-theme']();
     } catch (e) {
