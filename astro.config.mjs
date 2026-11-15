@@ -138,18 +138,7 @@ export default defineConfig({
 				visible: false,
 			},
 			accessibility: true,
-			// 样式表/脚本一旦进 head 就常驻、不再逐页增删：各页型有一张独有 CSS
-			// （如首页的分页/卡片包、文章页的 markdown-extend），默认行为是每次切页
-			// 把旧页独有表摘掉、新页独有表重新挂上并 awaitAssets 等它加载完才肯换
-			// 内容——这段等待发生在旧内容已淡出之后，是切页中段露出空壳/半换状态
-			// 的结构性来源之一（与网络快慢无关、每趟必付）。常驻后差分只剩首次
-			// 访问某页型时新增一次；这些表要么是 data-astro-cid 作用域样式、
-			// 要么只作用于 .custom-md/.card-github 子树，常驻不影响其他页面。
-			updateHead: {
-				awaitAssets: true,
-				persistAssets: true,
-				persistTags: "link[rel=stylesheet], script[src]",
-			},
+			updateHead: true,
 			updateBodyClass: false,
 			globalInstance: true,
 			// 滚动相关配置优化
