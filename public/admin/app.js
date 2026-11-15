@@ -1661,6 +1661,11 @@ routes.dashboard = async () => {
     profile: { label: '简介', icon: '👤', nav: true, details: [['👤', '关于页资料', '']] },
     banner: { label: '横幅', icon: '🏞️', nav: true, details: [['🖼️', '横幅标题与文案', '']] },
     sitenav: { label: '站点导航', icon: '🗺️', nav: true, details: [['🌐', '博客顶栏导航', '']] },
+    /* Lanmist 专用卡：只在 lanmist 站的 homeCards 里出现 */
+    'lm-home': { label: 'Lanmist 总览', icon: '🌫', nav: true, details: [['🗂️', '内容计数与本地条目', '']] },
+    'lm-publish': { label: '发布到 Lanmist', icon: '✍️', nav: true, details: [['📝', '文章 / 动态 / 日记 / 碎碎念', '']] },
+    'lm-theme': { label: 'Lanmist 主题', icon: '🎨', nav: true, details: [['🖼️', '色相 · 默认形态 · 开场图', '']] },
+    'lm-texts': { label: 'Lanmist 文案', icon: '📝', nav: true, details: [['✒️', '站名与各处文案', '']] },
   };
   const homeOrder = (() => {
     const cfgList = (CFG.navLayout && Array.isArray(CFG.navLayout.homeCards)) ? CFG.navLayout.homeCards : [];
@@ -1695,6 +1700,561 @@ routes.dashboard = async () => {
       })();
     }
   }
+};
+
+
+/* ================= Lanmist 个人主页（lm-* 专用页，2026-11-15 接入） =================
+ * 数据面（与每日同步的共存设计，冲突分析见方案补记）：
+ * - 读 core/site-data.js 走 Git Data API 的 blob 路径（文件 >800KB，Contents API 有 1MB 上限）。
+ * - 发布双写同 commit：local-content/<类>.json 是本地条目的 canonical 源文件；
+ *   core/site-data.js 是写穿镜像，条目对象逐字段一致。生成器每日把源文件条目
+ *   收编进 fresh 并按合并键（posts=slug、dynamic=日期+正文、diary/thoughts=日期+标题）
+ *   与镜像去重——同键同内容只留一份；删条目必须两边同删（本页保存/删除恒同 commit 双写）。
+ * - 主题/文案：对 core/tokens.css、core/index.html 做锚点手术，锚点缺失即报错、不保存。
+ * - 永不覆写 core/assets/ 已存在文件：开场图一律新文件名 + 改 index.html 引用。
+ */
+let _lmTreeCache = null;
+async function lmTree() {
+  if (_lmTreeCache) return _lmTreeCache;
+  const base = `/repos/${CFG.owner}/${CFG.repo}`;
+  const ref = await gh(`${base}/git/ref/heads/${CFG.branch}`);
+  const commit = await gh(`${base}/git/commits/${ref.object.sha}`);
+  const tree = await gh(`${base}/git/trees/${commit.tree.sha}?recursive=1`);
+  const map = {};
+  (tree.tree || []).forEach((e) => { if (e.type === 'blob') map[e.path] = { sha: e.sha, size: e.size || 0 }; });
+  _lmTreeCache = { map, headSha: ref.object.sha };
+  return _lmTreeCache;
+}
+async function lmReadText(path) {
+  const t = await lmTree();
+  const ent = t.map[path];
+  if (!ent) return null;
+  const blob = await gh(`/repos/${CFG.owner}/${CFG.repo}/git/blobs/${ent.sha}`);
+  return b64decodeUnicode(String(blob.content || '').replace(/\n/g, ''));
+}
+async function lmReadJSON(path) {
+  const t = await lmReadText(path);
+  return t === null ? null : JSON.parse(t);
+}
+function lmParseData(text) {
+  const m = String(text).match(/const SITE_DATA = (\{[\s\S]*\});?\s*$/);
+  if (!m) throw new Error('site-data.js 格式异常，认不出 SITE_DATA');
+  return JSON.parse(m[1]);
+}
+const lmSerializeData = (data) => 'const SITE_DATA = ' + JSON.stringify(data, null, 1) + ';\n';
+async function lmLoadData() {
+  const t = await lmReadText('core/site-data.js');
+  if (t === null) throw new Error('读不到 core/site-data.js');
+  return lmParseData(t);
+}
+async function lmLocalList(cat) {
+  const v = await lmReadJSON(`local-content/${cat}.json`);
+  return Array.isArray(v) ? v : [];
+}
+async function lmCommit(files, message) {
+  const r = await ghCommitMulti(files, message);
+  _lmTreeCache = null; /* 仓已变，本页后续读取重新拉树 */
+  return r;
+}
+const lmByDateDesc = (a, b) => String(b.date || '').localeCompare(String(a.date || ''));
+function lmPlain(md) {
+  return String(md || '')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/[#>*`~_|-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+/* 本地条目的合并键（与 gen_site_data.py 的 LIST_KEYS 对齐） */
+const LM_CAT_KEYS = {
+  posts: (e) => 'slug:' + (e.slug || ''),
+  dynamic: (e) => 'dyn:' + (e.date || '') + '|' + (e.text || ''),
+  diary: (e) => 'dia:' + (e.date || '') + '|' + (e.title || ''),
+  thoughts: (e) => 'tho:' + (e.date || '') + '|' + (e.title || ''),
+};
+const LM_CATS = {
+  posts: { label: '文章', dataKey: 'posts' },
+  dynamic: { label: '动态', dataKey: 'dynamic' },
+  diary: { label: '日记', dataKey: 'diary' },
+  thoughts: { label: '碎碎念', dataKey: 'thoughts' },
+};
+
+/* ---------- 总览（只读） ---------- */
+routes['lm-home'] = async () => {
+  _lmTreeCache = null;
+  view.innerHTML = '<div class="card"><h2>🌫 Lanmist 总览</h2><p class="hint">正在读取 lanmist 仓库…</p></div>';
+  try {
+    const tree = await lmTree();
+    const data = await lmLoadData();
+    const [lp, ld, ldi, lt] = await Promise.all(['posts', 'dynamic', 'diary', 'thoughts'].map((c) => lmLocalList(c)));
+    let last = null;
+    try {
+      const cs = await gh(`/repos/${CFG.owner}/${CFG.repo}/commits?per_page=1`);
+      if (Array.isArray(cs) && cs[0]) last = cs[0];
+    } catch (e) { /* 提交信息读不到不挡总览 */ }
+    const sdSize = tree.map['core/site-data.js'] ? tree.map['core/site-data.js'].size : 0;
+    const cell = (n, label) => `<div class="stat"><div class="stat-head"><span class="lbl">${label}</span><span class="num">${n}</span></div></div>`;
+    view.innerHTML = `
+      <div class="card"><h2>🌫 Lanmist 总览 <span class="sub">Misty-ui-source/lanmist · 静态展示 + 本地发布</span></h2>
+      <p class="hint">主站数据每天 09:41 自动同步进来（只增添删改）；下面「本地」是在这里发布的条目，存在仓库 local-content/ 里，同步不会冲掉。</p>
+      <div class="stat-grid">
+        ${cell((data.posts || []).length, '文章（本地 ' + lp.length + '）')}
+        ${cell((data.dynamic || []).length, '动态（本地 ' + ld.length + '）')}
+        ${cell((data.diary || []).length, '日记（本地 ' + ldi.length + '）')}
+        ${cell((data.thoughts || []).length, '碎碎念（本地 ' + lt.length + '）')}
+        ${cell((data.friends || []).length, '友链')}
+        ${cell((data.moments || []).length, '友圈动态')}
+        ${cell((data.guestbook || []).length, '留言')}
+        ${cell((data.projects || []).length, '项目')}
+      </div>
+      <p class="hint">site-data.js ${(sdSize / 1024).toFixed(0)} KB${last ? ` · 最近提交 ${esc(String(last.sha).slice(0, 7))}「${esc(last.commit.message.split('\n')[0])}」${esc((last.commit.committer && last.commit.committer.date || '').slice(0, 10))}` : ''}</p>
+      <div class="modal-ops">
+        <button class="btn" id="lm-go-publish" type="button">✍️ 去发布</button>
+        <button class="btn btn-ghost" id="lm-go-theme" type="button">🎨 主题</button>
+        <button class="btn btn-ghost" id="lm-go-texts" type="button">📝 文案</button>
+        <button class="btn btn-ghost" id="lm-open-site" type="button">🌐 打开 Lanmist 首页</button>
+      </div></div>`;
+    $('#lm-go-publish').onclick = () => { location.hash = '#/lm-publish'; };
+    $('#lm-go-theme').onclick = () => { location.hash = '#/lm-theme'; };
+    $('#lm-go-texts').onclick = () => { location.hash = '#/lm-texts'; };
+    $('#lm-open-site').onclick = () => window.open('https://lanmist.pages.dev/', '_blank', 'noopener');
+  } catch (e) {
+    view.innerHTML = `<div class="card"><h2>🌫 Lanmist 总览</h2><p class="hint">加载失败：${esc(e.message)}</p></div>`;
+  }
+};
+
+/* ---------- 发布（本地条目：源文件 + site-data 写穿，同 commit） ---------- */
+routes['lm-publish'] = async () => {
+  _lmTreeCache = null;
+  view.innerHTML = '<div class="card"><h2>✍️ 发布</h2><p class="hint">正在读取本地条目…</p></div>';
+  let cat = 'posts';
+  let lists = {};
+  let editing = null; /* {entry, oldKey} 编辑态；null = 列表态 */
+  try {
+    for (const c of Object.keys(LM_CATS)) lists[c] = await lmLocalList(c);
+  } catch (e) {
+    view.innerHTML = `<div class="card"><h2>✍️ 发布</h2><p class="hint">加载失败：${esc(e.message)}</p></div>`;
+    return;
+  }
+  const keyOf = (c, e) => LM_CAT_KEYS[c](e);
+  const todayStr = () => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
+  const slugify = (s) => String(s || '').toLowerCase().replace(/[^\w一-龥-]+/g, '-').replace(/^-+|-+$/g, '');
+
+  function render() {
+    const L = LM_CATS[cat];
+    const rows = lists[cat].map((e, i) => {
+      const title = cat === 'dynamic' ? String(e.text || '').slice(0, 42) : (e.title || '(无标题)');
+      return `<div class="list-item"><span class="title">${esc(title)}</span><span class="meta">${esc(e.date || '')}</span><span class="spacer"></span>
+        <button class="btn btn-small" data-edit="${i}" type="button">编辑</button>
+        <button class="btn btn-small btn-danger" data-del="${i}" type="button">删除</button></div>`;
+    }).join('');
+    view.innerHTML = `
+      <div class="card"><h2>✍️ 发布 <span class="sub">只进 Lanmist，不回主站</span></h2>
+      <p class="hint">本地条目存仓库 local-content/（源文件）并同步写进 site-data.js（同一次提交）；每日 09:41 同步按合并键去重收编，不会重复、不会被冲掉。保存尽量避开 09:41 前后几分钟。</p>
+      <div class="pills" id="lm-cat-pills">${Object.keys(LM_CATS).map((c) => `<label class="pill${c === cat ? ' on' : ''}"><input type="radio" name="lm-cat" value="${c}"${c === cat ? ' checked' : ''}>${LM_CATS[c].label}（${lists[c].length}）</label>`).join('')}</div>
+      <div style="margin:12px 0"><button class="btn" id="lm-new" type="button">＋ 新建${L.label}</button></div>
+      <div id="lm-list">${rows || '<p class="hint">还没有本地' + L.label + '，点上面新建第一条。</p>'}</div>
+      <div id="lm-editor"></div></div>`;
+    view.querySelectorAll('input[name="lm-cat"]').forEach((r) => { r.onchange = () => { cat = r.value; editing = null; render(); }; });
+    $('#lm-new').onclick = () => openEditor(null);
+    view.querySelectorAll('[data-edit]').forEach((b) => { b.onclick = () => openEditor(lists[cat][Number(b.dataset.edit)]); });
+    view.querySelectorAll('[data-del]').forEach((b) => { b.onclick = () => delEntry(lists[cat][Number(b.dataset.del)]); });
+  }
+
+  function fieldHtml() {
+    if (cat === 'posts') return `
+      <div class="grid2">
+        <div class="field"><label>标题</label><input type="text" id="lf-title"></div>
+        <div class="field"><label>日期</label><input type="date" id="lf-date"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>分类（主站词表）</label><input type="text" id="lf-category"></div>
+        <div class="field"><label>系列（选填）</label><input type="text" id="lf-series"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>标签（逗号分隔）</label><input type="text" id="lf-tags"></div>
+        <div class="field"><label>slug（自动加 local- 前缀防撞）</label><input type="text" id="lf-slug"></div>
+      </div>
+      <div class="field"><label>封面 URL（选填，走 R2 外链；不要往仓库 assets 里塞）</label><input type="text" id="lf-cover" placeholder="https://img.lanerc.me/…"></div>
+      <div class="field"><label>简介（选填，空则取正文前 200 字）</label><input type="text" id="lf-desc"></div>
+      <div class="field"><label>正文（Markdown）</label><textarea id="lf-body" rows="12"></textarea></div>`;
+    if (cat === 'dynamic') return `
+      <div class="field"><label>日期</label><input type="date" id="lf-date"></div>
+      <div class="field"><label>动态内容</label><textarea id="lf-text" rows="5"></textarea></div>`;
+    if (cat === 'diary') return `
+      <div class="grid2">
+        <div class="field"><label>日期</label><input type="date" id="lf-date"></div>
+        <div class="field"><label>标题</label><input type="text" id="lf-title"></div>
+      </div>
+      <div class="field"><label>正文</label><textarea id="lf-text" rows="10"></textarea></div>`;
+    return `
+      <div class="grid2">
+        <div class="field"><label>日期</label><input type="date" id="lf-date"></div>
+        <div class="field"><label>标题</label><input type="text" id="lf-title"></div>
+      </div>
+      <div class="field"><label>内容</label><textarea id="lf-text" rows="6"></textarea></div>`;
+  }
+
+  function openEditor(entry) {
+    const host = $('#lm-editor');
+    if (!host) return;
+    editing = { entry: entry || null, oldKey: entry ? keyOf(cat, entry) : null };
+    host.innerHTML = `<div class="card" style="margin-top:14px"><h2>${entry ? '编辑' : '新建'}${LM_CATS[cat].label}</h2>
+      ${fieldHtml()}
+      <div class="modal-ops"><button class="btn btn-ghost" id="lf-cancel" type="button">取消</button>
+      <button class="btn" id="lf-save" type="button">保存（源文件 + 站点数据同提交）</button></div></div>`;
+    const v = (id, val) => { const el = $(id); if (el) el.value = val == null ? '' : val; };
+    let draftRaw = null;
+    if (!entry) { try { draftRaw = localStorage.getItem(siteKey('lm-pub-draft-' + cat)); } catch (e) {} }
+    let src = entry || null;
+    if (!src && draftRaw) { try { src = JSON.parse(draftRaw); } catch (e) { src = null; } }
+    if (cat === 'posts') {
+      v('#lf-title', src && src.title); v('#lf-date', (src && src.date) || todayStr());
+      v('#lf-category', src && src.category); v('#lf-series', src && src.series);
+      v('#lf-tags', src && (Array.isArray(src.tags) ? src.tags.join(', ') : src.tags));
+      v('#lf-slug', src && String(src.slug || '').replace(/^local-/, ''));
+      v('#lf-cover', src && src.cover); v('#lf-desc', src && src.desc); v('#lf-body', src && src.body);
+    } else if (cat === 'dynamic') {
+      v('#lf-date', (src && src.date) || todayStr()); v('#lf-text', src && src.text);
+    } else {
+      v('#lf-date', (src && src.date) || todayStr()); v('#lf-title', src && src.title); v('#lf-text', src && src.text);
+    }
+    if (!entry) {
+      host.querySelectorAll('input, textarea').forEach((el) => {
+        el.addEventListener('input', () => {
+          try { localStorage.setItem(siteKey('lm-pub-draft-' + cat), JSON.stringify(readForm())); } catch (e) {}
+        });
+      });
+    }
+    $('#lf-cancel').onclick = () => { editing = null; host.innerHTML = ''; };
+    $('#lf-save').onclick = saveEntry;
+  }
+
+  function readForm() {
+    const g = (id) => { const el = $(id); return el ? el.value.trim() : ''; };
+    if (cat === 'posts') {
+      const body = g('#lf-body');
+      let slug = slugify(g('#lf-slug')) || slugify(g('#lf-title')) || 'post';
+      if (!slug.startsWith('local-')) slug = 'local-' + slug;
+      return {
+        title: g('#lf-title'), date: g('#lf-date') || todayStr(), category: g('#lf-category'),
+        tags: g('#lf-tags').split(/[,，、]/).map((s) => s.trim()).filter(Boolean),
+        slug, cover: g('#lf-cover'), desc: g('#lf-desc') || lmPlain(body).slice(0, 200),
+        excerpt: lmPlain(body).slice(0, 600), body, series: g('#lf-series'), downloads: [],
+      };
+    }
+    if (cat === 'dynamic') return { date: g('#lf-date') || todayStr(), text: g('#lf-text') };
+    if (cat === 'diary') return { date: g('#lf-date') || todayStr(), title: g('#lf-title'), text: g('#lf-text') };
+    return { title: g('#lf-title'), text: g('#lf-text'), date: g('#lf-date') || todayStr() };
+  }
+
+  async function saveEntry() {
+    const btn = $('#lf-save');
+    const entry = readForm();
+    if (cat === 'posts' && !entry.title) { toast('请填标题', true); return; }
+    if (cat !== 'posts' && !(entry.text || '').trim()) { toast('内容不能为空', true); return; }
+    btn.disabled = true;
+    try {
+      const data = await lmLoadData();
+      const dk = LM_CATS[cat].dataKey;
+      const oldKey = editing && editing.oldKey;
+      const nl = lists[cat].filter((e) => keyOf(cat, e) !== oldKey && keyOf(cat, e) !== keyOf(cat, entry));
+      nl.push(entry);
+      nl.sort(lmByDateDesc);
+      let arr = (data[dk] || []).filter((e) => keyOf(cat, e) !== oldKey && keyOf(cat, e) !== keyOf(cat, entry));
+      if (cat === 'thoughts') {
+        arr = nl.concat(arr); /* 碎碎念本地条目置顶，其余保持源顺序 */
+      } else {
+        arr.push(entry); arr.sort(lmByDateDesc);
+      }
+      data[dk] = arr;
+      await lmCommit([
+        { path: `local-content/${cat}.json`, content: JSON.stringify(nl, null, 1) + '\n', encoding: 'utf-8' },
+        { path: 'core/site-data.js', content: lmSerializeData(data), encoding: 'utf-8' },
+      ], `${editing && editing.entry ? '更新' : '发布'}本地${LM_CATS[cat].label}：${entry.title || entry.date} [管理台]`);
+      lists[cat] = nl;
+      editing = null;
+      try { localStorage.removeItem(siteKey('lm-pub-draft-' + cat)); } catch (e) {}
+      toast('已保存，Lanmist 重新部署后可见');
+      render();
+    } catch (e) {
+      toast('保存失败：' + e.message, true);
+      btn.disabled = false;
+    }
+  }
+
+  async function delEntry(entry) {
+    const name = entry.title || String(entry.text || '').slice(0, 20) || entry.date;
+    if (!confirm(`确定删除这条本地${LM_CATS[cat].label}「${name}」？源文件与站点数据会同一次提交一起删。`)) return;
+    try {
+      const data = await lmLoadData();
+      const dk = LM_CATS[cat].dataKey;
+      const k = keyOf(cat, entry);
+      const nl = lists[cat].filter((e) => keyOf(cat, e) !== k);
+      data[dk] = (data[dk] || []).filter((e) => keyOf(cat, e) !== k);
+      await lmCommit([
+        { path: `local-content/${cat}.json`, content: JSON.stringify(nl, null, 1) + '\n', encoding: 'utf-8' },
+        { path: 'core/site-data.js', content: lmSerializeData(data), encoding: 'utf-8' },
+      ], `删除本地${LM_CATS[cat].label}：${name} [管理台]`);
+      lists[cat] = nl;
+      toast('已删除');
+      render();
+    } catch (e) { toast('删除失败：' + e.message, true); }
+  }
+
+  render();
+};
+
+/* ---------- 主题（色相 / 默认形态 / 开场图） ---------- */
+routes['lm-theme'] = async () => {
+  _lmTreeCache = null;
+  view.innerHTML = '<div class="card"><h2>🎨 主题</h2><p class="hint">正在读取 tokens.css 与 index.html…</p></div>';
+  let tokensTxt, htmlTxt;
+  try {
+    [tokensTxt, htmlTxt] = await Promise.all([lmReadText('core/tokens.css'), lmReadText('core/index.html')]);
+    if (tokensTxt === null || htmlTxt === null) throw new Error('tokens.css 或 index.html 读不到');
+  } catch (e) {
+    view.innerHTML = `<div class="card"><h2>🎨 主题</h2><p class="hint">加载失败：${esc(e.message)}</p></div>`;
+    return;
+  }
+  const hueM = tokensTxt.match(/--hue:\s*(\d+)/);
+  const forms = [];
+  for (const m of htmlTxt.matchAll(/data-form="([^"]+)" data-hue="(\d+)"/g)) forms.push({ name: m[1], hue: Number(m[2]) });
+  const defM = htmlTxt.match(/<html[^>]*\bdata-default-form="([^"]+)"/);
+  const heroM = htmlTxt.match(/id="stageBg" src="([^"]+)"/);
+  if (!hueM || !forms.length || !heroM) {
+    view.innerHTML = '<div class="card"><h2>🎨 主题</h2><p class="hint">锚点缺失（--hue / 调色板行 / 开场图），为防写坏页面，本页停用。</p></div>';
+    return;
+  }
+  let hue = Number(hueM[1]);
+  let form = defM ? defM[1] : '澜雾';
+  let heroFile = null; /* {name, b64} */
+  let heroUrl = '';
+  view.innerHTML = `
+    <div class="card"><h2>🎨 主题 <span class="sub">改 core/tokens.css 与 core/index.html · 一次保存一个 commit</span></h2>
+    <div class="field"><label>默认形态（访客没选过形态时打开看到的样子；选定后色相自动跟到该形态的签名色）</label>
+      <div class="pills" id="lm-forms">${forms.map((f) => `<label class="pill${f.name === form ? ' on' : ''}"><input type="radio" name="lm-form" value="${esc(f.name)}" data-hue="${f.hue}"${f.name === form ? ' checked' : ''}>${esc(f.name)}（${f.hue}）</label>`).join('')}</div></div>
+    <div class="field"><label>色相种子 --hue（全站颜色由这一个数派生）<span class="sub" id="lm-hue-val">${hue}</span></label>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span id="lm-hue-sw" style="width:38px;height:38px;border-radius:10px;background:hsl(${hue},70%,45%);flex:none"></span>
+        <input type="range" id="lm-hue" min="0" max="360" step="1" value="${hue}" style="flex:1">
+        <input type="number" id="lm-hue-num" min="0" max="360" value="${hue}" style="width:84px">
+      </div></div>
+    <div class="field"><label>开场图（首屏大图；换图 = 传新文件 + 改引用，旧图文件保留在仓库里不覆写）</label>
+      <p class="hint">当前：${esc(heroM[1])}</p>
+      <img id="lm-hero-preview" src="${esc('https://lanmist.pages.dev/' + heroM[1])}" alt="当前开场图" style="max-width:420px;width:100%;border-radius:10px;display:block;margin:6px 0">
+      <input type="file" id="lm-hero-file" accept="image/*">
+      <input type="text" id="lm-hero-url" placeholder="或填外链 URL（填了优先用外链，不上传）" style="margin-top:8px">
+      <p class="hint" id="lm-hero-note"></p></div>
+    <div class="modal-ops"><button class="btn" id="lm-theme-save" type="button">保存主题</button></div></div>`;
+  const syncHueUi = () => {
+    $('#lm-hue-val').textContent = String(hue);
+    $('#lm-hue').value = String(hue);
+    $('#lm-hue-num').value = String(hue);
+    $('#lm-hue-sw').style.background = `hsl(${hue},70%,45%)`;
+  };
+  $('#lm-hue').addEventListener('input', (e) => { hue = Number(e.target.value); syncHueUi(); });
+  $('#lm-hue-num').addEventListener('input', (e) => { hue = Math.max(0, Math.min(360, Number(e.target.value) || 0)); syncHueUi(); });
+  view.querySelectorAll('input[name="lm-form"]').forEach((r) => {
+    r.onchange = () => {
+      form = r.value; hue = Number(r.dataset.hue); syncHueUi();
+      view.querySelectorAll('#lm-forms .pill').forEach((p) => p.classList.toggle('on', p.contains(r)));
+    };
+  });
+  $('#lm-hero-file').addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) { heroFile = null; return; }
+    const rd = new FileReader();
+    rd.onload = () => {
+      const b64 = String(rd.result).split(',')[1] || '';
+      const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+      heroFile = { path: `core/assets/hero-${Date.now()}.${ext}`, b64 };
+      $('#lm-hero-preview').src = String(rd.result);
+      $('#lm-hero-note').textContent = `将上传为 ${heroFile.path} 并把首屏引用指过去（旧图不删）。`;
+    };
+    rd.readAsDataURL(f);
+  });
+  $('#lm-hero-url').addEventListener('input', (e) => { heroUrl = e.target.value.trim(); });
+
+  $('#lm-theme-save').onclick = async () => {
+    const btn = $('#lm-theme-save');
+    btn.disabled = true;
+    try {
+      const files = [];
+      const newTokens = tokensTxt.replace(/--hue:\s*\d+/, `--hue:${hue}`);
+      if (newTokens !== tokensTxt) files.push({ path: 'core/tokens.css', content: newTokens, encoding: 'utf-8' });
+      let newHtml = htmlTxt;
+      /* 默认形态：写 <html> 的 data-default-form（澜雾为默认时不写）；璨夜另需 data-form 点亮暗色令牌。
+         shell.js 开机逻辑已认这两个属性（访客本机选择仍优先）。 */
+      const tagM = newHtml.match(/<html[^>]*>/);
+      if (!tagM) throw new Error('index.html 找不到 <html> 标签，锚点缺失，已中止');
+      let tag = tagM[0].replace(/\s+data-default-form="[^"]*"/, '').replace(/\s+data-form="[^"]*"/, '');
+      if (form !== '澜雾') tag = tag.replace(/>$/, ` data-default-form="${form}">`);
+      if (form === '璨夜') tag = tag.replace(/>$/, ' data-form="璨夜">');
+      newHtml = newHtml.replace(tagM[0], tag);
+      let heroPath = heroM[1];
+      if (heroUrl) heroPath = heroUrl;
+      else if (heroFile) heroPath = heroFile.path.replace(/^core\//, '');
+      if (heroPath !== heroM[1]) {
+        if (!/id="stageBg" src="[^"]+"/.test(newHtml)) throw new Error('开场图锚点缺失，已中止');
+        newHtml = newHtml.replace(/id="stageBg" src="[^"]+"/, `id="stageBg" src="${heroPath}"`);
+      }
+      if (heroFile && !heroUrl) files.push({ path: heroFile.path, content: heroFile.b64, encoding: 'base64' });
+      if (newHtml !== htmlTxt) files.push({ path: 'core/index.html', content: newHtml, encoding: 'utf-8' });
+      if (!files.length) { toast('没有改动'); btn.disabled = false; return; }
+      await lmCommit(files, `主题：默认形态 ${form} / 色相 ${hue}${heroPath !== heroM[1] ? ' / 开场图' : ''} [管理台]`);
+      toast('主题已保存，Lanmist 重新部署后生效');
+      routes['lm-theme']();
+    } catch (e) {
+      toast('保存失败：' + e.message, true);
+      btn.disabled = false;
+    }
+  };
+};
+
+/* ---------- 文案（index.html 锚点手术 + 站名改名） ---------- */
+routes['lm-texts'] = async () => {
+  _lmTreeCache = null;
+  view.innerHTML = '<div class="card"><h2>📝 文案</h2><p class="hint">正在读取 index.html…</p></div>';
+  let htmlTxt;
+  try {
+    htmlTxt = await lmReadText('core/index.html');
+    if (htmlTxt === null) throw new Error('index.html 读不到');
+  } catch (e) {
+    view.innerHTML = `<div class="card"><h2>📝 文案</h2><p class="hint">加载失败：${esc(e.message)}</p></div>`;
+    return;
+  }
+  const pick = (re) => { const m = htmlTxt.match(re); return m ? m[1] : null; };
+  const cur = {
+    name: pick(/<title>([^<]*?) · Lanmist<\/title>/),
+    sub: pick(/<div class="sub">([^<]*)<\/div>/),
+    vert: pick(/<div class="vert">([^<]*)<small>/),
+    vertSub: pick(/<div class="vert">[^<]*<small>([^<]*)<\/small>/),
+    finWord: pick(/<p class="finale-word">([^<]*)<\/p>/),
+    finSub: pick(/<p class="finale-sub">([^<]*)<\/p>/),
+    finAbout: pick(/<div class="finale-about">\s*<p>([\s\S]*?)<\/p>/),
+    headline: pick(/data-headline-title>([^<]*)</),
+    tagline: pick(/<div class="acard-tag">([^<]*)<\/div>/),
+  };
+  const links = [];
+  { const block = pick(/<div class="finale-links">([\s\S]*?)<\/div>/);
+    if (block) for (const m of block.matchAll(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/g)) links.push({ href: m[1], label: m[2] }); }
+  const msgs = [];
+  { const block = pick(/(<div class="home-blinds-headline__messages" data-headline-messages>[\s\S]*?<\/div>)/);
+    if (block) for (const m of block.matchAll(/data-headline-message>([\s\S]*?)<\/p>/g))
+      msgs.push([...m[1].matchAll(/data-headline-message-char>([^<]*)<\/span>/g)].map((x) => x[1]).join('')); }
+  const sites = [];
+  for (const m of htmlTxt.matchAll(/<a class="acard-cell acard-site" href="([^"]*)"[^>]*><b>([^<]*)<\/b><span>([^<]*)<\/span><\/a>/g))
+    sites.push({ href: m[1], label: m[2], sub: m[3] });
+  let bubbles = null, cfgObj = null;
+  { const raw = pick(/<script type="application\/json" data-home-blinds-config>([\s\S]*?)<\/script>/);
+    if (raw) { try { cfgObj = JSON.parse(raw); bubbles = (((cfgObj.scenes || {}).bubbleMessages) || []).map((b) => ({ text: b.text || '', weight: b.weight || '', image: b.image || '' })); } catch (e) {} } }
+  const missing = Object.entries(cur).filter(([, v]) => v === null).map(([k]) => k);
+  if (missing.length || !links.length || msgs.length !== 3 || sites.length !== 4 || !bubbles) {
+    view.innerHTML = `<div class="card"><h2>📝 文案</h2><p class="hint">锚点缺失（${esc(missing.join('、') || 'links/messages/sites/bubbles')}），为防写坏页面，本页停用。</p></div>`;
+    return;
+  }
+  const linkRow = (l, i) => `<div class="grid2 lm-linkrow"><div class="field"><label>文字 ${i + 1}</label><input type="text" data-lk-label="${i}" value="${esc(l.label)}"></div><div class="field"><label>链接</label><input type="text" data-lk-href="${i}" value="${esc(l.href)}"></div></div>`;
+  const siteRow = (s, i) => `<div class="grid2"><div class="field"><label>名称</label><input type="text" data-st-label="${i}" value="${esc(s.label)}"></div><div class="field"><label>副标</label><input type="text" data-st-sub="${i}" value="${esc(s.sub)}"></div></div><div class="field"><label>「${esc(s.label)}」链接</label><input type="text" data-st-href="${i}" value="${esc(s.href)}"></div>`;
+  const bubbleRow = (b, i) => `<div class="grid2"><div class="field"><label>气泡文案</label><input type="text" data-bb-text="${i}" value="${esc(b.text)}"></div><div class="field"><label>权重</label><input type="number" step="0.1" min="0" data-bb-weight="${i}" value="${esc(String(b.weight))}"></div></div><div class="field"><label>配图（选填，相对路径或 URL）</label><input type="text" data-bb-image="${i}" value="${esc(b.image)}"></div>`;
+  view.innerHTML = `
+    <div class="card"><h2>📝 文案与站名 <span class="sub">只改 core/index.html · 保存前逐锚点校验，缺一个就不存</span></h2>
+    <div class="field"><label>站名（现在显示在标题栏、大标题、品牌行、关于卡、页脚五处；改名五处一起换）</label><input type="text" id="lt-name" value="${esc(cur.name)}"></div>
+    <div class="grid2">
+      <div class="field"><label>首屏副标题</label><input type="text" id="lt-sub" value="${esc(cur.sub)}"></div>
+      <div class="field"><label>关于卡签名</label><input type="text" id="lt-tagline" value="${esc(cur.tagline)}"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>竖排主文</label><input type="text" id="lt-vert" value="${esc(cur.vert)}"></div>
+      <div class="field"><label>竖排小字</label><input type="text" id="lt-vertsub" value="${esc(cur.vertSub)}"></div>
+    </div>
+    <div class="field"><label>揭示大标题</label><input type="text" id="lt-headline" value="${esc(cur.headline)}"></div>
+    ${msgs.map((t, i) => `<div class="field"><label>揭示短句 ${i + 1}</label><input type="text" data-msg="${i}" value="${esc(t)}"></div>`).join('')}
+    <div class="field"><label>终幕大字</label><input type="text" id="lt-finword" value="${esc(cur.finWord)}"></div>
+    <div class="field"><label>终幕小字</label><input type="text" id="lt-finsub" value="${esc(cur.finSub)}"></div>
+    <div class="field"><label>终幕「关于」节选</label><textarea id="lt-finabout" rows="3">${esc(cur.finAbout)}</textarea></div>
+    <h3 style="margin:14px 0 6px">终幕联系按钮</h3>
+    <div id="lt-links">${links.map(linkRow).join('')}</div>
+    <h3 style="margin:14px 0 6px">关于卡 · 四个站点</h3>
+    ${sites.map(siteRow).join('')}
+    <h3 style="margin:14px 0 6px">首屏气泡文案</h3>
+    <div id="lt-bubbles">${bubbles.map(bubbleRow).join('')}</div>
+    <div class="modal-ops"><button class="btn btn-ghost" id="lt-bb-add" type="button">＋ 加一条气泡</button>
+    <button class="btn" id="lt-save" type="button">保存文案</button></div></div>`;
+
+  $('#lt-bb-add').onclick = () => {
+    const i = $('#lt-bubbles').querySelectorAll('[data-bb-text]').length;
+    const d = document.createElement('div');
+    d.innerHTML = bubbleRow({ text: '', weight: '1', image: '' }, i);
+    $('#lt-bubbles').appendChild(d);
+  };
+
+  $('#lt-save').onclick = async () => {
+    const btn = $('#lt-save');
+    btn.disabled = true;
+    const g = (id) => { const el = $(id); return el ? el.value : ''; };
+    const gv = (attr, i) => { const el = view.querySelector(`[${attr}="${i}"]`); return el ? el.value.trim() : ''; };
+    let out = htmlTxt;
+    const fails = [];
+    const rep = (label, re, make) => {
+      if (!re.test(out)) { fails.push(label); return; }
+      out = out.replace(re, make);
+    };
+    /* 站名：五处全换，任一锚点不在就整单不保存 */
+    const newName = g('#lt-name').trim();
+    if (newName && newName !== cur.name) {
+      const chars = [...newName].map((c, i) => `<span class="ch" style="--i:${i}">${esc(c)}</span>`).join('');
+      rep('标题栏站名', /<title>[^<]*<\/title>/, `<title>${esc(newName)} · Lanmist</title>`);
+      rep('品牌行站名', /(<span class="brand"><img src="assets\/avatar\.png" alt="">)[^<]*(<\/span>)/, (m, a, b) => a + esc(newName) + b);
+      rep('大标题站名', /<h1>(?:<span class="ch" style="--i:\d+">[^<]*<\/span>)+<\/h1>/, `<h1>${chars}</h1>`);
+      rep('关于卡站名', /<div class="acard-name">[^<]*<\/div>/, `<div class="acard-name">${esc(newName)}</div>`);
+      rep('页脚站名', /<div class="fname">[^<]*<\/div>/, `<div class="fname">${esc(newName)} · LANMIST</div>`);
+    }
+    rep('副标题', /<div class="sub">[^<]*<\/div>/, `<div class="sub">${esc(g('#lt-sub'))}</div>`);
+    rep('关于卡签名', /<div class="acard-tag">[^<]*<\/div>/, `<div class="acard-tag">${esc(g('#lt-tagline'))}</div>`);
+    rep('竖排文', /<div class="vert">[^<]*<small>[^<]*<\/small><\/div>/, `<div class="vert">${esc(g('#lt-vert'))}<small>${esc(g('#lt-vertsub'))}</small></div>`);
+    rep('揭示标题', /(<p class="home-blinds-headline__title" data-headline-title>)[^<]*(<\/p>)/, (m, a, b) => a + esc(g('#lt-headline')) + b);
+    { const newMsgs = msgs.map((_, i) => gv('data-msg', i));
+      rep('揭示短句', /(<div class="home-blinds-headline__messages" data-headline-messages>)[\s\S]*?(<\/div>)/,
+        (m, a, b) => a + newMsgs.map((t) => `<p class="home-blinds-headline__message" data-headline-message>${[...t].map((c) => `<span class="home-blinds-headline__message-char" data-headline-message-char>${esc(c)}</span>`).join('')}</p>`).join('') + b); }
+    rep('终幕大字', /<p class="finale-word">[^<]*<\/p>/, `<p class="finale-word">${esc(g('#lt-finword'))}</p>`);
+    rep('终幕小字', /<p class="finale-sub">[^<]*<\/p>/, `<p class="finale-sub">${esc(g('#lt-finsub'))}</p>`);
+    rep('终幕节选', /(<div class="finale-about">\s*<p>)[\s\S]*?(<\/p>)/, (m, a, b) => a + esc(g('#lt-finabout').trim()) + b);
+    { const nl = links.map((_, i) => ({ label: gv('data-lk-label', i), href: gv('data-lk-href', i) }));
+      rep('终幕链接', /(<div class="finale-links">)[\s\S]*?(<\/div>)/,
+        (m, a, b) => a + nl.map((l) => `<a href="${esc(l.href)}"${/^https?:/.test(l.href) ? ' target="_blank" rel="noopener"' : ''}>${esc(l.label)}</a>`).join('') + b); }
+    { let idx = 0;
+      const siteRe = /<a class="acard-cell acard-site" href="[^"]*"[^>]*><b>[^<]*<\/b><span>[^<]*<\/span><\/a>/g;
+      if ((out.match(siteRe) || []).length !== sites.length) fails.push('关于卡站点');
+      else out = out.replace(siteRe, () => {
+        const i = idx++;
+        return `<a class="acard-cell acard-site" href="${esc(gv('data-st-href', i))}" target="_blank" rel="noopener"><b>${esc(gv('data-st-label', i))}</b><span>${esc(gv('data-st-sub', i))}</span></a>`;
+      }); }
+    { const rows = [];
+      view.querySelectorAll('[data-bb-text]').forEach((el, i) => {
+        const text = el.value.trim();
+        if (!text) return;
+        const row = { text, weight: Number(gv('data-bb-weight', i)) || 0 };
+        const img = gv('data-bb-image', i);
+        if (img) row.image = img;
+        rows.push(row);
+      });
+      if (rows.length) {
+        cfgObj.scenes.bubbleMessages = rows;
+        rep('气泡配置', /(<script type="application\/json" data-home-blinds-config>)[\s\S]*?(<\/script>)/,
+          (m, a, b) => a + JSON.stringify(cfgObj) + b);
+      } }
+    if (fails.length) { toast('锚点缺失，已取消保存：' + fails.join('、'), true); btn.disabled = false; return; }
+    if (out === htmlTxt) { toast('没有改动'); btn.disabled = false; return; }
+    try {
+      await lmCommit([{ path: 'core/index.html', content: out, encoding: 'utf-8' }], '文案更新 [管理台]');
+      toast('文案已保存，Lanmist 重新部署后生效');
+      routes['lm-texts']();
+    } catch (e) {
+      toast('保存失败：' + e.message, true);
+      btn.disabled = false;
+    }
+  };
 };
 
 /* ---------- 写作统计图：折线图 + 热力图 ---------- */

@@ -91,6 +91,30 @@ window.ADMIN_CONFIG = {
         { icon: '🐙', label: 'GitHub 仓库', url: 'https://github.com/Misty-ui-source/fuwari' },
       ],
     },
+    {
+      /* 个人主页 Lanmist（2026-11-15 接入）：静态展示页 + 可发布站点。
+       * 内容不在 Markdown 集合里：总览/发布/主题/文案走 app.js 的 lm-* 专用页，
+       * 发布写 lanmist 仓的 local-content/*.json（源文件）+ core/site-data.js（写穿镜像）；
+       * oplog:false 同灵感屋，不往该仓写操作日志。令牌全站共用一份，零新增授权。 */
+      id: 'lanmist', label: '🌫 个人主页',
+      owner: 'Misty-ui-source', repo: 'lanmist', branch: 'main',
+      oplog: false,
+      pages: ['dashboard', 'login', 'lm-home', 'lm-publish', 'lm-theme', 'lm-texts'],
+      dashHint: '个人主页 Lanmist：这里发布的内容只进 Lanmist，不回主站；主站数据每天自动同步进来，只增添删改。',
+      collections: {},
+      navLayout: {
+        primary: ['dashboard', 'lm-home', 'lm-publish', 'lm-theme', 'lm-texts'],
+        secondary: [],
+        homeCards: ['lm-publish', 'lm-theme', 'lm-texts'],
+        labels: { 'lm-home': '🌫 总览', 'lm-publish': '✍️ 发布', 'lm-theme': '🎨 主题', 'lm-texts': '📝 文案' },
+      },
+      navExternal: { blog: 'https://lanmist.pages.dev/' },
+      quickLinks: [
+        { icon: '🌐', label: 'Lanmist 首页', url: 'https://lanmist.pages.dev/' },
+        { icon: '🐙', label: 'GitHub 仓库', url: 'https://github.com/Misty-ui-source/lanmist' },
+        { icon: '☁️', label: 'Cloudflare Pages', url: 'https://dash.cloudflare.com' },
+      ],
+    },
   ],
 
   // R2 图床公开访问前缀（Function 返回的 URL 会拼成 公开前缀 + 路径）

@@ -285,6 +285,7 @@
     }
     const s = sites.find((x) => x.id === id);
     if (!s) return null;
+    if (id === 'lanmist') return { id: s.id, label: s.label || s.id, owner: s.owner, repo: s.repo, branch: s.branch, lanmist: true };
     return { id: s.id, label: s.label || s.id, owner: s.owner, repo: s.repo, branch: s.branch, postsPath: ((s.collections || {}).posts || {}).path || 'src/content/posts' };
   }
   const sourceRepo = () => ({ owner: CFG.owner, repo: CFG.repo, branch: CFG.branch });
@@ -326,7 +327,8 @@
 
     const mainT = targetDef('main');
     const fuwariT = targetDef('archive');
-    const targets = [mainT, fuwariT].filter(Boolean);
+    const lanmistT = targetDef('lanmist');
+    const targets = [mainT, fuwariT, lanmistT].filter(Boolean);
     if (!targets.length) { body.innerHTML = '<p class="hint">没有可用的转投目标（config 未登记）。</p>'; return; }
     const directives = detectDirectives(src.body);
     const hasPw = !!(src.fm.password && String(src.fm.password).trim() !== '');
@@ -338,7 +340,7 @@
         </div></div>
       <div class="grid2">
         <div class="field"><label>目标目录名（slug）</label><input type="text" id="tr-slug" value="${esc(dirName)}"></div>
-        <div class="field"><label>投放状态</label><select id="tr-draft">
+        <div class="field" id="tr-draft-zone"><label>投放状态</label><select id="tr-draft">
           <option value="false">正式发布（draft: false）</option>
           <option value="true">存为草稿（draft: true）</option>
         </select></div>
@@ -369,11 +371,14 @@
     const paintTarget = () => {
       const t = curTarget();
       const cat = $q('#tr-category');
-      if (t.id === 'main') cat.value = CATEGORY_TO_MAIN[String(src.fm.category || '')] || String(src.fm.category || '');
+      if (t.id === 'main' || t.lanmist) cat.value = CATEGORY_TO_MAIN[String(src.fm.category || '')] || String(src.fm.category || '');
       else cat.value = String(src.fm.category || ''); // 旧站沿用原名
       $q('#tr-series-zone').classList.toggle('hidden', t.id !== 'main');
+      $q('#tr-draft-zone').classList.toggle('hidden', !!t.lanmist);
       $q('#tr-pw-warn').classList.toggle('hidden', !(t.id === 'archive' && hasPw));
-      $q('#tr-note').textContent = t.id === 'archive'
+      $q('#tr-note').textContent = t.lanmist
+        ? '转个人主页 Lanmist：作为本地文章直接进个人主页——slug 自动加 local- 前缀防撞、封面随迁到 Lanmist 的 assets/local/、正文图片不随迁（引用保持原样）；写进 local-content/posts.json 并同步进站点数据，同一次提交落地，每日同步不会冲掉。分类按主站词表换算，==高亮== 转 <mark>，密码与草稿状态不带过去。'
+        : t.id === 'archive'
         ? '转旧站：丢弃旧站没有的 8 个字段，日期转纯日期，==高亮== 转 <mark>，图片平铺不变，文件名保留 index.md。'
         : '转主站：字段几全直传，正文图片移入 images/ 子目录并改引用，封面留根目录，==高亮== 保留。';
     };
@@ -396,6 +401,89 @@
       const btn = $q('#tr-go');
       btn.disabled = true;
       try {
+        /* Lanmist 目标：不走 Markdown 集合路径。条目进 local-content/posts.json（源文件）
+           + core/site-data.js（写穿镜像）同一次提交；封面字节随迁 core/assets/local/；
+           site-data.js 大小超过 Contents API 上限，读写走 Git Data API blob 路径。
+           转换借 fuwari 口径（==高亮== 转 <mark>、日期转纯日期、正文图片引用不动），
+           downloads 不进正文、单独挂条目的 downloads 字段（根相对 URL 补灵感屋域名）。 */
+        if (t.lanmist) {
+          const conv = convertTransfer(
+            { fm: src.fm, body: src.body, files: src.files.map((f) => f.rel), downloads: [] },
+            { target: 'fuwari', category: $q('#tr-category').value.trim(),
+              tags: $q('#tr-tags').value.split(/[,，、]/).map((s) => s.trim()).filter(Boolean),
+              draft: 'false', series: '', seriesOrder: '', approxDirectives: directives.length > 0 });
+          const body = stripLeadingH1(conv.body);
+          const ltBase = `/repos/${t.owner}/${t.repo}`;
+          const ltTreeMap = async () => {
+            const ref = await gh(`${ltBase}/git/ref/heads/${t.branch}`);
+            const cm = await gh(`${ltBase}/git/commits/${ref.object.sha}`);
+            const tr = await gh(`${ltBase}/git/trees/${cm.tree.sha}?recursive=1`);
+            const map = {};
+            (tr.tree || []).forEach((e) => { if (e.type === 'blob') map[e.path] = e.sha; });
+            return map;
+          };
+          const ltRead = async (map, path) => {
+            if (!map[path]) return null;
+            const b = await gh(`${ltBase}/git/blobs/${map[path]}`);
+            return b64decodeUnicode(String(b.content || '').replace(/\n/g, ''));
+          };
+          const map = await ltTreeMap();
+          const sdTxt = await ltRead(map, 'core/site-data.js');
+          if (sdTxt === null) throw new Error('Lanmist 的 core/site-data.js 读不到');
+          const dm = sdTxt.match(/const SITE_DATA = (\{[\s\S]*\});?\s*$/);
+          if (!dm) throw new Error('site-data.js 格式异常');
+          const data = JSON.parse(dm[1]);
+          const locTxt = await ltRead(map, 'local-content/posts.json');
+          const locals = locTxt ? JSON.parse(locTxt) : [];
+          let slug = 'local-' + slug0;
+          const taken = (s) => (data.posts || []).some((x) => x.slug === s);
+          if (taken(slug)) { let n = 1; while (taken(`${slug}(${n})`)) n++; slug = `${slug}(${n})`; toast(`Lanmist 已有同 slug，自动改名为 ${slug}`); }
+          const files = [];
+          let cover = '';
+          const coverPlan = conv.plan.find((x) => x.kind === 'cover');
+          if (coverPlan) {
+            const raw = await gh(repoPath(`${col.path}/${dirName}/${coverPlan.from}`));
+            const ext = (coverPlan.to.split('.').pop() || 'webp').toLowerCase();
+            files.push({ path: `core/assets/local/${slug}-cover.${ext}`, content: String(raw.content || '').replace(/\n/g, ''), encoding: 'base64' });
+            cover = `assets/local/${slug}-cover.${ext}`;
+          }
+          const plain = lmPlain(body);
+          const entry = {
+            title: String(conv.fm.title || ''), date: String(conv.fm.published || '').slice(0, 10),
+            category: conv.fm.category || '', tags: Array.isArray(conv.fm.tags) ? conv.fm.tags : [],
+            slug, cover, desc: String(conv.fm.description || '') || plain.slice(0, 200),
+            excerpt: plain.slice(0, 600), body, series: '',
+            downloads: (src.downloads || []).map((d) => ({ name: d.name, url: d.url.startsWith('/') ? 'https://idea.lanerc.me' + d.url : d.url, size: d.size || '', desc: d.desc || '' })),
+          };
+          const byDateDesc = (a, b) => String(b.date || '').localeCompare(String(a.date || ''));
+          const nl = locals.filter((e) => e.slug !== slug); nl.push(entry); nl.sort(byDateDesc);
+          data.posts = (data.posts || []).filter((x) => x.slug !== slug); data.posts.push(entry); data.posts.sort(byDateDesc);
+          files.push({ path: 'local-content/posts.json', content: JSON.stringify(nl, null, 1) + '\n', encoding: 'utf-8' });
+          files.push({ path: 'core/site-data.js', content: 'const SITE_DATA = ' + JSON.stringify(data, null, 1) + ';\n', encoding: 'utf-8' });
+          const r = await ghCommitMulti(files, `转投文章 ${slug}（自灵感屋 ${dirName}）[管理台]`, { owner: t.owner, repo: t.repo, branch: t.branch });
+          const back = await ltRead(await ltTreeMap(), 'core/site-data.js');
+          if (!back || !back.includes('"slug": "' + slug + '"')) throw new Error('回读 site-data.js 没找到新条目，请去 GitHub 核对（原稿未动）');
+          $q('#tr-result').innerHTML = `
+            <p class="hint" style="margin-top:10px">✅ 已转投到 ${esc(t.label)}：本地文章 ${esc(slug)}（commit ${esc(String(r.commitSha).slice(0, 7))}），Lanmist 重新部署后出现在归档与阅读窗；正文图片未随迁。</p>
+            <div class="modal-ops">
+              <button class="btn" id="tr-keep" type="button">保留原稿，完成</button>
+              <button class="btn btn-danger" id="tr-del" type="button">删除灵感屋原稿</button>
+            </div>`;
+          btn.classList.add('hidden');
+          $q('#tr-keep').onclick = () => { close(); toast('转投完成，原稿已保留'); router(); };
+          $q('#tr-del').onclick = async () => {
+            if (!confirm(`确定删除灵感屋原稿「${dirName}」的全部 ${src.files.length} 个文件？删了只能从 git 历史找回。`)) return;
+            const delBtn = $q('#tr-del');
+            delBtn.disabled = true;
+            try {
+              for (const f of src.files) await ghDelFile(`${col.path}/${dirName}/${f.rel}`, f.sha, `转投后删除原稿 ${dirName}/${f.rel} [管理台]`);
+              close();
+              toast('转投完成，原稿已删除');
+              router();
+            } catch (err) { toast('删原稿失败（转投本身已成功）：' + err.message, true); delBtn.disabled = false; }
+          };
+          return;
+        }
         /* 1) 转换（纯逻辑） */
         const conv = convertTransfer(
           { fm: src.fm, body: src.body, files: src.files.map((f) => f.rel), downloads: src.downloads },
