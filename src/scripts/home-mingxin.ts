@@ -620,6 +620,7 @@ export function mountMingxinBlinds(
 	 * 布局间距差异，无需硬编码。
 	 */
 	const calibrateFinaleSpacer = () => {
+		const compassTitle = resolveCompassTitle();
 		if (
 			!finaleSpacer ||
 			!finaleCopyLayer ||

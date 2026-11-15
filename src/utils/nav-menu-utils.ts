@@ -1,4 +1,5 @@
 import { navBarConfig, siteConfig } from "@/config";
+import { featuresConfig } from "@/config/featuresConfig";
 import type { NavBarLink } from "@/types/navBarConfig";
 import { resolveNavbarLinks } from "@/utils/navbar-i18n";
 
@@ -7,6 +8,10 @@ export function resolveNavMenuLinks(): NavBarLink[] {
 	const pages = siteConfig.pages;
 
 	function isPageEnabled(link: NavBarLink): boolean {
+		// 澜澜问答单页入口（/assistant/，在「链接」下拉「博客日志」下方）由功能
+		// 总闸 featuresConfig.fish 管：关了从全部导航结构一并隐去（页面本身
+		// 关闸时跳 404，两边口径一致）。配置是纯数据，总闸只能落在这里。
+		if (link.url === "/assistant/" && !featuresConfig.fish) return false;
 		if (!link.pageKey) return true;
 		return pages[link.pageKey as keyof typeof pages] !== false;
 	}

@@ -209,6 +209,11 @@ export const navBarConfig: NavBarConfig = {
 					url: "/changelog/",
 					icon: "material-symbols:history",
 				},
+				{
+					name: "问问澜澜",
+					url: "/assistant/",
+					icon: "material-symbols:auto-awesome-outline-rounded",
+				},
 			],
 		},
 		{

@@ -1,0 +1,420 @@
+---
+import { featuresConfig} from "@/config/featuresConfig";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import "@/styles/pages/common.css";
+
+// 澜澜的站内问答单页（2026-11-15 站长拍板）：导航栏加入口、点开是整页
+// 对话界面（参考 UpXuu AI 的单页形态），不做浮动按钮、不做弹窗面板。
+// 功能总闸在 featuresConfig.fish：关了按站内单页惯例跳 404（同 guestbook）。
+// 大脑在 /api/fish/chat（路径沿用肥鱼的老接口，Pages Function 代理
+// DeepSeek，key 走环境变量）＋构建期知识文件 /assistant-knowledge.json；
+// 没接上时她会明说站长还没配好，不假死。友链申请走本地向导：收集信息
+// 拼成可复制文本，访客自己去留言板粘贴，本页不自动提交。
+// 人格设定在 functions/api/fish/chat.js 顶部 PERSONA 一处，要改只改那里。
+if (!featuresConfig.fish) {
+return Astro.redirect("/404/");
+}
+
+const title = "问问澜澜";
+const description =
+"澜澜是站长的 AI 小助手，基于博客文章的问答助手：找文章、逛站点、申请友链，或者随便聊聊，都可以问她。";
+
+// 头像与评论区现行呈现同源：澜澜的 Waline 头像（QQ 头像）已于 2026-11-15
+// 取回自托管，避免第三方图床依赖；她日后换头像时替换这个文件即可。
+const LANLAN_AVATAR = "/assets/images/lanlan/avatar.jpg";
+---
+
+<MainGridLayout title={title} description={description}>
+<div class="flex w-full rounded-(--radius-large) overflow-hidden relative">
+<div class="card-base z-10 px-5 py-6 md:px-9 relative w-full" id="lanlan-page">
+<!-- 页头：助手身份（与评论区现行呈现同口径） -->
+<header class="la-head">
+<img class="la-avatar" src={LANLAN_AVATAR} alt="澜澜" referrerpolicy="no-referrer" />
+<div class="la-head-meta">
+<h2 class="la-name">澜澜 <span class="la-badge">AI 小助手</span></h2>
+<p class="la-sub">基于博客文章的 AI 问答助手 · 找文章 · 逛站点 · 申请友链</p>
+</div>
+</header>
+
+<!-- 消息区 -->
+<div class="la-msgs" data-la-msgs>
+<div class="la-msg la-msg--bot">你好呀，我是澜澜，站长的 AI 小助手。找文章、逛站点、申请友链，或者随便聊聊，都可以喊我。评论区里值班的也是我。</div>
+</div>
+
+<!-- 友链申请向导（本地拼文本，不自动提交） -->
+<form class="la-fl" data-la-fl hidden>
+<p class="la-fl-title">申请友链 · 填这几项，我帮你拼成申请文本</p>
+<label>站点名称 *<input data-fl-name type="text" maxlength="40" placeholder="比如：某某的小站" autocomplete="off" /></label>
+<label>博客链接 *<input data-fl-url type="url" maxlength="120" placeholder="https://example.com" autocomplete="off" /></label>
+<label>头像链接<input data-fl-avatar type="url" maxlength="200" placeholder="https://…/avatar.png（可空）" autocomplete="off" /></label>
+<label>一句话简介<input data-fl-desc type="text" maxlength="60" placeholder="记录代码与生活（可空）" autocomplete="off" /></label>
+<label>RSS 地址<input data-fl-rss type="url" maxlength="200" placeholder="https://…/rss.xml（可空）" autocomplete="off" /></label>
+<p class="la-fl-err" data-la-fl-err hidden>名称和链接是必填的，先把这两项填上。</p>
+<div class="la-fl-ops">
+<button type="button" class="la-fl-gen" data-la-fl-gen>生成申请文本</button>
+<button type="button" class="la-fl-cancel" data-la-fl-cancel>算了</button>
+</div>
+</form>
+
+<!-- 快捷问 -->
+<div class="la-chips">
+<button type="button" class="la-chip" data-la-chip="最近有什么新文章？">最近新文</button>
+<button type="button" class="la-chip" data-la-chip="带我逛逛这个站，有什么好玩的页面？">带我逛逛</button>
+<button type="button" class="la-chip" data-la-fl-open>申请友链</button>
+<button type="button" class="la-chip" data-la-chip="介绍一下站长和这个博客">站长是谁</button>
+</div>
+
+<!-- 输入区 -->
+<form class="la-form" data-la-form>
+<input class="la-input" data-la-input type="text" maxlength="500" placeholder="问问澜澜…" autocomplete="off" />
+<button class="la-send" type="submit">发送</button>
+</form>
+<p class="la-note">回复由 AI 生成，站长本人可能会再跟进</p>
+</div>
+</div>
+</MainGridLayout>
+
+<style>
+.la-head {
+display: flex;
+align-items: center;
+gap: 0.85rem;
+margin-bottom: 1.1rem;
+}
+.la-avatar {
+width: 3.4rem;
+height: 3.4rem;
+border-radius: 50%;
+object-fit: cover;
+flex: none;
+}
+.la-head-meta {
+display: flex;
+flex-direction: column;
+gap: 0.15rem;
+min-width: 0;
+}
+.la-name {
+font-weight: 800;
+font-size: 1.3rem;
+line-height: 1.3;
+display: flex;
+align-items: center;
+gap: 0.5rem;
+margin: 0;
+}
+/* 素色小标，与评论区 Waline 徽章同口径（站长定版：不用渐变胶囊） */
+.la-badge {
+font-size: 0.66rem;
+font-weight: 600;
+padding: 0.1rem 0.45rem;
+border-radius: 0.3rem;
+background: rgb(128 128 128 / 0.16);
+opacity: 0.85;
+white-space: nowrap;
+}
+.la-sub {
+font-size: 0.82rem;
+opacity: 0.65;
+margin: 0;
+}
+.la-msgs {
+height: clamp(320px, 52vh, 560px);
+overflow-y: auto;
+display: flex;
+flex-direction: column;
+gap: 0.5rem;
+padding: 0.9rem;
+border-radius: 0.9rem;
+background: rgb(128 128 128 / 0.06);
+}
+:global(.la-msg) {
+max-width: 85%;
+padding: 0.5rem 0.7rem;
+border-radius: 0.85rem;
+font-size: 0.88rem;
+line-height: 1.6;
+white-space: pre-wrap;
+word-break: break-word;
+}
+:global(.la-msg--bot) {
+align-self: flex-start;
+background: rgb(128 128 128 / 0.13);
+border-bottom-left-radius: 0.25rem;
+}
+:global(.la-msg--user) {
+align-self: flex-end;
+background: var(--primary);
+color: white;
+border-bottom-right-radius: 0.25rem;
+}
+:global(.la-msg pre) {
+white-space: pre-wrap;
+word-break: break-word;
+font: inherit;
+margin: 0 0 0.4rem;
+}
+:global(.la-msg.la-copy) {
+font-size: 0.74rem;
+font-weight: 700;
+padding: 0.22rem 0.65rem;
+border-radius: 999px;
+background: var(--primary);
+color: white;
+margin-right: 0.4rem;
+cursor: pointer;
+}
+:global(.la-msg.la-golink) {
+font-size: 0.74rem;
+font-weight: 700;
+color: var(--primary);
+text-decoration: underline;
+}
+.la-fl {
+display: flex;
+flex-direction: column;
+gap: 0.45rem;
+padding: 0.7rem;
+margin-top: 0.7rem;
+border-radius: 0.85rem;
+background: rgb(128 128 128 / 0.08);
+}
+.la-fl[hidden] {
+display: none;
+}
+.la-fl-title {
+font-size: 0.82rem;
+font-weight: 700;
+margin: 0;
+}
+.la-fl label {
+display: flex;
+flex-direction: column;
+gap: 0.18rem;
+font-size: 0.75rem;
+opacity: 0.9;
+}
+.la-fl input {
+font-size: 0.85rem;
+padding: 0.4rem 0.6rem;
+border-radius: 0.55rem;
+background: rgb(128 128 128 / 0.1);
+outline: none;
+color: inherit;
+}
+.la-fl-err {
+font-size: 0.75rem;
+color: #e11d48;
+margin: 0;
+}
+.la-fl-ops {
+display: flex;
+gap: 0.45rem;
+}
+.la-fl-gen {
+font-size: 0.82rem;
+font-weight: 700;
+padding: 0.4rem 0.75rem;
+border-radius: 0.6rem;
+background: var(--primary);
+color: white;
+cursor: pointer;
+}
+.la-fl-cancel {
+font-size: 0.82rem;
+padding: 0.4rem 0.65rem;
+border-radius: 0.6rem;
+background: rgb(128 128 128 / 0.13);
+cursor: pointer;
+}
+.la-chips {
+display: flex;
+gap: 0.4rem;
+flex-wrap: wrap;
+margin-top: 0.7rem;
+}
+.la-chip {
+font-size: 0.76rem;
+padding: 0.26rem 0.6rem;
+border-radius: 999px;
+background: rgb(128 128 128 / 0.13);
+cursor: pointer;
+}
+.la-chip:hover {
+background: rgb(128 128 128 / 0.22);
+}
+.la-form {
+display: flex;
+gap: 0.45rem;
+margin-top: 0.7rem;
+}
+.la-input {
+flex: 1;
+min-width: 0;
+font-size: 0.88rem;
+padding: 0.55rem 0.7rem;
+border-radius: 0.7rem;
+background: rgb(128 128 128 / 0.1);
+outline: none;
+color: inherit;
+}
+.la-send {
+font-size: 0.88rem;
+font-weight: 700;
+padding: 0.55rem 0.9rem;
+border-radius: 0.7rem;
+background: var(--primary);
+color: white;
+cursor: pointer;
+}
+.la-note {
+font-size: 0.7rem;
+opacity: 0.55;
+margin: 0.6rem 0 0;
+text-align: center;
+}
+@media (max-width: 640px) {
+.la-msgs {
+height: 46vh;
+}
+:global(.la-msg) {
+max-width: 92%;
+}
+}
+</style>
+
+<script>
+(() => {
+const root = document.getElementById("lanlan-page");
+if (!root) return;
+
+const msgs = root.querySelector("[data-la-msgs]") as HTMLElement;
+const form = root.querySelector("[data-la-form]") as HTMLFormElement;
+const input = root.querySelector("[data-la-input]") as HTMLInputElement;
+
+function addMsg(text: string, who: "bot" | "user") {
+const div = document.createElement("div");
+div.className = `la-msg la-msg--${who}`;
+div.textContent = text;
+msgs.appendChild(div);
+msgs.scrollTop = msgs.scrollHeight;
+return div;
+}
+
+const WELCOME =
+"你好呀，我是澜澜，站长的 AI 小助手。找文章、逛站点、申请友链，或者随便聊聊，都可以喊我。评论区里值班的也是我。";
+const convo: { role: string; text: string}[] = [
+{ role: "fish", text: WELCOME},
+];
+
+/* ---------- 友链申请向导（本地拼文本，不自动提交） ---------- */
+const flForm = root.querySelector("[data-la-fl]") as HTMLFormElement;
+const flErr = root.querySelector("[data-la-fl-err]") as HTMLElement;
+const flVal = (sel: string) =>
+(flForm.querySelector(sel) as HTMLInputElement)?.value.trim() || "";
+let flIntroShown = false;
+root.querySelector("[data-la-fl-open]")?.addEventListener("click", () => {
+if (!flIntroShown) {
+flIntroShown = true;
+addMsg(
+"申请友链很简单：把下面几项填好，我帮你拼成一段申请文本，你复制下来去留言板粘贴给站长就行。通不通过站长本人说了算，我只负责递话。",
+"bot",
+);
+convo.push({ role: "fish", text: "（访客打开了友链申请向导）"});
+}
+flForm.hidden = false;
+(flForm.querySelector("[data-fl-name]") as HTMLInputElement)?.focus();
+});
+root.querySelector("[data-la-fl-cancel]")?.addEventListener("click", () => {
+flForm.hidden = true;
+flErr.hidden = true;
+});
+root.querySelector("[data-la-fl-gen]")?.addEventListener("click", () => {
+const name = flVal("[data-fl-name]");
+const url = flVal("[data-fl-url]");
+if (!name ||!url) {
+flErr.hidden = false;
+return;
+}
+flErr.hidden = true;
+const avatarUrl = flVal("[data-fl-avatar]");
+const desc = flVal("[data-fl-desc]");
+const rss = flVal("[data-fl-rss]");
+const lines = ["", `名称：${name}`, `链接：${url}`];
+if (avatarUrl) lines.push(`头像：${avatarUrl}`);
+if (desc) lines.push(`简介：${desc}`);
+if (rss) lines.push(`RSS：${rss}`);
+const text = lines.join("\n");
+flForm.hidden = true;
+const div = document.createElement("div");
+div.className = "la-msg la-msg--bot";
+const pre = document.createElement("pre");
+pre.textContent = text;
+div.appendChild(pre);
+const copyBtn = document.createElement("button");
+copyBtn.type = "button";
+copyBtn.className = "la-copy";
+copyBtn.textContent = "复制申请文本";
+copyBtn.addEventListener("click", async () => {
+try {
+await navigator.clipboard.writeText(text);
+copyBtn.textContent = "已复制 ✓";
+} catch {
+copyBtn.textContent = "复制失败，长按文本手动复制";
+}
+window.setTimeout(() => (copyBtn.textContent = "复制申请文本"), 2200);
+});
+div.appendChild(copyBtn);
+const go = document.createElement("a");
+go.className = "la-golink";
+go.href = "/guestbook/";
+go.textContent = "去留言板粘贴 →";
+div.appendChild(go);
+msgs.appendChild(div);
+msgs.scrollTop = msgs.scrollHeight;
+});
+
+/* ---------- 对话（大脑在 /api/fish/chat，路径沿用肥鱼老接口） ---------- */
+let busy = false;
+async function send(text: string) {
+const msg = text.trim();
+if (!msg || busy) return;
+busy = true;
+addMsg(msg, "user");
+convo.push({ role: "user", text: msg});
+input.value = "";
+const pending = addMsg("（想一想……）", "bot");
+try {
+const res = await fetch("/api/fish/chat", {
+method: "POST",
+headers: { "Content-Type": "application/json"},
+body: JSON.stringify({
+message: msg,
+path: location.pathname,
+title: document.title,
+history: convo.slice(-6),
+}),
+});
+const data = await res.json();
+pending.textContent =
+(data.say && data.say.trim()) || "（澜澜没听清，再说一遍好不好）";
+convo.push({ role: "fish", text: pending.textContent});
+} catch {
+pending.textContent = "呜……我这边信号断了，等会儿再喊我好不好。";
+} finally {
+busy = false;
+msgs.scrollTop = msgs.scrollHeight;
+}
+}
+
+form.addEventListener("submit", (e) => {
+e.preventDefault();
+send(input.value);
+});
+root.querySelectorAll("[data-la-chip]").forEach((el) =>
+el.addEventListener("click", () => {
+send((el as HTMLElement).dataset.laChip || "");
+}),
+);
+})();
+</script>

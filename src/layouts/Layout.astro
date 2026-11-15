@@ -14,7 +14,6 @@ import SakuraEffect from "@components/features/SakuraEffect.astro";
 import ParticleEffects from "@components/features/ParticleEffects.astro";
 import DanmakuLayer from "@components/features/DanmakuLayer.astro";
 import FloatingPlayer from "@components/features/FloatingPlayer.astro";
-import FloatingFish from "@components/features/FloatingFish.astro";
 import MingxinMusicPlayer from "@components/features/MingxinMusicPlayer.astro";
 import MingxinMobileDock from "@components/layout/MingxinMobileDock.astro";
 import { featuresConfig } from "@/config/featuresConfig";
@@ -1100,9 +1099,9 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
     <!-- 碎碎念弹幕（第二批，常驻层） -->
     <DanmakuLayer />
 
-    <!-- 全局浮动播放器 + 肥鱼（第三批，常驻层；总闸在 featuresConfig） -->
+    <!-- 全局浮动播放器（常驻层；总闸在 featuresConfig）。
+         澜澜问答已改为独立单页 /assistant/（导航栏入口跳转），不在常驻层挂面板 -->
     {featuresConfig.floatingPlayer && <FloatingPlayer />}
-    {featuresConfig.fish && <FloatingFish />}
 
     <!-- 明信音乐播放器（二期，常驻层；只在明信现身、切形态不断播） -->
     <MingxinMusicPlayer />
