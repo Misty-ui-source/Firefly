@@ -1665,7 +1665,7 @@ routes.dashboard = async () => {
     'lm-home': { label: 'Lanmist 总览', icon: '🌫', nav: true, details: [['🗂️', '内容计数与本地条目', '']] },
     'lm-publish': { label: '发布到 Lanmist', icon: '✍️', nav: true, details: [['📝', '文章 / 动态 / 日记 / 碎碎念', '']] },
     'lm-theme': { label: 'Lanmist 主题', icon: '🎨', nav: true, details: [['🖼️', '色相 · 默认形态 · 开场图', '']] },
-    'lm-texts': { label: 'Lanmist 文案', icon: '📝', nav: true, details: [['✒️', '站名与各处文案', '']] },
+    'lm-texts': { label: 'Lanmist 文案', icon: '📝', nav: true, details: [['✒️', '站名 · 五幕 · 各处文案', '']] },
   };
   const homeOrder = (() => {
     const cfgList = (CFG.navLayout && Array.isArray(CFG.navLayout.homeCards)) ? CFG.navLayout.homeCards : [];
@@ -2146,17 +2146,41 @@ routes['lm-texts'] = async () => {
   const sites = [];
   for (const m of htmlTxt.matchAll(/<a class="acard-cell acard-site" href="([^"]*)"[^>]*><b>([^<]*)<\/b><span>([^<]*)<\/span><\/a>/g))
     sites.push({ href: m[1], label: m[2], sub: m[3] });
+  /* 五幕：逐幕解析（配图 + 标题/日期/说明）；第一幕配图在正文外还有背景与传送门两处引用，保存时一并换 */
+  const acts = [];
+  for (const m of htmlTxt.matchAll(/<article class="home-blinds-scene[^"]*" data-home-blinds-scene data-scene-index="(\d+)"[^>]*>([\s\S]*?)<\/article>/g)) {
+    const inner = m[2];
+    const imgM = inner.match(/<img class="home-blinds-scene__image" (?:data-home-blinds-src|src)="([^"]+)"/);
+    const tM = inner.match(/<p class="home-blinds-scene__band-title" data-scene-title>([^<]*)<\/p>/);
+    const dM = inner.match(/<p class="home-blinds-scene__band-date" data-scene-date>([^<]*)<\/p>/);
+    const nM = inner.match(/<p class="home-blinds-scene__band-note" data-scene-note>([^<]*)<\/p>/);
+    if (imgM && tM && dM && nM) acts[Number(m[1])] = { img: imgM[1], title: tM[1], date: dM[1], note: nM[1] };
+  }
+  const actFile = [null, null, null, null, null]; /* 待上传 {path, b64} */
+  const actUrl = ['', '', '', '', '']; /* 外链（填了优先于上传） */
   let bubbles = null, cfgObj = null;
   { const raw = pick(/<script type="application\/json" data-home-blinds-config>([\s\S]*?)<\/script>/);
     if (raw) { try { cfgObj = JSON.parse(raw); bubbles = (((cfgObj.scenes || {}).bubbleMessages) || []).map((b) => ({ text: b.text || '', weight: b.weight || '', image: b.image || '' })); } catch (e) {} } }
   const missing = Object.entries(cur).filter(([, v]) => v === null).map(([k]) => k);
-  if (missing.length || !links.length || msgs.length !== 3 || sites.length !== 4 || !bubbles) {
-    view.innerHTML = `<div class="card"><h2>📝 文案</h2><p class="hint">锚点缺失（${esc(missing.join('、') || 'links/messages/sites/bubbles')}），为防写坏页面，本页停用。</p></div>`;
+  if (missing.length || !links.length || msgs.length !== 3 || sites.length !== 4 || !bubbles || ![0, 1, 2, 3, 4].every((i) => acts[i])) {
+    view.innerHTML = `<div class="card"><h2>📝 文案</h2><p class="hint">锚点缺失（${esc(missing.join('、') || 'links/messages/sites/bubbles/acts')}），为防写坏页面，本页停用。</p></div>`;
     return;
   }
   const linkRow = (l, i) => `<div class="grid2 lm-linkrow"><div class="field"><label>文字 ${i + 1}</label><input type="text" data-lk-label="${i}" value="${esc(l.label)}"></div><div class="field"><label>链接</label><input type="text" data-lk-href="${i}" value="${esc(l.href)}"></div></div>`;
   const siteRow = (s, i) => `<div class="grid2"><div class="field"><label>名称</label><input type="text" data-st-label="${i}" value="${esc(s.label)}"></div><div class="field"><label>副标</label><input type="text" data-st-sub="${i}" value="${esc(s.sub)}"></div></div><div class="field"><label>「${esc(s.label)}」链接</label><input type="text" data-st-href="${i}" value="${esc(s.href)}"></div>`;
   const bubbleRow = (b, i) => `<div class="grid2"><div class="field"><label>气泡文案</label><input type="text" data-bb-text="${i}" value="${esc(b.text)}"></div><div class="field"><label>权重</label><input type="number" step="0.1" min="0" data-bb-weight="${i}" value="${esc(String(b.weight))}"></div></div><div class="field"><label>配图（选填，相对路径或 URL）</label><input type="text" data-bb-image="${i}" value="${esc(b.image)}"></div>`;
+  const actRow = (a, i) => `<h3 style="margin:14px 0 6px">第 ${['一', '二', '三', '四', '五'][i]} 幕 · ${esc(a.title)}</h3>
+    <div class="field"><label>配图（换图 = 传新文件 + 改引用，旧图文件保留在仓库里不覆写；第一幕的背景与传送门图会跟着一起换）</label>
+      <p class="hint">当前：${esc(a.img)}</p>
+      <img data-act-preview="${i}" src="${esc(/^(https?:|data:)/.test(a.img) ? a.img : 'https://lanmist.pages.dev/' + a.img)}" alt="第 ${i + 1} 幕当前配图" style="max-width:320px;width:100%;border-radius:10px;display:block;margin:6px 0">
+      <input type="file" data-act-file="${i}" accept="image/*">
+      <input type="text" data-act-url="${i}" placeholder="或填外链 URL（填了优先用外链，不上传）" style="margin-top:8px">
+      <p class="hint" data-act-hint="${i}"></p></div>
+    <div class="grid2">
+      <div class="field"><label>幕标题</label><input type="text" data-act-title="${i}" value="${esc(a.title)}"></div>
+      <div class="field"><label>幕日期</label><input type="text" data-act-date="${i}" value="${esc(a.date)}"></div>
+    </div>
+    <div class="field"><label>幕说明</label><input type="text" data-act-note="${i}" value="${esc(a.note)}"></div>`;
   view.innerHTML = `
     <div class="card"><h2>📝 文案与站名 <span class="sub">只改 core/index.html · 保存前逐锚点校验，缺一个就不存</span></h2>
     <div class="field"><label>站名（现在显示在标题栏、大标题、品牌行、关于卡、页脚五处；改名五处一起换）</label><input type="text" id="lt-name" value="${esc(cur.name)}"></div>
@@ -2170,6 +2194,8 @@ routes['lm-texts'] = async () => {
     </div>
     <div class="field"><label>揭示大标题</label><input type="text" id="lt-headline" value="${esc(cur.headline)}"></div>
     ${msgs.map((t, i) => `<div class="field"><label>揭示短句 ${i + 1}</label><input type="text" data-msg="${i}" value="${esc(t)}"></div>`).join('')}
+    <h3 style="margin:16px 0 2px">五幕（配图＋文字，跟其他文案同一次保存）</h3>
+    ${acts.map(actRow).join('')}
     <div class="field"><label>终幕大字</label><input type="text" id="lt-finword" value="${esc(cur.finWord)}"></div>
     <div class="field"><label>终幕小字</label><input type="text" id="lt-finsub" value="${esc(cur.finSub)}"></div>
     <div class="field"><label>终幕「关于」节选</label><textarea id="lt-finabout" rows="3">${esc(cur.finAbout)}</textarea></div>
@@ -2181,6 +2207,26 @@ routes['lm-texts'] = async () => {
     <div id="lt-bubbles">${bubbles.map(bubbleRow).join('')}</div>
     <div class="modal-ops"><button class="btn btn-ghost" id="lt-bb-add" type="button">＋ 加一条气泡</button>
     <button class="btn" id="lt-save" type="button">保存文案</button></div></div>`;
+
+  acts.forEach((a, i) => {
+    view.querySelector(`[data-act-file="${i}"]`).addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) { actFile[i] = null; return; }
+      const rd = new FileReader();
+      rd.onload = () => {
+        const b64 = String(rd.result).split(',')[1] || '';
+        const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+        actFile[i] = { path: `core/assets/acts/act${i + 1}-${Date.now()}.${ext}`, b64 };
+        view.querySelector(`[data-act-preview="${i}"]`).src = String(rd.result);
+        view.querySelector(`[data-act-hint="${i}"]`).textContent = `将上传为 ${actFile[i].path} 并把本幕引用指过去（旧图不删）。`;
+      };
+      rd.readAsDataURL(f);
+    });
+    view.querySelector(`[data-act-url="${i}"]`).addEventListener('input', (e) => {
+      actUrl[i] = e.target.value.trim();
+      if (actUrl[i]) view.querySelector(`[data-act-preview="${i}"]`).src = actUrl[i];
+    });
+  });
 
   $('#lt-bb-add').onclick = () => {
     const i = $('#lt-bubbles').querySelectorAll('[data-bb-text]').length;
@@ -2244,10 +2290,38 @@ routes['lm-texts'] = async () => {
         rep('气泡配置', /(<script type="application\/json" data-home-blinds-config>)[\s\S]*?(<\/script>)/,
           (m, a, b) => a + JSON.stringify(cfgObj) + b);
       } }
+    /* 五幕：配图（外链优先，其次上传新文件）+ 标题/日期/说明，与上面所有文案同一次提交；
+       第一幕的图在正文外还有背景、传送门两处引用，一并替换；旧图文件永不覆写 */
+    const actUploads = [];
+    let actImgChanged = false;
+    acts.forEach((a, i) => {
+      let newImg = a.img;
+      if (actUrl[i]) newImg = actUrl[i];
+      else if (actFile[i]) newImg = actFile[i].path.replace(/^core\//, '');
+      const artRe = new RegExp(`(<article class="home-blinds-scene[^"]*" data-home-blinds-scene data-scene-index="${i}"[^>]*>)([\\s\\S]*?)(</article>)`);
+      if (!artRe.test(out)) { fails.push(`第${i + 1}幕`); return; }
+      out = out.replace(artRe, (m, open, inner, close) => {
+        let s = inner;
+        s = s.replace(/(<p class="home-blinds-scene__band-title" data-scene-title>)[^<]*(<\/p>)/, (x, p, q) => p + esc(gv('data-act-title', i)) + q);
+        s = s.replace(/(<p class="home-blinds-scene__band-date" data-scene-date>)[^<]*(<\/p>)/, (x, p, q) => p + esc(gv('data-act-date', i)) + q);
+        s = s.replace(/(<p class="home-blinds-scene__band-note" data-scene-note>)[^<]*(<\/p>)/, (x, p, q) => p + esc(gv('data-act-note', i)) + q);
+        s = s.replace(/(<img class="home-blinds-scene__image" (?:data-home-blinds-src|src)=")[^"]*(")/, (x, p, q) => p + newImg + q);
+        return open.replace(/aria-label="[^"]*"/, `aria-label="${esc(gv('data-act-title', i))}"`) + s + close;
+      });
+      if (newImg !== a.img) {
+        actImgChanged = true;
+        if (i === 0) {
+          rep('首幕背景图', /(<img class="home-blinds__background" data-home-blinds-src=")[^"]*(")/, (m, p, q) => p + newImg + q);
+          rep('首幕传送门图', /(<img class="home-blinds__portal-image" data-home-blinds-src=")[^"]*(")/, (m, p, q) => p + newImg + q);
+        }
+        if (actFile[i] && !actUrl[i]) actUploads.push({ path: actFile[i].path, content: actFile[i].b64, encoding: 'base64' });
+      }
+    });
     if (fails.length) { toast('锚点缺失，已取消保存：' + fails.join('、'), true); btn.disabled = false; return; }
     if (out === htmlTxt) { toast('没有改动'); btn.disabled = false; return; }
     try {
-      await lmCommit([{ path: 'core/index.html', content: out, encoding: 'utf-8' }], '文案更新 [管理台]');
+      await lmCommit(actUploads.concat([{ path: 'core/index.html', content: out, encoding: 'utf-8' }]),
+        actImgChanged ? '文案与五幕更新 [管理台]' : '文案更新 [管理台]');
       toast('文案已保存，Lanmist 重新部署后生效');
       routes['lm-texts']();
     } catch (e) {
