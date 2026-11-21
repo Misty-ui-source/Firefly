@@ -5,6 +5,7 @@ tags:
   - 杂谈
   - VPS
   - Waline
+  - Umami
 description: Azure 额度爆掉数据差点陪葬、Vercel 被自家 AI 轮询烧穿、Waline 迁移磨了一整天，最后也是全捞回来了，简单水一下这一周吧。感觉这周就是哪里塌了补哪里，还要上课。。
 image: https://img.lanerc.me/covers/mwqh93cm-e7cfd6e3aca9309d63a932c1c20b77a9.webp
 draft: false
