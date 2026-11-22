@@ -11,7 +11,7 @@ This static blog is based on [Firefly](https://github.com/CuteLeaf/Firefly).
 
 目前在折腾的项目：
 
-- **个人博客** — 就是本站，基于 Astro + Firefly 主题，部署在自建 VPS 上
+- **个人博客** — 就是本站，基于 Astro + Firefly 主题，部署在 Cloudflare Pages 上
 - **Folia** — 开源在线音乐播放器，聚合多个音乐源：https://folia.kps.kdns.fr
 - **Komari Monitor** — VPS 状态监控面板：https://komari.kps.kdns.fr
 - **哪吒管理面板** — 哪吒探针，服务器状态监控：http://3.106.241.76:8008/
@@ -111,7 +111,7 @@ This static blog is based on [Firefly](https://github.com/CuteLeaf/Firefly).
 - **禁止**: 商业用途
 ## 技术支持
 
-本站由 [Cloudflare](https://www.cloudflare.com/) 提供 CDN 与 HTTPS 支持，部署在自建 VPS 上
+本站由 [Cloudflare](https://www.cloudflare.com/) 提供 CDN 与 HTTPS 支持，部署在 Cloudflare Pages
 
 建立本站的初衷是希望能与自己以及在看的你分享、记录一些实用的技术和日常生活中的趣闻轶事，如果有帮助到你，那我也会非常开心。
 也欢迎各位访客提出建议与批评。
