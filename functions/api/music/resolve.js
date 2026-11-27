@@ -577,7 +577,8 @@ function buildSourceChain(platform) {
 	if (platform === "tx") chain.push(SOURCE_HANDLERS.suyinQQ);
 	if (platform === "kw") chain.push(SOURCE_HANDLERS.suyinSearch);
 	if (platform === "mg") chain.push(SOURCE_HANDLERS.suyinMigu);
-	chain.push(SOURCE_HANDLERS.changqingVip, SOURCE_HANDLERS.nianxinVip);
+	// 2026-11-27 实测长青 wy 验活 403、念心 wy 验活 404，两家模板源已死，故摘链
+	// （handler 与模板常量保留原样，需要时一键加回）。
 	return chain;
 }
 
@@ -617,8 +618,10 @@ async function getUrlWithFallback(platform, songInfo, quality) {
 // VIP/版权锁）后，拿歌名+歌手去别的平台找同一首歌，而不是就此判死。
 // 第一梯队 kw/mg：溯音处理器本就是按名搜索 + 严格匹配（歌名/歌手对不上
 // 直接抛错），天然适合换源；必须剥掉本平台的 id 再喂，否则星海/模板源
-// 会拿外平台 id 撞出别人的歌。第二梯队：星海搜索 tx/wy/kg，命中候选
-// 后走该平台整链。换源结果照样过验活才递给播放器。
+// 会拿外平台 id 撞出别人的歌。第二梯队：QQ 按名换源（VKeys，2026-11-27
+// 补）→ 星海搜索 tx/wy/kg，命中候选后走该平台整链。wy 最后还有一层
+// Meting 兜底（多半是试听片段，见 metingFallbackGetUrl 注释）。换源结果
+// 照样过验活才递给播放器。
 const SWAP_LABELS = { wy: "网易", tx: "QQ", kw: "酷我", kg: "酷狗", mg: "咪咕" };
 const SWAP_DEADLINE_MS = 25000;
 
@@ -654,9 +657,85 @@ async function xinghaiSearchSwap(targetPlatform, songInfo, quality, deadline) {
 	throw new Error("星海搜索无匹配歌曲");
 }
 
+// ─── QQ 按名换源（VKeys）（2026-11-27 补，配方出自冷汐点歌台公开文章）：
+// 先用 QQ 官方搜索按「歌名+歌手」找 songmid，再走 VKeys 取链。VKeys 背后
+// 是共享号，偶尔被风控报错——失败直接抛错走下一梯队，不重试死磕。实测
+// 《群青》《直觉》经此路拿到完整全曲（3.8MB / 2.4MB）。
+const QQ_SEARCH_API = "https://c.y.qq.com/soso/fcgi-bin/search_for_qq_cp";
+const VKEYS_QQ_LINK_API = "https://api.vkeys.cn/music/tencent/song/link";
+
+async function vkeysQQSwap(songInfo) {
+	const kw = [songInfo?.name, songInfo?.singer].filter(Boolean).join(" ").trim();
+	if (!kw) throw new Error("VKeys换源缺少歌名");
+	const searchUrl =
+		QQ_SEARCH_API +
+		"?p=1&n=5&w=" +
+		encodeURIComponent(kw) +
+		"&format=json";
+	const res = await httpRequest(searchUrl, {
+		method: "GET",
+		headers: { "User-Agent": "Mozilla/5.0", Referer: "https://y.qq.com/" },
+	});
+	const list = res.body?.data?.song?.list;
+	if (!Array.isArray(list) || !list.length)
+		throw new Error("VKeys换源 QQ搜索无结果");
+	let mid = "";
+	for (const item of list) {
+		const candName = item?.songname || "";
+		const candArtist = Array.isArray(item?.singer)
+			? item.singer.map((s) => s?.name || "").join(" ")
+			: "";
+		if (!titleMatch(candName, songInfo.name || "")) continue;
+		if (songInfo.singer && candArtist && !titleMatch(candArtist, songInfo.singer))
+			continue;
+		mid = item?.songmid || "";
+		if (mid) break;
+	}
+	if (!mid) throw new Error("VKeys换源 QQ搜索无匹配歌曲");
+	const linkRes = await httpRequest(
+		VKEYS_QQ_LINK_API + "?quality=6&mid=" + encodeURIComponent(mid),
+		{ method: "GET", headers: { "User-Agent": "Mozilla/5.0" } },
+	);
+	const candidate = validateUrl(linkRes.body?.data?.url, "VKeys");
+	return await probeUrl(candidate);
+}
+
+// ─── Meting 兜底（仅 wy）（2026-11-27 补）：api.injahow.cn 的 Meting 按
+// 网易云 id 取 url 跳转地址。2026-11-27 实测：其他源 14 首全灭的歌它全部
+// 出链，但 13 首只有 0.5–0.9MB，是网易云试听片段而非全曲——所以只能放在
+// 整条链最后（所有换源都失败之后、最终抛错之前）当最后兜底，绝不能提前，
+// 否则播放器会大面积递到半截试听片段。
+const METING_API = "https://api.injahow.cn/meting/";
+
+async function metingFallbackGetUrl(songInfo) {
+	const id = songInfo?.id || songInfo?.songmid;
+	if (!id) throw new Error("Meting兜底缺少songId");
+	const res = await fetch(
+		METING_API +
+			"?server=netease&type=url&id=" +
+			encodeURIComponent(String(id)),
+		{
+			method: "GET",
+			redirect: "manual",
+			headers: {
+				Referer: "https://music.163.com/",
+				"User-Agent": "Mozilla/5.0",
+			},
+			signal: AbortSignal.timeout(6000),
+		},
+	);
+	const loc = res.headers.get("location");
+	try {
+		await res.body?.cancel();
+	} catch {}
+	if (!loc) throw new Error("Meting兜底无跳转地址");
+	const candidate = validateUrl(loc, "Meting兜底");
+	return await probeUrl(candidate);
+}
+
 async function getUrlWithSwap(platform, songInfo, quality) {
-	// 顺序+预算（2026-10-31 三改）：先给本平台链 6 秒——能出链就用本平台的
-	// （音质优先，实测并发竞速会被酷我低码率链抢跑）；6 秒没出或整链失败，
+	// 顺序+预算（2026-10-31 三改）：先给本平台链 11 秒——能出链就用本平台的
+	// （音质优先，实测并发竞速会被酷我低码率链抢跑）；11 秒没出或整链失败，
 	// 再让酷我/咪咕按名链竞速换源；最后星海搜索补试。串行等全链失败太慢、
 	// 纯竞速伤音质，这是折中。
 	const withBudget = (promise, ms, label) =>
@@ -667,8 +746,8 @@ async function getUrlWithSwap(platform, songInfo, quality) {
 	try {
 		const url = await withBudget(
 			getUrlWithFallback(platform, songInfo, quality),
-			6000,
-			"本平台链 6 秒未出链",
+			11000,
+			"本平台链 11 秒未出链",
 		);
 		return { url, servedPlatform: platform, swapped: false };
 	} catch (nativeErr) {
@@ -687,6 +766,15 @@ async function getUrlWithSwap(platform, songInfo, quality) {
 			const attempts = [nativeErr?.message || String(nativeErr)];
 			for (const e of agg?.errors || []) attempts.push(e?.message || String(e));
 			if (agg?.message && !agg?.errors) attempts.push(agg.message);
+			// 第二梯队先试 QQ 按名换源（VKeys），再星海搜索补试（2026-11-27）。
+			if (platform !== "tx") {
+				try {
+					const url = await vkeysQQSwap(infoSearch);
+					return { url, servedPlatform: "tx", swapped: true };
+				} catch (e) {
+					attempts.push("QQ(VKeys): " + (e?.message || e));
+				}
+			}
 			const deadline = Date.now() + SWAP_DEADLINE_MS;
 			for (const p of ["tx", "wy", "kg"]) {
 				if (p === platform || Date.now() > deadline) continue;
@@ -695,6 +783,15 @@ async function getUrlWithSwap(platform, songInfo, quality) {
 					return { url, servedPlatform: p, swapped: true };
 				} catch (e) {
 					attempts.push(SWAP_LABELS[p] + ": " + (e?.message || e));
+				}
+			}
+			// 最后兜底（仅 wy）：Meting 多半只给试听片段，排在所有换源之后。
+			if (platform === "wy") {
+				try {
+					const url = await metingFallbackGetUrl(songInfo);
+					return { url, servedPlatform: "wy", swapped: false, viaMeting: true };
+				} catch (e) {
+					attempts.push("Meting兜底: " + (e?.message || e));
 				}
 			}
 			throw new Error(attempts.join(" | ") + " | 换源也失败");
@@ -774,7 +871,7 @@ export async function onRequestGet(context) {
 			}
 		} catch {}
 		const res = json(
-			{ url: finalUrl, platform, servedPlatform: got.servedPlatform, swapped: got.swapped, quality },
+			{ url: finalUrl, platform, servedPlatform: got.servedPlatform, swapped: got.swapped, viaMeting: got.viaMeting === true, quality },
 			200,
 			{ "Cache-Control": "public, max-age=1200" },
 		);
