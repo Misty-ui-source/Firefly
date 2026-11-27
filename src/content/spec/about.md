@@ -12,12 +12,9 @@ This static blog is based on [Firefly](https://github.com/CuteLeaf/Firefly).
 目前在折腾的项目：
 
 - **个人博客** — 就是本站，基于 Astro + Firefly 主题，部署在 Cloudflare Pages 上
-- **Folia** — 开源在线音乐播放器，聚合多个音乐源：https://folia.kps.kdns.fr
-- **Komari Monitor** — VPS 状态监控面板：https://komari.kps.kdns.fr
-- **哪吒管理面板** — 哪吒探针，服务器状态监控：http://3.106.241.76:8008/
-- **Cloud Mail** — 自建云邮箱服务：https://mail.clam0.cc.cd/login
-- **IP 检测工具** — IP 与网络环境检测：https://ip.kps.kdns.fr/
-- **SRTP** — 在研：基于多智能体协同的 FPGA 敏捷设计与自动化验证（AI for EDA）
+- **AI for EDA**（在研）— 基于多智能体协同的 FPGA 敏捷设计与自动化验证
+- **神经形态视觉器件**（在研）— 基于正负光电导效应的仿生器件，做全光控的视觉感知
+- **一些自用小服务** — Folia 播放器、服务器监控、Cloud Mail 邮箱和 IP 检测工具
 
 联系方式：
 

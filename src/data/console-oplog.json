@@ -1090,5 +1090,12 @@
     "action": "更新",
     "target": "src/content/posts/something1121/index.md",
     "detail": ""
+  },
+  {
+    "ts": "2026-11-27T13:09:45.991Z",
+    "type": "单页",
+    "action": "更新",
+    "target": "src/content/spec/about.md",
+    "detail": ""
   }
 ]
