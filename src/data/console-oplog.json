@@ -1097,5 +1097,12 @@
     "action": "更新",
     "target": "src/content/spec/about.md",
     "detail": ""
+  },
+  {
+    "ts": "2026-11-28T14:50:14.670Z",
+    "type": "动态",
+    "action": "新建",
+    "target": "src/content/dynamic/2026-11-28.md",
+    "detail": ""
   }
 ]
